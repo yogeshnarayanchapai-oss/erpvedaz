@@ -2,3 +2,6 @@ project_id = "llcvudydgizzuqctatnt"
 
 [functions.bootstrap-admin]
 verify_jwt = false
+
+[functions.impersonate-user]
+verify_jwt = false
