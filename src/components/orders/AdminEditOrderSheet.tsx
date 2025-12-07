@@ -292,14 +292,16 @@ export function AdminEditOrderSheet({
             <Label>Destination Branch</Label>
             <BranchSelect
               value={formData.branch_id}
-              onChange={(branchId, branch) => {
+              customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
+              onChange={(branchId, branch, customName) => {
                 handleFormChange({ 
                   branch_id: branchId || '',
-                  destination_branch: branch?.branch_name || ''
+                  destination_branch: branch?.branch_name || customName || ''
                 });
               }}
-              placeholder="Select destination branch..."
-              showDetails={true}
+              placeholder="Type or select branch..."
+              showDetails={!!formData.branch_id}
+              allowCustom={true}
             />
           </div>
 
