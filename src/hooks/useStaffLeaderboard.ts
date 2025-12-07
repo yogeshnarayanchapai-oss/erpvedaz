@@ -30,6 +30,7 @@ export function useStaffLeaderboard(dateRange: DateRange) {
           sales_person_id,
           order_date
         `)
+        .eq('is_deleted', false)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`)
         .not('sales_person_id', 'is', null);

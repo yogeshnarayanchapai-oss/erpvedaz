@@ -19,6 +19,7 @@ export function useSalesByDateRange(dateRange: DateRange) {
       const { data, error } = await supabase
         .from('orders')
         .select('delivery_location, amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
 
@@ -51,6 +52,7 @@ export function useDailyDeliveryByDateRange(dateRange: DateRange) {
       const { data, error } = await supabase
         .from('orders')
         .select('order_date, delivery_location, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
 
@@ -97,6 +99,7 @@ export function useStaffPerformanceByDateRange(dateRange: DateRange, staffList: 
       const { data: orders, error } = await supabase
         .from('orders')
         .select('sales_person_id, delivery_location, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
 
@@ -137,6 +140,7 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('product_id, amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
 

@@ -118,6 +118,7 @@ export function useProductDaybook(filters?: {
           products:product_id(name, cost_price, selling_price),
           leads:lead_id(client_name)
         `)
+        .eq('is_deleted', false)
         .eq('is_counted_in_sales', true)
         .order('confirmed_at', { ascending: false });
 

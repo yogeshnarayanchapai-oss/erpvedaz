@@ -69,6 +69,7 @@ export function useAuditSummary(filters: AuditFilters) {
       const { data: salesData } = await supabase
         .from('orders')
         .select('amount, order_status')
+        .eq('is_deleted', false)
         .eq('order_status', 'DELIVERED')
         .gte('order_date', startDate || '2020-01-01')
         .lte('order_date', endDate || new Date().toISOString().split('T')[0]);
@@ -175,6 +176,7 @@ export function useMonthlySales(filters: AuditFilters) {
       const { data } = await supabase
         .from('orders')
         .select('amount, order_date')
+        .eq('is_deleted', false)
         .eq('order_status', 'DELIVERED')
         .gte('order_date', startDate || '2020-01-01')
         .lte('order_date', endDate || new Date().toISOString().split('T')[0]);

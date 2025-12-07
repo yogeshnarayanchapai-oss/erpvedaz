@@ -22,6 +22,7 @@ export function usePerformanceNotifications() {
       const { data: todayOrders, error: ordersErr } = await supabase
         .from('orders')
         .select('id, amount, sales_person_id, delivery_location')
+        .eq('is_deleted', false)
         .gte('order_date', `${today}T00:00:00`)
         .lte('order_date', `${today}T23:59:59`)
         .in('order_status', ['CONFIRMED', 'DELIVERED', 'DISPATCHED']);

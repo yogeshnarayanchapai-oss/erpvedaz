@@ -158,6 +158,7 @@ export function useCallingReport(staffId: string, dateRange: DateRange) {
       const { data: orders, error: ordersErr } = await supabase
         .from('orders')
         .select('id, order_date, amount, order_status, delivery_location, inside_delivery_status')
+        .eq('is_deleted', false)
         .eq('sales_person_id', staffId)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`);
@@ -302,6 +303,7 @@ export function useFollowupReport(staffId: string, dateRange: DateRange) {
       const { data: orders, error: ordersErr } = await supabase
         .from('orders')
         .select('id, order_date, amount, order_status, delivery_location')
+        .eq('is_deleted', false)
         .eq('sales_person_id', staffId)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`);
