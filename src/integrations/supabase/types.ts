@@ -5862,6 +5862,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_owner: { Args: { _user_id: string }; Returns: boolean }
       perform_system_reset: {
         Args: never
         Returns: {
