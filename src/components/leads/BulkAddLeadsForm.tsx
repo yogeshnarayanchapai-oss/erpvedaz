@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
@@ -98,62 +97,115 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add New Leads (Bulk Entry)</DialogTitle>
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="text-lg font-semibold">Add New Leads (Bulk Entry)</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto">
-          <div className="space-y-3">
+        
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {/* Table Header */}
+          <div className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <div></div>
+            <div>Date *</div>
+            <div>Customer Name *</div>
+            <div>Phone *</div>
+            <div>Alt Phone</div>
+            <div>Product *</div>
+            <div>Source *</div>
+            <div>Remark</div>
+            <div></div>
+          </div>
+
+          {/* Table Rows */}
+          <div className="space-y-2">
             {rows.map((row, index) => (
-              <div key={row.id} className="grid grid-cols-12 gap-2 items-start p-3 border rounded-lg">
-                <div className="col-span-1"><Label className="text-xs">#{index + 1}</Label></div>
-                <div className="col-span-1">
-                  <Label className="text-xs">Date *</Label>
-                  <Input type="date" value={row.date} onChange={(e) => updateRow(row.id, 'date', e.target.value)} className="h-9" />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Customer Name *</Label>
-                  <Input value={row.client_name} onChange={(e) => updateRow(row.id, 'client_name', e.target.value)} className="h-9" />
-                </div>
-                <div className="col-span-1">
-                  <Label className="text-xs">Phone *</Label>
-                  <Input value={row.contact_number} onChange={(e) => updateRow(row.id, 'contact_number', e.target.value)} className="h-9" />
-                </div>
-                <div className="col-span-1">
-                  <Label className="text-xs">Alt Phone</Label>
-                  <Input value={row.alt_phone} onChange={(e) => updateRow(row.id, 'alt_phone', e.target.value)} className="h-9" placeholder="Optional" />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Product *</Label>
-                  <Select value={row.product_id} onValueChange={(v) => updateRow(row.id, 'product_id', v)}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>{products.filter(p => p.is_active).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Source *</Label>
-                  <Select value={row.source_id} onValueChange={(v) => updateRow(row.id, 'source_id', v)}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>{sources.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-1">
-                  <Label className="text-xs">Remark</Label>
-                  <Input value={row.remark} onChange={(e) => updateRow(row.id, 'remark', e.target.value)} className="h-9" />
-                </div>
-                <div className="col-span-1 flex items-end">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => deleteRow(row.id)} className="h-9 w-9 p-0">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div 
+                key={row.id} 
+                className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 items-center"
+              >
+                <div className="text-sm font-medium text-muted-foreground">#{index + 1}</div>
+                
+                <Input 
+                  type="date" 
+                  value={row.date} 
+                  onChange={(e) => updateRow(row.id, 'date', e.target.value)} 
+                  className="h-9 text-sm"
+                />
+                
+                <Input 
+                  value={row.client_name} 
+                  onChange={(e) => updateRow(row.id, 'client_name', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Customer name"
+                />
+                
+                <Input 
+                  value={row.contact_number} 
+                  onChange={(e) => updateRow(row.id, 'contact_number', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Phone"
+                />
+                
+                <Input 
+                  value={row.alt_phone} 
+                  onChange={(e) => updateRow(row.id, 'alt_phone', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Optional"
+                />
+                
+                <Select value={row.product_id} onValueChange={(v) => updateRow(row.id, 'product_id', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.filter(p => p.is_active).map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={row.source_id} onValueChange={(v) => updateRow(row.id, 'source_id', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sources.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Input 
+                  value={row.remark} 
+                  onChange={(e) => updateRow(row.id, 'remark', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Remark"
+                />
+                
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => deleteRow(row.id)} 
+                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
         </div>
-        <DialogFooter className="border-t pt-4 flex-row justify-between">
+
+        <DialogFooter className="px-6 py-4 border-t flex-row justify-between bg-muted/30">
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}><Plus className="w-3 h-3 mr-1" />Add 1</Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => addRows(5)}><Plus className="w-3 h-3 mr-1" />Add 5</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add 1
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addRows(5)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add 5
+            </Button>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
