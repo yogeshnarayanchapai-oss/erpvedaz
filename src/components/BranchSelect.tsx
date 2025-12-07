@@ -1,31 +1,36 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useBranches, Branch } from '@/hooks/useBranches';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, ChevronsUpDown, MapPin, Clock, Phone, DollarSign } from 'lucide-react';
+import { Check, ChevronsUpDown, MapPin, Clock, Phone, DollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BranchSelectProps {
   value?: string;
-  onChange: (branchId: string | undefined, branch?: Branch) => void;
+  customValue?: string;
+  onChange: (branchId: string | undefined, branch?: Branch, customName?: string) => void;
   placeholder?: string;
   showDetails?: boolean;
   className?: string;
   disabled?: boolean;
+  allowCustom?: boolean;
 }
 
 export function BranchSelect({ 
   value, 
+  customValue,
   onChange, 
   placeholder = "Select branch...",
   showDetails = false,
   className,
   disabled = false,
+  allowCustom = true,
 }: BranchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const { data: branches = [], isLoading } = useBranches();
 
@@ -44,15 +49,46 @@ export function BranchSelect({
     );
   }, [branches, search]);
 
+  // Check if search matches any existing branch exactly
+  const hasExactMatch = useMemo(() => {
+    if (!search) return false;
+    return branches.some(b => b.branch_name.toLowerCase() === search.toLowerCase());
+  }, [branches, search]);
+
   const handleSelect = (branch: Branch) => {
-    onChange(branch.id, branch);
+    onChange(branch.id, branch, undefined);
     setOpen(false);
     setSearch('');
   };
 
-  const handleClear = () => {
-    onChange(undefined, undefined);
+  const handleCustomSelect = () => {
+    if (search.trim()) {
+      onChange(undefined, undefined, search.trim());
+      setOpen(false);
+      setSearch('');
+    }
   };
+
+  const handleClear = () => {
+    onChange(undefined, undefined, undefined);
+  };
+
+  // Focus input when popover opens
+  useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [open]);
+
+  const displayValue = useMemo(() => {
+    if (selectedBranch) {
+      return `${selectedBranch.branch_name}${selectedBranch.district ? ` – ${selectedBranch.district}` : ''}`;
+    }
+    if (customValue) {
+      return customValue;
+    }
+    return placeholder;
+  }, [selectedBranch, customValue, placeholder]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -65,29 +101,48 @@ export function BranchSelect({
             className="w-full justify-between"
             disabled={disabled || isLoading}
           >
-            <span className="truncate">
-              {selectedBranch 
-                ? `${selectedBranch.branch_name}${selectedBranch.district ? ` – ${selectedBranch.district}` : ''}`
-                : placeholder
-              }
+            <span className={cn("truncate", !selectedBranch && !customValue && "text-muted-foreground")}>
+              {displayValue}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[350px] p-0" align="start">
-          <div className="p-2 border-b">
+        <PopoverContent className="w-[350px] p-0 bg-popover" align="start">
+          <div className="p-2 border-b border-border">
             <Input
-              placeholder="Search branch, district, area..."
+              ref={inputRef}
+              placeholder="Type to search or enter custom..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && allowCustom && search.trim() && !hasExactMatch) {
+                  e.preventDefault();
+                  handleCustomSelect();
+                }
+              }}
               className="h-9"
             />
           </div>
           <ScrollArea className="h-[250px]">
             <div className="p-1">
-              {filteredBranches.length === 0 ? (
+              {/* Custom entry option */}
+              {allowCustom && search.trim() && !hasExactMatch && (
+                <button
+                  onClick={handleCustomSelect}
+                  className="flex items-center gap-2 w-full rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer border-b border-border mb-1"
+                >
+                  <Plus className="h-4 w-4 text-primary" />
+                  <span>Use "<strong>{search.trim()}</strong>" as custom branch</span>
+                </button>
+              )}
+              
+              {filteredBranches.length === 0 && !search.trim() ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   {isLoading ? 'Loading...' : 'No branches found'}
+                </div>
+              ) : filteredBranches.length === 0 && search.trim() && !allowCustom ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No matching branches
                 </div>
               ) : (
                 filteredBranches.map((branch) => (
@@ -121,8 +176,8 @@ export function BranchSelect({
               )}
             </div>
           </ScrollArea>
-          {value && (
-            <div className="border-t p-2">
+          {(value || customValue) && (
+            <div className="border-t border-border p-2">
               <Button
                 variant="ghost"
                 size="sm"
