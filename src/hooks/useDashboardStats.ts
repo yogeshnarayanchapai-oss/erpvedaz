@@ -78,7 +78,7 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
     queryFn: async (): Promise<LeadStatsResult> => {
       let query = supabase
         .from('leads')
-        .select('id, status, is_transferred, order_id, created_at');
+        .select('id, status, assigned_to_user_id, order_id, created_at');
 
       // Apply date filters using Nepal timezone
       if (dateFrom) {
@@ -100,7 +100,7 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
         followUp: leads.filter(l => l.status === 'FOLLOW_UP').length,
         cancelled: leads.filter(l => l.status === 'CANCELLED').length,
         redirect: leads.filter(l => l.status === 'REDIRECT').length,
-        pendingTransfer: leads.filter(l => l.is_transferred === false).length,
+        pendingTransfer: leads.filter(l => l.assigned_to_user_id === null).length,
         newLeads: leads.filter(l => l.status === 'NEW').length,
         assigned: leads.filter(l => l.status === 'ASSIGNED').length,
       };
