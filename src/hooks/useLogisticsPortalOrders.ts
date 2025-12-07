@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyLogisticsStatusUpdate } from '@/lib/notificationHelpers';
 
 interface LogisticsOrdersFilters {
   dateFrom?: string;
@@ -136,6 +137,17 @@ export function useLogisticsMarkDelivered() {
     }) => {
       const now = new Date().toISOString();
 
+      // Get order details for notification
+      const { data: order } = await supabase
+        .from('orders')
+        .select(`
+          id, 
+          sales_person_id,
+          leads:leads!orders_lead_id_fkey (client_name)
+        `)
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('orders')
         .update({
@@ -146,6 +158,28 @@ export function useLogisticsMarkDelivered() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Notify order owner
+      if (order && order.sales_person_id && order.sales_person_id !== userId) {
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', userId)
+          .single();
+
+        try {
+          await notifyLogisticsStatusUpdate({
+            orderId,
+            customerName: (order.leads as any)?.client_name || 'Customer',
+            newStatus: 'DELIVERED',
+            orderOwnerUserId: order.sales_person_id,
+            actorId: userId,
+            actorName: actorProfile?.name || 'Logistics',
+          });
+        } catch (notifyError) {
+          console.error('Failed to send notification:', notifyError);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });

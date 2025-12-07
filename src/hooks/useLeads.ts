@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { notifyLeadTransfer, notifyLeadStatusChange } from '@/lib/notificationHelpers';
+import { notifyLeadTransfer, notifyLeadStatusChange, notifyLeadReturnedToCNR } from '@/lib/notificationHelpers';
 
 type LeadStatus = 'NEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'CONFIRMED' | 'FOLLOW_UP' | 'CALL_NOT_RECEIVED' | 'CANCELLED' | 'REDIRECT';
 type TeamType = 'LEADS' | 'CALLING' | 'FOLLOWUP';
@@ -463,6 +463,20 @@ export function useMarkAsCNR() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get lead details for notification
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('client_name, contact_number, product_id, products:product_id(name)')
+        .eq('id', leadId)
+        .single();
+
+      // Get actor name
+      const { data: actorProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
       // Update lead to CNR status and move to LEADS team for redistribution
       // Include assigned_to_user_id filter to satisfy RLS policy
       const { error: updateError } = await supabase
@@ -496,6 +510,22 @@ export function useMarkAsCNR() {
         });
 
       if (transferError) throw transferError;
+
+      // Send notification to LEADS role
+      if (lead) {
+        try {
+          await notifyLeadReturnedToCNR({
+            leadId,
+            customerName: lead.client_name || 'Unknown',
+            phone: lead.contact_number || '',
+            productName: (lead.products as any)?.name,
+            actorId: user.id,
+            actorName: actorProfile?.name || 'Staff',
+          });
+        } catch (notifyError) {
+          console.error('Failed to send notification:', notifyError);
+        }
+      }
 
       return { success: true };
     },
