@@ -21,8 +21,8 @@ export async function notifyLeadTransfer({
   // Notification to the calling staff
   notifications.push({
     type: 'LEAD_TRANSFER',
-    title: 'New leads assigned',
-    message: `${count} new lead${count > 1 ? 's' : ''} ${productName ? `for ${productName} ` : ''}assigned to you.`,
+    title: 'New Leads Assigned',
+    message: `Assigned new ${count} lead${count > 1 ? 's' : ''} to you.`,
     actorId,
     actorName,
     targetUserId,
