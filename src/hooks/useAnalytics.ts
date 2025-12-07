@@ -75,6 +75,7 @@ export function useSalesMetrics(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('amount, is_cod, quantity, product_id, customer_id')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -172,6 +173,7 @@ export function useOrderChannels(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('shipping_partner, amount, delivery_location')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -209,6 +211,7 @@ export function useOrderStatusDistribution(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('order_status')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -242,6 +245,7 @@ export function useTopCities(filters: AnalyticsFilters, type: 'orders' | 'revenu
       let ordersQuery = supabase
         .from('orders')
         .select('destination_branch, amount')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -279,6 +283,7 @@ export function useProductInsights(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('product_id, quantity, amount')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -346,6 +351,7 @@ export function useStaffPerformance(filters: AnalyticsFilters) {
         let ordersQuery = supabase
           .from('orders')
           .select('amount, delivery_location')
+          .eq('is_deleted', false)
           .eq('sales_person_id', s.id)
           .gte('created_at', filters.dateFrom)
           .lte('created_at', filters.dateTo);
@@ -387,6 +393,7 @@ export function useDeliveryInsights(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('delivery_location, order_status, destination_branch, created_at')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo);
 
@@ -452,6 +459,7 @@ export function useRevenueTrend(filters: AnalyticsFilters) {
       let ordersQuery = supabase
         .from('orders')
         .select('created_at, amount')
+        .eq('is_deleted', false)
         .gte('created_at', filters.dateFrom)
         .lte('created_at', filters.dateTo)
         .order('created_at');

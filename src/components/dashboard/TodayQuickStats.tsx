@@ -39,6 +39,7 @@ export function TodayQuickStats() {
       const { count: confirmedToday } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
         .eq('order_status', 'CONFIRMED')
         .gte('created_at', todayStart)
         .lte('created_at', todayEnd);
@@ -47,6 +48,7 @@ export function TodayQuickStats() {
       const { count: pendingDispatch } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
         .eq('order_status', 'CONFIRMED')
         .is('courier_provider', null);
 
@@ -54,6 +56,7 @@ export function TodayQuickStats() {
       const { data: salesData } = await supabase
         .from('orders')
         .select('amount')
+        .eq('is_deleted', false)
         .eq('order_status', 'CONFIRMED')
         .gte('created_at', todayStart)
         .lte('created_at', todayEnd);
@@ -76,6 +79,7 @@ export function TodayQuickStats() {
       const { count: pendingInsideValley } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
         .eq('delivery_location', 'INSIDE_VALLEY')
         .eq('inside_delivery_status', 'PENDING');
 

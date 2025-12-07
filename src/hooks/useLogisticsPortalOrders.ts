@@ -48,6 +48,7 @@ export function useLogisticsPortalOrders(filters: LogisticsOrdersFilters = {}) {
           redirected_by:profiles!orders_redirected_by_user_id_fkey (id, name),
           order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
         `)
+        .eq('is_deleted', false)
         .order('order_date', { ascending: false });
 
       // Date filtering - same as useFollowupOrders

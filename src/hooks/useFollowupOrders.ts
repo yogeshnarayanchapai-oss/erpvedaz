@@ -88,6 +88,7 @@ export function useFollowupOrders(filters: FollowupOrdersFilters = {}, enableSou
           redirected_by:profiles!orders_redirected_by_user_id_fkey (id, name),
           order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
         `)
+        .eq('is_deleted', false)
         .order('order_date', { ascending: false });
 
       if (filters.dateFrom) {
@@ -214,6 +215,7 @@ export function useFollowupStats(dateFrom: string, dateTo: string) {
           redirected_by_user_id,
           profiles:profiles!orders_sales_person_id_fkey (id, name)
         `)
+        .eq('is_deleted', false)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`);
 

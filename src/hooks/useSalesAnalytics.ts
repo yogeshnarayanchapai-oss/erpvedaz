@@ -13,6 +13,7 @@ export function useTodaySalesByLocation() {
       const { data, error } = await supabase
         .from('orders')
         .select('delivery_location, amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${today}T00:00:00`)
         .lte('order_date', `${today}T23:59:59`);
 
@@ -45,6 +46,7 @@ export function useDailyDeliveryChart(year: number, month: number) {
       const { data, error } = await supabase
         .from('orders')
         .select('order_date, delivery_location, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
 
@@ -81,6 +83,7 @@ export function useMonthlySalesChart(year: number) {
       const { data, error } = await supabase
         .from('orders')
         .select('order_date, amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
 
@@ -115,6 +118,7 @@ export function useMonthlyPLData(year: number) {
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('order_date, amount, order_status, quantity, product_id')
+        .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
 
@@ -213,6 +217,7 @@ export function useWeeklySales() {
       const { data: thisWeekData, error: thisWeekError } = await supabase
         .from('orders')
         .select('amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${thisWeekStart}T00:00:00`)
         .lte('order_date', `${thisWeekEnd}T23:59:59`);
 
@@ -221,6 +226,7 @@ export function useWeeklySales() {
       const { data: lastWeekData, error: lastWeekError } = await supabase
         .from('orders')
         .select('amount, order_status')
+        .eq('is_deleted', false)
         .gte('order_date', `${lastWeekStart}T00:00:00`)
         .lte('order_date', `${lastWeekEnd}T23:59:59`);
 
