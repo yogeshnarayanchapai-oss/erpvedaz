@@ -18,11 +18,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, MessageSquare, PhoneOff, Clock, XCircle, Edit, ArrowRightLeft, Calendar, Timer, Filter, Users, CornerDownLeft, Plus, Copy, Search } from 'lucide-react';
+import { Phone, MessageSquare, PhoneOff, Clock, XCircle, Edit, ArrowRightLeft, Calendar, Timer, Filter, Users, CornerDownLeft, Plus, Copy, Search, FileSpreadsheet } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 import { toast } from 'sonner';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { AddLeadDialog } from '@/components/leads/AddLeadDialog';
+import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { FormattedDate } from '@/components/FormattedDate';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
@@ -298,6 +299,7 @@ export default function CallingLeads() {
 
   // Add Lead dialog state
   const [addLeadDialogOpen, setAddLeadDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Sheet state for editing
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -780,6 +782,13 @@ Order By: ${profile?.name || 'N/A'}`;
         </div>
         <div className="flex items-center gap-3">
           <Button 
+            variant="outline"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+          <Button 
             onClick={() => setAddLeadDialogOpen(true)}
             className="bg-green-600 hover:bg-green-700"
           >
@@ -819,6 +828,9 @@ Order By: ${profile?.name || 'N/A'}`;
 
       {/* Add Lead Dialog */}
       <AddLeadDialog open={addLeadDialogOpen} onOpenChange={setAddLeadDialogOpen} />
+
+      {/* Import Leads Dialog */}
+      <ImportLeadsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} portalType="CALLING" />
 
       {/* Advanced Search Bar */}
       <AdvancedSearchBar
