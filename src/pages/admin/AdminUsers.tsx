@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2 } from 'lucide-react';
+import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -73,8 +73,50 @@ export default function AdminUsers() {
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<StaffMember | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const handleImpersonate = async (user: StaffMember) => {
+    if (user.id === profile?.id) {
+      toast.error("You cannot login as yourself");
+      return;
+    }
+
+    setIsImpersonating(user.id);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/impersonate-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ targetUserId: user.id })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to impersonate user');
+      }
+
+      // Open the login URL in a new tab
+      window.open(result.loginUrl, '_blank');
+      toast.success(`Opening login session for ${user.name}`);
+    } catch (error: unknown) {
+      console.error('Impersonation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to login as user';
+      toast.error(errorMessage);
+    } finally {
+      setIsImpersonating(null);
+    }
+  };
 
 const usersWithEmployee = useMemo(() => {
     const map = new Map<string, string>();
@@ -654,18 +696,34 @@ const usersWithEmployee = useMemo(() => {
                             {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                           </Button>
                           {(profile?.role === 'ADMIN') && user.id !== profile.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
-                              onClick={() => {
-                                setResetPasswordUser(user);
-                                setIsResetPasswordOpen(true);
-                              }}
-                              title="Reset Password"
-                            >
-                              <KeyRound className="w-4 h-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                                onClick={() => {
+                                  setResetPasswordUser(user);
+                                  setIsResetPasswordOpen(true);
+                                }}
+                                title="Reset Password"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                onClick={() => handleImpersonate(user)}
+                                disabled={isImpersonating === user.id}
+                                title="Login as this user"
+                              >
+                                {isImpersonating === user.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <LogIn className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </>
                           )}
                           {canDeleteUser(user) && (
                             <Button
