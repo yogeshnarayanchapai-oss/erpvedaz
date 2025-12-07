@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useBranches } from '@/hooks/useBranches';
+import { BranchSelect } from '@/components/BranchSelect';
 import { useLogisticsRedirectOrder, useLogisticsMarkDelivered } from '@/hooks/useLogisticsPortalOrders';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -36,7 +35,6 @@ export function LogisticsRedirectModal({
   userId,
   userName,
 }: LogisticsRedirectModalProps) {
-  const { data: branches = [] } = useBranches();
   const redirectOrder = useLogisticsRedirectOrder();
   const markDelivered = useLogisticsMarkDelivered();
 
@@ -181,18 +179,15 @@ export function LogisticsRedirectModal({
               <div className="space-y-3">
                 <div>
                   <Label htmlFor="branch">Change Branch/Area</Label>
-                  <Select value={newBranch} onValueChange={setNewBranch}>
-                    <SelectTrigger id="branch">
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch: any) => (
-                        <SelectItem key={branch.id} value={branch.branch_name}>
-                          {branch.branch_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <BranchSelect
+                    value=""
+                    customValue={newBranch || undefined}
+                    onChange={(branchId, branch, customName) => {
+                      setNewBranch(branch?.branch_name || customName || '');
+                    }}
+                    placeholder="Type or select branch..."
+                    allowCustom={true}
+                  />
                 </div>
 
                 <div>
