@@ -12,9 +12,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const PAYMENT_OPTIONS = ['COD', 'PREPAID'];
-const DELIVERY_OPTIONS = ['Inside Valley', 'Outside Valley'];
-const STATUS_OPTIONS = ['CONFIRMED', 'PENDING', 'PACKED', 'DISPATCHED', 'DELIVERED'];
+const STATUS_OPTIONS = ['NEW', 'FOLLOWUP', 'CONFIRMED', 'CANCELLED', 'NOT_INTERESTED'];
+const DELIVERY_OPTIONS = ['Valley Delivery', 'Out Valley Delivery'];
 
 interface ImportOrdersDialogProps {
   open: boolean;
@@ -23,40 +22,26 @@ interface ImportOrdersDialogProps {
 }
 
 interface ImportRow {
+  'S.No'?: string | number;
+  'Date'?: string;
+  'Customer'?: string;
+  'Phone'?: string;
+  'Product'?: string;
+  'Branch'?: string;
+  'Address'?: string;
+  'Status'?: string;
+  'Remark'?: string;
+  'Delivery'?: string;
+  // Alternate column names
   date?: string;
-  Date?: string;
-  client?: string;
-  Client?: string;
-  CLIENT?: string;
-  customer_name?: string;
-  contact?: string;
-  Contact?: string;
-  CONTACT?: string;
+  customer?: string;
   phone?: string;
   product?: string;
-  Product?: string;
-  PRODUCT?: string;
-  qty?: string | number;
-  Qty?: string | number;
-  QTY?: string | number;
-  quantity?: string | number;
-  amount?: string | number;
-  Amount?: string | number;
-  AMOUNT?: string | number;
-  payment?: string;
-  Payment?: string;
-  PAYMENT?: string;
-  delivery?: string;
-  Delivery?: string;
-  DELIVERY?: string;
   branch?: string;
-  Branch?: string;
-  BRANCH?: string;
-  status?: string;
-  Status?: string;
-  STATUS?: string;
   address?: string;
-  Address?: string;
+  status?: string;
+  remark?: string;
+  delivery?: string;
 }
 
 export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrdersDialogProps) {
@@ -73,25 +58,38 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
   const [importComplete, setImportComplete] = useState(false);
 
   const getTemplateColumns = () => {
-    return ['Date', 'Client', 'Contact', 'Product', 'Qty', 'Amount', 'Payment', 'Delivery', 'Branch', 'Status', 'Address'];
+    return ['S.No', 'Date', 'Customer', 'Phone', 'Product', 'Branch', 'Address', 'Status', 'Remark', 'Delivery'];
   };
 
   const downloadTemplate = () => {
     const columns = getTemplateColumns();
     
-    // Create sample data row
-    const sampleRow = [
-      new Date().toISOString().split('T')[0],
-      'John Doe',
-      '9841234567',
-      products.filter(p => p.is_active)[0]?.name || 'Product Name',
-      1,
-      900,
-      'COD',
-      'Outside Valley',
-      branches[0]?.branch_name || 'Branch Name',
-      'CONFIRMED',
-      'Full address here'
+    // Create sample data rows
+    const sampleRows = [
+      [
+        1,
+        new Date().toISOString().split('T')[0],
+        'John Doe',
+        '9841234567',
+        products.filter(p => p.is_active)[0]?.name || 'Product Name',
+        branches[0]?.branch_name || 'Branch Name',
+        'Full address here',
+        'NEW',
+        'Sample remark',
+        'Valley Delivery'
+      ],
+      [
+        2,
+        new Date().toISOString().split('T')[0],
+        'Jane Smith',
+        '9851234567',
+        products.filter(p => p.is_active)[1]?.name || 'Product Name',
+        branches[1]?.branch_name || 'Branch Name',
+        'Another address',
+        'CONFIRMED',
+        '',
+        'Out Valley Delivery'
+      ]
     ];
     
     // Create products reference sheet
@@ -109,9 +107,9 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
     const wb = XLSX.utils.book_new();
     
     // Main data sheet
-    const ws = XLSX.utils.aoa_to_sheet([columns, sampleRow]);
-    ws['!cols'] = columns.map(() => ({ wch: 16 }));
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+    const ws = XLSX.utils.aoa_to_sheet([columns, ...sampleRows]);
+    ws['!cols'] = columns.map((_, i) => ({ wch: i === 6 ? 25 : 16 })); // Wider column for Address
+    XLSX.utils.book_append_sheet(wb, ws, 'Leads');
     
     // Products reference sheet
     const wsProducts = XLSX.utils.json_to_sheet(productsList);
@@ -121,18 +119,18 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
     const wsBranches = XLSX.utils.json_to_sheet(branchesList);
     XLSX.utils.book_append_sheet(wb, wsBranches, 'Branches');
     
-    // Payment & Delivery reference
+    // Status & Delivery reference
     const wsOptions = XLSX.utils.aoa_to_sheet([
-      ['Payment Options', 'Delivery Options', 'Status Options'],
-      ['COD', 'Inside Valley', 'CONFIRMED'],
-      ['PREPAID', 'Outside Valley', 'PENDING'],
-      ['', '', 'PACKED'],
-      ['', '', 'DISPATCHED'],
-      ['', '', 'DELIVERED'],
+      ['Status Options', 'Delivery Options'],
+      ['NEW', 'Valley Delivery'],
+      ['FOLLOWUP', 'Out Valley Delivery'],
+      ['CONFIRMED', ''],
+      ['CANCELLED', ''],
+      ['NOT_INTERESTED', ''],
     ]);
     XLSX.utils.book_append_sheet(wb, wsOptions, 'Options Reference');
     
-    XLSX.writeFile(wb, `orders_import_template_${portalType.toLowerCase()}.xlsx`);
+    XLSX.writeFile(wb, `leads_import_template_${portalType.toLowerCase()}.xlsx`);
     toast.success('Template downloaded');
   };
 
@@ -168,36 +166,27 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
         // Validate data
         const validationErrors: string[] = [];
         jsonData.forEach((row, index) => {
-          const client = getValue(row, ['client', 'Client', 'CLIENT', 'customer_name']);
-          const contact = getValue(row, ['contact', 'Contact', 'CONTACT', 'phone']);
-          const product = getValue(row, ['product', 'Product', 'PRODUCT']);
-          const qty = getValue(row, ['qty', 'Qty', 'QTY', 'quantity']);
-          const amount = getValue(row, ['amount', 'Amount', 'AMOUNT']);
-          const payment = getValue(row, ['payment', 'Payment', 'PAYMENT']);
-          const delivery = getValue(row, ['delivery', 'Delivery', 'DELIVERY']);
+          const customer = getValue(row, ['Customer', 'customer']);
+          const phone = getValue(row, ['Phone', 'phone']);
+          const product = getValue(row, ['Product', 'product']);
+          const delivery = getValue(row, ['Delivery', 'delivery']);
           
-          if (!client) validationErrors.push(`Row ${index + 2}: Client name is required`);
-          if (!contact) validationErrors.push(`Row ${index + 2}: Contact is required`);
+          if (!customer) validationErrors.push(`Row ${index + 2}: Customer name is required`);
+          if (!phone) validationErrors.push(`Row ${index + 2}: Phone is required`);
           if (!product) validationErrors.push(`Row ${index + 2}: Product is required`);
-          if (!qty || Number(qty) < 1) validationErrors.push(`Row ${index + 2}: Valid quantity is required`);
-          if (!amount || Number(amount) <= 0) validationErrors.push(`Row ${index + 2}: Valid amount is required`);
-          if (!payment) validationErrors.push(`Row ${index + 2}: Payment type is required`);
-          if (!delivery) validationErrors.push(`Row ${index + 2}: Delivery location is required`);
+          if (!delivery) validationErrors.push(`Row ${index + 2}: Delivery type is required`);
           
           // Check if product exists
           if (product && !products.find(p => p.name.toLowerCase() === product.toString().toLowerCase())) {
             validationErrors.push(`Row ${index + 2}: Product "${product}" not found`);
           }
           
-          // Check payment type
-          if (payment && !PAYMENT_OPTIONS.find(p => p.toLowerCase() === payment.toString().toLowerCase())) {
-            validationErrors.push(`Row ${index + 2}: Payment "${payment}" not valid. Use: ${PAYMENT_OPTIONS.join(', ')}`);
-          }
-          
-          // Check delivery location
-          const deliveryStr = delivery?.toString().toLowerCase().replace(/[_\s]/g, '');
-          if (delivery && !['insidevalley', 'outsidevalley'].includes(deliveryStr || '')) {
-            validationErrors.push(`Row ${index + 2}: Delivery "${delivery}" not valid. Use: ${DELIVERY_OPTIONS.join(', ')}`);
+          // Check delivery type
+          const deliveryStr = delivery?.toString().toLowerCase().trim();
+          const validDelivery = deliveryStr === 'valley delivery' || deliveryStr === 'out valley delivery' || 
+                               deliveryStr === 'inside valley' || deliveryStr === 'outside valley';
+          if (delivery && !validDelivery) {
+            validationErrors.push(`Row ${index + 2}: Delivery "${delivery}" not valid. Use: ${DELIVERY_OPTIONS.join(' or ')}`);
           }
         });
         
@@ -218,16 +207,40 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
 
     setIsImporting(true);
     try {
-      // First, create leads for each order
+      // Create leads for each row
       const leadsToInsert = parsedData.map(row => {
-        const client = getValue(row, ['client', 'Client', 'CLIENT', 'customer_name']);
-        const contact = getValue(row, ['contact', 'Contact', 'CONTACT', 'phone']);
-        const productName = getValue(row, ['product', 'Product', 'PRODUCT']);
-        const date = getValue(row, ['date', 'Date']) || new Date().toISOString().split('T')[0];
+        const customer = getValue(row, ['Customer', 'customer']);
+        const phone = getValue(row, ['Phone', 'phone']);
+        const productName = getValue(row, ['Product', 'product']);
+        const branchName = getValue(row, ['Branch', 'branch']);
+        const address = getValue(row, ['Address', 'address']);
+        const statusRaw = getValue(row, ['Status', 'status'])?.toString().toUpperCase() || 'NEW';
+        const remark = getValue(row, ['Remark', 'remark']);
+        const deliveryRaw = getValue(row, ['Delivery', 'delivery'])?.toString().toLowerCase().trim() || '';
+        const date = getValue(row, ['Date', 'date']) || new Date().toISOString().split('T')[0];
         
         const product = products.find(p => p.name.toLowerCase() === productName?.toString().toLowerCase());
+        const branch = branches.find(b => b.branch_name.toLowerCase() === branchName?.toString().toLowerCase());
         
-        // Map LOGISTICS to FOLLOWUP for database compatibility
+        // Determine delivery location
+        const isInsideValley = deliveryRaw === 'valley delivery' || deliveryRaw === 'inside valley';
+        const deliveryLocation = isInsideValley ? 'INSIDE_VALLEY' : 'OUTSIDE_VALLEY';
+        
+        // Validate and map status - using valid database enum values
+        type ValidStatus = 'NEW' | 'FOLLOW_UP' | 'CONFIRMED' | 'CANCELLED';
+        let mappedStatus: ValidStatus = 'NEW';
+        const upperStatus = statusRaw.toUpperCase();
+        if (upperStatus === 'CONFIRMED') mappedStatus = 'CONFIRMED';
+        else if (upperStatus === 'FOLLOWUP' || upperStatus === 'FOLLOW_UP') mappedStatus = 'FOLLOW_UP';
+        else if (upperStatus === 'CANCELLED' || upperStatus === 'NOT_INTERESTED') mappedStatus = 'CANCELLED';
+        
+        // Determine lead_bucket based on status - using valid enum values
+        type ValidBucket = 'NEW' | 'FOLLOWUP' | 'CANCELLED';
+        let leadBucket: ValidBucket = 'NEW';
+        if (mappedStatus === 'FOLLOW_UP') leadBucket = 'FOLLOWUP';
+        else if (mappedStatus === 'CANCELLED') leadBucket = 'CANCELLED';
+        
+        // Map portal type to current_team
         const teamMapping: Record<string, 'LEADS' | 'CALLING' | 'FOLLOWUP'> = {
           'CALLING': 'CALLING',
           'FOLLOWUP': 'FOLLOWUP',
@@ -236,74 +249,33 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
         
         return {
           date: date.toString(),
-          client_name: client?.toString().trim() || '',
-          contact_number: contact?.toString().trim() || '',
-          product_id: product?.id,
-          source: portalType === 'CALLING' ? 'Calling' : 'Facebook Ads',
+          client_name: customer?.toString().trim() || '',
+          contact_number: phone?.toString().trim() || '',
+          product_id: product?.id || null,
+          branch_id: branch?.id || null,
+          full_address: address?.toString().trim() || null,
+          delivery_location: deliveryLocation as 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY',
+          source: 'Facebook Ads',
+          remark: remark?.toString().trim() || null,
+          status: mappedStatus,
+          lead_bucket: leadBucket,
+          current_team: teamMapping[portalType] || 'CALLING',
+          pool_status: 'ASSIGNED' as const,
           created_by_user_id: profile.id,
           created_by_staff_id: profile.id,
           assigned_to_user_id: profile.id,
-          status: 'CONFIRMED' as const,
-          lead_bucket: 'FOLLOWUP' as const,
-          current_team: teamMapping[portalType] || 'FOLLOWUP',
-          pool_status: 'ASSIGNED' as const,
         };
       });
 
-      const { data: createdLeads, error: leadsError } = await supabase
+      const { error: leadsError } = await supabase
         .from('leads')
-        .insert(leadsToInsert)
-        .select('id');
+        .insert(leadsToInsert);
       
       if (leadsError) throw leadsError;
 
-      // Now create orders linked to leads
-      const ordersToInsert = parsedData.map((row, index) => {
-        const productName = getValue(row, ['product', 'Product', 'PRODUCT']);
-        const qty = Number(getValue(row, ['qty', 'Qty', 'QTY', 'quantity'])) || 1;
-        const amount = Number(getValue(row, ['amount', 'Amount', 'AMOUNT'])) || 0;
-        const payment = getValue(row, ['payment', 'Payment', 'PAYMENT'])?.toString().toUpperCase();
-        const delivery = getValue(row, ['delivery', 'Delivery', 'DELIVERY'])?.toString().toLowerCase().replace(/[_\s]/g, '');
-        const branch = getValue(row, ['branch', 'Branch', 'BRANCH'])?.toString();
-        const statusRaw = getValue(row, ['status', 'Status', 'STATUS'])?.toString().toUpperCase() || 'CONFIRMED';
-        const address = getValue(row, ['address', 'Address'])?.toString();
-        const date = getValue(row, ['date', 'Date']) || new Date().toISOString();
-        
-        const product = products.find(p => p.name.toLowerCase() === productName?.toString().toLowerCase());
-        const branchData = branches.find(b => b.branch_name.toLowerCase() === branch?.toLowerCase());
-        const deliveryLocation = delivery === 'insidevalley' ? 'INSIDE_VALLEY' : 'OUTSIDE_VALLEY';
-        const isCod = payment === 'COD';
-        
-        // Validate and cast order status to valid enum value
-        const validStatuses = ['CONFIRMED', 'PENDING', 'PACKED', 'DISPATCHED', 'DELIVERED', 'CANCELLED', 'RETURNED', 'REDIRECT', 'SENT_FOR_DELIVERY', 'LOCATION_CNR'] as const;
-        type OrderStatus = typeof validStatuses[number];
-        const orderStatus: OrderStatus = validStatuses.includes(statusRaw as OrderStatus) ? (statusRaw as OrderStatus) : 'CONFIRMED';
-
-        return {
-          lead_id: createdLeads?.[index]?.id,
-          product_id: product?.id,
-          quantity: qty,
-          amount: amount,
-          is_cod: isCod,
-          payment_status: isCod ? 'PENDING' as const : 'PAID' as const,
-          delivery_location: deliveryLocation as 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY',
-          destination_branch: branchData?.branch_name || branch || null,
-          branch_id: branchData?.id || null,
-          full_address: address || null,
-          order_status: orderStatus,
-          order_date: date.toString(),
-          sales_person_id: profile.id,
-          confirmed_by_user_id: profile.id,
-          sent_to_logistics: deliveryLocation === 'OUTSIDE_VALLEY',
-        };
-      });
-
-      const { error: ordersError } = await supabase.from('orders').insert(ordersToInsert);
-      if (ordersError) throw ordersError;
-
-      toast.success(`${ordersToInsert.length} orders imported successfully`);
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success(`${leadsToInsert.length} leads imported successfully`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       setImportComplete(true);
       
       setTimeout(() => {
@@ -343,7 +315,7 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5" />
-            Import Orders - {getPortalLabel()}
+            Import Leads - {getPortalLabel()}
           </DialogTitle>
         </DialogHeader>
         
@@ -352,7 +324,7 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
           <div className="p-4 border rounded-lg bg-muted/30">
             <h4 className="font-medium mb-2">Step 1: Download Template</h4>
             <p className="text-sm text-muted-foreground mb-3">
-              Download the Excel template with columns: Date, Client, Contact, Product, Qty, Amount, Payment, Delivery, Branch, Status, Address
+              Download the Excel template with columns: S.No, Date, Customer, Phone, Product, Branch, Address, Status, Remark, Delivery
             </p>
             <Button variant="outline" onClick={downloadTemplate} className="gap-2">
               <Download className="w-4 h-4" />
@@ -364,7 +336,7 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
           <div className="p-4 border rounded-lg">
             <h4 className="font-medium mb-2">Step 2: Upload Filled Template</h4>
             <p className="text-sm text-muted-foreground mb-3">
-              Upload your filled Excel file to import orders.
+              Upload your filled Excel file to import leads.
             </p>
             <Input
               ref={fileInputRef}
@@ -382,7 +354,7 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
                 <Alert className="border-green-500 bg-green-50">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-700">
-                    {parsedData.length} orders imported successfully!
+                    {parsedData.length} leads imported successfully!
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -428,7 +400,7 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
             className="gap-2"
           >
             <Upload className="w-4 h-4" />
-            {isImporting ? 'Importing...' : `Import ${parsedData.length} Orders`}
+            {isImporting ? 'Importing...' : `Import ${parsedData.length} Leads`}
           </Button>
         </DialogFooter>
       </DialogContent>
