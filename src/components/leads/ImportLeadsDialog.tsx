@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
+import { useBranches } from '@/hooks/useBranches';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,6 +14,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SOURCE_OPTIONS = ['Facebook Ads', 'Shopify', 'Website', 'TikTok', 'Calling'];
 
+const STATUS_OPTIONS = ['NEW', 'CONFIRMED', 'FOLLOW_UP', 'CANCELLED', 'CALL_NOT_RECEIVED'];
+
+const DELIVERY_OPTIONS = ['INSIDE_VALLEY', 'OUTSIDE_VALLEY'];
+
 interface ImportLeadsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,6 +25,18 @@ interface ImportLeadsDialogProps {
 }
 
 interface ImportRow {
+  'S.No'?: string | number;
+  'Date'?: string;
+  'Customer'?: string;
+  'Phone'?: string;
+  'Alt Phone'?: string;
+  'Product'?: string;
+  'Branch'?: string;
+  'Address'?: string;
+  'Status'?: string;
+  'Remark'?: string;
+  'Delivery'?: string;
+  // Legacy column names for backward compatibility
   date?: string;
   client_name?: string;
   customer_name?: string;
@@ -29,11 +46,16 @@ interface ImportRow {
   product?: string;
   source?: string;
   remark?: string;
+  branch?: string;
+  address?: string;
+  status?: string;
+  delivery?: string;
 }
 
 export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLeadsDialogProps) {
   const { profile } = useAuth();
   const { data: products = [] } = useProducts();
+  const { data: branches = [] } = useBranches();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -44,7 +66,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
   const [importComplete, setImportComplete] = useState(false);
 
   const getTemplateColumns = () => {
-    return ['Date', 'Customer Name', 'Phone', 'Alt Phone', 'Product', 'Source', 'Remark'];
+    return ['S.No', 'Date', 'Customer', 'Phone', 'Alt Phone', 'Product', 'Branch', 'Address', 'Status', 'Remark', 'Delivery'];
   };
 
   const downloadTemplate = () => {
@@ -55,20 +77,30 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
     
     // Create sample data row
     const sampleRow = [
+      '1',
       new Date().toISOString().split('T')[0],
       'John Doe',
       '9841234567',
       '9851234567',
       products.filter(p => p.is_active)[0]?.name || 'Product Name',
-      'Facebook Ads',
-      'Sample remark'
+      branches.filter(b => b.is_active)[0]?.branch_name || 'Kathmandu',
+      'Sample Address, Ward 10',
+      'NEW',
+      'Sample remark',
+      'INSIDE_VALLEY'
     ];
     
     // Create products reference sheet
     const productsList = products.filter(p => p.is_active).map(p => ({ 'Available Products': p.name }));
     
-    // Create sources reference sheet
-    const sourcesList = SOURCE_OPTIONS.map(s => ({ 'Available Sources': s }));
+    // Create branches reference sheet
+    const branchesList = branches.filter(b => b.is_active).map(b => ({ 'Available Branches': b.branch_name }));
+    
+    // Create status reference sheet
+    const statusList = STATUS_OPTIONS.map(s => ({ 'Available Statuses': s }));
+    
+    // Create delivery reference sheet
+    const deliveryList = DELIVERY_OPTIONS.map(d => ({ 'Delivery Options': d }));
 
     const wb = XLSX.utils.book_new();
     
@@ -81,9 +113,17 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
     const wsProducts = XLSX.utils.json_to_sheet(productsList);
     XLSX.utils.book_append_sheet(wb, wsProducts, 'Products Reference');
     
-    // Sources reference sheet
-    const wsSources = XLSX.utils.json_to_sheet(sourcesList);
-    XLSX.utils.book_append_sheet(wb, wsSources, 'Sources Reference');
+    // Branches reference sheet
+    const wsBranches = XLSX.utils.json_to_sheet(branchesList);
+    XLSX.utils.book_append_sheet(wb, wsBranches, 'Branches Reference');
+    
+    // Status reference sheet
+    const wsStatus = XLSX.utils.json_to_sheet(statusList);
+    XLSX.utils.book_append_sheet(wb, wsStatus, 'Status Reference');
+    
+    // Delivery reference sheet
+    const wsDelivery = XLSX.utils.json_to_sheet(deliveryList);
+    XLSX.utils.book_append_sheet(wb, wsDelivery, 'Delivery Reference');
     
     XLSX.writeFile(wb, `leads_import_template_${portalType.toLowerCase()}.xlsx`);
     toast.success('Template downloaded');
@@ -111,24 +151,35 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
         // Validate data
         const validationErrors: string[] = [];
         jsonData.forEach((row, index) => {
-          const name = row.client_name || row.customer_name || row['Customer Name'];
-          const phone = row.contact_number || row.phone || row['Phone'];
-          const product = row.product || row['Product'];
-          const source = row.source || row['Source'];
+          const name = row['Customer'] || row.client_name || row.customer_name;
+          const phone = row['Phone'] || row.contact_number || row.phone;
+          const productName = row['Product'] || row.product;
+          const status = row['Status'] || row.status;
+          const delivery = row['Delivery'] || row.delivery;
+          const branchName = row['Branch'] || row.branch;
           
           if (!name) validationErrors.push(`Row ${index + 2}: Customer name is required`);
           if (!phone) validationErrors.push(`Row ${index + 2}: Phone is required`);
-          if (!product) validationErrors.push(`Row ${index + 2}: Product is required`);
-          if (!source) validationErrors.push(`Row ${index + 2}: Source is required`);
+          if (!productName) validationErrors.push(`Row ${index + 2}: Product is required`);
           
           // Check if product exists
-          if (product && !products.find(p => p.name.toLowerCase() === product.toString().toLowerCase())) {
-            validationErrors.push(`Row ${index + 2}: Product "${product}" not found`);
+          if (productName && !products.find(p => p.name.toLowerCase() === productName.toString().toLowerCase())) {
+            validationErrors.push(`Row ${index + 2}: Product "${productName}" not found`);
           }
           
-          // Check if source exists in hardcoded options
-          if (source && !SOURCE_OPTIONS.find(s => s.toLowerCase() === source.toString().toLowerCase())) {
-            validationErrors.push(`Row ${index + 2}: Source "${source}" not valid. Use: ${SOURCE_OPTIONS.join(', ')}`);
+          // Check if branch exists (optional)
+          if (branchName && !branches.find(b => b.branch_name.toLowerCase() === branchName.toString().toLowerCase())) {
+            validationErrors.push(`Row ${index + 2}: Branch "${branchName}" not found`);
+          }
+          
+          // Check if status is valid (optional)
+          if (status && !STATUS_OPTIONS.find(s => s.toLowerCase() === status.toString().toLowerCase())) {
+            validationErrors.push(`Row ${index + 2}: Status "${status}" not valid. Use: ${STATUS_OPTIONS.join(', ')}`);
+          }
+          
+          // Check if delivery is valid (optional)
+          if (delivery && !DELIVERY_OPTIONS.find(d => d.toLowerCase() === delivery.toString().toLowerCase())) {
+            validationErrors.push(`Row ${index + 2}: Delivery "${delivery}" not valid. Use: ${DELIVERY_OPTIONS.join(', ')}`);
           }
         });
         
@@ -150,16 +201,33 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
     setIsImporting(true);
     try {
       const leadsToInsert = parsedData.map(row => {
-        const name = row.client_name || row.customer_name || row['Customer Name'];
-        const phone = row.contact_number || row.phone || row['Phone'];
-        const altPhone = row.alt_phone || row['Alt Phone'];
-        const productName = row.product || row['Product'];
-        const sourceName = row.source || row['Source'];
-        const remark = row.remark || row['Remark'];
-        const date = row.date || row['Date'] || new Date().toISOString().split('T')[0];
+        const name = row['Customer'] || row.client_name || row.customer_name;
+        const phone = row['Phone'] || row.contact_number || row.phone;
+        const altPhone = row['Alt Phone'] || row.alt_phone;
+        const productName = row['Product'] || row.product;
+        const branchName = row['Branch'] || row.branch;
+        const address = row['Address'] || row.address;
+        const statusVal = row['Status'] || row.status;
+        const remark = row['Remark'] || row.remark;
+        const delivery = row['Delivery'] || row.delivery;
+        const date = row['Date'] || row.date || new Date().toISOString().split('T')[0];
         
         const product = products.find(p => p.name.toLowerCase() === productName?.toString().toLowerCase());
-        const sourceValue = SOURCE_OPTIONS.find(s => s.toLowerCase() === sourceName?.toString().toLowerCase()) || 'Facebook Ads';
+        const branch = branches.find(b => b.branch_name.toLowerCase() === branchName?.toString().toLowerCase());
+        
+        // Map status to valid enum value
+        const statusUpper = statusVal?.toString().toUpperCase().replace(/ /g, '_');
+        const validStatus = STATUS_OPTIONS.find(s => s === statusUpper) || 'NEW';
+        
+        // Map delivery to valid enum value
+        const deliveryUpper = delivery?.toString().toUpperCase().replace(/ /g, '_');
+        const validDelivery = DELIVERY_OPTIONS.find(d => d === deliveryUpper) || null;
+        
+        // Map lead_bucket based on status
+        let leadBucket = 'NEW';
+        if (validStatus === 'CONFIRMED') leadBucket = 'CONFIRMED';
+        else if (validStatus === 'FOLLOW_UP') leadBucket = 'FOLLOWUP';
+        else if (validStatus === 'CANCELLED' || validStatus === 'CALL_NOT_RECEIVED') leadBucket = 'REJECTED';
         
         // Base lead data
         const leadData: any = {
@@ -168,17 +236,21 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           contact_number: phone?.toString().trim(),
           alt_phone: altPhone?.toString().trim() || null,
           product_id: product?.id,
-          source: sourceValue,
+          branch_id: branch?.id || null,
+          destination_branch: branchName?.toString().trim() || null,
+          full_address: address?.toString().trim() || null,
+          od_vd: validDelivery,
           remark: remark?.toString().trim() || null,
           created_by_user_id: profile?.id,
           created_by_staff_id: profile?.id,
-          status: 'NEW',
-          lead_bucket: 'NEW',
+          status: validStatus,
+          lead_bucket: leadBucket,
+          source: 'Facebook Ads', // Default source
         };
         
         // Portal-specific settings
         if (portalType === 'CALLING') {
-          leadData.source = 'Direct Call';
+          leadData.source = 'Calling';
           leadData.assigned_to_user_id = profile?.id;
           leadData.current_team = 'CALLING';
           leadData.pool_status = 'ASSIGNED';
@@ -242,7 +314,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           <div className="p-4 border rounded-lg bg-muted/30">
             <h4 className="font-medium mb-2">Step 1: Download Template</h4>
             <p className="text-sm text-muted-foreground mb-3">
-              Download the Excel template with correct columns and fill your data.
+              Download the Excel template with correct columns (S.No, Date, Customer, Phone, Alt Phone, Product, Branch, Address, Status, Remark, Delivery).
             </p>
             <Button variant="outline" onClick={downloadTemplate} className="gap-2">
               <Download className="w-4 h-4" />
