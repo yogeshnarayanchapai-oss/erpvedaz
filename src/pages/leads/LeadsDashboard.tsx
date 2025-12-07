@@ -19,7 +19,7 @@ import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
-import { TransferLeadsModal } from '@/components/leads/TransferLeadsModal';
+import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsModal';
 
 export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
@@ -222,10 +222,9 @@ export default function LeadsDashboard() {
 
       <ImportLeadsDialog open={isImportOpen} onOpenChange={setIsImportOpen} portalType="LEADS" />
 
-      <TransferLeadsModal
+      <AdminTransferLeadsModal
         open={isTransferOpen} 
         onOpenChange={setIsTransferOpen}
-        leadsInPool={leadsInPool}
       />
 
       {/* Stats */}
