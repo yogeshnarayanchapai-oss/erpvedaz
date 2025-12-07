@@ -15,7 +15,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-type AppRole = 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -40,6 +40,7 @@ export default function Auth() {
 
   const redirectToRoleDashboard = (userRole: AppRole) => {
     const routes: Record<AppRole, string> = {
+      OWNER: '/admin/dashboard',
       ADMIN: '/admin/dashboard',
       LEADS: '/leads/dashboard',
       CALLING: '/calling/dashboard',

@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const roleColors: Record<string, string> = {
+  OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
   ADMIN: 'bg-primary/10 text-primary border-primary/20',
   LEADS: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
   CALLING: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
@@ -407,11 +408,37 @@ const usersWithEmployee = useMemo(() => {
   };
 
   const canDeleteUser = (user: StaffMember): boolean => {
-    // Only ADMIN can delete
-    if (profile?.role !== 'ADMIN') return false;
     // Cannot delete yourself
     if (profile?.id === user.id) return false;
-    return true;
+    // OWNER can delete anyone (including ADMIN)
+    if (profile?.role === 'OWNER') return true;
+    // ADMIN cannot delete OWNER
+    if (user.role === 'OWNER') return false;
+    // ADMIN can delete others
+    if (profile?.role === 'ADMIN') return true;
+    return false;
+  };
+
+  // Check if current user can edit another user's role
+  const canEditUser = (user: StaffMember): boolean => {
+    // Cannot edit yourself
+    if (profile?.id === user.id) return false;
+    // OWNER can edit anyone
+    if (profile?.role === 'OWNER') return true;
+    // ADMIN cannot edit OWNER
+    if (user.role === 'OWNER') return false;
+    // ADMIN can edit others
+    if (profile?.role === 'ADMIN') return true;
+    return false;
+  };
+
+  // Get available roles for editing based on current user's role
+  const getAvailableRoles = (): AppRole[] => {
+    if (profile?.role === 'OWNER') {
+      return ALL_ROLES; // OWNER can assign any role including OWNER and ADMIN
+    }
+    // ADMIN cannot assign OWNER role
+    return ALL_ROLES.filter(r => r !== 'OWNER');
   };
 
   const activeCount = staff.filter(s => s.is_active).length;
@@ -520,7 +547,7 @@ const usersWithEmployee = useMemo(() => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ALL_ROLES.map((role) => (
+                      {getAvailableRoles().map((role) => (
                         <SelectItem key={role} value={role}>{role}</SelectItem>
                       ))}
                     </SelectContent>
@@ -569,7 +596,7 @@ const usersWithEmployee = useMemo(() => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALL_ROLES.map((role) => (
+                  {getAvailableRoles().map((role) => (
                     <SelectItem key={role} value={role}>{role}</SelectItem>
                   ))}
                 </SelectContent>
@@ -679,23 +706,29 @@ const usersWithEmployee = useMemo(() => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(user)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleStatus(user)}
-                          >
-                            {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                          </Button>
-                          {(profile?.role === 'ADMIN') && user.id !== profile.id && (
+                          {canEditUser(user) && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openEditDialog(user)}
+                                title="Edit User"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleToggleStatus(user)}
+                                title={user.is_active ? 'Deactivate' : 'Activate'}
+                              >
+                                {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                              </Button>
+                            </>
+                          )}
+                          {(profile?.role === 'ADMIN' || profile?.role === 'OWNER') && user.id !== profile.id && canEditUser(user) && (
                             <>
                               <Button
                                 variant="ghost"

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-type AppRole = 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
@@ -19,6 +19,7 @@ const Index = () => {
           return;
         }
         const routes: Record<AppRole, string> = {
+          OWNER: '/admin/dashboard',
           ADMIN: '/admin/dashboard',
           LEADS: '/leads/dashboard',
           CALLING: '/calling/dashboard',

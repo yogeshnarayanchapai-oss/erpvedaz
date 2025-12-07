@@ -69,7 +69,7 @@ import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 import { useBranding } from '@/hooks/useBranding';
 
-type AppRole = 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
@@ -168,6 +168,79 @@ const accountingItems: MenuItem[] = [
 ];
 
 const menuItems: Record<AppRole, MenuItem[]> = {
+  OWNER: [
+    { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Users', 
+      url: '/admin/users', 
+      icon: Users,
+      children: [
+        { title: 'All Users', url: '/admin/users', icon: Users },
+        { title: 'Roles & Permissions', url: '/admin/roles-permissions', icon: Shield },
+      ]
+    },
+    { title: 'Products', url: '/admin/products', icon: Package },
+    { title: 'Branches', url: '/admin/branches', icon: Building2 },
+    {
+      title: 'Inventory',
+      url: '/admin/inventory/stock-summary',
+      icon: Warehouse,
+      children: inventoryItems,
+    },
+    {
+      title: 'Accounting',
+      url: '/admin/accounting/dashboard-new',
+      icon: Calculator,
+      children: accountingItems,
+    },
+    {
+      title: 'Marketing',
+      url: '/admin/marketing/ads',
+      icon: Megaphone,
+      children: marketingItems,
+    },
+    { title: 'Leads', url: '/admin/leads', icon: Phone },
+    { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
+    { title: 'Customers', url: '/admin/customers', icon: Users },
+    { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+    { 
+      title: 'Reports', 
+      url: '/admin/reports', 
+      icon: FileText,
+      children: [
+        { title: 'All Reports', url: '/admin/reports', icon: FileText },
+        { title: 'Daily Performance', url: '/admin/reports/daily-performance', icon: TrendingUp },
+      ]
+    },
+    { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
+    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
+    { title: 'Branding', url: '/admin/branding', icon: Palette },
+    { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
+    {
+      title: 'Courier Integration',
+      url: '/admin/logistics-dashboard',
+      icon: Package,
+      children: logisticsItems,
+    },
+    {
+      title: 'Messaging',
+      url: '/admin/messaging/channels',
+      icon: MessageSquare,
+      children: messagingItems,
+    },
+    {
+      title: 'Knowledge Center',
+      url: '/hrm/knowledge-center',
+      icon: BookOpen,
+      children: knowledgeCenterItems,
+    },
+    {
+      title: 'HRM',
+      url: '/hrm/employees',
+      icon: Briefcase,
+      children: hrmItems,
+    },
+  ],
   ADMIN: [
     { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
     { 
