@@ -468,7 +468,7 @@ export function useMarkAsCNR() {
         .from('profiles')
         .select('name, role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
 
@@ -477,7 +477,7 @@ export function useMarkAsCNR() {
         .from('leads')
         .select('client_name, contact_number, product_id, assigned_to_user_id, products:product_id(name)')
         .eq('id', leadId)
-        .single();
+        .maybeSingle();
 
       if (!lead) throw new Error('Lead not found');
 
@@ -567,7 +567,7 @@ export function useTransferToLeads() {
         .from('profiles')
         .select('name, role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
 
@@ -576,7 +576,7 @@ export function useTransferToLeads() {
         .from('leads')
         .select('assigned_to_user_id')
         .eq('id', leadId)
-        .single();
+        .maybeSingle();
 
       if (!lead) throw new Error('Lead not found');
 
