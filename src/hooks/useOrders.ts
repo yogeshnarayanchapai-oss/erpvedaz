@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { notifyOrderConfirmed, notifyInsideDeliveryUpdate } from '@/lib/notificationHelpers';
+import { notifyOrderConfirmed, notifyInsideDeliveryUpdate, notifyLogisticsStatusUpdate } from '@/lib/notificationHelpers';
 
 type OrderStatus = 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'SENT_FOR_DELIVERY' | 'LOCATION_CNR' | 'PENDING' | 'CANCELLED' | 'REDIRECT' | 'SENT_FOR_NCM' | 'SENT_FOR_PATHAO';
 type PaymentStatus = 'PENDING' | 'PAID' | 'COD';
@@ -320,6 +320,7 @@ export function useUpdateOrderStatus() {
       partnerStatus,
       deliveryNotes,
       deliveryLocation,
+      notifyOwner = false,
     }: {
       orderId: string;
       orderStatus?: OrderStatus;
@@ -329,7 +330,25 @@ export function useUpdateOrderStatus() {
       partnerStatus?: string;
       deliveryNotes?: string;
       deliveryLocation?: DeliveryLocation;
+      notifyOwner?: boolean;
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // First fetch order details for notification
+      let orderDetails: any = null;
+      if (notifyOwner && orderStatus) {
+        const { data } = await supabase
+          .from('orders')
+          .select(`
+            id, 
+            sales_person_id,
+            leads:leads!orders_lead_id_fkey (client_name, contact_number)
+          `)
+          .eq('id', orderId)
+          .single();
+        orderDetails = data;
+      }
+
       const updates: Record<string, any> = {};
       if (orderStatus) updates.order_status = orderStatus;
       if (paymentStatus) updates.payment_status = paymentStatus;
@@ -347,6 +366,35 @@ export function useUpdateOrderStatus() {
         .single();
 
       if (error) throw error;
+
+      // Send notification to order owner if requested and status changed
+      if (notifyOwner && orderStatus && orderDetails && user) {
+        const customerName = orderDetails.leads?.client_name || 'Customer';
+        const ownerUserId = orderDetails.sales_person_id;
+        
+        // Get actor name
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        if (ownerUserId && ownerUserId !== user.id) {
+          try {
+            await notifyLogisticsStatusUpdate({
+              orderId,
+              customerName,
+              newStatus: orderStatus,
+              orderOwnerUserId: ownerUserId,
+              actorId: user.id,
+              actorName: actorProfile?.name || 'Logistics',
+            });
+          } catch (notifyError) {
+            console.error('Failed to send notification:', notifyError);
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {

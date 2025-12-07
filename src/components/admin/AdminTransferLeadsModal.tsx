@@ -14,6 +14,7 @@ import { Check, ChevronsUpDown, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { notifyLeadTransfer } from '@/lib/notificationHelpers';
 
 interface AdminTransferLeadsModalProps {
   open: boolean;
@@ -246,6 +247,20 @@ export function AdminTransferLeadsModal({
       }));
 
       await supabase.from('lead_history').insert(historyRecords);
+
+      // Send real-time notification to the assigned staff
+      try {
+        await notifyLeadTransfer({
+          count: leadIds.length,
+          productName,
+          targetUserId: staffId,
+          targetUserName: staffName,
+          actorId: user.id,
+          actorName: 'Admin',
+        });
+      } catch (notifyError) {
+        console.error('Failed to send notification:', notifyError);
+      }
 
       const leadTypeLabel = leadType === 'NEW' ? 'New' : leadType === 'FOLLOW_UP_POOL' ? 'Follow-up' : 'CNR';
       toast.success(`Successfully transferred ${leadIds.length} ${leadTypeLabel} leads of ${productName} to ${staffName}`);

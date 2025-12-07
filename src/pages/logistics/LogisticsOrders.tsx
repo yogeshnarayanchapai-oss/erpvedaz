@@ -106,6 +106,7 @@ export default function LogisticsOrders() {
     await updateOrderStatus.mutateAsync({
       orderId,
       orderStatus: status as any,
+      notifyOwner: true,
     });
   };
 

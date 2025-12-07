@@ -105,7 +105,7 @@ export default function LogisticsInsideValley() {
   ).length;
 
   const handleStatusChange = async (orderId: string, status: string) => {
-    await updateOrderStatus.mutateAsync({ orderId, orderStatus: status as any });
+    await updateOrderStatus.mutateAsync({ orderId, orderStatus: status as any, notifyOwner: true });
   };
 
   const handlePaymentChange = async (orderId: string, status: string) => {

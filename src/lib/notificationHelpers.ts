@@ -47,6 +47,52 @@ export async function notifyLeadTransfer({
   await createNotifications(notifications);
 }
 
+// Helper to notify LEADS role when CNR leads are returned
+export async function notifyLeadReturnedToCNR({
+  leadId,
+  customerName,
+  phone,
+  productName,
+  actorId,
+  actorName,
+}: {
+  leadId: string;
+  customerName: string;
+  phone: string;
+  productName?: string;
+  actorId: string;
+  actorName: string;
+}) {
+  const notifications: CreateNotificationParams[] = [
+    // Notify LEADS role
+    {
+      type: 'LEAD_CNR',
+      title: 'Lead returned as CNR',
+      message: `${customerName} (${phone})${productName ? ` - ${productName}` : ''} returned to CNR pool by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'LEADS',
+      portal: 'LEADS',
+      linkPath: '/leads/dashboard',
+      meta: { leadId, customerName, phone, productName },
+    },
+    // Notify Admin
+    {
+      type: 'LEAD_CNR',
+      title: 'Lead marked as CNR',
+      message: `${customerName} (${phone}) marked as CNR by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'ADMIN',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { leadId, customerName, phone, productName },
+    },
+  ];
+
+  await createNotifications(notifications);
+}
+
 // Helper to create order confirmed notification
 export async function notifyOrderConfirmed({
   orderId,
@@ -369,4 +415,43 @@ export async function notifyLogisticsExport({
       meta: { count, partnerName },
     },
   ]);
+}
+
+// Helper for logistics order status updates - notify order owner
+export async function notifyLogisticsStatusUpdate({
+  orderId,
+  customerName,
+  newStatus,
+  orderOwnerUserId,
+  actorId,
+  actorName,
+}: {
+  orderId: string;
+  customerName: string;
+  newStatus: string;
+  orderOwnerUserId?: string;
+  actorId: string;
+  actorName: string;
+}) {
+  const statusLabel = newStatus.replace(/_/g, ' ').toLowerCase();
+  const notifications: CreateNotificationParams[] = [];
+
+  // Notify the order owner (sales person/calling staff)
+  if (orderOwnerUserId) {
+    notifications.push({
+      type: 'DELIVERY_UPDATED',
+      title: 'Your order status updated',
+      message: `Order for ${customerName} updated to "${statusLabel}" by logistics`,
+      actorId,
+      actorName,
+      targetUserId: orderOwnerUserId,
+      portal: 'CALLING',
+      linkPath: '/calling/orders',
+      meta: { orderId, customerName, newStatus },
+    });
+  }
+
+  if (notifications.length > 0) {
+    await createNotifications(notifications);
+  }
 }

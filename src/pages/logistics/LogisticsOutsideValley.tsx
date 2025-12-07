@@ -108,6 +108,7 @@ export default function LogisticsOutsideValley() {
     deliveryLocation: 'OUTSIDE_VALLEY',
     sentToLogistics: includeNotSent ? undefined : true,
   });
+  const updateOrderStatus = useUpdateOrderStatus();
 
   // Real-time subscription
   useEffect(() => {
@@ -159,16 +160,11 @@ export default function LogisticsOutsideValley() {
   const deliveryRate = totalOrders > 0 ? ((deliveredOrders.length / totalOrders) * 100).toFixed(1) : '0';
 
   const handleStatusChange = async (orderId: string, status: string) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({ order_status: status as any })
-      .eq('id', orderId);
-    if (error) {
-      toast.error('Failed to update status');
-    } else {
-      toast.success('Status updated');
-      refetch();
-    }
+    await updateOrderStatus.mutateAsync({
+      orderId,
+      orderStatus: status as any,
+      notifyOwner: true,
+    });
   };
 
   const handlePaymentChange = async (orderId: string, status: string) => {
