@@ -2,14 +2,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BranchSelect } from '@/components/BranchSelect';
+import { Trash2, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
+import { useLeadSources } from '@/hooks/useLeadSources';
 import { useStaff } from '@/hooks/useStaff';
-import { useCustomerInsight } from '@/hooks/useCustomerInsight';
-import { CustomerInsightCard } from '@/components/customers/CustomerInsightCard';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,248 +17,231 @@ interface AdminAddLeadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface LeadRow {
+  id: string;
+  date: string;
+  client_name: string;
+  contact_number: string;
+  alt_phone: string;
+  product_id: string;
+  source_id: string;
+  remark: string;
+}
+
 export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogProps) {
   const { profile } = useAuth();
   const { data: products = [] } = useProducts();
-  const { data: callingStaff = [] } = useStaff('CALLING');
-  const { data: followupStaff = [] } = useStaff('FOLLOWUP');
+  const { data: sources = [] } = useLeadSources();
   const queryClient = useQueryClient();
-  
-  const allAssignableStaff = [...callingStaff, ...followupStaff];
-  
-  const [form, setForm] = useState({
+
+  // Find default source (Facebook Ads)
+  const defaultSourceId = sources.find(s => s.name.toLowerCase().includes('facebook'))?.id || '';
+
+  const createEmptyRow = (): LeadRow => ({
+    id: crypto.randomUUID(),
     date: new Date().toISOString().split('T')[0],
     client_name: '',
     contact_number: '',
     alt_phone: '',
     product_id: '',
-    branch_id: '',
-    destination_branch: '',
-    full_address: '',
-    status: 'NEW',
-    assigned_to_user_id: '',
+    source_id: defaultSourceId,
+    remark: '',
   });
+
+  const [rows, setRows] = useState<LeadRow[]>([createEmptyRow()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Customer insight check using hook
-  const { data: customerInsight, isLoading: insightLoading } = useCustomerInsight(form.contact_number, open);
+  // Update default source when sources load
+  useEffect(() => {
+    if (defaultSourceId && rows.every(r => !r.source_id)) {
+      setRows(rows.map(row => ({ ...row, source_id: defaultSourceId })));
+    }
+  }, [defaultSourceId]);
 
-  const resetForm = () => {
-    setForm({
-      date: new Date().toISOString().split('T')[0],
-      client_name: '',
-      contact_number: '',
-      alt_phone: '',
-      product_id: '',
-      branch_id: '',
-      destination_branch: '',
-      full_address: '',
-      status: 'NEW',
-      assigned_to_user_id: '',
-    });
+  // Reset when dialog opens
+  useEffect(() => {
+    if (open) {
+      setRows([createEmptyRow()]);
+    }
+  }, [open]);
+
+  const addRows = (count: number) => {
+    const newRows = Array.from({ length: count }, () => createEmptyRow());
+    setRows([...rows, ...newRows]);
+  };
+
+  const deleteRow = (id: string) => {
+    if (rows.length === 1) {
+      toast.error('Cannot delete the last row');
+      return;
+    }
+    setRows(rows.filter(row => row.id !== id));
+  };
+
+  const updateRow = (id: string, field: keyof LeadRow, value: string) => {
+    setRows(rows.map(row => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
   const handleSubmit = async () => {
-    if (!form.client_name.trim()) {
-      toast.error('Customer name is required');
-      return;
-    }
-    if (!form.contact_number.trim()) {
-      toast.error('Phone number is required');
-      return;
-    }
-    if (!form.product_id) {
-      toast.error('Product is required');
+    const invalidRows = rows.filter(
+      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id || !row.source_id
+    );
+
+    if (invalidRows.length > 0) {
+      toast.error(`Please fill required fields (${invalidRows.length} incomplete)`);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const leadData: any = {
-        date: form.date,
-        client_name: form.client_name.trim(),
-        contact_number: form.contact_number.trim(),
-        alt_phone: form.alt_phone.trim() || null,
-        product_id: form.product_id,
-        branch_id: form.branch_id || null,
-        destination_branch: form.destination_branch || null,
-        full_address: form.full_address.trim() || null,
-        status: form.status as any,
+      const leadsToInsert = rows.map(row => ({
+        date: row.date,
+        client_name: row.client_name.trim(),
+        contact_number: row.contact_number.trim(),
+        alt_phone: row.alt_phone.trim() || null,
+        product_id: row.product_id,
+        source_id: row.source_id,
+        remark: row.remark.trim() || null,
         created_by_user_id: profile?.id,
-        lead_bucket: 'NEW',
-        current_team: 'LEADS',
-        pool_status: 'IN_POOL',
-      };
+        created_by_staff_id: profile?.id,
+        status: 'NEW' as const,
+        current_team: 'LEADS' as const,
+        lead_bucket: 'NEW' as const,
+        pool_status: 'IN_POOL' as const,
+      }));
 
-      // If assigned to someone, set assignment fields
-      if (form.assigned_to_user_id && form.assigned_to_user_id !== '__NONE__') {
-        leadData.assigned_to_user_id = form.assigned_to_user_id;
-        leadData.assigned_at = new Date().toISOString();
-        leadData.pool_status = 'ASSIGNED';
-        
-        // Determine current_team based on assigned staff's role
-        const assignedStaff = allAssignableStaff.find(s => s.id === form.assigned_to_user_id);
-        if (assignedStaff) {
-          leadData.current_team = assignedStaff.role as 'CALLING' | 'FOLLOWUP' | 'LEADS';
-        }
-      }
-
-      const { error } = await supabase
-        .from('leads')
-        .insert(leadData);
-
+      const { error } = await supabase.from('leads').insert(leadsToInsert);
       if (error) throw error;
 
-      toast.success('Lead created successfully');
+      toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      resetForm();
       onOpenChange(false);
+      setRows([createEmptyRow()]);
     } catch (error: any) {
-      toast.error(`Failed to add lead: ${error.message}`);
+      toast.error(`Failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(value) => {
-      if (!value) resetForm();
-      onOpenChange(value);
-    }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Lead</DialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="text-lg font-semibold">Add New Leads (Bulk Entry)</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="date">Date *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-            />
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {/* Table Header */}
+          <div className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <div></div>
+            <div>Date *</div>
+            <div>Customer Name *</div>
+            <div>Phone *</div>
+            <div>Alt Phone</div>
+            <div>Product *</div>
+            <div>Source *</div>
+            <div>Remark</div>
+            <div></div>
           </div>
 
+          {/* Table Rows */}
           <div className="space-y-2">
-            <Label htmlFor="client_name">Customer Name *</Label>
-            <Input
-              id="client_name"
-              value={form.client_name}
-              onChange={(e) => setForm({ ...form, client_name: e.target.value })}
-              placeholder="Enter customer name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contact_number">Phone Number *</Label>
-            <Input
-              id="contact_number"
-              value={form.contact_number}
-              onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
-              placeholder="Enter phone number"
-            />
-            <CustomerInsightCard 
-              insight={customerInsight} 
-              isLoading={insightLoading} 
-              phone={form.contact_number} 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="alt_phone">Alternate Phone</Label>
-            <Input
-              id="alt_phone"
-              value={form.alt_phone}
-              onChange={(e) => setForm({ ...form, alt_phone: e.target.value })}
-              placeholder="Enter alternate phone (optional)"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="product">Product *</Label>
-            <Select value={form.product_id} onValueChange={(value) => setForm({ ...form, product_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.filter(p => p.is_active).map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Branch</Label>
-            <BranchSelect
-              value={form.branch_id}
-              onChange={(branchId, branch) => setForm({ 
-                ...form, 
-                branch_id: branchId || '',
-                destination_branch: branch?.branch_name || '' 
-              })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="full_address">Full Address</Label>
-            <Textarea
-              id="full_address"
-              value={form.full_address}
-              onChange={(e) => setForm({ ...form, full_address: e.target.value })}
-              placeholder="Enter full delivery address"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
-            <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="NEW">New</SelectItem>
-                <SelectItem value="ASSIGNED">Assigned</SelectItem>
-                <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="CALL_NOT_RECEIVED">CNR</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="assigned_to">Assigned To (Optional)</Label>
-            <Select value={form.assigned_to_user_id} onValueChange={(value) => setForm({ ...form, assigned_to_user_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select staff or leave unassigned" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__NONE__">Unassigned (Pool)</SelectItem>
-                {allAssignableStaff.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.name} ({staff.role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {rows.map((row, index) => (
+              <div 
+                key={row.id} 
+                className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 items-center"
+              >
+                <div className="text-sm font-medium text-muted-foreground">#{index + 1}</div>
+                
+                <Input 
+                  type="date" 
+                  value={row.date} 
+                  onChange={(e) => updateRow(row.id, 'date', e.target.value)} 
+                  className="h-9 text-sm"
+                />
+                
+                <Input 
+                  value={row.client_name} 
+                  onChange={(e) => updateRow(row.id, 'client_name', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Customer name"
+                />
+                
+                <Input 
+                  value={row.contact_number} 
+                  onChange={(e) => updateRow(row.id, 'contact_number', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Phone"
+                />
+                
+                <Input 
+                  value={row.alt_phone} 
+                  onChange={(e) => updateRow(row.id, 'alt_phone', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Optional"
+                />
+                
+                <Select value={row.product_id} onValueChange={(v) => updateRow(row.id, 'product_id', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.filter(p => p.is_active).map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={row.source_id} onValueChange={(v) => updateRow(row.id, 'source_id', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sources.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Input 
+                  value={row.remark} 
+                  onChange={(e) => updateRow(row.id, 'remark', e.target.value)} 
+                  className="h-9 text-sm"
+                  placeholder="Remark"
+                />
+                
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => deleteRow(row.id)} 
+                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Adding...' : 'Add Lead'}
-          </Button>
+        <DialogFooter className="px-6 py-4 border-t flex-row justify-between bg-muted/30">
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add 1
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addRows(5)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add 5
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : `Create ${rows.length}`}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
