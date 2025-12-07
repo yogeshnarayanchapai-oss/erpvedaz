@@ -1,0 +1,77 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export interface PartyTransaction {
+  id: string;
+  party_id: string;
+  date: string;
+  product_id: string | null;
+  warehouse_id: string | null;
+  qty: number | null;
+  rate: number | null;
+  amount: number;
+  direction: 'RECEIVABLE' | 'PAYABLE';
+  source: 'STOCK_IN' | 'WHOLESALE_OUT' | 'ADJUSTMENT';
+  reference: string | null;
+  remarks: string | null;
+  created_at: string;
+  products?: { id: string; name: string };
+  warehouses?: { id: string; name: string };
+}
+
+export function usePartyTransactions(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
+  return useQuery({
+    queryKey: ['party-transactions', partyId, filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('party_transactions')
+        .select(`
+          *,
+          products:product_id(id, name),
+          warehouses:warehouse_id(id, name)
+        `)
+        .eq('party_id', partyId)
+        .order('date', { ascending: false });
+
+      if (filters?.startDate) {
+        query = query.gte('date', filters.startDate);
+      }
+      if (filters?.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+      if (filters?.productId) {
+        query = query.eq('product_id', filters.productId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as PartyTransaction[];
+    },
+    enabled: !!partyId,
+  });
+}
+
+export function useCreatePartyTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (transaction: Omit<PartyTransaction, 'id' | 'created_at' | 'products' | 'warehouses'>) => {
+      const { data, error } = await supabase
+        .from('party_transactions')
+        .insert(transaction)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      toast.success('Transaction recorded');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create transaction: ${error.message}`);
+    },
+  });
+}

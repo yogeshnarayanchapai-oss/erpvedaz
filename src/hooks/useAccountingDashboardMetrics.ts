@@ -1,0 +1,202 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+
+export interface AccountBalance {
+  id: string;
+  name: string;
+  type: string;
+  current_balance: number;
+  currency: string;
+}
+
+export interface DashboardMetrics {
+  netWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  totalIncome: number;
+  totalExpense: number;
+  profitLoss: number;
+  receivableOutstanding: number;
+  payableOutstanding: number;
+  assetAccounts: AccountBalance[];
+  liabilityAccounts: AccountBalance[];
+}
+
+// Account types that are considered assets
+const ASSET_TYPES = ['cash', 'bank', 'savings', 'investment', 'receivable', 'asset'];
+// Account types that are considered liabilities
+const LIABILITY_TYPES = ['credit_card', 'loan', 'payable', 'liability'];
+
+export function useAccountingDashboardMetrics(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['dashboard-metrics', startDate, endDate],
+    queryFn: async () => {
+      // Get all active accounts with their balances
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('id, name, type, current_balance, currency')
+        .eq('is_active', true);
+      
+      // Separate assets and liabilities based on account type
+      const assetAccounts: AccountBalance[] = [];
+      const liabilityAccounts: AccountBalance[] = [];
+      
+      accounts?.forEach(acc => {
+        const accountType = acc.type?.toLowerCase() || '';
+        const balance = acc.current_balance || 0;
+        
+        if (LIABILITY_TYPES.some(t => accountType.includes(t))) {
+          liabilityAccounts.push(acc as AccountBalance);
+        } else {
+          // Default to asset if not explicitly a liability
+          assetAccounts.push(acc as AccountBalance);
+        }
+      });
+      
+      const totalAssets = assetAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+      const totalLiabilities = liabilityAccounts.reduce((sum, acc) => sum + Math.abs(acc.current_balance || 0), 0);
+      const netWorth = totalAssets - totalLiabilities;
+
+      // Get income for period from transactions table
+      const { data: incomeData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .in('type', ['income', 'invoice_receipt'])
+        .gte('date', startDate)
+        .lte('date', endDate);
+      
+      const totalIncome = incomeData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+      // Get expenses for period from transactions table
+      const { data: expenseData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .in('type', ['expense', 'bill_payment'])
+        .gte('date', startDate)
+        .lte('date', endDate);
+      
+      const totalExpense = expenseData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+      // Get receivables and payables from party transactions and payments
+      const [{ data: transactions }, { data: payments }] = await Promise.all([
+        supabase.from('party_transactions').select('party_id, direction, amount'),
+        supabase.from('party_payments').select('party_id, payment_type, amount'),
+      ]);
+
+      // Calculate totals per party
+      const partyBalances = new Map<string, { receivable: number; payable: number; received: number; paid: number }>();
+      
+      transactions?.forEach(tx => {
+        const current = partyBalances.get(tx.party_id) || { receivable: 0, payable: 0, received: 0, paid: 0 };
+        if (tx.direction === 'RECEIVABLE') {
+          current.receivable += tx.amount || 0;
+        } else if (tx.direction === 'PAYABLE') {
+          current.payable += tx.amount || 0;
+        }
+        partyBalances.set(tx.party_id, current);
+      });
+
+      payments?.forEach(payment => {
+        const current = partyBalances.get(payment.party_id) || { receivable: 0, payable: 0, received: 0, paid: 0 };
+        if (payment.payment_type === 'RECEIVED') {
+          current.received += payment.amount || 0;
+        } else if (payment.payment_type === 'PAID') {
+          current.paid += payment.amount || 0;
+        }
+        partyBalances.set(payment.party_id, current);
+      });
+      
+      let receivableOutstanding = 0;
+      let payableOutstanding = 0;
+      
+      partyBalances.forEach(balance => {
+        const netReceivable = balance.receivable - balance.received;
+        const netPayable = balance.payable - balance.paid;
+        
+        if (netReceivable > 0) {
+          receivableOutstanding += netReceivable;
+        }
+        if (netPayable > 0) {
+          payableOutstanding += netPayable;
+        }
+      });
+
+      return {
+        netWorth,
+        totalAssets,
+        totalLiabilities,
+        totalIncome,
+        totalExpense,
+        profitLoss: totalIncome - totalExpense,
+        receivableOutstanding,
+        payableOutstanding,
+        assetAccounts,
+        liabilityAccounts,
+      } as DashboardMetrics;
+    },
+  });
+}
+
+export function useNetWorthOverTime() {
+  return useQuery({
+    queryKey: ['net-worth-over-time'],
+    queryFn: async () => {
+      // Get last 12 months of data
+      const months = [];
+      for (let i = 11; i >= 0; i--) {
+        const date = subMonths(new Date(), i);
+        const start = format(startOfMonth(date), 'yyyy-MM-dd');
+        const end = format(endOfMonth(date), 'yyyy-MM-dd');
+        
+        // This is a simplified calculation - in production, you'd want to calculate
+        // actual account balances as of the end of each month
+        const { data: transactions } = await supabase
+          .from('transactions')
+          .select('amount, type')
+          .gte('date', start)
+          .lte('date', end);
+        
+        const income = transactions?.filter(t => ['income', 'invoice_receipt'].includes(t.type))
+          .reduce((sum, t) => sum + t.amount, 0) || 0;
+        const expense = transactions?.filter(t => ['expense', 'bill_payment'].includes(t.type))
+          .reduce((sum, t) => sum + t.amount, 0) || 0;
+        
+        months.push({
+          month: format(date, 'MMM'),
+          value: income - expense,
+        });
+      }
+      
+      return months;
+    },
+  });
+}
+
+export function useExpenseByCategory(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['expense-by-category', startDate, endDate],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('transactions')
+        .select(`
+          amount,
+          transaction_categories:category_id(name)
+        `)
+        .eq('type', 'expense')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      
+      const categoryTotals = new Map<string, number>();
+      data?.forEach(t => {
+        const categoryName = t.transaction_categories?.name || 'Uncategorized';
+        categoryTotals.set(categoryName, (categoryTotals.get(categoryName) || 0) + t.amount);
+      });
+      
+      return Array.from(categoryTotals.entries())
+        .map(([name, amount]) => ({ name, amount }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10); // Top 10 categories
+    },
+  });
+}

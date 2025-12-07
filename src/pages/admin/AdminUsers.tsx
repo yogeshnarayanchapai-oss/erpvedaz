@@ -1,0 +1,785 @@
+import { useState, useMemo } from 'react';
+import { useStaff, StaffMember, ALL_ROLES, AppRole } from '@/hooks/useStaff';
+import { useEmployees } from '@/hooks/useHRM';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+
+const roleColors: Record<string, string> = {
+  ADMIN: 'bg-primary/10 text-primary border-primary/20',
+  LEADS: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  CALLING: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  FOLLOWUP: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  LOGISTICS: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  MARKETING: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+  MANAGER: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  HR: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+};
+
+// Generate a secure random password
+function generatePassword(length = 12): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*';
+  const all = uppercase + lowercase + numbers + special;
+  
+  let password = '';
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += special[Math.floor(Math.random() * special.length)];
+  
+  for (let i = password.length; i < length; i++) {
+    password += all[Math.floor(Math.random() * all.length)];
+  }
+  
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+export default function AdminUsers() {
+  const { profile } = useAuth();
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
+  
+  // Determine includeInactive based on statusFilter
+  const includeInactive = statusFilter === 'ALL' || statusFilter === 'INACTIVE';
+  
+  const { data: staff = [], isLoading } = useStaff(undefined, includeInactive);
+  const { data: employees = [] } = useEmployees();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<StaffMember | null>(null);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<StaffMember | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<StaffMember | null>(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+const usersWithEmployee = useMemo(() => {
+    const map = new Map<string, string>();
+    employees.forEach(e => {
+      if (e.user_id) map.set(e.user_id, e.id);
+    });
+    return map;
+  }, [employees]);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'CALLING' as AppRole,
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    phone: '',
+    role: 'CALLING' as AppRole,
+  });
+
+  const filteredStaff = staff.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.email.toLowerCase().includes(search.toLowerCase());
+    const matchesRole = roleFilter === 'ALL' || s.role === roleFilter;
+    
+    // Status filtering is now done at DB level, but we need additional client-side filtering
+    // when statusFilter is 'INACTIVE' (since DB returns all when includeInactive=true but we want only inactive)
+    const matchesStatus = statusFilter === 'ALL' || 
+      (statusFilter === 'ACTIVE' && s.is_active) ||
+      (statusFilter === 'INACTIVE' && !s.is_active);
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+
+  const handleToggleStatus = async (user: StaffMember) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: !user.is_active })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      toast.success(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } catch (error: any) {
+      toast.error(`Failed to update status: ${error.message}`);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: AppRole) => {
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
+
+      if (roleError) throw roleError;
+
+      toast.success('Role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } catch (error: any) {
+      toast.error(`Failed to update role: ${error.message}`);
+    }
+  };
+
+  const openEditDialog = (user: StaffMember) => {
+    setEditingUser(user);
+    setEditFormData({
+      name: user.name,
+      phone: user.phone || '',
+      role: user.role,
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          name: editFormData.name,
+          phone: editFormData.phone || null,
+          role: editFormData.role,
+        })
+        .eq('id', editingUser.id);
+
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: editFormData.role })
+        .eq('user_id', editingUser.id);
+
+      if (roleError) throw roleError;
+
+      toast.success('User updated successfully');
+      setIsEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } catch (error: any) {
+      toast.error(`Failed to update: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser) return;
+
+    // Validation
+    if (!newPassword || !confirmNewPassword) {
+      toast.error("Please fill in both password fields.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    setIsResettingPassword(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
+            userId: resetPasswordUser.id,
+            newPassword
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset password');
+      }
+
+      toast.success("Password reset successfully. Share the new password with the user.");
+
+      // Close modal and reset form
+      setIsResetPasswordOpen(false);
+      setResetPasswordUser(null);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      toast.error(error.message || "Failed to reset password. Please try again.");
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setCreatedCredentials(null);
+
+    const tempPassword = generatePassword();
+
+    try {
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          password: tempPassword,
+          name: formData.name,
+          phone: formData.phone || null,
+          role: formData.role,
+        },
+      });
+
+      // Handle edge function errors (non-2xx responses)
+      if (response.error) {
+        // Try to extract error message from the response
+        let errorMsg = 'Failed to create user';
+        
+        // Check if the error context contains our JSON response
+        const errorContext = (response.error as any)?.context;
+        if (errorContext?.body) {
+          try {
+            const parsedBody = JSON.parse(errorContext.body);
+            if (parsedBody.error) {
+              errorMsg = parsedBody.error;
+            }
+          } catch {
+            // Not JSON, use the raw message
+          }
+        }
+        
+        // Fallback to error message if available
+        if (errorMsg === 'Failed to create user' && response.error.message) {
+          // Check if message contains JSON
+          const jsonMatch = response.error.message.match(/\{.*"error":\s*"([^"]+)"/);
+          if (jsonMatch) {
+            errorMsg = jsonMatch[1];
+          } else {
+            errorMsg = response.error.message;
+          }
+        }
+        
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Handle application-level errors from edge function
+      if (response.data?.error) {
+        toast.error(response.data.error);
+        return;
+      }
+
+      // Success
+      setCreatedCredentials({ email: formData.email, password: tempPassword });
+      toast.success('User created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast.error(error.message || 'Failed to create user');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseAddDialog = () => {
+    setIsOpen(false);
+    setCreatedCredentials(null);
+    setFormData({ name: '', email: '', phone: '', role: 'CALLING' });
+    setShowPassword(false);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  const handleCreateEmployee = (user: StaffMember) => {
+    navigate(`/hrm/employees?prefillUser=${user.id}`);
+  };
+
+  const openDeleteDialog = (user: StaffMember) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', userToDelete.id);
+
+      if (error) throw error;
+
+      toast.success('User deleted successfully');
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } catch (error: any) {
+      toast.error(`Failed to delete user: ${error.message}`);
+    }
+  };
+
+  const canDeleteUser = (user: StaffMember): boolean => {
+    // Only ADMIN can delete
+    if (profile?.role !== 'ADMIN') return false;
+    // Cannot delete yourself
+    if (profile?.id === user.id) return false;
+    return true;
+  };
+
+  const activeCount = staff.filter(s => s.is_active).length;
+  const inactiveCount = staff.filter(s => !s.is_active).length;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Users Management</h1>
+          <p className="text-muted-foreground">
+            {activeCount} active, {inactiveCount} inactive users
+          </p>
+        </div>
+        <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleCloseAddDialog()}>
+          <DialogTrigger asChild>
+            <Button onClick={() => {
+              setFormData({ name: '', email: '', phone: '', role: 'CALLING' });
+              setCreatedCredentials(null);
+            }}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{createdCredentials ? 'User Created Successfully' : 'Add New User'}</DialogTitle>
+            </DialogHeader>
+            
+            {createdCredentials ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-3">
+                    Share these credentials with the new user:
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Email</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input value={createdCredentials.email} readOnly className="font-mono text-sm" />
+                        <Button size="icon" variant="outline" onClick={() => copyToClipboard(createdCredentials.email)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Temporary Password</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input 
+                          type={showPassword ? 'text' : 'password'} 
+                          value={createdCredentials.password} 
+                          readOnly 
+                          className="font-mono text-sm" 
+                        />
+                        <Button size="icon" variant="outline" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                        <Button size="icon" variant="outline" onClick={() => copyToClipboard(createdCredentials.password)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The user should change their password after first login.
+                </p>
+                <Button onClick={handleCloseAddDialog} className="w-full">Done</Button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    placeholder="john@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone (optional)</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+977 98XXXXXXXX"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role *</Label>
+                  <Select value={formData.role} onValueChange={(v: AppRole) => setFormData({ ...formData, role: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALL_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
+                  A secure temporary password will be generated automatically.
+                </div>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating...' : 'Create User'}
+                </Button>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Phone</Label>
+              <Input
+                id="edit-phone"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editFormData.role} onValueChange={(v: AppRole) => setEditFormData({ ...editFormData, role: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Staff Members
+            </CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative w-48">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Roles</SelectItem>
+                  {ALL_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="ALL">All Status</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="table-header">Name</TableHead>
+                  <TableHead className="table-header">Email</TableHead>
+                  <TableHead className="table-header">Phone</TableHead>
+                  <TableHead className="table-header">Role</TableHead>
+                  <TableHead className="table-header">Employee</TableHead>
+                  <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStaff.map((user) => {
+                  const hasEmployee = usersWithEmployee.has(user.id);
+                  return (
+                    <TableRow key={user.id} className={!user.is_active ? 'opacity-60' : ''}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.phone || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={roleColors[user.role]}>
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {hasEmployee ? (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 cursor-pointer"
+                            onClick={() => navigate('/hrm/employees')}
+                          >
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            Linked
+                          </Badge>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 text-xs"
+                            onClick={() => handleCreateEmployee(user)}
+                          >
+                            <UserPlus className="w-3 h-3 mr-1" />
+                            Create
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(user)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleStatus(user)}
+                          >
+                            {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          </Button>
+                          {(profile?.role === 'ADMIN') && user.id !== profile.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                              onClick={() => {
+                                setResetPasswordUser(user);
+                                setIsResetPasswordOpen(true);
+                              }}
+                              title="Reset Password"
+                            >
+                              <KeyRound className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {canDeleteUser(user) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => openDeleteDialog(user)}
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredStaff.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{userToDelete?.name}</strong>? This will remove their access to Vakari Vision. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Reset password for {resetPasswordUser?.name} ({resetPasswordUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 8 characters)"
+                disabled={isResettingPassword}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+              <Input
+                id="confirmNewPassword"
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                disabled={isResettingPassword}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsResetPasswordOpen(false);
+                setResetPasswordUser(null);
+                setNewPassword('');
+                setConfirmNewPassword('');
+              }}
+              disabled={isResettingPassword}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={isResettingPassword}
+              variant="destructive"
+            >
+              {isResettingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Save New Password'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

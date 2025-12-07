@@ -1,0 +1,463 @@
+import { useState, useMemo, useEffect } from 'react';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { Package, Search, Download, Eye, MessageCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { useOrders } from '@/hooks/useOrders';
+import { useAuth } from '@/contexts/AuthContext';
+import { FormattedDate } from '@/components/FormattedDate';
+import { toast } from 'sonner';
+
+const orderStatusColors: Record<string, string> = {
+  CONFIRMED: 'bg-success/10 text-success border-success/20',
+  PACKED: 'bg-info/10 text-info border-info/20',
+  DISPATCHED: 'bg-primary/10 text-primary border-primary/20',
+  DELIVERED: 'bg-chart-2/10 text-chart-2 border-chart-2/20',
+  RETURNED: 'bg-destructive/10 text-destructive border-destructive/20',
+  REDIRECT: 'bg-warning/10 text-warning border-warning/20',
+  CANCELLED: 'bg-muted text-muted-foreground border-muted-foreground/20',
+  PENDING: 'bg-secondary/50 text-secondary-foreground border-secondary/20',
+};
+
+const paymentStatusColors: Record<string, string> = {
+  PENDING: 'bg-warning/10 text-warning border-warning/20',
+  PAID: 'bg-success/10 text-success border-success/20',
+  COD: 'bg-info/10 text-info border-info/20',
+};
+
+export default function CallingMyOrders() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const today = new Date();
+
+  // Date range state
+  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: startOfDay(today),
+    to: endOfDay(today),
+  });
+
+  // Filter states
+  const [search, setSearch] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
+  const [selectedPayment, setSelectedPayment] = useState<string>('all');
+
+  // Update date range when tab changes
+  useEffect(() => {
+    if (activeTab === 'today') {
+      setDateRange({
+        from: startOfDay(today),
+        to: endOfDay(today),
+      });
+    } else {
+      setDateRange({
+        from: startOfDay(subDays(today, 30)),
+        to: endOfDay(today),
+      });
+    }
+  }, [activeTab]);
+
+  const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
+  const dateTo = format(dateRange.to, 'yyyy-MM-dd');
+
+  const { data: orders = [], isLoading } = useOrders({
+    salesPersonId: profile?.id,
+    dateFrom,
+    dateTo,
+  });
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
+      const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
+      const matchesPayment = selectedPayment === 'all' || 
+        (selectedPayment === 'COD' && order.is_cod) || 
+        (selectedPayment === 'ONLINE' && !order.is_cod);
+      const matchesSearch =
+        !search ||
+        order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+        order.leads?.contact_number?.includes(search) ||
+        order.id.toLowerCase().includes(search.toLowerCase());
+      return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
+    });
+  }, [orders, selectedStatus, selectedDelivery, selectedPayment, search]);
+
+  // Helper to calculate order total from order_items or fallback
+  const getOrderTotal = (order: any) => {
+    const orderItems = order.order_items || [];
+    if (orderItems.length > 0) {
+      return orderItems.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
+    }
+    return (order.amount || 0) * (order.quantity || 1);
+  };
+
+  // Calculate stats
+  const totalOrders = filteredOrders.length;
+  const insideValleyOrders = filteredOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
+  const outsideValleyOrders = filteredOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+  const totalAmount = filteredOrders.reduce((sum, o) => sum + getOrderTotal(o), 0);
+  
+  // Performance stats
+  const deliveredCount = filteredOrders.filter(o => o.order_status === 'DELIVERED').length;
+  const insideDelivered = filteredOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY' && o.order_status === 'DELIVERED').length;
+  const insidePending = filteredOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY' && o.order_status !== 'DELIVERED' && o.order_status !== 'CANCELLED').length;
+  const outsideDelivered = filteredOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY' && o.order_status === 'DELIVERED').length;
+  const outsidePending = filteredOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY' && o.order_status !== 'DELIVERED' && o.order_status !== 'CANCELLED').length;
+  const deliverySuccessRate = totalOrders > 0 ? ((deliveredCount / totalOrders) * 100).toFixed(1) : '0.0';
+
+  const getDeliveryLocationLabel = (location: string | null) => {
+    if (location === 'INSIDE_VALLEY') return 'Inside Valley';
+    if (location === 'OUTSIDE_VALLEY') return 'Outside Valley';
+    return '';
+  };
+
+  const handleReset = () => {
+    setSearch('');
+    setSelectedStatus('all');
+    setSelectedDelivery('all');
+    setSelectedPayment('all');
+    setActiveTab('today');
+  };
+
+  const handleInsideValleyClick = () => {
+    setSelectedDelivery('INSIDE_VALLEY');
+    toast.info('Filtered to Inside Valley orders');
+  };
+
+  const exportCSV = () => {
+    const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Payment', 'Delivery', 'Branch', 'Status', 'Order By'];
+    const rows = filteredOrders.map((order) => {
+      // Handle multi-product orders
+      const orderItemsList = (order as any).order_items || [];
+      const productDisplay = orderItemsList.length > 0 
+        ? orderItemsList.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
+        : `${order.products?.name || '-'} x${order.quantity || 1}`;
+      const totalQty = orderItemsList.length > 0
+        ? orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+        : order.quantity || 1;
+      const totalAmount = orderItemsList.length > 0
+        ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
+        : (order.amount || 0) * (order.quantity || 1);
+      const orderBy = (order as any).created_by_staff?.name || order.sales_person?.name || '-';
+      
+      return [
+        order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd HH:mm') : '',
+        order.leads?.client_name || '',
+        order.leads?.contact_number || '',
+        productDisplay,
+        totalQty,
+        totalAmount,
+        order.is_cod ? 'COD' : 'Online',
+        getDeliveryLocationLabel(order.delivery_location),
+        order.destination_branch || '',
+        order.order_status || '',
+        orderBy,
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my_orders_${dateFrom}_to_${dateTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Orders exported to CSV');
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">My Orders</h1>
+          <p className="text-muted-foreground">Orders you have confirmed</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
+            <TabsList>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="all">All Orders</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button onClick={exportCSV} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Orders"
+          value={totalOrders}
+          icon={<Package className="h-5 w-5" />}
+          variant="default"
+        />
+        <StatCard
+          title="Inside Valley"
+          value={insideValleyOrders}
+          icon={<Package className="h-5 w-5" />}
+          variant="info"
+          onClick={handleInsideValleyClick}
+          className="cursor-pointer"
+        />
+        <StatCard
+          title="Outside Valley"
+          value={outsideValleyOrders}
+          icon={<Package className="h-5 w-5" />}
+          variant="primary"
+        />
+        <StatCard
+          title="Total Amount"
+          value={`₹${totalAmount.toLocaleString()}`}
+          icon={<Package className="h-5 w-5" />}
+          variant="success"
+        />
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            {/* Search and Date Range */}
+            <div className="flex flex-wrap items-center gap-4">
+              {activeTab === 'all' && (
+                <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              )}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search order, phone, name..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button variant="outline" onClick={handleReset}>
+                Reset
+              </Button>
+            </div>
+
+            {/* Additional Filters */}
+            <div className="flex flex-wrap items-center gap-4">
+              <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Delivery Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Deliveries</SelectItem>
+                  <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
+                  <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payments</SelectItem>
+                  <SelectItem value="COD">COD</SelectItem>
+                  <SelectItem value="ONLINE">Online</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="PACKED">Packed</SelectItem>
+                  <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                  <SelectItem value="DELIVERED">Delivered</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="RETURNED">RTO</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Quick Link */}
+            <div className="text-sm">
+              <button
+                onClick={handleInsideValleyClick}
+                className="text-primary hover:underline"
+              >
+                View delivered vs pending for Inside Valley →
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Orders Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            Orders ({filteredOrders.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="table-header">Date</TableHead>
+                  <TableHead className="table-header">Client</TableHead>
+                  <TableHead className="table-header">Contact</TableHead>
+                  <TableHead className="table-header">Products</TableHead>
+                  <TableHead className="table-header text-right">Amount</TableHead>
+                  <TableHead className="table-header">Payment</TableHead>
+                  <TableHead className="table-header">Delivery</TableHead>
+                  <TableHead className="table-header">Branch</TableHead>
+                  <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      Loading orders...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      No orders found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const orderItemsList = (order as any).order_items || [];
+                    const productDisplay = orderItemsList.length > 0 
+                      ? orderItemsList.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
+                      : `${order.products?.name || '-'} x${order.quantity || 1}`;
+                    const totalAmount = orderItemsList.length > 0
+                      ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
+                      : (order.amount || 0) * (order.quantity || 1);
+                      
+                    return (
+                    <TableRow key={order.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <FormattedDate date={order.order_date} />
+                      </TableCell>
+                      <TableCell
+                        className="font-medium text-primary hover:underline cursor-pointer"
+                        onClick={() => navigate(`/calling/orders/${order.id}`)}
+                      >
+                        {order.leads?.client_name || '-'}
+                      </TableCell>
+                      <TableCell>{order.leads?.contact_number || '-'}</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <span className="line-clamp-2">{productDisplay}</span>
+                      </TableCell>
+                      <TableCell className="text-right">Rs. {totalAmount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={paymentStatusColors[order.is_cod ? 'COD' : 'PAID']}>
+                          {order.is_cod ? 'COD' : 'Online'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={order.delivery_location === 'INSIDE_VALLEY' ? 'bg-success/10 text-success' : 'bg-info/10 text-info'}
+                        >
+                          {getDeliveryLocationLabel(order.delivery_location) || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{order.destination_branch || '-'}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={orderStatusColors[order.order_status || 'CONFIRMED']}
+                        >
+                          {order.order_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/calling/orders/${order.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const phone = order.leads?.contact_number;
+                              if (phone) {
+                                window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+                              }
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Performance Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>My Performance (Orders)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Total Orders Confirmed</p>
+              <p className="text-2xl font-bold">{totalOrders}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Inside Valley</p>
+              <div className="space-y-1">
+                <p className="text-sm">Delivered: <span className="font-bold text-success">{insideDelivered}</span></p>
+                <p className="text-sm">Pending: <span className="font-bold text-warning">{insidePending}</span></p>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Outside Valley</p>
+              <div className="space-y-1">
+                <p className="text-sm">Delivered: <span className="font-bold text-success">{outsideDelivered}</span></p>
+                <p className="text-sm">Pending: <span className="font-bold text-warning">{outsidePending}</span></p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Total Amount</p>
+              <p className="text-xl font-bold text-success">₹{totalAmount.toLocaleString()}</p>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-sm text-muted-foreground">Delivery Success Rate</p>
+              <p className="text-xl font-bold">{deliverySuccessRate}%</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
