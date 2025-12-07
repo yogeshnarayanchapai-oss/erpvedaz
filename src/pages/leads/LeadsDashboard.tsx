@@ -11,13 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Send, Users, FileText, Phone, Package, ArrowRight, Clock, TrendingUp, BarChart3, PhoneOff } from 'lucide-react';
+import { Plus, Send, Users, FileText, Phone, Package, ArrowRight, Clock, TrendingUp, BarChart3, PhoneOff, FileSpreadsheet } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval, parseISO, isToday } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from 'recharts';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
+import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { TransferLeadsModal } from '@/components/leads/TransferLeadsModal';
 
 export default function LeadsDashboard() {
@@ -43,6 +44,7 @@ export default function LeadsDashboard() {
   }, [queryClient]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   
   const [analyticsDateRange, setAnalyticsDateRange] = useState<DateRange>({
@@ -205,6 +207,10 @@ export default function LeadsDashboard() {
             <Send className="w-4 h-4 mr-2" />
             Transfer Leads
           </Button>
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Import
+          </Button>
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Leads
@@ -213,6 +219,8 @@ export default function LeadsDashboard() {
       </div>
 
       <BulkAddLeadsForm open={isAddOpen} onOpenChange={setIsAddOpen} />
+
+      <ImportLeadsDialog open={isImportOpen} onOpenChange={setIsImportOpen} portalType="LEADS" />
 
       <TransferLeadsModal
         open={isTransferOpen} 

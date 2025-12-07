@@ -25,10 +25,12 @@ import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
+import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsModal';
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { toast } from 'sonner';
+import { FileSpreadsheet } from 'lucide-react';
 
 export default function AdminLeads() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,6 +75,7 @@ export default function AdminLeads() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showTransferLeadsModal, setShowTransferLeadsModal] = useState(false);
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
@@ -332,6 +335,10 @@ export default function AdminLeads() {
               <Button variant="outline" onClick={() => setShowTransferLeadsModal(true)} className="gap-2">
                 <ArrowRightLeft className="w-4 h-4" />
                 Transfer Leads
+              </Button>
+              <Button variant="outline" onClick={() => setShowImportDialog(true)} className="gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Import
               </Button>
               <Button onClick={() => setShowAddLeadDialog(true)} className="gap-2">
                 <Plus className="w-4 h-4" />
@@ -706,6 +713,13 @@ export default function AdminLeads() {
       <BulkAddLeadsForm 
         open={showAddLeadDialog} 
         onOpenChange={setShowAddLeadDialog} 
+      />
+
+      {/* Import Leads Dialog */}
+      <ImportLeadsDialog 
+        open={showImportDialog} 
+        onOpenChange={setShowImportDialog}
+        portalType="ADMIN"
       />
       
       {/* Admin Transfer Leads Modal */}
