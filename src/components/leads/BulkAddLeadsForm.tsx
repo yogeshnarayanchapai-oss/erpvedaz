@@ -5,9 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
-import { useLeadSources } from '@/hooks/useLeadSources';
 import { useBulkCreateLeads, type BulkLeadInput } from '@/hooks/useBulkCreateLeads';
 import { toast } from 'sonner';
+
+const SOURCE_OPTIONS = [
+  { value: 'Facebook Ads', label: 'Facebook Ads' },
+  { value: 'Shopify', label: 'Shopify' },
+  { value: 'Website', label: 'Website' },
+  { value: 'TikTok', label: 'TikTok' },
+  { value: 'Calling', label: 'Calling' },
+];
 
 interface BulkAddLeadsFormProps {
   open: boolean;
@@ -21,17 +28,13 @@ interface LeadRow {
   contact_number: string;
   alt_phone: string;
   product_id: string;
-  source_id: string;
+  source: string;
   remark: string;
 }
 
 export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) {
   const { data: products = [] } = useProducts();
-  const { data: sources = [] } = useLeadSources();
   const bulkCreateLeads = useBulkCreateLeads();
-
-  // Find default source (Facebook Ads)
-  const defaultSourceId = sources.find(s => s.name.toLowerCase().includes('facebook'))?.id || '';
 
   const createEmptyRow = () => ({
     id: crypto.randomUUID(),
@@ -40,18 +43,11 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
     contact_number: '',
     alt_phone: '',
     product_id: '',
-    source_id: defaultSourceId,
+    source: 'Facebook Ads',
     remark: '',
   });
 
   const [rows, setRows] = useState<LeadRow[]>([createEmptyRow()]);
-
-  // Update default source when sources load
-  useEffect(() => {
-    if (defaultSourceId && rows.every(r => !r.source_id)) {
-      setRows(rows.map(row => ({ ...row, source_id: defaultSourceId })));
-    }
-  }, [defaultSourceId]);
 
   const addRows = (count: number) => {
     const newRows = Array.from({ length: count }, () => createEmptyRow());
@@ -72,7 +68,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
 
   const handleSubmit = async () => {
     const invalidRows = rows.filter(
-      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id || !row.source_id
+      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id || !row.source
     );
 
     if (invalidRows.length > 0) {
@@ -86,7 +82,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
       contact_number: row.contact_number.trim(),
       alt_phone: row.alt_phone.trim() || undefined,
       product_id: row.product_id,
-      source_id: row.source_id,
+      source: row.source,
       remark: row.remark.trim() || undefined,
     }));
 
@@ -164,13 +160,13 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
                   </SelectContent>
                 </Select>
                 
-                <Select value={row.source_id} onValueChange={(v) => updateRow(row.id, 'source_id', v)}>
+                <Select value={row.source} onValueChange={(v) => updateRow(row.id, 'source', v)}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sources.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    {SOURCE_OPTIONS.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
