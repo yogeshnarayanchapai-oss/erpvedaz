@@ -5889,6 +5889,7 @@ export type Database = {
         | "MARKETING"
         | "MANAGER"
         | "HR"
+        | "OWNER"
       bill_status:
         | "DRAFT"
         | "PENDING"
@@ -6113,6 +6114,7 @@ export const Constants = {
         "MARKETING",
         "MANAGER",
         "HR",
+        "OWNER",
       ],
       bill_status: [
         "DRAFT",
