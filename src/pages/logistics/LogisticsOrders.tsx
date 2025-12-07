@@ -10,11 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Truck, CheckCircle, Clock, Download, Search, MapPin, Globe, History } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, Download, Search, MapPin, Globe, History, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrderHistoryTimeline } from '@/components/logistics/OrderHistoryTimeline';
 import { getOrderStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { FormattedDate } from '@/components/FormattedDate';
+import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Inside Valley specific status options
 const INSIDE_VALLEY_STATUSES = [
@@ -44,12 +46,14 @@ const paymentStatusColors: Record<string, string> = {
 type DeliveryTab = 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
 
 export default function LogisticsOrders() {
+  const { profile } = useAuth();
   const today = new Date().toISOString().split('T')[0];
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<DeliveryTab>('INSIDE_VALLEY');
   const [includeNotSent, setIncludeNotSent] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { data: orders = [], isLoading } = useOrders({
     dateFrom,
@@ -179,11 +183,23 @@ export default function LogisticsOrders() {
           <h1 className="text-2xl font-bold">Orders Management</h1>
           <p className="text-muted-foreground">Track and manage order fulfillment</p>
         </div>
-        <Button onClick={exportCSV}>
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setImportDialogOpen(true)} variant="outline">
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+          <Button onClick={exportCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
+
+      <ImportOrdersDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        portalType="LOGISTICS"
+      />
 
       {/* Tabs for Inside/Outside Valley */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DeliveryTab)}>

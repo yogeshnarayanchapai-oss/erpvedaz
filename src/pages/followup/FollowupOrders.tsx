@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw } from 'lucide-react';
+import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, Upload, Download } from 'lucide-react';
 import { useFollowupOrders, useRedirectOrder } from '@/hooks/useFollowupOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 
 export default function FollowupOrders() {
   const { user, profile } = useAuth();
@@ -32,6 +33,7 @@ export default function FollowupOrders() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [redirectRemark, setRedirectRemark] = useState('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Fetch all today's orders (no server-side filtering for delivery/status)
   // Enable sound notifications for new orders
@@ -138,6 +140,10 @@ export default function FollowupOrders() {
               <TabsTrigger value="all">All Orders</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </Button>
           {isFetching && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -146,6 +152,12 @@ export default function FollowupOrders() {
           )}
         </div>
       </div>
+
+      <ImportOrdersDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        portalType="FOLLOWUP"
+      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
