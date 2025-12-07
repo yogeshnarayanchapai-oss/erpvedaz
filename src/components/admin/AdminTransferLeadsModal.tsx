@@ -20,7 +20,7 @@ interface AdminTransferLeadsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type LeadType = 'NEW' | 'FOLLOW_UP_POOL';
+type LeadType = 'NEW' | 'FOLLOW_UP_POOL' | 'CNR_POOL';
 
 interface ProductLeadCount {
   productId: string;
@@ -242,12 +242,12 @@ export function AdminTransferLeadsModal({
         to_staff_id: staffId,
         transferred_by: user.id,
         action: 'TRANSFER',
-        notes: `Transferred ${leadType === 'NEW' ? 'new' : 'follow-up'} lead for ${productName} to ${staffName}`,
+        notes: `Transferred ${leadType === 'NEW' ? 'new' : leadType === 'FOLLOW_UP_POOL' ? 'follow-up' : 'CNR'} lead for ${productName} to ${staffName}`,
       }));
 
       await supabase.from('lead_history').insert(historyRecords);
 
-      const leadTypeLabel = leadType === 'NEW' ? 'New' : 'Follow-up';
+      const leadTypeLabel = leadType === 'NEW' ? 'New' : leadType === 'FOLLOW_UP_POOL' ? 'Follow-up' : 'CNR';
       toast.success(`Successfully transferred ${leadIds.length} ${leadTypeLabel} leads of ${productName} to ${staffName}`);
       
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -309,10 +309,11 @@ export function AdminTransferLeadsModal({
               <SelectContent>
                 <SelectItem value="NEW">New Leads</SelectItem>
                 <SelectItem value="FOLLOW_UP_POOL">Follow-up Leads</SelectItem>
+                <SelectItem value="CNR_POOL">CNR Leads</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Only products with available {leadType === 'NEW' ? 'new' : 'follow-up'} leads will be shown
+              Only products with available {leadType === 'NEW' ? 'new' : leadType === 'FOLLOW_UP_POOL' ? 'follow-up' : 'CNR'} leads will be shown
             </p>
           </div>
 
@@ -321,7 +322,7 @@ export function AdminTransferLeadsModal({
             <Info className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="text-sm">
               <span className="font-medium">
-                {leadType === 'NEW' ? 'New Leads' : 'Follow-up Leads'}:
+                {leadType === 'NEW' ? 'New Leads' : leadType === 'FOLLOW_UP_POOL' ? 'Follow-up Leads' : 'CNR Leads'}:
               </span>{' '}
               <span className="text-muted-foreground">
                 {totalAvailable} lead{totalAvailable !== 1 ? 's' : ''} available across {productLeadCounts.length} product{productLeadCounts.length !== 1 ? 's' : ''}
@@ -336,7 +337,7 @@ export function AdminTransferLeadsModal({
               <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
                 <AlertCircle className="h-4 w-4 text-amber-500" />
                 <AlertDescription className="text-sm">
-                  No leads available for {leadType === 'NEW' ? 'new' : 'follow-up'} lead type
+                  No leads available for {leadType === 'NEW' ? 'new' : leadType === 'FOLLOW_UP_POOL' ? 'follow-up' : 'CNR'} lead type
                 </AlertDescription>
               </Alert>
             ) : (
