@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Eye, RotateCcw, Package } from 'lucide-react';
 import { useFollowupOrders, useRedirectOrder } from '@/hooks/useFollowupOrders';
 import { useAuth } from '@/contexts/AuthContext';
+import { BranchSelect } from '@/components/BranchSelect';
 import { toast } from 'sonner';
 
 interface FollowupOrdersTableProps {
@@ -25,6 +26,7 @@ export function FollowupOrdersTable({ dateFrom, dateTo }: FollowupOrdersTablePro
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [redirectRemark, setRedirectRemark] = useState('');
+  const [redirectBranch, setRedirectBranch] = useState('');
 
   // Fetch all orders for date range, filter client-side for realtime to work properly
   const { data: allOrders = [], isLoading } = useFollowupOrders({
@@ -75,6 +77,7 @@ export function FollowupOrdersTable({ dateFrom, dateTo }: FollowupOrdersTablePro
   const handleOpenEdit = (order: any) => {
     setSelectedOrder(order);
     setRedirectRemark(order.delivery_notes || '');
+    setRedirectBranch(order.destination_branch || '');
     setIsEditOpen(true);
   };
 
@@ -85,6 +88,7 @@ export function FollowupOrdersTable({ dateFrom, dateTo }: FollowupOrdersTablePro
       await redirectOrder.mutateAsync({
         orderId: selectedOrder.id,
         remark: redirectRemark,
+        branch: redirectBranch !== selectedOrder.destination_branch ? redirectBranch : undefined,
         userId: user.id,
         userName: profile.name,
       });
@@ -92,6 +96,7 @@ export function FollowupOrdersTable({ dateFrom, dateTo }: FollowupOrdersTablePro
       setIsEditOpen(false);
       setSelectedOrder(null);
       setRedirectRemark('');
+      setRedirectBranch('');
     } catch (error) {
       toast.error('Failed to redirect order');
     }
@@ -280,6 +285,18 @@ export function FollowupOrdersTable({ dateFrom, dateTo }: FollowupOrdersTablePro
 
               {canRedirect(selectedOrder) && (
                 <div className="space-y-4 border-t pt-4">
+                  <div className="space-y-2">
+                    <Label>Change Branch/Area</Label>
+                    <BranchSelect
+                      value=""
+                      customValue={redirectBranch || undefined}
+                      onChange={(branchId, branch, customName) => {
+                        setRedirectBranch(branch?.branch_name || customName || '');
+                      }}
+                      placeholder="Type or select branch..."
+                      allowCustom={true}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label>Redirect Remark</Label>
                     <Textarea

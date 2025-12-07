@@ -113,12 +113,14 @@ export function useRedirectOrder() {
     mutationFn: async ({
       orderId,
       remark,
+      branch,
       userId,
       userName,
       sendToLogistics = true,
     }: {
       orderId: string;
       remark: string;
+      branch?: string;
       userId: string;
       userName: string;
       sendToLogistics?: boolean;
@@ -139,15 +141,21 @@ export function useRedirectOrder() {
       const redirectNote = `Redirected by ${userName} on ${new Date().toLocaleDateString()}`;
       const updatedRemark = remark ? `${remark}\n${redirectNote}` : redirectNote;
 
+      const updateData: any = {
+        order_status: 'REDIRECT',
+        delivery_notes: updatedRemark,
+        redirected_by_user_id: userId,
+        redirected_at: now,
+        sent_to_logistics: sendToLogistics,
+      };
+
+      if (branch) {
+        updateData.destination_branch = branch;
+      }
+
       const { error } = await supabase
         .from('orders')
-        .update({
-          order_status: 'REDIRECT',
-          delivery_notes: updatedRemark,
-          redirected_by_user_id: userId,
-          redirected_at: now,
-          sent_to_logistics: sendToLogistics,
-        })
+        .update(updateData)
         .eq('id', orderId);
 
       if (error) throw error;
