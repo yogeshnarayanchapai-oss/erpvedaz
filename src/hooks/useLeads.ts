@@ -463,23 +463,31 @@ export function useMarkAsCNR() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get lead details for notification
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('client_name, contact_number, product_id, products:product_id(name)')
-        .eq('id', leadId)
-        .single();
-
-      // Get actor name
-      const { data: actorProfile } = await supabase
+      // Get user role
+      const { data: userProfile } = await supabase
         .from('profiles')
-        .select('name')
+        .select('name, role')
         .eq('id', user.id)
         .single();
 
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+
+      // Get lead details for notification and verification
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('client_name, contact_number, product_id, assigned_to_user_id, products:product_id(name)')
+        .eq('id', leadId)
+        .single();
+
+      if (!lead) throw new Error('Lead not found');
+
+      // Verify permission: must be assigned to this lead OR be admin/manager
+      if (!isAdminOrManager && lead.assigned_to_user_id !== user.id) {
+        throw new Error('You can only mark leads assigned to you as CNR');
+      }
+
       // Update lead to CNR status and move to LEADS team for redistribution
-      // Include assigned_to_user_id filter to satisfy RLS policy
-      const { error: updateError } = await supabase
+      const { error: updateError, count } = await supabase
         .from('leads')
         .update({
           status: 'CALL_NOT_RECEIVED',
@@ -493,8 +501,7 @@ export function useMarkAsCNR() {
           returned_to_leads_at: new Date().toISOString(),
           remark: notes || 'Call Not Received',
         })
-        .eq('id', leadId)
-        .eq('assigned_to_user_id', user.id); // Ensure lead is assigned to current user
+        .eq('id', leadId);
 
       if (updateError) throw updateError;
 
@@ -520,7 +527,7 @@ export function useMarkAsCNR() {
             phone: lead.contact_number || '',
             productName: (lead.products as any)?.name,
             actorId: user.id,
-            actorName: actorProfile?.name || 'Staff',
+            actorName: userProfile?.name || 'Staff',
           });
         } catch (notifyError) {
           console.error('Failed to send notification:', notifyError);
@@ -555,6 +562,29 @@ export function useTransferToLeads() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get user role
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('name, role')
+        .eq('id', user.id)
+        .single();
+
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+
+      // Get lead details to verify ownership
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('assigned_to_user_id')
+        .eq('id', leadId)
+        .single();
+
+      if (!lead) throw new Error('Lead not found');
+
+      // Verify permission: must be assigned to this lead OR be admin/manager
+      if (!isAdminOrManager && lead.assigned_to_user_id !== user.id) {
+        throw new Error('You can only transfer leads assigned to you');
+      }
+
       // Determine status and bucket based on reason
       let status: LeadStatus;
       let leadBucket: LeadBucket;
@@ -574,7 +604,7 @@ export function useTransferToLeads() {
           break;
       }
 
-      // Update lead - include assigned_to_user_id filter to satisfy RLS policy
+      // Update lead
       const { error: updateError } = await supabase
         .from('leads')
         .update({
@@ -589,8 +619,7 @@ export function useTransferToLeads() {
           returned_to_leads_at: reason !== 'CANCELLED' ? new Date().toISOString() : undefined,
           remark: notes || undefined,
         })
-        .eq('id', leadId)
-        .eq('assigned_to_user_id', user.id); // Ensure lead is assigned to current user
+        .eq('id', leadId);
 
       if (updateError) throw updateError;
 
