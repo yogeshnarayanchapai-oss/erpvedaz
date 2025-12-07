@@ -10,45 +10,43 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.log('Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create client with service role for admin operations
+    // Create admin client with service role for all operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Create client with user's token to verify they're admin
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { autoRefreshToken: false, persistSession: false }
-      }
-    );
-
-    // Get the requesting user
-    const { data: { user: requestingUser }, error: userError } = await supabaseUser.auth.getUser();
+    // Verify JWT and get user from token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
     if (userError || !requestingUser) {
+      console.log('User verification failed:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if requesting user is ADMIN
-    const { data: adminRole } = await supabaseAdmin
+    console.log('Requesting user:', requestingUser.id);
+
+    // Check if requesting user is ADMIN using user_roles table
+    const { data: adminRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
       .eq('role', 'ADMIN')
-      .single();
+      .maybeSingle();
+
+    console.log('Admin role check:', adminRole, roleError?.message);
 
     if (!adminRole) {
       return new Response(
@@ -66,6 +64,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('Target user ID:', targetUserId);
+
     // Cannot impersonate yourself
     if (targetUserId === requestingUser.id) {
       return new Response(
@@ -77,19 +77,19 @@ Deno.serve(async (req) => {
     // Get target user email
     const { data: targetUser, error: targetError } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
     if (targetError || !targetUser?.user?.email) {
+      console.log('Target user not found:', targetError?.message);
       return new Response(
         JSON.stringify({ error: 'Target user not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('Generating magic link for:', targetUser.user.email);
+
     // Generate a magic link for the target user
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: targetUser.user.email,
-      options: {
-        redirectTo: Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || '/'
-      }
     });
 
     if (linkError || !linkData?.properties?.hashed_token) {
@@ -101,7 +101,9 @@ Deno.serve(async (req) => {
     }
 
     // Return the verification URL that can be used directly
-    const verifyUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=/`;
+    const verifyUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent('/')}`;
+
+    console.log('Magic link generated successfully');
 
     return new Response(
       JSON.stringify({ 
