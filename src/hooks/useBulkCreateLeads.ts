@@ -8,7 +8,7 @@ export interface BulkLeadInput {
   contact_number: string;
   alt_phone?: string;
   product_id: string;
-  source_id: string;
+  source?: string;
   remark?: string;
 }
 
