@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
-import { useLeadSources } from '@/hooks/useLeadSources';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const SOURCE_OPTIONS = ['Facebook Ads', 'Shopify', 'Website', 'TikTok', 'Calling'];
 
 interface ImportLeadsDialogProps {
   open: boolean;
@@ -33,7 +34,6 @@ interface ImportRow {
 export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLeadsDialogProps) {
   const { profile } = useAuth();
   const { data: products = [] } = useProducts();
-  const { data: sources = [] } = useLeadSources();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -60,7 +60,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
       '9841234567',
       '9851234567',
       products.filter(p => p.is_active)[0]?.name || 'Product Name',
-      sources[0]?.name || 'Facebook Ads',
+      'Facebook Ads',
       'Sample remark'
     ];
     
@@ -68,7 +68,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
     const productsList = products.filter(p => p.is_active).map(p => ({ 'Available Products': p.name }));
     
     // Create sources reference sheet
-    const sourcesList = sources.map(s => ({ 'Available Sources': s.name }));
+    const sourcesList = SOURCE_OPTIONS.map(s => ({ 'Available Sources': s }));
 
     const wb = XLSX.utils.book_new();
     
@@ -126,9 +126,9 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
             validationErrors.push(`Row ${index + 2}: Product "${product}" not found`);
           }
           
-          // Check if source exists
-          if (source && !sources.find(s => s.name.toLowerCase() === source.toString().toLowerCase())) {
-            validationErrors.push(`Row ${index + 2}: Source "${source}" not found`);
+          // Check if source exists in hardcoded options
+          if (source && !SOURCE_OPTIONS.find(s => s.toLowerCase() === source.toString().toLowerCase())) {
+            validationErrors.push(`Row ${index + 2}: Source "${source}" not valid. Use: ${SOURCE_OPTIONS.join(', ')}`);
           }
         });
         
@@ -159,7 +159,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
         const date = row.date || row['Date'] || new Date().toISOString().split('T')[0];
         
         const product = products.find(p => p.name.toLowerCase() === productName?.toString().toLowerCase());
-        const source = sources.find(s => s.name.toLowerCase() === sourceName?.toString().toLowerCase());
+        const sourceValue = SOURCE_OPTIONS.find(s => s.toLowerCase() === sourceName?.toString().toLowerCase()) || 'Facebook Ads';
         
         // Base lead data
         const leadData: any = {
@@ -168,7 +168,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           contact_number: phone?.toString().trim(),
           alt_phone: altPhone?.toString().trim() || null,
           product_id: product?.id,
-          source_id: source?.id,
+          source: sourceValue,
           remark: remark?.toString().trim() || null,
           created_by_user_id: profile?.id,
           created_by_staff_id: profile?.id,
