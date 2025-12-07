@@ -14,10 +14,10 @@ serve(async (req: Request) => {
     const { email, otp, userName } = await req.json();
 
     // In production, integrate with your email service (SendGrid, AWS SES, etc.)
-    console.log(`Sending OTP ${otp} to ${email} for user ${userName}`);
+    // SECURITY: Never log OTP codes - only log email for debugging
+    console.log(`Sending verification email to: ${email}`);
     
-    // Placeholder: Log the OTP for now
-    // TODO: Replace with actual email sending logic
+    // TODO: Replace with actual email sending logic (SendGrid, AWS SES, etc.)
     
     return new Response(
       JSON.stringify({ success: true, message: "Email sent successfully" }),
