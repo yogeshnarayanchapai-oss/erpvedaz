@@ -76,18 +76,29 @@ export function useNotifications() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      // For non-OWNER users, we need to filter by BOTH (user/role) AND (store)
+      // Using PostgREST filter syntax with proper AND/OR logic
       let query = supabase
         .from('notifications')
         .select('*')
-        .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // OWNER sees all notifications, others only see their store's notifications
-      if (!isOwner && currentStore?.id) {
-        // Filter to only show notifications for current store or null store_id (legacy/global)
-        query = query.or(`store_id.eq.${currentStore.id},store_id.is.null`);
+      if (isOwner) {
+        // OWNER sees all notifications for their user/role across all stores
+        query = query.or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`);
+      } else if (currentStore?.id) {
+        // Non-OWNER: must match (user OR role) AND (store OR null store)
+        // We need to filter notifications that:
+        // 1. Are targeted to this user OR this role
+        // 2. AND belong to this store OR have no store (global)
+        query = query
+          .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
+          .or(`store_id.eq.${currentStore.id},store_id.is.null`);
+      } else {
+        // Fallback: just user/role filter
+        query = query.or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`);
       }
 
       const { data, error } = await query;
