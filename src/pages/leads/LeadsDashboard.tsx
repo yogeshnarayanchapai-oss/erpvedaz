@@ -57,25 +57,33 @@ export default function LeadsDashboard() {
   // Filter leads in LEADS team pool with IN_POOL status
   const leadsInPool = allLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
   
-  // Today's leads in pool: created today OR returned today
-  const todayLeadsInPool = leadsInPool.filter(l => {
+  // Today's leads: all leads created today (New + FU + CNR combined)
+  const todayAllLeads = allLeads.filter(l => {
     const isCreatedToday = l.date === today;
     const isReturnedToday = l.returned_to_leads_at && isToday(new Date(l.returned_to_leads_at));
     return isCreatedToday || isReturnedToday;
   });
   
-  // New leads bucket count (pool_status = IN_POOL)
-  const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW');
+  // Today's breakdown
+  const todayNewCount = todayAllLeads.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED').length;
+  const todayFUCount = todayAllLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL').length;
+  const todayCNRCount = todayAllLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED').length;
+  
+  // New leads bucket count - only NEW bucket (not CNR or FU)
+  const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED');
   
   // Follow-up leads pool count
   const followupLeads = leadsInPool.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL');
   
   // CNR leads count - includes both teams (LEADS and CALLING)
   const cnrLeads = allLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
+  
+  // Total in Queue: Only NEW leads pending assignment (not CNR, not FU)
+  const totalInQueue = newLeads.length;
 
   // Calculate today's transfer progress
   // Total to transfer today = all leads in pool for today
-  const todayAllInPool = todayLeadsInPool.length;
+  const todayAllInPool = todayAllLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id).length;
   
   // Transferred today = leads assigned today (using assigned_at)
   const todayTransferredLeads = allLeads.filter(l => {
@@ -233,8 +241,8 @@ export default function LeadsDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <StatCard
           title="Today's Leads"
-          value={todayLeadsInPool.length}
-          description={`New: ${todayLeadsInPool.filter(l => l.lead_bucket === 'NEW').length} | FU: ${todayLeadsInPool.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL').length} | CNR: ${todayLeadsInPool.filter(l => l.lead_bucket === 'CNR_POOL').length}`}
+          value={todayAllLeads.length}
+          description={`New: ${todayNewCount} | FU: ${todayFUCount} | CNR: ${todayCNRCount}`}
           icon={<FileText className="w-5 h-5" />}
           variant="primary"
           onClick={() => navigate('/leads/all')}
@@ -266,10 +274,10 @@ export default function LeadsDashboard() {
         />
         <StatCard
           title="Total in Queue"
-          value={leadsInPool.length}
+          value={totalInQueue}
           icon={<Phone className="w-5 h-5" />}
           variant="default"
-          onClick={() => navigate('/leads/all')}
+          onClick={() => navigate('/leads/all?bucket=NEW')}
           className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
