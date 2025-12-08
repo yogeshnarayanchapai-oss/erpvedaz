@@ -40,6 +40,8 @@ export interface CreateStoreInput {
   contact_phone?: string;
   address?: string;
   is_active?: boolean;
+  admin_name?: string;
+  admin_email?: string;
 }
 
 export interface UpdateStoreInput extends Partial<CreateStoreInput> {
@@ -150,16 +152,17 @@ export function useCreateStore() {
   return useMutation({
     mutationFn: async (input: CreateStoreInput) => {
       const { data: { user } } = await supabase.auth.getUser();
+      const { admin_name, admin_email, ...storeInput } = input;
       
       const { data, error } = await supabase
         .from('stores')
-        .insert(input)
+        .insert(storeInput)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Automatically assign the creator as admin of this store
+      // Automatically assign the creator (OWNER) as admin of this store
       if (user) {
         await supabase.from('user_store_access').upsert({
           user_id: user.id,
@@ -171,11 +174,31 @@ export function useCreateStore() {
         });
       }
 
-      // Optionally create default domain
+      // Create admin user for the store if provided
+      if (admin_name && admin_email) {
+        try {
+          const { data: funcData, error: funcError } = await supabase.functions.invoke('create-user', {
+            body: {
+              email: admin_email,
+              full_name: admin_name,
+              role: 'ADMIN',
+              store_id: data.id,
+            },
+          });
+          
+          if (funcError) {
+            console.error('Failed to create admin user:', funcError);
+          }
+        } catch (err) {
+          console.error('Error creating admin user:', err);
+        }
+      }
+
+      // Create default subdomain entry
       if (input.default_subdomain) {
         await supabase.from('store_domains').insert({
           store_id: data.id,
-          domain: `${input.default_subdomain}.vakari.store`,
+          domain: `${input.default_subdomain}.techlaya.com`,
           is_primary: true,
         });
       }
@@ -192,7 +215,7 @@ export function useCreateStore() {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
       queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
       queryClient.invalidateQueries({ queryKey: ['accessible-stores'] });
-      toast.success('Store created successfully');
+      toast.success('Store and admin created successfully');
     },
     onError: (error: any) => {
       toast.error(`Failed to create store: ${error.message}`);
