@@ -69,7 +69,7 @@ export function useNotifications() {
 
   // Fetch notifications for current user/role - RLS handles store filtering
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications', profile?.id, profile?.role],
+    queryKey: ['notifications', profile?.id, profile?.role, currentStore?.id, isOwner],
     queryFn: async () => {
       if (!profile?.id) return [];
 
@@ -78,13 +78,20 @@ export function useNotifications() {
 
       // RLS policies handle store filtering automatically
       // Just filter by user/role and RLS takes care of the rest
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
         .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(100);
+
+      // For OWNER viewing a specific store, filter to that store's notifications
+      if (isOwner && currentStore?.id) {
+        query = query.eq('store_id', currentStore.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as Notification[];
@@ -133,56 +140,68 @@ export function useNotifications() {
     },
   });
 
-  // Realtime subscription
+  // Realtime subscription with store-specific channel
   useEffect(() => {
     if (!profile?.id || !profile?.role) return;
 
+    // Create store-specific channel name to scope subscriptions
+    const channelName = isOwner 
+      ? `notifications-owner-${profile.id}-${currentStore?.id || 'all'}`
+      : `notifications-${currentStore?.id || 'no-store'}-${profile.id}`;
+
+    const subscriptionConfig: any = {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+    };
+
+    // Add store_id filter for non-owners with a store context
+    if (!isOwner && currentStore?.id) {
+      subscriptionConfig.filter = `store_id=eq.${currentStore.id}`;
+    } else if (isOwner && currentStore?.id) {
+      // OWNER viewing specific store - filter to that store
+      subscriptionConfig.filter = `store_id=eq.${currentStore.id}`;
+    }
+
     const channel = supabase
-      .channel(`notifications-${profile.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-        },
-        (payload) => {
-          const newNotification = payload.new as Notification;
-          
-          // Check if this notification is for the current user
-          const isForCurrentUser = 
-            newNotification.target_user_id === profile.id ||
-            newNotification.target_role === profile.role;
+      .channel(channelName)
+      .on('postgres_changes', subscriptionConfig, (payload) => {
+        const newNotification = payload.new as Notification;
+        
+        // Check if this notification is for the current user
+        const isForCurrentUser = 
+          newNotification.target_user_id === profile.id ||
+          newNotification.target_role === profile.role;
 
-          // For non-OWNER users, also check store match
-          const isForCurrentStore = 
-            isOwner || // OWNER sees all stores
-            !newNotification.store_id || // null store_id = global notification
-            newNotification.store_id === currentStore?.id; // matches current store
+        // Strict store validation - null store_id role notifications should NOT be shown
+        const isForCurrentStore = 
+          // User-targeted notifications without store_id (direct messages)
+          (newNotification.target_user_id === profile.id && !newNotification.target_role) ||
+          // Store-specific notifications must match current store
+          (newNotification.store_id && newNotification.store_id === currentStore?.id);
 
-          if (isForCurrentUser && isForCurrentStore) {
-            // Play sound if user has interacted
-            if (hasInteracted) {
-              playNotificationSound();
-            }
-
-            // Show toast
-            toast.info(newNotification.title, {
-              description: newNotification.message,
-              duration: 5000,
-              action: newNotification.link_path ? {
-                label: 'View',
-                onClick: () => {
-                  window.location.href = newNotification.link_path!;
-                },
-              } : undefined,
-            });
-
-            // Update cache
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        if (isForCurrentUser && isForCurrentStore) {
+          // Play sound if user has interacted
+          if (hasInteracted) {
+            playNotificationSound();
           }
+
+          // Show toast
+          toast.info(newNotification.title, {
+            description: newNotification.message,
+            duration: 5000,
+            action: newNotification.link_path ? {
+              label: 'View',
+              onClick: () => {
+                window.location.href = newNotification.link_path!;
+              },
+            } : undefined,
+          });
+
+          // Update cache
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
         }
-      )
+      })
       .subscribe();
 
     return () => {
