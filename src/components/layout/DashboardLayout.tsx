@@ -24,11 +24,23 @@ export function DashboardLayout() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
+  const portalName = profile?.role ? `${profile.role.charAt(0)}${profile.role.slice(1).toLowerCase()}` : '';
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Update document title based on portal
+  useEffect(() => {
+    if (profile?.role) {
+      document.title = `${portalName} - Vedaz Store`;
+    }
+    return () => {
+      document.title = 'Vedaz Store';
+    };
+  }, [profile?.role, portalName]);
 
   if (loading) {
     return (
