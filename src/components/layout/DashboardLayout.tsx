@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { CurrentStoreProvider, useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
@@ -8,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { DateModeToggle } from '@/components/DateModeToggle';
 import { UnifiedNotificationBell } from '@/components/notifications/UnifiedNotificationBell';
+import { StoreSwitcher } from './StoreSwitcher';
 import { Loader2, Calendar, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,11 +22,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 
-export function DashboardLayout() {
+function DashboardLayoutInner() {
   const { user, profile, loading } = useAuth();
+  const { currentStore } = useCurrentStore();
   const navigate = useNavigate();
 
   const portalName = profile?.role ? `${profile.role.charAt(0)}${profile.role.slice(1).toLowerCase()}` : '';
+  const storeName = currentStore?.name || 'Dashboard';
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,15 +36,17 @@ export function DashboardLayout() {
     }
   }, [user, loading, navigate]);
 
-  // Update document title based on portal
+  // Update document title based on portal and store
   useEffect(() => {
-    if (profile?.role) {
-      document.title = `${portalName} - Vedaz Store`;
+    if (profile?.role && currentStore?.name) {
+      document.title = `${portalName} - ${currentStore.name}`;
+    } else if (profile?.role) {
+      document.title = `${portalName} Dashboard`;
     }
     return () => {
       document.title = 'Vedaz Store';
     };
-  }, [profile?.role, portalName]);
+  }, [profile?.role, portalName, currentStore?.name]);
 
   if (loading) {
     return (
@@ -62,6 +68,12 @@ export function DashboardLayout() {
           <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
+            
+            {/* Store Switcher */}
+            <StoreSwitcher />
+            
+            <Separator orientation="vertical" className="mx-2 h-4" />
+            
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -126,5 +138,13 @@ export function DashboardLayout() {
         </SidebarInset>
       </div>
     </SidebarProvider>
+  );
+}
+
+export function DashboardLayout() {
+  return (
+    <CurrentStoreProvider>
+      <DashboardLayoutInner />
+    </CurrentStoreProvider>
   );
 }

@@ -12,6 +12,7 @@ interface Profile {
   role: AppRole;
   is_active: boolean;
   daily_target: number | null;
+  default_store_id: string | null;
 }
 
 interface AuthContextType {

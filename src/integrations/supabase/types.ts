@@ -4280,6 +4280,7 @@ export type Database = {
           auth_user_id: string | null
           created_at: string | null
           daily_target: number | null
+          default_store_id: string | null
           email: string
           email_verified: boolean | null
           email_verified_at: string | null
@@ -4294,6 +4295,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string | null
           daily_target?: number | null
+          default_store_id?: string | null
           email: string
           email_verified?: boolean | null
           email_verified_at?: string | null
@@ -4308,6 +4310,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string | null
           daily_target?: number | null
+          default_store_id?: string | null
           email?: string
           email_verified?: boolean | null
           email_verified_at?: string | null
@@ -4318,7 +4321,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_store_id_fkey"
+            columns: ["default_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rbac_audit_logs: {
         Row: {
@@ -5710,6 +5721,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_store_access: {
+        Row: {
+          access_level: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          store_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_level?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          store_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_level?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          store_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_store_access_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_store_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_view_state: {
         Row: {
           created_at: string
@@ -5851,6 +5907,14 @@ export type Database = {
     Functions: {
       create_verification_otp: { Args: { p_user_id: string }; Returns: string }
       generate_otp: { Args: never; Returns: string }
+      get_user_accessible_stores: {
+        Args: { p_user_id: string }
+        Returns: {
+          access_level: string
+          store_id: string
+          store_name: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

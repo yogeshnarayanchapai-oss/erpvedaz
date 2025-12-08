@@ -34,6 +34,8 @@ import AdminStaffTargets from "./pages/admin/AdminStaffTargets";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminDataTools from "./pages/admin/AdminDataTools";
 import AdminBranding from "./pages/admin/AdminBranding";
+import Stores from "./pages/admin/Stores";
+import StoreDetail from "./pages/admin/StoreDetail";
 
 // Admin Messaging pages
 import AdminMessagingChannels from "./pages/admin/messaging/AdminMessagingChannels";
@@ -211,6 +213,8 @@ const App = () => (
               <Route path="/admin/notifications" element={<AdminNotifications />} />
               <Route path="/admin/branding" element={<AdminBranding />} />
               <Route path="/admin/data-tools" element={<AdminDataTools />} />
+              <Route path="/admin/stores" element={<Stores />} />
+              <Route path="/admin/stores/:storeId" element={<StoreDetail />} />
               
               {/* Admin Messaging Routes */}
               <Route path="/admin/messaging/channels" element={<AdminMessagingChannels />} />
