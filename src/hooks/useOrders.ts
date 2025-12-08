@@ -40,6 +40,7 @@ export interface Order {
   confirmed_at: string | null;
   confirmed_by_user_id: string | null;
   cancelled_at: string | null;
+  store_id: string | null;
   // Meta fields for delivery status edit permissions
   called_by_user_id: string | null;
   called_by_role: string | null;
@@ -772,13 +773,14 @@ export function useAdminUpdateOrder() {
         // 6. Notify admins about the edit
         try {
           const customerName = input.clientName || (currentOrder?.leads as any)?.client_name || 'Customer';
+          const orderStoreId = (currentOrder as any)?.store_id as string | undefined;
           await notifyOrderEdited({
             orderId: input.orderId,
             customerName,
             changeCount: changes.length,
             actorId: user.id,
             actorName,
-            storeId: currentOrder?.store_id || undefined,
+            storeId: orderStoreId || undefined,
           });
         } catch (notifyError) {
           console.error('Failed to send order edit notification:', notifyError);
