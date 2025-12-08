@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface Product {
   id: string;
@@ -12,32 +13,47 @@ export interface Product {
   delivery_cost: number | null;
   is_active: boolean;
   created_at: string;
+  store_id: string | null;
 }
 
 export function useProducts() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
         .order('name');
 
+      // Filter by store_id if available
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       return data as Product[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (input: Partial<Omit<Product, 'id' | 'created_at' | 'is_active'>> & { name: string }) => {
       const { data, error } = await supabase
         .from('products')
-        .insert(input)
+        .insert({
+          ...input,
+          store_id: storeId,
+        })
         .select()
         .single();
 

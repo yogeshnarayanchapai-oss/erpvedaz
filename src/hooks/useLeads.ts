@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyLeadTransfer, notifyLeadStatusChange, notifyLeadReturnedToCNR } from '@/lib/notificationHelpers';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 type LeadStatus = 'NEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'CONFIRMED' | 'FOLLOW_UP' | 'CALL_NOT_RECEIVED' | 'CANCELLED' | 'REDIRECT';
 type TeamType = 'LEADS' | 'CALLING' | 'FOLLOWUP';
@@ -85,9 +86,13 @@ export function useLeads(filters?: {
   dateFrom?: string;
   dateTo?: string;
   leadBucket?: LeadBucket;
+  storeId?: string;
 }) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters?.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['leads', filters],
+    queryKey: ['leads', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -102,6 +107,11 @@ export function useLeads(filters?: {
         .neq('status', 'CONFIRMED')
         .is('order_id', null)
         .order('created_at', { ascending: false });
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -129,11 +139,13 @@ export function useLeads(filters?: {
       if (error) throw error;
       return data as Lead[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateLead() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (input: CreateLeadInput) => {
@@ -148,6 +160,7 @@ export function useCreateLead() {
           created_by_user_id: user.id,
           status: 'NEW',
           current_team: 'LEADS',
+          store_id: storeId,
         })
         .select()
         .single();

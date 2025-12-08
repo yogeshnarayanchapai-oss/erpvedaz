@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 type Customer = Database['public']['Tables']['customers']['Row'];
 
@@ -23,14 +24,23 @@ export function useCustomers(filters?: {
   valueSegment?: 'all' | 'high' | 'medium' | 'low';
   city?: string;
   status?: string;
+  storeId?: string;
 }) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters?.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['customers', filters],
+    queryKey: ['customers', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('customers')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (filters?.search) {
         query = query.or(`customer_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%`);
@@ -95,6 +105,7 @@ export function useCustomers(filters?: {
 
       return filteredData as Customer[];
     },
+    enabled: !!storeId,
   });
 }
 
