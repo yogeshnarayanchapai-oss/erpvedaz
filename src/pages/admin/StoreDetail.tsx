@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, TrendingUp, Users, ShoppingCart, DollarSign, Globe, Palette, Settings } from 'lucide-react';
+import { ArrowLeft, Edit, TrendingUp, Users, ShoppingCart, DollarSign, Palette, Settings } from 'lucide-react';
 import { StoreFormDialog } from '@/components/stores/StoreFormDialog';
-import { StoreDomainsTab } from '@/components/stores/StoreDomainsTab';
 import { StoreBrandingTab } from '@/components/stores/StoreBrandingTab';
 import { StoreUsersTab } from '@/components/stores/StoreUsersTab';
 import { format } from 'date-fns';
@@ -110,7 +109,7 @@ export default function StoreDetail() {
       />
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-xl">
+        <TabsList className="grid grid-cols-3 w-full max-w-md">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Overview
@@ -122,10 +121,6 @@ export default function StoreDetail() {
           <TabsTrigger value="branding" className="flex items-center gap-2">
             <Palette className="w-4 h-4" />
             Branding
-          </TabsTrigger>
-          <TabsTrigger value="domains" className="flex items-center gap-2">
-            <Globe className="w-4 h-4" />
-            Domains
           </TabsTrigger>
         </TabsList>
 
@@ -266,10 +261,6 @@ export default function StoreDetail() {
 
         <TabsContent value="branding">
           <StoreBrandingTab storeId={storeId!} />
-        </TabsContent>
-
-        <TabsContent value="domains">
-          <StoreDomainsTab storeId={storeId!} />
         </TabsContent>
       </Tabs>
     </div>
