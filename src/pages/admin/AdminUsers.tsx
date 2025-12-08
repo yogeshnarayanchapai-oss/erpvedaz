@@ -317,40 +317,39 @@ const usersWithEmployee = useMemo(() => {
 
       // Handle edge function errors (non-2xx responses)
       if (response.error) {
-        // Try to extract error message from the response
         let errorMsg = 'Failed to create user';
         
-        // Check if the error context contains our JSON response
-        const errorContext = (response.error as any)?.context;
-        if (errorContext?.body) {
-          try {
-            const parsedBody = JSON.parse(errorContext.body);
-            if (parsedBody.error) {
-              errorMsg = parsedBody.error;
-            }
-          } catch {
-            // Not JSON, use the raw message
-          }
-        }
+        // The error message from supabase.functions.invoke often contains JSON
+        const errorMessage = response.error.message || '';
         
-        // Fallback to error message if available
-        if (errorMsg === 'Failed to create user' && response.error.message) {
-          // Check if message contains JSON
-          const jsonMatch = response.error.message.match(/\{.*"error":\s*"([^"]+)"/);
+        // Try to parse JSON from the error message
+        try {
+          const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            errorMsg = jsonMatch[1];
-          } else {
-            errorMsg = response.error.message;
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.error) {
+              errorMsg = parsed.error;
+            }
+          }
+        } catch {
+          // If parsing fails, try to extract just the error text
+          const simpleMatch = errorMessage.match(/"error"\s*:\s*"([^"]+)"/);
+          if (simpleMatch) {
+            errorMsg = simpleMatch[1];
+          } else if (errorMessage && errorMessage !== 'FunctionsHttpError') {
+            errorMsg = errorMessage;
           }
         }
         
         toast.error(errorMsg);
+        setIsSubmitting(false);
         return;
       }
 
       // Handle application-level errors from edge function
       if (response.data?.error) {
         toast.error(response.data.error);
+        setIsSubmitting(false);
         return;
       }
 
