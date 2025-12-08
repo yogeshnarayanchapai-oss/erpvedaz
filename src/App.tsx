@@ -1,13 +1,16 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 
 const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
 const Sonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DateModeProvider } from "@/contexts/DateModeContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { StoreRouteWrapper } from "@/components/layout/StoreRouteWrapper";
+import { StoreDashboardLayout } from "@/components/layout/StoreDashboardLayout";
+import { Loader2 } from 'lucide-react';
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -45,7 +48,6 @@ import AdminMessagingLogs from "./pages/admin/messaging/AdminMessagingLogs";
 
 // Admin Logistics pages
 import AdminLogisticsSettings from "./pages/admin/AdminLogisticsSettings";
-import AdminLogisticsDashboard from "./pages/admin/AdminLogisticsDashboard";
 import LogisticsDashboardMain from "./pages/logistics/LogisticsDashboardMain";
 import CourierDetailPage from "./pages/logistics/CourierDetailPage";
 import LogisticsControlCenter from "./pages/admin/logistics/LogisticsControlCenter";
@@ -163,237 +165,402 @@ import MyProfile from "./pages/settings/MyProfile";
 
 const queryClient = new QueryClient();
 
+// Loading component
+const Loading = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
+
+// Store routes component to reduce repetition
+function StoreRoutes() {
+  return (
+    <>
+      {/* Admin Routes */}
+      <Route path="admin/dashboard" element={<AdminDashboard />} />
+      <Route path="admin/users" element={<AdminUsers />} />
+      <Route path="admin/roles-permissions" element={<RolesPermissions />} />
+      <Route path="admin/products" element={<AdminProducts />} />
+      <Route path="admin/branches" element={<AdminBranches />} />
+      <Route path="admin/ads" element={<AdminAds />} />
+      <Route path="admin/leads" element={<AdminLeads />} />
+      <Route path="admin/orders" element={<AdminOrders />} />
+      <Route path="admin/orders/:orderId" element={<OrderDetail />} />
+      <Route path="admin/customers" element={<AdminCustomers />} />
+      <Route path="admin/customers/:customerId" element={<CustomerDetail />} />
+      <Route path="admin/reports" element={<AdminReports />} />
+      <Route path="admin/reports/daily-performance" element={<DailyPerformance />} />
+      <Route path="admin/analytics" element={<AdminAnalytics />} />
+      <Route path="admin/accounting/dashboard" element={<AccountingDashboard />} />
+      <Route path="admin/accounting/dashboard-new" element={<AccountingDashboardNew />} />
+      <Route path="admin/accounting/new-deposit" element={<NewDeposit />} />
+      <Route path="admin/accounting/new-expense" element={<NewExpense />} />
+      <Route path="admin/accounting/new-transfer" element={<NewTransfer />} />
+      <Route path="admin/accounting/transactions" element={<ViewTransactions />} />
+      <Route path="admin/accounting/accounts" element={<AccountsManagement />} />
+      <Route path="admin/accounting/receivables" element={<Receivables />} />
+      <Route path="admin/accounting/payables" element={<Payables />} />
+      <Route path="admin/accounting/cash-bank" element={<CashBank />} />
+      <Route path="admin/accounting/party-statement" element={<PartyStatement />} />
+      <Route path="admin/accounting/audit" element={<AuditDashboard />} />
+      <Route path="admin/staff-targets" element={<AdminStaffTargets />} />
+      <Route path="admin/staff/:staffId" element={<StaffDetail />} />
+      <Route path="admin/notifications" element={<AdminNotifications />} />
+      <Route path="admin/branding" element={<AdminBranding />} />
+      <Route path="admin/data-tools" element={<AdminDataTools />} />
+      <Route path="admin/stores" element={<Stores />} />
+      <Route path="admin/stores/:storeId" element={<StoreDetail />} />
+      <Route path="admin/messaging/channels" element={<AdminMessagingChannels />} />
+      <Route path="admin/messaging/templates" element={<AdminMessagingTemplates />} />
+      <Route path="admin/messaging/rules" element={<AdminMessagingRules />} />
+      <Route path="admin/messaging/logs" element={<AdminMessagingLogs />} />
+      <Route path="admin/logistics/control-center" element={<LogisticsControlCenter />} />
+      <Route path="admin/logistics-settings" element={<AdminLogisticsSettings />} />
+      <Route path="admin/logistics-dashboard" element={<LogisticsDashboardMain />} />
+      <Route path="admin/logistics/:courier" element={<CourierDetailPage />} />
+      <Route path="orders/:orderId" element={<AdminOrderDetail />} />
+      <Route path="admin/marketing/ads" element={<AdminAds />} />
+      <Route path="admin/marketing/influencers" element={<InfluencerList />} />
+      <Route path="admin/marketing/campaigns" element={<Campaigns />} />
+      <Route path="admin/marketing/video-projects" element={<VideoProduction />} />
+      <Route path="admin/marketing/content-calendar" element={<ContentCalendar />} />
+      <Route path="admin/marketing/reports" element={<MarketingReports />} />
+      <Route path="admin/ai-insights" element={<AIInsights />} />
+      <Route path="admin/inventory/stock-summary" element={<StockSummary />} />
+      <Route path="admin/inventory/movements" element={<StockMovements />} />
+      <Route path="admin/inventory/parties" element={<Parties />} />
+      <Route path="admin/inventory/warehouses" element={<Warehouses />} />
+      <Route path="admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
+      <Route path="admin/inventory/daily-pl" element={<DailyPL />} />
+      <Route path="admin/inventory/ai-reorder" element={<AIStockReorder />} />
+
+      {/* HRM Routes */}
+      <Route path="hrm/employees" element={<HRMEmployees />} />
+      <Route path="hrm/employees/:id" element={<HRMEmployeeDetail />} />
+      <Route path="hrm/staff-documents" element={<HRMStaffDocuments />} />
+      <Route path="hrm/payroll" element={<HRMPayroll />} />
+      <Route path="hrm/policies" element={<HRMPolicies />} />
+      <Route path="hrm/holidays" element={<HRMHolidays />} />
+      <Route path="hrm/leave" element={<HRMLeave />} />
+      <Route path="hrm/leave-quota" element={<HRMLeaveQuota />} />
+      <Route path="hrm/notices" element={<HRMNotices />} />
+      <Route path="hrm/team-structure" element={<HRMTeamStructure />} />
+      <Route path="hrm/company-info" element={<HRMCompanyInfo />} />
+      <Route path="hrm/salary-slips" element={<HRMSalarySlip />} />
+      <Route path="hrm/assets" element={<HRMAssets />} />
+      <Route path="hrm/attendance" element={<HRMAttendance />} />
+      <Route path="hrm/chat" element={<HRMChat />} />
+      <Route path="hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
+      <Route path="hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
+      <Route path="hrm/knowledge-center/reports" element={<KnowledgeCenterReports />} />
+
+      {/* Training Routes */}
+      <Route path="training/my-courses" element={<MyCourses />} />
+      <Route path="training/courses/:slug" element={<CoursePlayer />} />
+      <Route path="training/courses/:slug/quiz" element={<CourseQuiz />} />
+      <Route path="training/certificates" element={<MyCertificates />} />
+
+      {/* My HR Routes */}
+      <Route path="my-hr" element={<MyHRDashboard />} />
+      <Route path="my-hr/documents" element={<MyHRDocuments />} />
+      <Route path="my-hr/attendance" element={<MyHRDashboard />} />
+      <Route path="my-hr/leave" element={<HRMLeave />} />
+      <Route path="my-hr/assets" element={<MyHRDashboard />} />
+      <Route path="my-hr/chat" element={<HRMChat />} />
+      <Route path="my-hr/holidays" element={<HRMHolidays />} />
+      <Route path="my-hr/notices" element={<HRMNotices />} />
+      <Route path="my-hr/salary-slips" element={<StaffSelfService />} />
+
+      {/* Leads Routes */}
+      <Route path="leads/dashboard" element={<LeadsDashboard />} />
+      <Route path="leads/all" element={<LeadsAll />} />
+      <Route path="leads/followup" element={<LeadsFollowup />} />
+      <Route path="leads/reports" element={<LeadsReports />} />
+      <Route path="leads/self-service" element={<StaffSelfService />} />
+
+      {/* Calling Routes */}
+      <Route path="calling/dashboard" element={<CallingDashboard />} />
+      <Route path="calling/leads" element={<CallingLeads />} />
+      <Route path="calling/orders" element={<CallingOrders />} />
+      <Route path="calling/my-orders" element={<CallingMyOrders />} />
+      <Route path="calling/orders/:orderId" element={<CallingOrderDetail />} />
+      <Route path="calling/reports" element={<CallingReports />} />
+      <Route path="calling/self-service" element={<StaffSelfService />} />
+
+      {/* Followup Routes */}
+      <Route path="followup/dashboard" element={<LogisticsPortalOrders />} />
+      <Route path="followup/orders" element={<LogisticsPortalOrders />} />
+      <Route path="followup/reports" element={<LogisticsPortalOrders />} />
+      <Route path="followup/self-service" element={<StaffSelfService />} />
+
+      {/* HR Role Routes */}
+      <Route path="hr/dashboard" element={<HRDashboard />} />
+
+      {/* Manager Role Routes */}
+      <Route path="manager/dashboard" element={<ManagerDashboard />} />
+      <Route path="manager/reports" element={<AdminReports />} />
+      <Route path="manager/targets" element={<AdminStaffTargets />} />
+      <Route path="manager/approvals" element={<HRMLeave />} />
+
+      {/* Marketing Role Routes */}
+      <Route path="marketing/dashboard" element={<MarketingDashboard />} />
+      <Route path="marketing/ads" element={<AdminAds />} />
+      <Route path="marketing/daybook" element={<AdminDashboard />} />
+      <Route path="marketing/performance" element={<AdminReports />} />
+
+      {/* Logistics Routes */}
+      <Route path="logistics/dashboard" element={<LogisticsDashboard />} />
+      <Route path="logistics/orders" element={<LogisticsOrders />} />
+      <Route path="logistics/orders/inside-valley" element={<LogisticsInsideValley />} />
+      <Route path="logistics/orders/outside-valley" element={<LogisticsOutsideValley />} />
+      <Route path="logistics/self-service" element={<StaffSelfService />} />
+
+      {/* Logistics Portal Routes */}
+      <Route path="logistics-portal/dashboard" element={<LogisticsPortalOrders />} />
+      <Route path="logistics-portal/orders" element={<LogisticsPortalOrders />} />
+
+      {/* Inventory Routes */}
+      <Route path="inventory/stock-summary" element={<StockSummary />} />
+      <Route path="inventory/movements" element={<StockMovements />} />
+      <Route path="inventory/parties" element={<Parties />} />
+      <Route path="inventory/warehouses" element={<Warehouses />} />
+      <Route path="inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
+      <Route path="inventory/daily-pl" element={<DailyPL />} />
+      <Route path="inventory/ai-reorder" element={<AIStockReorder />} />
+
+      {/* Accounting Routes */}
+      <Route path="accounting/dashboard" element={<AccountingDashboard />} />
+      <Route path="accounting/dashboard-new" element={<AccountingDashboardNew />} />
+      <Route path="accounting/new-deposit" element={<NewDeposit />} />
+      <Route path="accounting/new-expense" element={<NewExpense />} />
+      <Route path="accounting/new-transfer" element={<NewTransfer />} />
+      <Route path="accounting/transactions" element={<ViewTransactions />} />
+      <Route path="accounting/accounts" element={<AccountsManagement />} />
+      <Route path="accounting/receivables" element={<Receivables />} />
+      <Route path="accounting/payables" element={<Payables />} />
+      <Route path="accounting/cash-bank" element={<CashBank />} />
+      <Route path="accounting/party-statement" element={<PartyStatement />} />
+      <Route path="accounting/audit" element={<AuditDashboard />} />
+
+      {/* Settings Routes */}
+      <Route path="settings/notifications" element={<NotificationSettingsPage />} />
+      <Route path="settings/profile" element={<MyProfile />} />
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <DateModeProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
+          <Suspense fallback={<Loading />}>
+            <Toaster />
+            <Sonner />
+          </Suspense>
           <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/update-password" element={<UpdatePassword />} />
-            <Route path="/setup" element={<SetupAdmin />} />
-            
-            {/* Admin Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
-              <Route path="/admin/products" element={<AdminProducts />} />
-              <Route path="/admin/branches" element={<AdminBranches />} />
-              <Route path="/admin/ads" element={<AdminAds />} />
-              <Route path="/admin/leads" element={<AdminLeads />} />
-      <Route path="/admin/orders" element={<AdminOrders />} />
-      <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
-      <Route path="/admin/customers" element={<AdminCustomers />} />
-      <Route path="/admin/customers/:customerId" element={<CustomerDetail />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              <Route path="/admin/reports/daily-performance" element={<DailyPerformance />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          {/* Accounting Routes */}
-          <Route path="/admin/accounting/dashboard" element={<AccountingDashboard />} />
-          <Route path="/admin/accounting/dashboard-new" element={<AccountingDashboardNew />} />
-          <Route path="/admin/accounting/new-deposit" element={<NewDeposit />} />
-          <Route path="/admin/accounting/new-expense" element={<NewExpense />} />
-          <Route path="/admin/accounting/new-transfer" element={<NewTransfer />} />
-          <Route path="/admin/accounting/transactions" element={<ViewTransactions />} />
-          <Route path="/admin/accounting/accounts" element={<AccountsManagement />} />
-          <Route path="/admin/accounting/receivables" element={<Receivables />} />
-          <Route path="/admin/accounting/payables" element={<Payables />} />
-          <Route path="/admin/accounting/cash-bank" element={<CashBank />} />
-          <Route path="/admin/accounting/party-statement" element={<PartyStatement />} />
-          <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
-          
-          <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
-              <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
-              <Route path="/admin/notifications" element={<AdminNotifications />} />
-              <Route path="/admin/branding" element={<AdminBranding />} />
-              <Route path="/admin/data-tools" element={<AdminDataTools />} />
-              <Route path="/admin/stores" element={<Stores />} />
-              <Route path="/admin/stores/:storeId" element={<StoreDetail />} />
-              
-              {/* Admin Messaging Routes */}
-              <Route path="/admin/messaging/channels" element={<AdminMessagingChannels />} />
-              <Route path="/admin/messaging/templates" element={<AdminMessagingTemplates />} />
-              <Route path="/admin/messaging/rules" element={<AdminMessagingRules />} />
-              <Route path="/admin/messaging/logs" element={<AdminMessagingLogs />} />
-              
-              {/* Admin Logistics Routes */}
-              <Route path="/admin/logistics/control-center" element={<LogisticsControlCenter />} />
-              <Route path="/admin/logistics-settings" element={<AdminLogisticsSettings />} />
-              <Route path="/admin/logistics-dashboard" element={<LogisticsDashboardMain />} />
-              <Route path="/admin/logistics/:courier" element={<CourierDetailPage />} />
-        <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
-        <Route path="/orders/:orderId" element={<AdminOrderDetail />} />
-              
-              {/* Admin Marketing Routes */}
-              <Route path="/admin/marketing/ads" element={<AdminAds />} />
-              <Route path="/admin/marketing/influencers" element={<InfluencerList />} />
-              <Route path="/admin/marketing/campaigns" element={<Campaigns />} />
-              <Route path="/admin/marketing/video-projects" element={<VideoProduction />} />
-              <Route path="/admin/marketing/content-calendar" element={<ContentCalendar />} />
-              <Route path="/admin/marketing/reports" element={<MarketingReports />} />
-              
-              {/* AI Insights */}
-              <Route path="/admin/ai-insights" element={<AIInsights />} />
-              
-              {/* Inventory Routes */}
-              <Route path="/admin/inventory/stock-summary" element={<StockSummary />} />
-              <Route path="/admin/inventory/movements" element={<StockMovements />} />
-              <Route path="/admin/inventory/parties" element={<Parties />} />
-              <Route path="/admin/inventory/warehouses" element={<Warehouses />} />
-              <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
-              <Route path="/admin/inventory/daily-pl" element={<DailyPL />} />
-              <Route path="/admin/inventory/ai-reorder" element={<AIStockReorder />} />
-              
-              {/* HRM Routes */}
-              <Route path="/hrm/employees" element={<HRMEmployees />} />
-              <Route path="/hrm/employees/:id" element={<HRMEmployeeDetail />} />
-              <Route path="/hrm/staff-documents" element={<HRMStaffDocuments />} />
-              <Route path="/hrm/payroll" element={<HRMPayroll />} />
-              <Route path="/hrm/policies" element={<HRMPolicies />} />
-              <Route path="/hrm/holidays" element={<HRMHolidays />} />
-              <Route path="/hrm/leave" element={<HRMLeave />} />
-              <Route path="/hrm/leave-quota" element={<HRMLeaveQuota />} />
-              <Route path="/hrm/notices" element={<HRMNotices />} />
-              <Route path="/hrm/team-structure" element={<HRMTeamStructure />} />
-              <Route path="/hrm/company-info" element={<HRMCompanyInfo />} />
-              <Route path="/hrm/salary-slips" element={<HRMSalarySlip />} />
-              <Route path="/hrm/assets" element={<HRMAssets />} />
-              <Route path="/hrm/attendance" element={<HRMAttendance />} />
-              <Route path="/hrm/chat" element={<HRMChat />} />
-              
-              {/* Knowledge Center Routes (Admin/Manager) */}
-              <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
-              <Route path="/hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
-              <Route path="/hrm/knowledge-center/reports" element={<KnowledgeCenterReports />} />
-              
-              {/* Training Routes (All Staff) */}
-              <Route path="/training/my-courses" element={<MyCourses />} />
-              <Route path="/training/courses/:slug" element={<CoursePlayer />} />
-              <Route path="/training/courses/:slug/quiz" element={<CourseQuiz />} />
-              <Route path="/training/certificates" element={<MyCertificates />} />
-              
-              {/* My HR Routes (accessible by all staff) */}
-              <Route path="/my-hr" element={<MyHRDashboard />} />
-              <Route path="/my-hr/documents" element={<MyHRDocuments />} />
-              <Route path="/my-hr/attendance" element={<MyHRDashboard />} />
-              <Route path="/my-hr/leave" element={<HRMLeave />} />
-              <Route path="/my-hr/assets" element={<MyHRDashboard />} />
-              <Route path="/my-hr/chat" element={<HRMChat />} />
-              <Route path="/my-hr/holidays" element={<HRMHolidays />} />
-              <Route path="/my-hr/notices" element={<HRMNotices />} />
-              <Route path="/my-hr/salary-slips" element={<StaffSelfService />} />
-            </Route>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/update-password" element={<UpdatePassword />} />
+              <Route path="/setup" element={<SetupAdmin />} />
 
-            {/* Leads Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/leads/dashboard" element={<LeadsDashboard />} />
-              <Route path="/leads/all" element={<LeadsAll />} />
-              <Route path="/leads/followup" element={<LeadsFollowup />} />
-              <Route path="/leads/reports" element={<LeadsReports />} />
-              <Route path="/leads/self-service" element={<StaffSelfService />} />
-            </Route>
+              {/* Store-based routes - /:storeSlug/* */}
+              <Route path="/:storeSlug" element={<StoreRouteWrapper />}>
+                <Route element={<StoreDashboardLayout />}>
+                  {/* Default redirect to admin dashboard */}
+                  <Route index element={<Navigate to="admin/dashboard" replace />} />
+                  {StoreRoutes()}
+                </Route>
+              </Route>
 
-            {/* Calling Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/calling/dashboard" element={<CallingDashboard />} />
-              <Route path="/calling/leads" element={<CallingLeads />} />
-              <Route path="/calling/orders" element={<CallingOrders />} />
-              <Route path="/calling/my-orders" element={<CallingMyOrders />} />
-              <Route path="/calling/orders/:orderId" element={<CallingOrderDetail />} />
-              <Route path="/calling/reports" element={<CallingReports />} />
-              <Route path="/calling/self-service" element={<StaffSelfService />} />
-            </Route>
+              {/* Legacy routes (for backward compatibility) */}
+              <Route element={<DashboardLayout />}>
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/branches" element={<AdminBranches />} />
+                <Route path="/admin/ads" element={<AdminAds />} />
+                <Route path="/admin/leads" element={<AdminLeads />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
+                <Route path="/admin/customers" element={<AdminCustomers />} />
+                <Route path="/admin/customers/:customerId" element={<CustomerDetail />} />
+                <Route path="/admin/reports" element={<AdminReports />} />
+                <Route path="/admin/reports/daily-performance" element={<DailyPerformance />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                <Route path="/admin/accounting/dashboard" element={<AccountingDashboard />} />
+                <Route path="/admin/accounting/dashboard-new" element={<AccountingDashboardNew />} />
+                <Route path="/admin/accounting/new-deposit" element={<NewDeposit />} />
+                <Route path="/admin/accounting/new-expense" element={<NewExpense />} />
+                <Route path="/admin/accounting/new-transfer" element={<NewTransfer />} />
+                <Route path="/admin/accounting/transactions" element={<ViewTransactions />} />
+                <Route path="/admin/accounting/accounts" element={<AccountsManagement />} />
+                <Route path="/admin/accounting/receivables" element={<Receivables />} />
+                <Route path="/admin/accounting/payables" element={<Payables />} />
+                <Route path="/admin/accounting/cash-bank" element={<CashBank />} />
+                <Route path="/admin/accounting/party-statement" element={<PartyStatement />} />
+                <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
+                <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
+                <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
+                <Route path="/admin/notifications" element={<AdminNotifications />} />
+                <Route path="/admin/branding" element={<AdminBranding />} />
+                <Route path="/admin/data-tools" element={<AdminDataTools />} />
+                <Route path="/admin/stores" element={<Stores />} />
+                <Route path="/admin/stores/:storeId" element={<StoreDetail />} />
+                <Route path="/admin/messaging/channels" element={<AdminMessagingChannels />} />
+                <Route path="/admin/messaging/templates" element={<AdminMessagingTemplates />} />
+                <Route path="/admin/messaging/rules" element={<AdminMessagingRules />} />
+                <Route path="/admin/messaging/logs" element={<AdminMessagingLogs />} />
+                <Route path="/admin/logistics/control-center" element={<LogisticsControlCenter />} />
+                <Route path="/admin/logistics-settings" element={<AdminLogisticsSettings />} />
+                <Route path="/admin/logistics-dashboard" element={<LogisticsDashboardMain />} />
+                <Route path="/admin/logistics/:courier" element={<CourierDetailPage />} />
+                <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
+                <Route path="/orders/:orderId" element={<AdminOrderDetail />} />
+                <Route path="/admin/marketing/ads" element={<AdminAds />} />
+                <Route path="/admin/marketing/influencers" element={<InfluencerList />} />
+                <Route path="/admin/marketing/campaigns" element={<Campaigns />} />
+                <Route path="/admin/marketing/video-projects" element={<VideoProduction />} />
+                <Route path="/admin/marketing/content-calendar" element={<ContentCalendar />} />
+                <Route path="/admin/marketing/reports" element={<MarketingReports />} />
+                <Route path="/admin/ai-insights" element={<AIInsights />} />
+                <Route path="/admin/inventory/stock-summary" element={<StockSummary />} />
+                <Route path="/admin/inventory/movements" element={<StockMovements />} />
+                <Route path="/admin/inventory/parties" element={<Parties />} />
+                <Route path="/admin/inventory/warehouses" element={<Warehouses />} />
+                <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
+                <Route path="/admin/inventory/daily-pl" element={<DailyPL />} />
+                <Route path="/admin/inventory/ai-reorder" element={<AIStockReorder />} />
+                <Route path="/hrm/employees" element={<HRMEmployees />} />
+                <Route path="/hrm/employees/:id" element={<HRMEmployeeDetail />} />
+                <Route path="/hrm/staff-documents" element={<HRMStaffDocuments />} />
+                <Route path="/hrm/payroll" element={<HRMPayroll />} />
+                <Route path="/hrm/policies" element={<HRMPolicies />} />
+                <Route path="/hrm/holidays" element={<HRMHolidays />} />
+                <Route path="/hrm/leave" element={<HRMLeave />} />
+                <Route path="/hrm/leave-quota" element={<HRMLeaveQuota />} />
+                <Route path="/hrm/notices" element={<HRMNotices />} />
+                <Route path="/hrm/team-structure" element={<HRMTeamStructure />} />
+                <Route path="/hrm/company-info" element={<HRMCompanyInfo />} />
+                <Route path="/hrm/salary-slips" element={<HRMSalarySlip />} />
+                <Route path="/hrm/assets" element={<HRMAssets />} />
+                <Route path="/hrm/attendance" element={<HRMAttendance />} />
+                <Route path="/hrm/chat" element={<HRMChat />} />
+                <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
+                <Route path="/hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
+                <Route path="/hrm/knowledge-center/reports" element={<KnowledgeCenterReports />} />
+                <Route path="/training/my-courses" element={<MyCourses />} />
+                <Route path="/training/courses/:slug" element={<CoursePlayer />} />
+                <Route path="/training/courses/:slug/quiz" element={<CourseQuiz />} />
+                <Route path="/training/certificates" element={<MyCertificates />} />
+                <Route path="/my-hr" element={<MyHRDashboard />} />
+                <Route path="/my-hr/documents" element={<MyHRDocuments />} />
+                <Route path="/my-hr/attendance" element={<MyHRDashboard />} />
+                <Route path="/my-hr/leave" element={<HRMLeave />} />
+                <Route path="/my-hr/assets" element={<MyHRDashboard />} />
+                <Route path="/my-hr/chat" element={<HRMChat />} />
+                <Route path="/my-hr/holidays" element={<HRMHolidays />} />
+                <Route path="/my-hr/notices" element={<HRMNotices />} />
+                <Route path="/my-hr/salary-slips" element={<StaffSelfService />} />
+              </Route>
 
-            {/* Followup Routes - Redirected to Logistics Portal */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/followup/dashboard" element={<LogisticsPortalOrders />} />
-              <Route path="/followup/orders" element={<LogisticsPortalOrders />} />
-              <Route path="/followup/reports" element={<LogisticsPortalOrders />} />
-              <Route path="/followup/self-service" element={<StaffSelfService />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/leads/dashboard" element={<LeadsDashboard />} />
+                <Route path="/leads/all" element={<LeadsAll />} />
+                <Route path="/leads/followup" element={<LeadsFollowup />} />
+                <Route path="/leads/reports" element={<LeadsReports />} />
+                <Route path="/leads/self-service" element={<StaffSelfService />} />
+              </Route>
 
-            {/* HR Role Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/hr/dashboard" element={<HRDashboard />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/calling/dashboard" element={<CallingDashboard />} />
+                <Route path="/calling/leads" element={<CallingLeads />} />
+                <Route path="/calling/orders" element={<CallingOrders />} />
+                <Route path="/calling/my-orders" element={<CallingMyOrders />} />
+                <Route path="/calling/orders/:orderId" element={<CallingOrderDetail />} />
+                <Route path="/calling/reports" element={<CallingReports />} />
+                <Route path="/calling/self-service" element={<StaffSelfService />} />
+              </Route>
 
-            {/* Manager Role Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/manager/dashboard" element={<ManagerDashboard />} />
-              <Route path="/manager/reports" element={<AdminReports />} />
-              <Route path="/manager/targets" element={<AdminStaffTargets />} />
-              <Route path="/manager/approvals" element={<HRMLeave />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/followup/dashboard" element={<LogisticsPortalOrders />} />
+                <Route path="/followup/orders" element={<LogisticsPortalOrders />} />
+                <Route path="/followup/reports" element={<LogisticsPortalOrders />} />
+                <Route path="/followup/self-service" element={<StaffSelfService />} />
+              </Route>
 
-            {/* Marketing Role Routes */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
-              <Route path="/marketing/ads" element={<AdminAds />} />
-              <Route path="/marketing/daybook" element={<AdminDashboard />} />
-              <Route path="/marketing/performance" element={<AdminReports />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/hr/dashboard" element={<HRDashboard />} />
+              </Route>
 
-            {/* Logistics Routes (Admin courier management) */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/logistics/dashboard" element={<LogisticsDashboard />} />
-              <Route path="/logistics/orders" element={<LogisticsOrders />} />
-              <Route path="/logistics/orders/inside-valley" element={<LogisticsInsideValley />} />
-              <Route path="/logistics/orders/outside-valley" element={<LogisticsOutsideValley />} />
-              <Route path="/logistics/self-service" element={<StaffSelfService />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+                <Route path="/manager/reports" element={<AdminReports />} />
+                <Route path="/manager/targets" element={<AdminStaffTargets />} />
+                <Route path="/manager/approvals" element={<HRMLeave />} />
+              </Route>
 
-            {/* Logistics Portal Routes (for LOGISTICS role) */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/logistics-portal/dashboard" element={<LogisticsPortalOrders />} />
-              <Route path="/logistics-portal/orders" element={<LogisticsPortalOrders />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
+                <Route path="/marketing/ads" element={<AdminAds />} />
+                <Route path="/marketing/daybook" element={<AdminDashboard />} />
+                <Route path="/marketing/performance" element={<AdminReports />} />
+              </Route>
 
-            {/* Short Inventory Routes (aliases for /admin/inventory/*) */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/inventory/stock-summary" element={<StockSummary />} />
-              <Route path="/inventory/movements" element={<StockMovements />} />
-              <Route path="/inventory/parties" element={<Parties />} />
-              <Route path="/inventory/warehouses" element={<Warehouses />} />
-              <Route path="/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
-              <Route path="/inventory/daily-pl" element={<DailyPL />} />
-              <Route path="/inventory/ai-reorder" element={<AIStockReorder />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/logistics/dashboard" element={<LogisticsDashboard />} />
+                <Route path="/logistics/orders" element={<LogisticsOrders />} />
+                <Route path="/logistics/orders/inside-valley" element={<LogisticsInsideValley />} />
+                <Route path="/logistics/orders/outside-valley" element={<LogisticsOutsideValley />} />
+                <Route path="/logistics/self-service" element={<StaffSelfService />} />
+              </Route>
 
-            {/* Short Accounting Routes (aliases for /admin/accounting/*) */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/accounting/dashboard" element={<AccountingDashboard />} />
-              <Route path="/accounting/dashboard-new" element={<AccountingDashboardNew />} />
-              <Route path="/accounting/new-deposit" element={<NewDeposit />} />
-              <Route path="/accounting/new-expense" element={<NewExpense />} />
-              <Route path="/accounting/new-transfer" element={<NewTransfer />} />
-              <Route path="/accounting/transactions" element={<ViewTransactions />} />
-              <Route path="/accounting/accounts" element={<AccountsManagement />} />
-              <Route path="/accounting/receivables" element={<Receivables />} />
-              <Route path="/accounting/payables" element={<Payables />} />
-              <Route path="/accounting/cash-bank" element={<CashBank />} />
-              <Route path="/accounting/party-statement" element={<PartyStatement />} />
-              <Route path="/accounting/audit" element={<AuditDashboard />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/logistics-portal/dashboard" element={<LogisticsPortalOrders />} />
+                <Route path="/logistics-portal/orders" element={<LogisticsPortalOrders />} />
+              </Route>
 
-            {/* Settings Routes (accessible by all authenticated users) */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
-              <Route path="/settings/profile" element={<MyProfile />} />
-            </Route>
+              <Route element={<DashboardLayout />}>
+                <Route path="/inventory/stock-summary" element={<StockSummary />} />
+                <Route path="/inventory/movements" element={<StockMovements />} />
+                <Route path="/inventory/parties" element={<Parties />} />
+                <Route path="/inventory/warehouses" element={<Warehouses />} />
+                <Route path="/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
+                <Route path="/inventory/daily-pl" element={<DailyPL />} />
+                <Route path="/inventory/ai-reorder" element={<AIStockReorder />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </DateModeProvider>
-  </AuthProvider>
-</QueryClientProvider>
+              <Route element={<DashboardLayout />}>
+                <Route path="/accounting/dashboard" element={<AccountingDashboard />} />
+                <Route path="/accounting/dashboard-new" element={<AccountingDashboardNew />} />
+                <Route path="/accounting/new-deposit" element={<NewDeposit />} />
+                <Route path="/accounting/new-expense" element={<NewExpense />} />
+                <Route path="/accounting/new-transfer" element={<NewTransfer />} />
+                <Route path="/accounting/transactions" element={<ViewTransactions />} />
+                <Route path="/accounting/accounts" element={<AccountsManagement />} />
+                <Route path="/accounting/receivables" element={<Receivables />} />
+                <Route path="/accounting/payables" element={<Payables />} />
+                <Route path="/accounting/cash-bank" element={<CashBank />} />
+                <Route path="/accounting/party-statement" element={<PartyStatement />} />
+                <Route path="/accounting/audit" element={<AuditDashboard />} />
+              </Route>
+
+              <Route element={<DashboardLayout />}>
+                <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+                <Route path="/settings/profile" element={<MyProfile />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </DateModeProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;
