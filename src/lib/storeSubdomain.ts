@@ -1,9 +1,25 @@
 // Utility functions for path-based store routing
-// Example: vedaz.techlaya.com/kakre -> store slug = kakre
+// Example: erp.techlaya.com/vedaz -> store slug = vedaz
+
+/**
+ * Get the base domain for store URLs
+ * Uses the current hostname for production, localhost for dev
+ */
+export function getBaseDomain(): string {
+  const hostname = window.location.hostname;
+  
+  // For local development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return window.location.origin;
+  }
+  
+  // For production - use the current origin (e.g., https://erp.techlaya.com)
+  return window.location.origin;
+}
 
 /**
  * Extract store slug from URL path
- * E.g., vedaz.techlaya.com/kakre -> kakre
+ * E.g., erp.techlaya.com/vedaz -> vedaz
  * Returns null if on root or no store path
  */
 export function getStoreSlugFromPath(): string | null {
@@ -16,7 +32,7 @@ export function getStoreSlugFromPath(): string | null {
   }
   
   // Get the first path segment after root
-  // e.g., /kakre/admin/dashboard -> kakre
+  // e.g., /vedaz/admin/dashboard -> vedaz
   const pathParts = pathname.split('/').filter(Boolean);
   
   // Check if first path is a store slug (not a known route)
@@ -43,17 +59,33 @@ export function isStorePath(storeSlug: string): boolean {
 
 /**
  * Get the store URL for a given store slug
+ * Returns: baseDomain/storeSlug (e.g., https://erp.techlaya.com/vedaz)
  */
 export function getStoreUrl(storeSlug: string): string {
+  const baseDomain = getBaseDomain();
   const hostname = window.location.hostname;
   
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${window.location.origin}?store=${storeSlug}`;
+    return `${baseDomain}?store=${storeSlug}`;
   }
   
   // For production, use path-based routing
-  // e.g., vedaz.techlaya.com/kakre
-  return `${window.location.origin}/${storeSlug}`;
+  // e.g., erp.techlaya.com/vedaz
+  return `${baseDomain}/${storeSlug}`;
+}
+
+/**
+ * Get display URL for store (without protocol)
+ * Returns: domain/storeSlug (e.g., erp.techlaya.com/vedaz)
+ */
+export function getStoreDisplayUrl(storeSlug: string): string {
+  const hostname = window.location.hostname;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${window.location.host}?store=${storeSlug}`;
+  }
+  
+  return `${window.location.host}/${storeSlug}`;
 }
 
 /**
