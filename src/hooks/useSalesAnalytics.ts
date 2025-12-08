@@ -1,21 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, format, startOfWeek, endOfWeek, subWeeks, getDaysInMonth, startOfYear, endOfYear } from 'date-fns';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 const VALID_ORDER_STATUSES = ['CONFIRMED', 'DISPATCHED', 'DELIVERED'];
 
 export function useTodaySalesByLocation() {
   const today = new Date().toISOString().split('T')[0];
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
 
   return useQuery({
-    queryKey: ['today_sales_by_location', today],
+    queryKey: ['today_sales_by_location', today, storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('delivery_location, amount, order_status')
+        .select('delivery_location, amount, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${today}T00:00:00`)
         .lte('order_date', `${today}T23:59:59`);
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -33,22 +42,32 @@ export function useTodaySalesByLocation() {
         total: insideValley + outsideValley,
       };
     },
+    enabled: !!storeId,
   });
 }
 
 export function useDailyDeliveryChart(year: number, month: number) {
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+
   return useQuery({
-    queryKey: ['daily_delivery_chart', year, month],
+    queryKey: ['daily_delivery_chart', year, month, storeId],
     queryFn: async () => {
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('order_date, delivery_location, order_status')
+        .select('order_date, delivery_location, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -70,22 +89,32 @@ export function useDailyDeliveryChart(year: number, month: number) {
 
       return dailyData;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useMonthlySalesChart(year: number) {
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+
   return useQuery({
-    queryKey: ['monthly_sales_chart', year],
+    queryKey: ['monthly_sales_chart', year, storeId],
     queryFn: async () => {
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('order_date, amount, order_status')
+        .select('order_date, amount, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -104,23 +133,33 @@ export function useMonthlySalesChart(year: number) {
 
       return monthlyData;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useMonthlyPLData(year: number) {
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+
   return useQuery({
-    queryKey: ['monthly_pl_data', year],
+    queryKey: ['monthly_pl_data', year, storeId],
     queryFn: async () => {
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
 
-      // Fetch orders with product info for delivery cost
-      const { data: orders, error: ordersError } = await supabase
+      // Fetch orders with product info for delivery cost, filtered by store
+      let ordersQuery = supabase
         .from('orders')
-        .select('order_date, amount, order_status, quantity, product_id')
+        .select('order_date, amount, order_status, quantity, product_id, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${startDate}T00:00:00`)
         .lte('order_date', `${endDate}T23:59:59`);
+
+      if (storeId) {
+        ordersQuery = ordersQuery.eq('store_id', storeId);
+      }
+
+      const { data: orders, error: ordersError } = await ordersQuery;
 
       if (ordersError) throw ordersError;
 
@@ -197,12 +236,16 @@ export function useMonthlyPLData(year: number) {
 
       return plData;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useWeeklySales() {
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+
   return useQuery({
-    queryKey: ['weekly_sales'],
+    queryKey: ['weekly_sales', storeId],
     queryFn: async () => {
       const today = new Date();
       
@@ -214,21 +257,33 @@ export function useWeeklySales() {
       const lastWeekStart = format(startOfWeek(subWeeks(today, 1), { weekStartsOn: 0 }), 'yyyy-MM-dd');
       const lastWeekEnd = format(endOfWeek(subWeeks(today, 1), { weekStartsOn: 0 }), 'yyyy-MM-dd');
 
-      const { data: thisWeekData, error: thisWeekError } = await supabase
+      let thisWeekQuery = supabase
         .from('orders')
-        .select('amount, order_status')
+        .select('amount, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${thisWeekStart}T00:00:00`)
         .lte('order_date', `${thisWeekEnd}T23:59:59`);
 
+      if (storeId) {
+        thisWeekQuery = thisWeekQuery.eq('store_id', storeId);
+      }
+
+      const { data: thisWeekData, error: thisWeekError } = await thisWeekQuery;
+
       if (thisWeekError) throw thisWeekError;
 
-      const { data: lastWeekData, error: lastWeekError } = await supabase
+      let lastWeekQuery = supabase
         .from('orders')
-        .select('amount, order_status')
+        .select('amount, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${lastWeekStart}T00:00:00`)
         .lte('order_date', `${lastWeekEnd}T23:59:59`);
+
+      if (storeId) {
+        lastWeekQuery = lastWeekQuery.eq('store_id', storeId);
+      }
+
+      const { data: lastWeekData, error: lastWeekError } = await lastWeekQuery;
 
       if (lastWeekError) throw lastWeekError;
 
@@ -242,5 +297,6 @@ export function useWeeklySales() {
 
       return { thisWeekSales, lastWeekSales };
     },
+    enabled: !!storeId,
   });
 }
