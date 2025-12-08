@@ -1,0 +1,185 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface UserStoreAccess {
+  id: string;
+  user_id: string;
+  store_id: string;
+  access_level: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  store?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+  };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export function useUserStoreAccess(userId?: string) {
+  return useQuery({
+    queryKey: ['user-store-access', userId],
+    queryFn: async () => {
+      let query = supabase
+        .from('user_store_access')
+        .select(`
+          *,
+          store:stores(id, name, slug, logo_url),
+          user:profiles(id, name, email)
+        `)
+        .eq('is_active', true);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as UserStoreAccess[];
+    },
+    enabled: true,
+  });
+}
+
+export function useStoreUsers(storeId?: string) {
+  return useQuery({
+    queryKey: ['store-users', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+
+      const { data, error } = await supabase
+        .from('user_store_access')
+        .select(`
+          *,
+          user:profiles(id, name, email, role)
+        `)
+        .eq('store_id', storeId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!storeId,
+  });
+}
+
+interface AssignStoreInput {
+  user_id: string;
+  store_id: string;
+  access_level?: string;
+}
+
+export function useAssignUserToStore() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (input: AssignStoreInput) => {
+      const { data, error } = await supabase
+        .from('user_store_access')
+        .upsert({
+          user_id: input.user_id,
+          store_id: input.store_id,
+          access_level: input.access_level || 'staff',
+          is_active: true,
+        }, {
+          onConflict: 'user_id,store_id',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
+      queryClient.invalidateQueries({ queryKey: ['store-users'] });
+      toast({
+        title: 'Success',
+        description: 'User assigned to store successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useRemoveUserFromStore() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ userId, storeId }: { userId: string; storeId: string }) => {
+      const { error } = await supabase
+        .from('user_store_access')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .eq('store_id', storeId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
+      queryClient.invalidateQueries({ queryKey: ['store-users'] });
+      toast({
+        title: 'Success',
+        description: 'User removed from store',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useUpdateUserStoreAccess() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, access_level }: { id: string; access_level: string }) => {
+      const { data, error } = await supabase
+        .from('user_store_access')
+        .update({ access_level })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
+      queryClient.invalidateQueries({ queryKey: ['store-users'] });
+      toast({
+        title: 'Success',
+        description: 'Access level updated',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
