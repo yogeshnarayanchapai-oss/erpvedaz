@@ -206,7 +206,7 @@ export function AdminTransferLeadsModal({
       // Get available leads (exclude confirmed leads - cannot be transferred)
       const { data: leads, error: fetchError } = await supabase
         .from('leads')
-        .select('id')
+        .select('id, store_id')
         .eq('product_id', productId)
         .eq('lead_bucket', leadType)
         .eq('pool_status', 'IN_POOL')
@@ -222,6 +222,7 @@ export function AdminTransferLeadsModal({
       }
 
       const leadIds = leads.map(l => l.id);
+      const notificationStoreId = leads[0]?.store_id;
 
       // Update leads
       const { error: updateError } = await supabase
@@ -257,6 +258,7 @@ export function AdminTransferLeadsModal({
           targetUserName: staffName,
           actorId: user.id,
           actorName: 'Admin',
+          storeId: notificationStoreId || undefined,
         });
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);

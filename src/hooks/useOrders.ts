@@ -770,10 +770,20 @@ export function useAdminUpdateOrder() {
 
         await supabase.from('order_history').insert(historyEntries);
 
-        // 6. Notify admins about the edit
+      // 6. Notify admins about the edit
         try {
           const customerName = input.clientName || (currentOrder?.leads as any)?.client_name || 'Customer';
-          const orderStoreId = (currentOrder as any)?.store_id as string | undefined;
+          
+          // Explicitly fetch store_id from order to ensure it's passed correctly
+          const { data: orderForStore } = await supabase
+            .from('orders')
+            .select('store_id')
+            .eq('id', input.orderId)
+            .single();
+          
+          const orderStoreId = orderForStore?.store_id;
+          console.log('[ORDER_EDIT] Notification store_id:', orderStoreId, 'for order:', input.orderId);
+          
           await notifyOrderEdited({
             orderId: input.orderId,
             customerName,
