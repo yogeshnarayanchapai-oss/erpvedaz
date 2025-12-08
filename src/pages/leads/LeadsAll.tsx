@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS = ['ALL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
-type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CANCELLED';
+type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED';
 
 export default function LeadsAll() {
   const today = new Date();
@@ -78,7 +78,9 @@ export default function LeadsAll() {
       const inDateRange = leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to);
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-      const matchesBucket = bucketFilter === 'ALL' || lead.lead_bucket === bucketFilter;
+      const matchesBucket = bucketFilter === 'ALL' || 
+        (bucketFilter === 'CNR' && lead.lead_bucket === 'CNR_POOL') ||
+        (bucketFilter !== 'CNR' && lead.lead_bucket === bucketFilter);
       const matchesSearch = search === '' || 
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
@@ -100,13 +102,14 @@ export default function LeadsAll() {
     return leads;
   }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, search, isTodayFilter]);
 
-  // Count leads by bucket
+  // Count leads by bucket - only count unassigned leads in pool for CNR
   const bucketCounts = useMemo(() => {
-    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CANCELLED: 0 };
+    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0 };
     allLeads.forEach(lead => {
       counts.ALL++;
       if (lead.lead_bucket === 'NEW') counts.NEW++;
-      else if (lead.lead_bucket === 'FOLLOWUP') counts.FOLLOWUP++;
+      else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.lead_bucket === 'FOLLOWUP') counts.FOLLOWUP++;
+      else if (lead.lead_bucket === 'CNR_POOL') counts.CNR++;
       else if (lead.lead_bucket === 'CANCELLED') counts.CANCELLED++;
     });
     return counts;
@@ -308,10 +311,11 @@ export default function LeadsAll() {
 
       {/* Lead Bucket Tabs */}
       <Tabs value={bucketFilter} onValueChange={(v) => setBucketFilter(v as LeadBucketFilter)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-md">
+        <TabsList className="grid w-full grid-cols-5 max-w-lg">
           <TabsTrigger value="ALL">All ({bucketCounts.ALL})</TabsTrigger>
           <TabsTrigger value="NEW">New ({bucketCounts.NEW})</TabsTrigger>
           <TabsTrigger value="FOLLOWUP">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
+          <TabsTrigger value="CNR">CNR ({bucketCounts.CNR})</TabsTrigger>
           <TabsTrigger value="CANCELLED">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
         </TabsList>
       </Tabs>
