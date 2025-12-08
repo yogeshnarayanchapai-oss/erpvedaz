@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Globe, User } from 'lucide-react';
 import { useCreateStore, useUpdateStore, type Store, type CreateStoreInput } from '@/hooks/useStores';
-import { getStoreDisplayUrl } from '@/lib/storeSubdomain';
+import { getStoreDisplayUrl, getPrimaryDomain } from '@/lib/storeSubdomain';
 
 interface StoreFormData extends CreateStoreInput {
   admin_name?: string;
@@ -167,7 +167,7 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
                 <Label htmlFor="default_subdomain">Store Path</Label>
                 <div className="flex items-center gap-0 mt-1">
                   <div className="bg-muted px-3 py-2 border border-input rounded-l-md text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    {window.location.host}/
+                    {getPrimaryDomain()}/
                   </div>
                   <Input
                     id="default_subdomain"
