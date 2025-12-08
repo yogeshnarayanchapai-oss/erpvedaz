@@ -72,9 +72,9 @@ export default function LeadsDashboard() {
   // New leads bucket count - only NEW bucket (not CNR or FU)
   const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED');
   
-  // Follow-up leads count - includes leads sent to FOLLOWUP team
+  // Follow-up leads count - includes leads with FOLLOW_UP status or sent to FOLLOWUP team
   const followupLeads = allLeads.filter(l => 
-    l.lead_bucket === 'FOLLOW_UP_POOL' || l.current_team === 'FOLLOWUP'
+    l.lead_bucket === 'FOLLOW_UP_POOL' || l.current_team === 'FOLLOWUP' || l.status === 'FOLLOW_UP'
   );
   
   // CNR leads count - includes both teams (LEADS and CALLING)
