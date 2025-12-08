@@ -177,14 +177,25 @@ export function useUpdateLead() {
         Object.entries(updates).filter(([_, v]) => v !== undefined)
       );
       
+      // If no updates, just return early
+      if (Object.keys(filteredUpdates).length === 0) {
+        const { data } = await supabase
+          .from('leads')
+          .select()
+          .eq('id', leadId)
+          .maybeSingle();
+        return data;
+      }
+      
       const { data, error } = await supabase
         .from('leads')
         .update(filteredUpdates)
         .eq('id', leadId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Lead not found or you do not have permission to update it');
       return data;
     },
     onSuccess: () => {
@@ -214,9 +225,10 @@ export function useUpdateLeadStatus() {
         .update({ status, remark })
         .eq('id', leadId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Lead not found or you do not have permission to update it');
       return data;
     },
     onSuccess: () => {
