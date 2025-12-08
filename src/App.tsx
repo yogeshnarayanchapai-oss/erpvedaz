@@ -17,6 +17,7 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import SetupAdmin from "./pages/SetupAdmin";
+import StoreAuth from "./pages/StoreAuth";
 import NotFound from "./pages/NotFound";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -366,6 +367,9 @@ const App = () => (
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/update-password" element={<UpdatePassword />} />
               <Route path="/setup" element={<SetupAdmin />} />
+
+              {/* Store-specific auth route */}
+              <Route path="/:storeSlug/auth" element={<StoreAuth />} />
 
               {/* Store-based routes - /:storeSlug/* */}
               <Route path="/:storeSlug/*" element={<StoreRouteWrapper />}>

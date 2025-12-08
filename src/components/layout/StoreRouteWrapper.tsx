@@ -49,9 +49,9 @@ export function StoreRouteWrapper() {
       // Wait for auth to complete
       if (authLoading) return;
 
-      // If no user, redirect to auth
+      // If no user, redirect to store-specific auth page (not global auth)
       if (!user) {
-        navigate('/auth');
+        navigate(`/${storeSlug}/auth`);
         return;
       }
 
@@ -70,22 +70,25 @@ export function StoreRouteWrapper() {
           return;
         }
 
+        // OWNER role should not access via store paths - redirect to global auth
+        if (profile?.role === 'OWNER') {
+          navigate('/admin/dashboard');
+          return;
+        }
+
         // Check if user has access to this store
-        const isOwner = profile?.role === 'OWNER';
-        
-        if (!isOwner) {
-          const { data: accessData } = await supabase
-            .rpc('get_user_accessible_stores', { p_user_id: user.id });
+        const { data: accessData } = await supabase
+          .rpc('get_user_accessible_stores', { p_user_id: user.id });
 
-          const hasAccess = accessData?.some(
-            (s: { store_id: string }) => s.store_id === storeData.id
-          );
+        const hasAccess = accessData?.some(
+          (s: { store_id: string }) => s.store_id === storeData.id
+        );
 
-          if (!hasAccess) {
-            setError('You do not have access to this store');
-            setLoading(false);
-            return;
-          }
+        if (!hasAccess) {
+          // Sign out and redirect to store auth with error
+          await supabase.auth.signOut();
+          navigate(`/${storeSlug}/auth`);
+          return;
         }
 
         setStore(storeData);
@@ -114,15 +117,23 @@ export function StoreRouteWrapper() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl font-bold text-destructive">Store Not Found</h1>
+        <div className="text-center space-y-4 p-6 max-w-md">
+          <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
           <p className="text-muted-foreground">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Go to Home
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => navigate(`/${storeSlug}/auth`)}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Login to Store
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-2 border border-border text-foreground rounded-md hover:bg-muted"
+            >
+              Go to Home
+            </button>
+          </div>
         </div>
       </div>
     );
