@@ -610,6 +610,7 @@ export function useAdminUpdateOrder() {
       orderStatus?: OrderStatus;
       paymentStatus?: PaymentStatus;
       deliveryNotes?: string;
+      orderDate?: string;
       items: {
         productId: string;
         productName: string;
@@ -665,6 +666,9 @@ export function useAdminUpdateOrder() {
         if (input.deliveryNotes !== undefined && input.deliveryNotes !== currentOrder.delivery_notes) {
           changes.push({ field: 'Delivery Notes', oldValue: currentOrder.delivery_notes || '-', newValue: input.deliveryNotes || '-' });
         }
+        if (input.orderDate !== undefined && input.orderDate !== currentOrder.order_date?.split('T')[0]) {
+          changes.push({ field: 'Order Date', oldValue: currentOrder.order_date?.split('T')[0] || '-', newValue: input.orderDate || '-' });
+        }
         if (input.grandTotal !== currentOrder.amount) {
           changes.push({ field: 'Amount', oldValue: `Rs. ${currentOrder.amount || 0}`, newValue: `Rs. ${input.grandTotal}` });
         }
@@ -696,6 +700,7 @@ export function useAdminUpdateOrder() {
       if (input.orderStatus !== undefined) orderUpdates.order_status = input.orderStatus;
       if (input.paymentStatus !== undefined) orderUpdates.payment_status = input.paymentStatus;
       if (input.deliveryNotes !== undefined) orderUpdates.delivery_notes = input.deliveryNotes;
+      if (input.orderDate !== undefined) orderUpdates.order_date = input.orderDate;
       
       // Update primary product_id to first item
       if (input.items.length > 0) {
