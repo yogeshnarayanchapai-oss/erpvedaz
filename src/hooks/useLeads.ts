@@ -511,7 +511,7 @@ export function useMarkAsCNR() {
       // Get lead details for notification and verification
       const { data: lead } = await supabase
         .from('leads')
-        .select('client_name, contact_number, product_id, assigned_to_user_id, products:product_id(name)')
+        .select('client_name, contact_number, product_id, assigned_to_user_id, store_id, products:product_id(name)')
         .eq('id', leadId)
         .maybeSingle();
 
@@ -554,20 +554,19 @@ export function useMarkAsCNR() {
 
       if (transferError) throw transferError;
 
-      // Send notification to LEADS role
-      if (lead) {
-        try {
-          await notifyLeadReturnedToCNR({
-            leadId,
-            customerName: lead.client_name || 'Unknown',
-            phone: lead.contact_number || '',
-            productName: (lead.products as any)?.name,
-            actorId: user.id,
-            actorName: userProfile?.name || 'Staff',
-          });
-        } catch (notifyError) {
-          console.error('Failed to send notification:', notifyError);
-        }
+      // Send notification to LEADS role with store_id
+      try {
+        await notifyLeadReturnedToCNR({
+          leadId,
+          customerName: lead.client_name || 'Unknown',
+          phone: lead.contact_number || '',
+          productName: (lead.products as any)?.name,
+          actorId: user.id,
+          actorName: userProfile?.name || 'Staff',
+          storeId: lead.store_id || undefined,
+        });
+      } catch (notifyError) {
+        console.error('Failed to send notification:', notifyError);
       }
 
       return { success: true };
@@ -607,10 +606,10 @@ export function useTransferToLeads() {
 
       const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
 
-      // Get lead details to verify ownership
+      // Get lead details to verify ownership and for notification
       const { data: lead } = await supabase
         .from('leads')
-        .select('assigned_to_user_id')
+        .select('assigned_to_user_id, client_name, contact_number, store_id, products:product_id(name)')
         .eq('id', leadId)
         .maybeSingle();
 
@@ -671,6 +670,23 @@ export function useTransferToLeads() {
         });
 
       if (transferError) throw transferError;
+
+      // Send notification to LEADS role when CNR is transferred back
+      if (reason === 'CNR') {
+        try {
+          await notifyLeadReturnedToCNR({
+            leadId,
+            customerName: lead.client_name || 'Unknown',
+            phone: lead.contact_number || '',
+            productName: (lead.products as any)?.name,
+            actorId: user.id,
+            actorName: userProfile?.name || 'Staff',
+            storeId: lead.store_id || undefined,
+          });
+        } catch (notifyError) {
+          console.error('Failed to send CNR notification:', notifyError);
+        }
+      }
 
       return { success: true };
     },
