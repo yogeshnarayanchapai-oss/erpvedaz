@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useStaff } from '@/hooks/useStaff';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -15,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { notifyLeadTransfer } from '@/lib/notificationHelpers';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AdminTransferLeadsModalProps {
   open: boolean;
@@ -40,7 +41,9 @@ export function AdminTransferLeadsModal({
   open, 
   onOpenChange,
 }: AdminTransferLeadsModalProps) {
-  const { data: callingStaff = [] } = useStaff('CALLING');
+  const { currentStore } = useCurrentStore();
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'OWNER';
   const queryClient = useQueryClient();
   
   const [leadType, setLeadType] = useState<LeadType>('NEW');
@@ -99,11 +102,52 @@ export function AdminTransferLeadsModal({
     enabled: open,
   });
 
-  // Fetch today's assigned leads count per staff
+  // Fetch today's assigned leads count per staff - directly fetch CALLING staff for current store
   const { data: staffWithCounts = [] } = useQuery({
-    queryKey: ['staff-today-counts', open],
+    queryKey: ['staff-today-counts', open, currentStore?.id, isOwner],
     queryFn: async () => {
       if (!open) return [];
+      
+      // First, fetch CALLING staff
+      let callingStaff: { id: string; name: string; email: string }[] = [];
+      
+      if (isOwner) {
+        // OWNER sees all CALLING staff
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .eq('role', 'CALLING')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (error) throw error;
+        callingStaff = data || [];
+      } else if (currentStore?.id) {
+        // Non-OWNER: get staff assigned to current store
+        const { data: storeUsers, error: storeError } = await supabase
+          .from('user_store_access')
+          .select('user_id')
+          .eq('store_id', currentStore.id)
+          .eq('is_active', true);
+        
+        if (storeError) throw storeError;
+        
+        if (storeUsers && storeUsers.length > 0) {
+          const userIds = storeUsers.map(u => u.user_id);
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .in('id', userIds)
+            .eq('role', 'CALLING')
+            .eq('is_active', true)
+            .order('name');
+          
+          if (error) throw error;
+          callingStaff = data || [];
+        }
+      }
+      
+      if (callingStaff.length === 0) return [];
       
       const today = new Date().toISOString().split('T')[0];
       
@@ -132,7 +176,7 @@ export function AdminTransferLeadsModal({
         todayAssigned: countMap.get(staff.id) || 0
       }));
     },
-    enabled: open && callingStaff.length > 0,
+    enabled: open && (isOwner || !!currentStore?.id),
   });
 
   // Calculate total available leads for selected type
