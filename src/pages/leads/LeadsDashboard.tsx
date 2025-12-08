@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLeads, useCreateLead } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
@@ -25,6 +26,7 @@ export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
   const today = getNepalDate();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const { data: allLeads = [], isLoading } = useLeads();
   const { data: products = [] } = useProducts();
@@ -68,8 +70,8 @@ export default function LeadsDashboard() {
   // Follow-up leads pool count
   const followupLeads = leadsInPool.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL');
   
-  // CNR leads pool count
-  const cnrLeads = leadsInPool.filter(l => l.lead_bucket === 'CNR_POOL');
+  // CNR leads count - includes both teams (LEADS and CALLING)
+  const cnrLeads = allLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
 
   // Calculate today's transfer progress
   // Total to transfer today = all leads in pool for today
@@ -235,36 +237,48 @@ export default function LeadsDashboard() {
           description={`New: ${todayLeadsInPool.filter(l => l.lead_bucket === 'NEW').length} | FU: ${todayLeadsInPool.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL').length} | CNR: ${todayLeadsInPool.filter(l => l.lead_bucket === 'CNR_POOL').length}`}
           icon={<FileText className="w-5 h-5" />}
           variant="primary"
+          onClick={() => navigate('/leads/all')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
           title="New Leads"
           value={newLeads.length}
           icon={<Users className="w-5 h-5" />}
           variant="info"
+          onClick={() => navigate('/leads/all?bucket=NEW')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
           title="Follow-up Leads"
           value={followupLeads.length}
           icon={<Clock className="w-5 h-5" />}
           variant="warning"
+          onClick={() => navigate('/leads/all?bucket=FOLLOWUP')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
           title="CNR Leads"
           value={cnrLeads.length}
           icon={<PhoneOff className="w-5 h-5" />}
           variant="destructive"
+          onClick={() => navigate('/leads/all?bucket=CNR')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
           title="Total in Queue"
           value={leadsInPool.length}
           icon={<Phone className="w-5 h-5" />}
           variant="default"
+          onClick={() => navigate('/leads/all')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
         <StatCard
           title="Products"
           value={products.length}
           icon={<Package className="w-5 h-5" />}
           variant="success"
+          onClick={() => navigate('/admin/products')}
+          className="cursor-pointer hover:shadow-md transition-shadow"
         />
       </div>
 

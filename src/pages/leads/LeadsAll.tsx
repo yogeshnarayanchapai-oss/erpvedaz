@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLeads, useTransferLeads } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
@@ -32,13 +33,18 @@ export default function LeadsAll() {
   const today = new Date();
   const queryClient = useQueryClient();
   const { currentStore } = useCurrentStore();
+  const [searchParams] = useSearchParams();
+  
+  // Read initial bucket filter from URL
+  const initialBucket = (searchParams.get('bucket') as LeadBucketFilter) || 'ALL';
+  
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(today),
     to: endOfDay(today),
   });
   const [productFilter, setProductFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [bucketFilter, setBucketFilter] = useState<LeadBucketFilter>('ALL');
+  const [bucketFilter, setBucketFilter] = useState<LeadBucketFilter>(initialBucket);
   const [search, setSearch] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -68,6 +74,14 @@ export default function LeadsAll() {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
+  // Sync bucket filter with URL params
+  useEffect(() => {
+    const urlBucket = searchParams.get('bucket') as LeadBucketFilter;
+    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED'].includes(urlBucket)) {
+      setBucketFilter(urlBucket);
+    }
+  }, [searchParams]);
 
   // Check if showing today's leads
   const isTodayFilter = isToday(dateRange.from) && isToday(dateRange.to);
