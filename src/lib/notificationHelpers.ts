@@ -7,12 +7,14 @@ export async function notifyNewLeadsCreated({
   createdByName,
   createdById,
   portal,
+  storeId,
 }: {
   count: number;
   productName?: string;
   createdByName: string;
   createdById: string;
   portal: string;
+  storeId?: string;
 }) {
   await createNotifications([
     {
@@ -25,6 +27,7 @@ export async function notifyNewLeadsCreated({
       portal: 'ADMIN',
       linkPath: '/admin/leads',
       meta: { count, productName, portal },
+      storeId,
     },
   ]);
 }
@@ -37,6 +40,7 @@ export async function notifyLeadTransfer({
   targetUserName,
   actorId,
   actorName,
+  storeId,
 }: {
   count: number;
   productName?: string;
@@ -44,6 +48,7 @@ export async function notifyLeadTransfer({
   targetUserName: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const notifications: CreateNotificationParams[] = [];
 
@@ -58,6 +63,7 @@ export async function notifyLeadTransfer({
     portal: 'CALLING',
     linkPath: '/calling/leads',
     meta: { count, productName },
+    storeId,
   });
 
   // Summary notification to Admin/Manager
@@ -71,6 +77,7 @@ export async function notifyLeadTransfer({
     portal: 'ADMIN',
     linkPath: '/admin/leads',
     meta: { count, productName, targetUserName, targetUserId },
+    storeId,
   });
 
   await createNotifications(notifications);
@@ -84,6 +91,7 @@ export async function notifyLeadReturnedToCNR({
   productName,
   actorId,
   actorName,
+  storeId,
 }: {
   leadId: string;
   customerName: string;
@@ -91,6 +99,7 @@ export async function notifyLeadReturnedToCNR({
   productName?: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const notifications: CreateNotificationParams[] = [
     // Notify LEADS role
@@ -104,6 +113,7 @@ export async function notifyLeadReturnedToCNR({
       portal: 'LEADS',
       linkPath: '/leads/dashboard',
       meta: { leadId, customerName, phone, productName },
+      storeId,
     },
     // Notify Admin
     {
@@ -116,6 +126,7 @@ export async function notifyLeadReturnedToCNR({
       portal: 'ADMIN',
       linkPath: '/admin/leads',
       meta: { leadId, customerName, phone, productName },
+      storeId,
     },
   ];
 
@@ -133,6 +144,7 @@ export async function notifyOrderConfirmed({
   actorId,
   actorName,
   amount,
+  storeId,
 }: {
   orderId: string;
   productName: string;
@@ -143,6 +155,7 @@ export async function notifyOrderConfirmed({
   actorId: string;
   actorName: string;
   amount: number;
+  storeId?: string;
 }) {
   const isInside = deliveryLocation === 'INSIDE_VALLEY';
   const locationLabel = isInside ? 'Inside Valley' : 'Outside Valley';
@@ -160,6 +173,7 @@ export async function notifyOrderConfirmed({
       portal: 'LOGISTICS',
       linkPath: logisticsPath,
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
+      storeId,
     },
     // Notify Admin
     {
@@ -172,6 +186,7 @@ export async function notifyOrderConfirmed({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
+      storeId,
     },
     // Notify Manager
     {
@@ -184,6 +199,7 @@ export async function notifyOrderConfirmed({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
+      storeId,
     },
   ];
 
@@ -199,6 +215,7 @@ export async function notifyOrderRedirected({
   callingStaffId,
   actorId,
   actorName,
+  storeId,
 }: {
   orderId: string;
   productName: string;
@@ -207,6 +224,7 @@ export async function notifyOrderRedirected({
   callingStaffId: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const notifications: CreateNotificationParams[] = [
     // Notify the original calling staff
@@ -220,6 +238,7 @@ export async function notifyOrderRedirected({
       portal: 'CALLING',
       linkPath: '/calling/orders',
       meta: { orderId, productName, customerName, amount },
+      storeId,
     },
     // Notify Admin
     {
@@ -232,6 +251,7 @@ export async function notifyOrderRedirected({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, customerName, amount },
+      storeId,
     },
     // Notify Manager
     {
@@ -244,6 +264,7 @@ export async function notifyOrderRedirected({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, customerName, amount },
+      storeId,
     },
   ];
 
@@ -259,6 +280,7 @@ export async function notifyDeliveryUpdated({
   callingStaffId,
   actorId,
   actorName,
+  storeId,
 }: {
   orderId: string;
   customerName: string;
@@ -267,6 +289,7 @@ export async function notifyDeliveryUpdated({
   callingStaffId?: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const notifications: CreateNotificationParams[] = [];
   const statusLabel = newStatus.replace(/_/g, ' ').toLowerCase();
@@ -283,6 +306,7 @@ export async function notifyDeliveryUpdated({
       portal: 'CALLING',
       linkPath: '/calling/orders',
       meta: { orderId, customerName, newStatus, deliveryLocation },
+      storeId,
     });
   }
 
@@ -297,6 +321,7 @@ export async function notifyDeliveryUpdated({
     portal: 'ADMIN',
     linkPath: '/admin/orders',
     meta: { orderId, customerName, newStatus, deliveryLocation },
+    storeId,
   });
 
   // Notify Follow-up if outside valley
@@ -311,6 +336,7 @@ export async function notifyDeliveryUpdated({
       portal: 'FOLLOWUP',
       linkPath: '/followup/orders',
       meta: { orderId, customerName, newStatus, deliveryLocation },
+      storeId,
     });
   }
 
@@ -325,6 +351,7 @@ export async function notifyInsideDeliveryUpdate({
   remark,
   actorId,
   actorName,
+  storeId,
 }: {
   orderId: string;
   customerName: string;
@@ -332,6 +359,7 @@ export async function notifyInsideDeliveryUpdate({
   remark?: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const statusLabel = deliveryStatus.replace(/_/g, ' ').toLowerCase();
   
@@ -347,6 +375,7 @@ export async function notifyInsideDeliveryUpdate({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, customerName, deliveryStatus, remark },
+      storeId,
     },
     // Notify Logistics
     {
@@ -359,6 +388,7 @@ export async function notifyInsideDeliveryUpdate({
       portal: 'LOGISTICS',
       linkPath: '/logistics/orders/inside-valley',
       meta: { orderId, customerName, deliveryStatus, remark },
+      storeId,
     },
   ];
 
@@ -373,6 +403,7 @@ export async function notifyLeadStatusChange({
   newStatus,
   actorId,
   actorName,
+  storeId,
 }: {
   leadId: string;
   customerName: string;
@@ -380,6 +411,7 @@ export async function notifyLeadStatusChange({
   newStatus: 'CALL_NOT_RECEIVED' | 'FOLLOW_UP' | 'CANCELLED';
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const typeMap: Record<string, string> = {
     CALL_NOT_RECEIVED: 'LEAD_CNR',
@@ -404,6 +436,7 @@ export async function notifyLeadStatusChange({
       portal: 'ADMIN',
       linkPath: '/admin/leads',
       meta: { leadId, customerName, phone, newStatus },
+      storeId,
     },
   ]);
 }
@@ -414,11 +447,13 @@ export async function notifyLogisticsExport({
   partnerName,
   actorId,
   actorName,
+  storeId,
 }: {
   count: number;
   partnerName: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   await createNotifications([
     {
@@ -431,6 +466,7 @@ export async function notifyLogisticsExport({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { count, partnerName },
+      storeId,
     },
     {
       type: 'LOGISTICS_EXPORTED',
@@ -442,6 +478,7 @@ export async function notifyLogisticsExport({
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { count, partnerName },
+      storeId,
     },
   ]);
 }
@@ -454,6 +491,7 @@ export async function notifyLogisticsStatusUpdate({
   orderOwnerUserId,
   actorId,
   actorName,
+  storeId,
 }: {
   orderId: string;
   customerName: string;
@@ -461,6 +499,7 @@ export async function notifyLogisticsStatusUpdate({
   orderOwnerUserId?: string;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   const statusLabel = newStatus.replace(/_/g, ' ').toLowerCase();
   const notifications: CreateNotificationParams[] = [];
@@ -477,6 +516,7 @@ export async function notifyLogisticsStatusUpdate({
       portal: 'CALLING',
       linkPath: '/calling/orders',
       meta: { orderId, customerName, newStatus },
+      storeId,
     });
   }
 
@@ -492,12 +532,14 @@ export async function notifyOrderEdited({
   changeCount,
   actorId,
   actorName,
+  storeId,
 }: {
   orderId: string;
   customerName: string;
   changeCount: number;
   actorId: string;
   actorName: string;
+  storeId?: string;
 }) {
   await createNotifications([
     {
@@ -510,6 +552,7 @@ export async function notifyOrderEdited({
       portal: 'ADMIN',
       linkPath: `/admin/orders/${orderId}`,
       meta: { orderId, customerName, changeCount },
+      storeId,
     },
     {
       type: 'ORDER_EDITED',
@@ -521,6 +564,7 @@ export async function notifyOrderEdited({
       portal: 'ADMIN',
       linkPath: `/admin/orders/${orderId}`,
       meta: { orderId, customerName, changeCount },
+      storeId,
     },
   ]);
 }

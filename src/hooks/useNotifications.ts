@@ -30,6 +30,7 @@ export interface Notification {
   link_path: string | null;
   read_at: string | null;
   meta: Record<string, any> | null;
+  store_id: string | null;
 }
 
 export interface CreateNotificationParams {
@@ -43,6 +44,7 @@ export interface CreateNotificationParams {
   portal?: string;
   linkPath?: string;
   meta?: Record<string, any>;
+  storeId?: string;
 }
 
 export function useNotifications() {
@@ -203,6 +205,7 @@ export async function createNotification(params: CreateNotificationParams) {
       portal: params.portal,
       link_path: params.linkPath,
       meta: params.meta || {},
+      store_id: params.storeId || null,
     });
 
   if (error) {
@@ -224,6 +227,7 @@ export async function createNotifications(notificationsList: CreateNotificationP
     portal: params.portal,
     link_path: params.linkPath,
     meta: params.meta || {},
+    store_id: params.storeId || null,
   }));
 
   const { error } = await supabase.from('notifications').insert(inserts);

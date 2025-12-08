@@ -119,6 +119,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
           createdByName: profile?.name || 'Staff',
           createdById: profile?.id || '',
           portal: 'CALLING',
+          storeId: currentStore?.id,
         });
       } catch (e) {
         console.error('Failed to send notification:', e);

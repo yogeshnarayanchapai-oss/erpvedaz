@@ -140,6 +140,7 @@ export function useConfirmLeadAsOrder() {
           actorId: user.id,
           actorName: userProfile?.name || 'Staff',
           amount: input.totalAmount,
+          storeId: currentStore?.id,
         });
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);
