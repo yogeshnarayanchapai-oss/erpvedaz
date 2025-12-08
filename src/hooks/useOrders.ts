@@ -300,6 +300,7 @@ export function useCreateOrder() {
             actorId: user.id,
             actorName: actorResult.data?.name || 'Staff',
             amount: input.amount,
+            storeId: storeId || undefined,
           });
         } catch (notifyError) {
           console.error('Failed to send order notification:', notifyError);
@@ -354,6 +355,7 @@ export function useUpdateOrderStatus() {
           .select(`
             id, 
             sales_person_id,
+            store_id,
             leads:leads!orders_lead_id_fkey (client_name, contact_number)
           `)
           .eq('id', orderId)
@@ -400,6 +402,7 @@ export function useUpdateOrderStatus() {
               orderOwnerUserId: ownerUserId,
               actorId: user.id,
               actorName: actorProfile?.name || 'Logistics',
+              storeId: orderDetails?.store_id || undefined,
             });
           } catch (notifyError) {
             console.error('Failed to send notification:', notifyError);
@@ -498,7 +501,7 @@ export function useUpdateInsideDeliveryStatus() {
 
       // Fetch order details for notification and permission check
       const [orderResult, actorResult, userRoleResult] = await Promise.all([
-        supabase.from('orders').select('leads(client_name), called_by_role, assigned_to_user_id').eq('id', orderId).single(),
+        supabase.from('orders').select('leads(client_name), called_by_role, assigned_to_user_id, store_id').eq('id', orderId).single(),
         supabase.from('profiles').select('name, role').eq('id', user.id).single(),
         supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
       ]);
@@ -544,6 +547,7 @@ export function useUpdateInsideDeliveryStatus() {
           remark: insideDeliveryRemark,
           actorId: user.id,
           actorName: actorResult.data?.name || 'Staff',
+          storeId: (orderResult.data as any)?.store_id || undefined,
         });
       } catch (notifyError) {
         console.error('Failed to send delivery notification:', notifyError);
@@ -774,6 +778,7 @@ export function useAdminUpdateOrder() {
             changeCount: changes.length,
             actorId: user.id,
             actorName,
+            storeId: currentOrder?.store_id || undefined,
           });
         } catch (notifyError) {
           console.error('Failed to send order edit notification:', notifyError);
