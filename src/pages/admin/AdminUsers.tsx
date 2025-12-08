@@ -823,44 +823,17 @@ const usersWithEmployee = useMemo(() => {
                             </>
                           )}
                           {(profile?.role === 'ADMIN' || profile?.role === 'OWNER') && user.id !== profile.id && canEditUser(user) && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
-                                onClick={() => {
-                                  setResetPasswordUser(user);
-                                  setIsResetPasswordOpen(true);
-                                }}
-                                title="Reset Password"
-                              >
-                                <KeyRound className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                                onClick={() => handleImpersonate(user)}
-                                disabled={isImpersonating === user.id}
-                                title="Login as this user"
-                              >
-                                {isImpersonating === user.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <LogIn className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </>
-                          )}
-                          {canDeleteUser(user) && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => openDeleteDialog(user)}
-                              title="Delete User"
+                              className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                              onClick={() => {
+                                setResetPasswordUser(user);
+                                setIsResetPasswordOpen(true);
+                              }}
+                              title="Reset Password"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <KeyRound className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
