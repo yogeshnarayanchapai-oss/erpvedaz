@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, AlertCircle, Info } from 'lucide-react';
+import { Check, ChevronsUpDown, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -41,7 +41,7 @@ export function AdminTransferLeadsModal({
   open, 
   onOpenChange,
 }: AdminTransferLeadsModalProps) {
-  const { currentStore } = useCurrentStore();
+  const { currentStore, isLoading: isStoreLoading } = useCurrentStore();
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
   const queryClient = useQueryClient();
@@ -103,8 +103,8 @@ export function AdminTransferLeadsModal({
   });
 
   // Fetch today's assigned leads count per staff - directly fetch CALLING staff for current store
-  const { data: staffWithCounts = [] } = useQuery({
-    queryKey: ['staff-today-counts', open, currentStore?.id, isOwner],
+  const { data: staffWithCounts = [], isLoading: isStaffLoading } = useQuery({
+    queryKey: ['staff-today-counts', open, currentStore?.id, isOwner, isStoreLoading],
     queryFn: async () => {
       if (!open) return [];
       
@@ -176,7 +176,7 @@ export function AdminTransferLeadsModal({
         todayAssigned: countMap.get(staff.id) || 0
       }));
     },
-    enabled: open && (isOwner || !!currentStore?.id),
+    enabled: open && !isStoreLoading && (isOwner || !!currentStore?.id),
   });
 
   // Calculate total available leads for selected type
@@ -360,6 +360,21 @@ export function AdminTransferLeadsModal({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          {/* Loading State */}
+          {isStoreLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading store data...</span>
+            </div>
+          ) : !isOwner && !currentStore?.id ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No store assigned to your account. Please contact admin.
+              </AlertDescription>
+            </Alert>
+          ) : (
+          <>
           {/* Lead Type Selection */}
           <div className="space-y-2">
             <Label>Lead Type *</Label>
@@ -554,6 +569,8 @@ export function AdminTransferLeadsModal({
               </p>
             )}
           </div>
+          </>
+          )}
         </div>
 
         <DialogFooter>
