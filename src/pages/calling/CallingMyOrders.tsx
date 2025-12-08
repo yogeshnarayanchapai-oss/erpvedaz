@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Package, Search, Download, Eye, MessageCircle } from 'lucide-react';
+import { Package, Search, Download, Eye, MessageCircle, Edit, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { useOrders } from '@/hooks/useOrders';
+import { useOrders, Order } from '@/hooks/useOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
+import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 
 const orderStatusColors: Record<string, string> = {
   CONFIRMED: 'bg-success/10 text-success border-success/20',
@@ -50,6 +51,9 @@ export default function CallingMyOrders() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<string>('all');
+
+  // Edit order state
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   // Update date range when tab changes
   useEffect(() => {
@@ -173,6 +177,38 @@ export default function CallingMyOrders() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Orders exported to CSV');
+  };
+
+  // Copy order details in specific format
+  const handleCopyOrder = (order: any) => {
+    const customerName = order.leads?.client_name || '';
+    const customerPhone = order.leads?.contact_number || '';
+    const fullAddress = order.leads?.full_address || order.destination_branch || '';
+    
+    // Get product details
+    const orderItemsList = order.order_items || [];
+    let productName = '';
+    let productPrice = 0;
+    let productQuantity = 0;
+    
+    if (orderItemsList.length > 0) {
+      productName = orderItemsList.map((item: any) => item.product_name).join(', ');
+      productPrice = orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
+      productQuantity = orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+    } else {
+      productName = order.products?.name || '';
+      productPrice = (order.amount || 0) * (order.quantity || 1);
+      productQuantity = order.quantity || 1;
+    }
+    
+    // Format: %customer name% %customer phone number% %product name% %full address% %product price% %product quantity% Vedaz01
+    const copyText = `${customerName} ${customerPhone} ${productName} ${fullAddress} ${productPrice} ${productQuantity} Vedaz01`;
+    
+    navigator.clipboard.writeText(copyText).then(() => {
+      toast.success('Order details copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy order details');
+    });
   };
 
   return (
@@ -388,13 +424,30 @@ export default function CallingMyOrders() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => navigate(`/calling/orders/${order.id}`)}
+                            title="View Order"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingOrder(order)}
+                            title="Edit Order"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleCopyOrder(order)}
+                            title="Copy Order"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -405,6 +458,7 @@ export default function CallingMyOrders() {
                                 window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
                               }
                             }}
+                            title="WhatsApp"
                           >
                             <MessageCircle className="h-4 w-4" />
                           </Button>
@@ -458,6 +512,13 @@ export default function CallingMyOrders() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Order Sheet */}
+      <AdminEditOrderSheet
+        order={editingOrder}
+        open={!!editingOrder}
+        onOpenChange={(open) => !open && setEditingOrder(null)}
+      />
     </div>
   );
 }
