@@ -148,8 +148,8 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
           });
           setAvailableStores(storesWithAccess);
 
-          // Only set current store if not already set from path
-          if (!storeSubdomain && !currentStore) {
+          // Set current store if not set from path - always set for non-OWNER staff
+          if (!storeSubdomain) {
             let selectedStore: Store | undefined;
             
             // Try saved preference
@@ -161,7 +161,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
               selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
             }
             
-            // Use first available
+            // Use first available (for staff this is their assigned store)
             if (!selectedStore) {
               selectedStore = storesWithAccess[0];
             }
@@ -182,7 +182,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isOwner, profile?.default_store_id, storeSubdomain, currentStore]);
+  }, [user?.id, isOwner, profile?.default_store_id, storeSubdomain]);
 
   useEffect(() => {
     fetchStores();
