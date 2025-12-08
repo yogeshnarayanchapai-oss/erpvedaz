@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyOrderConfirmed, notifyInsideDeliveryUpdate, notifyLogisticsStatusUpdate, notifyOrderEdited } from '@/lib/notificationHelpers';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 type OrderStatus = 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'SENT_FOR_DELIVERY' | 'LOCATION_CNR' | 'PENDING' | 'CANCELLED' | 'REDIRECT' | 'SENT_FOR_NCM' | 'SENT_FOR_PATHAO';
 type PaymentStatus = 'PENDING' | 'PAID' | 'COD';
@@ -66,9 +67,13 @@ export function useOrders(filters?: {
   salesPersonId?: string;
   deliveryLocation?: DeliveryLocation | 'ALL';
   sentToLogistics?: boolean;
+  storeId?: string;
 }) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters?.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['orders', filters],
+    queryKey: ['orders', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('orders')
@@ -84,6 +89,11 @@ export function useOrders(filters?: {
         `)
         .eq('is_deleted', false)
         .order('order_date', { ascending: false });
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (filters?.dateFrom) {
         query = query.gte('order_date', filters.dateFrom + 'T00:00:00');
@@ -111,6 +121,7 @@ export function useOrders(filters?: {
       if (error) throw error;
       return data as Order[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -149,7 +160,7 @@ export interface OrderItemInput {
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
-
+  const storeId = useCurrentStoreId();
   return useMutation({
     mutationFn: async (input: {
       leadId: string;
@@ -223,6 +234,7 @@ export function useCreateOrder() {
           called_by_user_id: user.id,
           called_by_role: calledByRole,
           assigned_to_user_id: user.id, // Initially assigned to creator
+          store_id: storeId,
         })
         .select()
         .single();

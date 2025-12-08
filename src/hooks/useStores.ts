@@ -149,6 +149,8 @@ export function useCreateStore() {
 
   return useMutation({
     mutationFn: async (input: CreateStoreInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('stores')
         .insert(input)
@@ -156,6 +158,18 @@ export function useCreateStore() {
         .single();
 
       if (error) throw error;
+
+      // Automatically assign the creator as admin of this store
+      if (user) {
+        await supabase.from('user_store_access').upsert({
+          user_id: user.id,
+          store_id: data.id,
+          access_level: 'admin',
+          is_active: true,
+        }, {
+          onConflict: 'user_id,store_id',
+        });
+      }
 
       // Optionally create default domain
       if (input.default_subdomain) {
@@ -166,10 +180,18 @@ export function useCreateStore() {
         });
       }
 
+      // Create empty branding record for this store
+      await supabase.from('branding').insert({
+        store_id: data.id,
+        primary_color: input.primary_color || '#3B82F6',
+      });
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
+      queryClient.invalidateQueries({ queryKey: ['accessible-stores'] });
       toast.success('Store created successfully');
     },
     onError: (error: any) => {
