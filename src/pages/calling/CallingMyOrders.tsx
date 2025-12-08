@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Search, Download, Eye, MessageCircle, Edit, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,20 +37,36 @@ const paymentStatusColors: Record<string, string> = {
 export default function CallingMyOrders() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const today = new Date();
 
-  // Date range state
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  // Read status filter from URL
+  const urlStatus = searchParams.get('status');
+
+  // Date range state - show all orders when coming from dashboard with status filter
+  const [activeTab, setActiveTab] = useState<'today' | 'all'>(urlStatus ? 'all' : 'today');
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: startOfDay(today),
+    from: urlStatus ? startOfDay(subDays(today, 30)) : startOfDay(today),
     to: endOfDay(today),
   });
 
   // Filter states
   const [search, setSearch] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>(urlStatus || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<string>('all');
+
+  // Sync status filter with URL params
+  useEffect(() => {
+    if (urlStatus) {
+      setSelectedStatus(urlStatus);
+      setActiveTab('all');
+      setDateRange({
+        from: startOfDay(subDays(today, 30)),
+        to: endOfDay(today),
+      });
+    }
+  }, [urlStatus]);
 
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);

@@ -212,7 +212,7 @@ export default function CallingDashboard() {
           value={confirmedCount}
           icon={<CheckCircle className="w-5 h-5" />}
           variant="success"
-          onClick={() => navigate('/calling/leads?status=CONFIRMED')}
+          onClick={() => navigate('/calling/orders?status=CONFIRMED')}
           className="cursor-pointer hover:ring-2 hover:ring-success/50 transition-all"
         />
         <StatCard
