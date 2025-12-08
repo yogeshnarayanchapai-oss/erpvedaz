@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DateRange } from '@/hooks/useSalesByDateRange';
 import { format } from 'date-fns';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 export interface StaffLeaderboardEntry {
   id: string;
@@ -16,34 +17,51 @@ export interface StaffLeaderboardEntry {
 export function useStaffLeaderboard(dateRange: DateRange) {
   const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
   const dateTo = format(dateRange.to, 'yyyy-MM-dd');
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
 
   return useQuery({
-    queryKey: ['staff-leaderboard', dateFrom, dateTo],
+    queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId],
     queryFn: async () => {
-      // Fetch all orders with sales person info
-      const { data: orders, error: ordersError } = await supabase
+      // Fetch all orders with sales person info, filtered by store
+      let ordersQuery = supabase
         .from('orders')
         .select(`
           id,
           amount,
           order_status,
           sales_person_id,
-          order_date
+          order_date,
+          store_id
         `)
         .eq('is_deleted', false)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`)
         .not('sales_person_id', 'is', null);
 
+      // Filter by store_id
+      if (storeId) {
+        ordersQuery = ordersQuery.eq('store_id', storeId);
+      }
+
+      const { data: orders, error: ordersError } = await ordersQuery;
+
       if (ordersError) throw ordersError;
 
-      // Fetch all leads with assigned user info
-      const { data: leads, error: leadsError } = await supabase
+      // Fetch all leads with assigned user info, filtered by store
+      let leadsQuery = supabase
         .from('leads')
-        .select('id, assigned_to_user_id, status')
+        .select('id, assigned_to_user_id, status, store_id')
         .gte('date', dateFrom)
         .lte('date', dateTo)
         .not('assigned_to_user_id', 'is', null);
+
+      // Filter by store_id
+      if (storeId) {
+        leadsQuery = leadsQuery.eq('store_id', storeId);
+      }
+
+      const { data: leads, error: leadsError } = await leadsQuery;
 
       if (leadsError) throw leadsError;
 
@@ -132,5 +150,6 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       return leaderboard;
     },
+    enabled: !!storeId,
   });
 }
