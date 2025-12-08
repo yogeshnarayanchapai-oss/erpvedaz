@@ -53,6 +53,7 @@ interface AdminEditOrderFormData {
   order_status: string;
   payment_status: string;
   delivery_notes: string;
+  order_date: string;
   orderItems: OrderItemLine[];
 }
 
@@ -83,6 +84,7 @@ export function AdminEditOrderSheet({
     order_status: 'CONFIRMED',
     payment_status: 'COD',
     delivery_notes: '',
+    order_date: '',
     orderItems: [],
   });
 
@@ -119,6 +121,7 @@ export function AdminEditOrderSheet({
         order_status: order.order_status || 'CONFIRMED',
         payment_status: order.payment_status || 'COD',
         delivery_notes: order.delivery_notes || '',
+        order_date: order.order_date?.split('T')[0] || '',
         orderItems: initialItems,
       });
     }
@@ -204,6 +207,7 @@ export function AdminEditOrderSheet({
         orderStatus: formData.order_status as any,
         paymentStatus: formData.payment_status as any,
         deliveryNotes: formData.delivery_notes || undefined,
+        orderDate: formData.order_date || undefined,
         items: validItems.map(item => ({
           productId: item.product_id,
           productName: item.product_name,
@@ -306,7 +310,15 @@ export function AdminEditOrderSheet({
           </div>
 
           {/* Status Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <div className="space-y-2">
+              <Label>Order Date</Label>
+              <Input
+                type="date"
+                value={formData.order_date}
+                onChange={(e) => handleFormChange({ order_date: e.target.value })}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Order Status</Label>
               <Select 
