@@ -678,8 +678,8 @@ Order By: ${profile?.name || 'N/A'}`;
   };
 
   const handleTransferToFollowup = async (lead: Lead) => {
-    if (!['FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED'].includes(lead.status)) {
-      toast.error('Can only transfer leads with Follow Up, CNR, or Cancelled status');
+    if (lead.status === 'CONFIRMED') {
+      toast.error('Cannot transfer confirmed orders');
       return;
     }
     await transferToFollowup.mutateAsync(lead.id);
@@ -715,8 +715,9 @@ Order By: ${profile?.name || 'N/A'}`;
     return (lead.status === 'NEW' || lead.status === 'ASSIGNED') && !calledLeadIds.includes(lead.id);
   };
 
-  const canTransfer = (lead: Lead) => {
-    return ['FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED'].includes(lead.status);
+  // Allow transfer to Follow-up for any lead status (except already confirmed orders)
+  const canTransferToFollowup = (lead: Lead) => {
+    return lead.status !== 'CONFIRMED';
   };
 
   // Export leads to CSV
@@ -1087,7 +1088,7 @@ Order By: ${profile?.name || 'N/A'}`;
                             <PhoneOff className="w-4 h-4" />
                           </Button>
                         )}
-                        {canTransfer(lead) && (
+                        {canTransferToFollowup(lead) && (
                           <Button
                             variant="ghost"
                             size="sm"
