@@ -92,9 +92,19 @@ export default function LeadsAll() {
       const inDateRange = leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to);
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-      const matchesBucket = bucketFilter === 'ALL' || 
-        (bucketFilter === 'CNR' && (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED')) ||
-        (bucketFilter !== 'CNR' && lead.lead_bucket === bucketFilter);
+      
+      // Bucket filter logic
+      let matchesBucket = bucketFilter === 'ALL';
+      if (bucketFilter === 'CNR') {
+        matchesBucket = lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED';
+      } else if (bucketFilter === 'FOLLOWUP') {
+        matchesBucket = lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.current_team === 'FOLLOWUP' || lead.status === 'FOLLOW_UP';
+      } else if (bucketFilter === 'NEW') {
+        matchesBucket = lead.lead_bucket === 'NEW' && lead.status !== 'CALL_NOT_RECEIVED' && lead.status !== 'FOLLOW_UP';
+      } else if (bucketFilter === 'CANCELLED') {
+        matchesBucket = lead.lead_bucket === 'CANCELLED';
+      }
+      
       const matchesSearch = search === '' || 
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
@@ -124,10 +134,10 @@ export default function LeadsAll() {
       // Check CNR first - status takes priority for CNR classification
       if (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED') {
         counts.CNR++;
+      } else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.current_team === 'FOLLOWUP' || lead.status === 'FOLLOW_UP') {
+        counts.FOLLOWUP++;
       } else if (lead.lead_bucket === 'NEW') {
         counts.NEW++;
-      } else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.lead_bucket === 'FOLLOWUP') {
-        counts.FOLLOWUP++;
       } else if (lead.lead_bucket === 'CANCELLED') {
         counts.CANCELLED++;
       }
