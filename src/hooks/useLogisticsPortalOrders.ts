@@ -143,6 +143,7 @@ export function useLogisticsMarkDelivered() {
         .select(`
           id, 
           sales_person_id,
+          store_id,
           leads:leads!orders_lead_id_fkey (client_name)
         `)
         .eq('id', orderId)
@@ -175,6 +176,7 @@ export function useLogisticsMarkDelivered() {
             orderOwnerUserId: order.sales_person_id,
             actorId: userId,
             actorName: actorProfile?.name || 'Logistics',
+            storeId: order.store_id || undefined,
           });
         } catch (notifyError) {
           console.error('Failed to send notification:', notifyError);
