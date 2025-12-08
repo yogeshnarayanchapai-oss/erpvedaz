@@ -57,13 +57,13 @@ export function AdminTransferLeadsModal({
 
   // Fetch available leads grouped by product for the selected lead type
   const { data: productLeadCounts = [], refetch: refetchProductCounts } = useQuery({
-    queryKey: ['product-lead-counts', leadType, open, profile?.id, isOwner],
+    queryKey: ['product-lead-counts', leadType, open, profile?.id, isOwner, currentStore?.id],
     queryFn: async () => {
       if (!open || !profile?.id) return [];
       
-      // Get user's store first (for non-OWNER)
-      let storeId: string | null = null;
-      if (!isOwner) {
+      // Use currentStore.id for OWNER, or get user's store for non-OWNER
+      let storeId: string | null = currentStore?.id || null;
+      if (!isOwner && !storeId) {
         const { data: userStoreAccess } = await supabase
           .from('user_store_access')
           .select('store_id')
@@ -72,23 +72,21 @@ export function AdminTransferLeadsModal({
           .single();
         
         storeId = userStoreAccess?.store_id || null;
-        if (!storeId) return [];
       }
       
-      // Get all unassigned leads for this lead type (exclude confirmed leads)
+      if (!storeId) return [];
+      
+      // Get all unassigned leads for this lead type filtered by store (exclude confirmed leads)
       let query = supabase
         .from('leads')
-        .select('product_id, products(id, name)')
+        .select('product_id, products!inner(id, name, store_id)')
         .eq('lead_bucket', leadType)
         .eq('pool_status', 'IN_POOL')
         .is('assigned_to_user_id', null)
         .neq('status', 'CONFIRMED')
-        .is('order_id', null);
-      
-      // Filter by store for non-OWNER
-      if (!isOwner && storeId) {
-        query = query.eq('store_id', storeId);
-      }
+        .is('order_id', null)
+        .eq('store_id', storeId)
+        .eq('products.store_id', storeId);
       
       const { data: leads, error } = await query;
 
@@ -125,79 +123,47 @@ export function AdminTransferLeadsModal({
 
   // Fetch today's assigned leads count per staff - directly fetch CALLING staff for current store
   const { data: staffWithCounts = [], isLoading: isStaffLoading } = useQuery({
-    queryKey: ['staff-today-counts', open, profile?.id, isOwner],
+    queryKey: ['staff-today-counts', open, profile?.id, isOwner, currentStore?.id],
     queryFn: async () => {
-      console.log('Staff query running, profile.id:', profile?.id, 'isOwner:', isOwner);
-      if (!open || !profile?.id) {
-        console.log('Staff query skipped - open:', open, 'profile?.id:', profile?.id);
-        return [];
-      }
+      if (!open || !profile?.id) return [];
       
-      // First, fetch CALLING staff
-      let callingStaff: { id: string; name: string; email: string }[] = [];
-      
-      if (isOwner) {
-        // OWNER sees all CALLING staff
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, name, email')
-          .eq('role', 'CALLING')
-          .eq('is_active', true)
-          .order('name');
-        
-        if (error) {
-          console.error('Owner staff query error:', error);
-          throw error;
-        }
-        callingStaff = data || [];
-        console.log('Owner - all CALLING staff:', callingStaff.length);
-      } else {
-        // Non-OWNER: First get user's store directly from user_store_access
-        console.log('Non-owner query, fetching store for user:', profile.id);
-        const { data: userStoreAccess, error: storeAccessError } = await supabase
+      // Use currentStore.id for OWNER, or get user's store for non-OWNER
+      let storeId: string | null = currentStore?.id || null;
+      if (!storeId) {
+        const { data: userStoreAccess } = await supabase
           .from('user_store_access')
           .select('store_id')
           .eq('user_id', profile.id)
           .eq('is_active', true)
           .maybeSingle();
         
-        console.log('User store access result:', userStoreAccess, 'error:', storeAccessError);
+        storeId = userStoreAccess?.store_id || null;
+      }
+      
+      if (!storeId) return [];
+      
+      // Get all CALLING staff for the store
+      const { data: storeUsers, error: storeError } = await supabase
+        .from('user_store_access')
+        .select('user_id')
+        .eq('store_id', storeId)
+        .eq('is_active', true);
+      
+      if (storeError) throw storeError;
+      
+      let callingStaff: { id: string; name: string; email: string }[] = [];
+      if (storeUsers && storeUsers.length > 0) {
+        const userIds = storeUsers.map(u => u.user_id);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', userIds)
+          .eq('role', 'CALLING')
+          .eq('is_active', true)
+          .order('name');
         
-        if (storeAccessError) {
-          console.error('Error fetching user store access:', storeAccessError);
-          return [];
-        }
-        
-        if (!userStoreAccess?.store_id) {
-          console.error('No store assigned to user');
-          return [];
-        }
-        
-        // Now get all CALLING staff for that store
-        const { data: storeUsers, error: storeError } = await supabase
-          .from('user_store_access')
-          .select('user_id')
-          .eq('store_id', userStoreAccess.store_id)
-          .eq('is_active', true);
-        
-        console.log('Store users for store', userStoreAccess.store_id, ':', storeUsers?.length, 'error:', storeError);
-        
-        if (storeError) throw storeError;
-        
-        if (storeUsers && storeUsers.length > 0) {
-          const userIds = storeUsers.map(u => u.user_id);
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .in('id', userIds)
-            .eq('role', 'CALLING')
-            .eq('is_active', true)
-            .order('name');
-          
-          console.log('CALLING staff found:', data?.length, 'error:', error);
-          if (error) throw error;
-          callingStaff = data || [];
-        }
+        if (error) throw error;
+        callingStaff = data || [];
       }
       
       console.log('Final callingStaff count:', callingStaff.length);
@@ -205,10 +171,11 @@ export function AdminTransferLeadsModal({
       
       const today = new Date().toISOString().split('T')[0];
       
-      // Get today's assigned leads per staff
+      // Get today's assigned leads per staff filtered by store
       const { data: assignments, error } = await supabase
         .from('leads')
         .select('assigned_to_user_id')
+        .eq('store_id', storeId)
         .gte('assigned_at', `${today}T00:00:00`)
         .lte('assigned_at', `${today}T23:59:59`)
         .not('assigned_to_user_id', 'is', null);
