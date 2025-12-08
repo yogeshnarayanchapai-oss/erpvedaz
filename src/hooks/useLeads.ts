@@ -287,7 +287,7 @@ export function useTransferLeads() {
       // Exclude confirmed leads - they cannot be transferred
       let query = supabase
         .from('leads')
-        .select('id')
+        .select('id, store_id')
         .eq('product_id', productId)
         .eq('current_team', 'LEADS')
         .eq('pool_status', 'IN_POOL')
@@ -309,6 +309,7 @@ export function useTransferLeads() {
       }
 
       const leadIds = leads.map(l => l.id);
+      const notificationStoreId = leads[0]?.store_id;
 
       // Update leads
       const { error: updateError } = await supabase
@@ -340,7 +341,7 @@ export function useTransferLeads() {
 
       if (transferError) throw transferError;
 
-      // Send notification
+      // Send notification with store_id from the leads
       try {
         await notifyLeadTransfer({
           count: leadIds.length,
@@ -349,6 +350,7 @@ export function useTransferLeads() {
           targetUserName: staffName,
           actorId: user.id,
           actorName,
+          storeId: notificationStoreId || undefined,
         });
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);

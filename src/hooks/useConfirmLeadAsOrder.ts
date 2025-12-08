@@ -127,9 +127,12 @@ export function useConfirmLeadAsOrder() {
         new_value: 'CONFIRMED',
       });
 
-      // Send notification
+      // Send notification - use order's store_id as it's guaranteed to be set
       try {
         const productNames = input.items.map(item => item.product_name).join(', ');
+        const notificationStoreId = order.store_id || currentStore?.id;
+        console.log('[ORDER_CONFIRMED] Notification store_id:', notificationStoreId, 'for order:', order.id);
+        
         await notifyOrderConfirmed({
           orderId: order.id,
           productName: productNames,
@@ -140,7 +143,7 @@ export function useConfirmLeadAsOrder() {
           actorId: user.id,
           actorName: userProfile?.name || 'Staff',
           amount: input.totalAmount,
-          storeId: currentStore?.id,
+          storeId: notificationStoreId || undefined,
         });
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);
