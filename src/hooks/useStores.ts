@@ -357,6 +357,36 @@ export function useDeleteStoreDomain() {
   });
 }
 
+export function useDeleteStore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (storeId: string) => {
+      // Delete related records first
+      await supabase.from('store_domains').delete().eq('store_id', storeId);
+      await supabase.from('branding').delete().eq('store_id', storeId);
+      await supabase.from('user_store_access').delete().eq('store_id', storeId);
+      
+      // Delete the store
+      const { error } = await supabase
+        .from('stores')
+        .delete()
+        .eq('id', storeId);
+
+      if (error) throw error;
+      return storeId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['accessible-stores'] });
+      toast.success('Store deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete store: ${error.message}`);
+    },
+  });
+}
+
 // Helper function to get store by domain (for multi-tenant routing)
 export async function getStoreByHost(host: string): Promise<Store | null> {
   const { data: domain } = await supabase
