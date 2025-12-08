@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface ProductInventory {
   id: string;
@@ -13,19 +14,21 @@ export interface ProductInventory {
   drawer_number: string | null;
   created_at: string;
   updated_at: string;
-  products?: { id: string; name: string; cost_price: number | null; sell_price: number | null };
+  products?: { id: string; name: string; cost_price: number | null; sell_price: number | null; store_id?: string | null };
   warehouses?: { id: string; name: string; code: string };
 }
 
 export function useInventory(warehouseId?: string, productSearch?: string, reorderOnly?: boolean) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['inventory', warehouseId, productSearch, reorderOnly],
+    queryKey: ['inventory', warehouseId, productSearch, reorderOnly, storeId],
     queryFn: async () => {
       let query = supabase
         .from('product_inventory')
         .select(`
           *,
-          products:product_id(id, name, cost_price, sell_price),
+          products:product_id(id, name, cost_price, sell_price, store_id),
           warehouses:warehouse_id(id, name, code)
         `)
         .order('created_at', { ascending: false });
@@ -41,6 +44,12 @@ export function useInventory(warehouseId?: string, productSearch?: string, reord
       if (error) throw error;
 
       let result = data as ProductInventory[];
+      
+      // Filter by store_id via product relation
+      if (storeId) {
+        result = result.filter((inv) => inv.products?.store_id === storeId);
+      }
+
       if (productSearch) {
         const search = productSearch.toLowerCase();
         result = result.filter((inv) =>
@@ -49,31 +58,41 @@ export function useInventory(warehouseId?: string, productSearch?: string, reord
       }
       return result;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useInventorySummary() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['inventory', 'summary'],
+    queryKey: ['inventory', 'summary', storeId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_inventory')
         .select(`
           current_stock,
-          products:product_id(cost_price)
+          products:product_id(cost_price, store_id)
         `);
       if (error) throw error;
 
-      const items = data as { current_stock: number; products: { cost_price: number | null } | null }[];
-      const totalProducts = new Set(items.map((i) => i.products)).size;
-      const totalStock = items.reduce((sum, i) => sum + (i.current_stock || 0), 0);
-      const stockValue = items.reduce(
+      const items = data as { current_stock: number; products: { cost_price: number | null; store_id: string | null } | null }[];
+      
+      // Filter by store
+      const filteredItems = storeId 
+        ? items.filter(i => i.products?.store_id === storeId)
+        : items;
+
+      const totalProducts = new Set(filteredItems.map((i) => i.products)).size;
+      const totalStock = filteredItems.reduce((sum, i) => sum + (i.current_stock || 0), 0);
+      const stockValue = filteredItems.reduce(
         (sum, i) => sum + (i.current_stock || 0) * (i.products?.cost_price || 0),
         0
       );
 
       return { totalProducts, totalStock, stockValue };
     },
+    enabled: !!storeId,
   });
 }
 

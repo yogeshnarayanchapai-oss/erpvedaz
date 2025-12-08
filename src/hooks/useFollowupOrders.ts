@@ -3,17 +3,21 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { playNotificationSound } from '@/lib/notificationSound';
 import { notifyOrderRedirected } from '@/lib/notificationHelpers';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 interface FollowupOrdersFilters {
   dateFrom?: string;
   dateTo?: string;
   deliveryLocation?: string;
   status?: string;
+  storeId?: string;
 }
 
 export function useFollowupOrders(filters: FollowupOrdersFilters = {}, enableSound: boolean = false) {
   const queryClient = useQueryClient();
   const hasInteractedRef = useRef(false);
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters.storeId || currentStoreId;
 
   // Track user interaction to enable audio
   useEffect(() => {
@@ -74,7 +78,7 @@ export function useFollowupOrders(filters: FollowupOrdersFilters = {}, enableSou
   }, [queryClient, enableSound]);
 
   return useQuery({
-    queryKey: ['followup-orders', filters],
+    queryKey: ['followup-orders', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('orders')
@@ -91,6 +95,11 @@ export function useFollowupOrders(filters: FollowupOrdersFilters = {}, enableSou
         .eq('is_deleted', false)
         .order('order_date', { ascending: false });
 
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
       if (filters.dateFrom) {
         query = query.gte('order_date', `${filters.dateFrom}T00:00:00`);
       }
@@ -103,6 +112,7 @@ export function useFollowupOrders(filters: FollowupOrdersFilters = {}, enableSou
       if (error) throw error;
       return data || [];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -186,6 +196,7 @@ export function useRedirectOrder() {
 
 export function useFollowupStats(dateFrom: string, dateTo: string) {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   // Set up realtime subscription for stats
   useEffect(() => {
@@ -210,10 +221,10 @@ export function useFollowupStats(dateFrom: string, dateTo: string) {
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ['followup-stats', dateFrom, dateTo],
+    queryKey: ['followup-stats', dateFrom, dateTo, storeId],
     queryFn: async () => {
       // Get all orders for the date range that followup can see
-      const { data: orders, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           id,
@@ -226,6 +237,13 @@ export function useFollowupStats(dateFrom: string, dateTo: string) {
         .eq('is_deleted', false)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`);
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data: orders, error } = await query;
 
       if (error) throw error;
 
@@ -268,21 +286,38 @@ export function useFollowupStats(dateFrom: string, dateTo: string) {
         staffRedirectStats,
       };
     },
+    enabled: !!storeId,
   });
 }
 
 export function useFollowupStaff() {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['followup-staff'],
+    queryKey: ['followup-staff', storeId],
     queryFn: async () => {
+      // Get users with FOLLOWUP role in current store
+      const { data: storeUsers, error: storeError } = await supabase
+        .from('user_store_access')
+        .select('user_id')
+        .eq('store_id', storeId!)
+        .eq('is_active', true);
+
+      if (storeError) throw storeError;
+      if (!storeUsers || storeUsers.length === 0) return [];
+
+      const userIds = storeUsers.map(u => u.user_id);
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name')
+        .in('id', userIds)
         .eq('role', 'FOLLOWUP')
         .eq('is_active', true);
 
       if (error) throw error;
       return data || [];
     },
+    enabled: !!storeId,
   });
 }

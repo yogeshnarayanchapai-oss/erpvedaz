@@ -44,6 +44,7 @@ export function useActiveWarehouses() {
 
 export function useCreateWarehouse() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (input: { name: string; code: string; location?: string; is_active?: boolean; remarks?: string }) => {
       const { data, error } = await supabase

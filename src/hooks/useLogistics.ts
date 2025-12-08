@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export type CourierProvider = 'NCM' | 'GBL' | 'PATHAO' | 'GAAUBESI';
 export type LogisticsDeliveryStatus = 
@@ -66,6 +67,7 @@ export interface LogisticsOrder {
   created_by: string | null;
   orders?: {
     id: string;
+    store_id?: string | null;
     leads?: { client_name: string; contact_number: string } | null;
     products?: { name: string } | null;
     amount: number | null;
@@ -149,9 +151,13 @@ export function useLogisticsOrders(filters?: {
   status?: LogisticsDeliveryStatus;
   dateFrom?: string;
   dateTo?: string;
+  storeId?: string;
 }) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters?.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['logistics-orders', filters],
+    queryKey: ['logistics-orders', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('logistics_orders')
@@ -160,6 +166,7 @@ export function useLogisticsOrders(filters?: {
           orders (
             id,
             amount,
+            store_id,
             leads ( client_name, contact_number ),
             products ( name )
           )
@@ -181,8 +188,16 @@ export function useLogisticsOrders(filters?: {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as LogisticsOrder[];
+      
+      // Filter by store_id through the orders relation
+      let result = data as LogisticsOrder[];
+      if (storeId) {
+        result = result.filter(lo => lo.orders?.store_id === storeId || !lo.orders);
+      }
+      
+      return result;
     },
+    enabled: !!storeId,
   });
 }
 
@@ -226,13 +241,20 @@ export function useCODSettlements(filters?: {
   status?: CODSettlementStatus;
   dateFrom?: string;
   dateTo?: string;
+  storeId?: string;
 }) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters?.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['cod-settlements', filters],
+    queryKey: ['cod-settlements', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('cod_settlements')
-        .select('*')
+        .select(`
+          *,
+          orders (store_id)
+        `)
         .order('created_at', { ascending: false });
       
       if (filters?.courier) {
@@ -250,8 +272,16 @@ export function useCODSettlements(filters?: {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as CODSettlement[];
+      
+      // Filter by store_id through orders relation
+      let result = data as (CODSettlement & { orders?: { store_id: string } })[];
+      if (storeId) {
+        result = result.filter(s => s.orders?.store_id === storeId || !s.orders);
+      }
+      
+      return result as CODSettlement[];
     },
+    enabled: !!storeId,
   });
 }
 
