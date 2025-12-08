@@ -658,17 +658,6 @@ export default function CallingOrders() {
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
-                        {order.leads?.contact_number && (
-                          <WhatsAppButton
-                            phone={order.leads.contact_number}
-                            customerName={order.leads.client_name || undefined}
-                            productName={order.products?.name || undefined}
-                            amount={order.amount || undefined}
-                            orderId={order.id}
-                            variant="ghost"
-                            size="icon"
-                          />
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
