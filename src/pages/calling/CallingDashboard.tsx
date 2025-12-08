@@ -75,7 +75,8 @@ export default function CallingDashboard() {
 
   // Use stats from realtime hooks, fallback to computed values if not yet loaded
   const assignedCount = leadStats?.total ?? 0;
-  const confirmedCount = leadStats?.confirmed ?? 0;
+  // Confirmed count = total orders created by this user
+  const confirmedCount = orders.length;
   const cnrCount = leadStats?.callNotReceived ?? 0;
   const followupCount = leadStats?.followUp ?? 0;
   const cancelledCount = leadStats?.cancelled ?? 0;
