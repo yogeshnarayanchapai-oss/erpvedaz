@@ -107,10 +107,16 @@ export default function LeadsAll() {
     const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0 };
     allLeads.forEach(lead => {
       counts.ALL++;
-      if (lead.lead_bucket === 'NEW') counts.NEW++;
-      else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.lead_bucket === 'FOLLOWUP') counts.FOLLOWUP++;
-      else if (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED') counts.CNR++;
-      else if (lead.lead_bucket === 'CANCELLED') counts.CANCELLED++;
+      // Check CNR first - status takes priority for CNR classification
+      if (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED') {
+        counts.CNR++;
+      } else if (lead.lead_bucket === 'NEW') {
+        counts.NEW++;
+      } else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.lead_bucket === 'FOLLOWUP') {
+        counts.FOLLOWUP++;
+      } else if (lead.lead_bucket === 'CANCELLED') {
+        counts.CANCELLED++;
+      }
     });
     return counts;
   }, [allLeads]);
