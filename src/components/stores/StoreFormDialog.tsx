@@ -7,9 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Globe, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useCreateStore, useUpdateStore, type Store, type CreateStoreInput } from '@/hooks/useStores';
-import { getStoreDisplayUrl, getPrimaryDomain } from '@/lib/storeSubdomain';
 
 interface StoreFormData extends CreateStoreInput {
   admin_name?: string;
@@ -44,7 +43,6 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
   });
 
   const name = watch('name');
-  const subdomain = watch('default_subdomain');
 
   useEffect(() => {
     if (store) {
@@ -153,49 +151,6 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
               </div>
             </div>
           </div>
-
-          {/* Store Path Section */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Store URL
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label htmlFor="default_subdomain">Store Path</Label>
-                <div className="flex items-center gap-0 mt-1">
-                  <div className="bg-muted px-3 py-2 border border-input rounded-l-md text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    {getPrimaryDomain()}/
-                  </div>
-                  <Input
-                    id="default_subdomain"
-                    {...register('default_subdomain')}
-                    placeholder="storename"
-                    className="rounded-l-none border-l-0"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Your store will be accessible at this unique URL path
-                </p>
-              </div>
-              
-              {subdomain && (
-                <div className="bg-background rounded-md p-3 border">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Store URL: </span>
-                    <span className="font-medium text-primary">
-                      {getStoreDisplayUrl(subdomain)}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Admin: {getStoreDisplayUrl(subdomain)}/admin
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Admin User Section - Only show for new stores */}
           {!isEdit && (
