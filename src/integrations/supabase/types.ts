@@ -5919,6 +5919,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_store_ids: { Args: { p_user_id: string }; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -5938,6 +5939,10 @@ export type Database = {
       reset_order_number_sequence: {
         Args: { start_value?: number }
         Returns: undefined
+      }
+      user_has_store_access: {
+        Args: { p_store_id: string; p_user_id: string }
+        Returns: boolean
       }
       verify_email_otp: {
         Args: { p_otp: string; p_user_id: string }
