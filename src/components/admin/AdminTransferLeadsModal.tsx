@@ -41,7 +41,7 @@ export function AdminTransferLeadsModal({
   open, 
   onOpenChange,
 }: AdminTransferLeadsModalProps) {
-  const { currentStore, isLoading: isStoreLoading } = useCurrentStore();
+  const { currentStore } = useCurrentStore();
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
   const queryClient = useQueryClient();
@@ -104,9 +104,9 @@ export function AdminTransferLeadsModal({
 
   // Fetch today's assigned leads count per staff - directly fetch CALLING staff for current store
   const { data: staffWithCounts = [], isLoading: isStaffLoading } = useQuery({
-    queryKey: ['staff-today-counts', open, currentStore?.id, isOwner, isStoreLoading],
+    queryKey: ['staff-today-counts', open, profile?.id, isOwner],
     queryFn: async () => {
-      if (!open) return [];
+      if (!open || !profile?.id) return [];
       
       // First, fetch CALLING staff
       let callingStaff: { id: string; name: string; email: string }[] = [];
@@ -122,12 +122,30 @@ export function AdminTransferLeadsModal({
         
         if (error) throw error;
         callingStaff = data || [];
-      } else if (currentStore?.id) {
-        // Non-OWNER: get staff assigned to current store
+      } else {
+        // Non-OWNER: First get user's store directly from user_store_access
+        const { data: userStoreAccess, error: storeAccessError } = await supabase
+          .from('user_store_access')
+          .select('store_id')
+          .eq('user_id', profile.id)
+          .eq('is_active', true)
+          .single();
+        
+        if (storeAccessError) {
+          console.error('Error fetching user store access:', storeAccessError);
+          return [];
+        }
+        
+        if (!userStoreAccess?.store_id) {
+          console.error('No store assigned to user');
+          return [];
+        }
+        
+        // Now get all CALLING staff for that store
         const { data: storeUsers, error: storeError } = await supabase
           .from('user_store_access')
           .select('user_id')
-          .eq('store_id', currentStore.id)
+          .eq('store_id', userStoreAccess.store_id)
           .eq('is_active', true);
         
         if (storeError) throw storeError;
@@ -176,7 +194,7 @@ export function AdminTransferLeadsModal({
         todayAssigned: countMap.get(staff.id) || 0
       }));
     },
-    enabled: open && !isStoreLoading && (isOwner || !!currentStore?.id),
+    enabled: open && !!profile?.id,
   });
 
   // Calculate total available leads for selected type
@@ -361,18 +379,11 @@ export function AdminTransferLeadsModal({
         
         <div className="space-y-4 py-4">
           {/* Loading State */}
-          {isStoreLoading ? (
+          {isStaffLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Loading store data...</span>
+              <span className="ml-2 text-muted-foreground">Loading staff data...</span>
             </div>
-          ) : !isOwner && !currentStore?.id ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No store assigned to your account. Please contact admin.
-              </AlertDescription>
-            </Alert>
           ) : (
           <>
           {/* Lead Type Selection */}
