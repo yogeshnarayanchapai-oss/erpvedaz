@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { playNotificationSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
 
@@ -49,8 +50,11 @@ export interface CreateNotificationParams {
 
 export function useNotifications() {
   const { profile } = useAuth();
+  const { currentStore } = useCurrentStore();
   const queryClient = useQueryClient();
   const [hasInteracted, setHasInteracted] = useState(false);
+  
+  const isOwner = profile?.role === 'OWNER';
 
   // Track user interaction for audio
   useEffect(() => {
@@ -63,22 +67,30 @@ export function useNotifications() {
     };
   }, []);
 
-  // Fetch notifications for current user/role
+  // Fetch notifications for current user/role filtered by store
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications', profile?.id, profile?.role],
+    queryKey: ['notifications', profile?.id, profile?.role, currentStore?.id, isOwner],
     queryFn: async () => {
       if (!profile?.id) return [];
 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
         .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(100);
+
+      // OWNER sees all notifications, others only see their store's notifications
+      if (!isOwner && currentStore?.id) {
+        // Filter to only show notifications for current store or null store_id (legacy/global)
+        query = query.or(`store_id.eq.${currentStore.id},store_id.is.null`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as Notification[];
@@ -148,7 +160,13 @@ export function useNotifications() {
             newNotification.target_user_id === profile.id ||
             newNotification.target_role === profile.role;
 
-          if (isForCurrentUser) {
+          // For non-OWNER users, also check store match
+          const isForCurrentStore = 
+            isOwner || // OWNER sees all stores
+            !newNotification.store_id || // null store_id = global notification
+            newNotification.store_id === currentStore?.id; // matches current store
+
+          if (isForCurrentUser && isForCurrentStore) {
             // Play sound if user has interacted
             if (hasInteracted) {
               playNotificationSound();
@@ -176,7 +194,7 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id, profile?.role, hasInteracted, queryClient]);
+  }, [profile?.id, profile?.role, hasInteracted, queryClient, isOwner, currentStore?.id]);
 
   return {
     notifications,
