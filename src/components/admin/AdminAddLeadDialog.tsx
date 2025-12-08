@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
 
 const SOURCE_OPTIONS = [
@@ -37,6 +38,7 @@ interface LeadRow {
 
 export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogProps) {
   const { profile } = useAuth();
+  const { currentStore } = useCurrentStore();
   const { data: products = [] } = useProducts();
   const queryClient = useQueryClient();
 
@@ -104,6 +106,7 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
         current_team: 'LEADS' as const,
         lead_bucket: 'NEW' as const,
         pool_status: 'IN_POOL' as const,
+        store_id: currentStore?.id || null,
       }));
 
       const { error } = await supabase.from('leads').insert(leadsToInsert);

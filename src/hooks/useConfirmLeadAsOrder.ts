@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyOrderConfirmed } from '@/lib/notificationHelpers';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 type DeliveryLocation = 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
 
@@ -25,6 +26,7 @@ interface ConfirmLeadAsOrderInput {
 
 export function useConfirmLeadAsOrder() {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
 
   return useMutation({
     mutationFn: async (input: ConfirmLeadAsOrderInput) => {
@@ -75,6 +77,7 @@ export function useConfirmLeadAsOrder() {
           created_by_staff_id: user.id,
           confirmed_by_user_id: user.id,
           confirmed_at: new Date().toISOString(),
+          store_id: currentStore?.id || null,
         })
         .select()
         .single();

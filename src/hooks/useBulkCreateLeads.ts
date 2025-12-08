@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 export interface BulkLeadInput {
   date: string;
@@ -15,6 +16,8 @@ export interface BulkLeadInput {
 
 export function useBulkCreateLeads() {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  
   return useMutation({
     mutationFn: async (leads: BulkLeadInput[]) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -35,6 +38,7 @@ export function useBulkCreateLeads() {
         current_team: 'LEADS' as const,
         lead_bucket: 'NEW' as const,
         pool_status: 'IN_POOL' as const,
+        store_id: currentStore?.id || null,
       }));
       const { data, error } = await supabase.from('leads').insert(leadsToInsert).select();
       if (error) throw error;
