@@ -5,16 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, TrendingUp, Users, ShoppingCart, DollarSign } from 'lucide-react';
+import { ArrowLeft, Edit, TrendingUp, Users, ShoppingCart, DollarSign, Globe, Palette, Settings } from 'lucide-react';
 import { StoreFormDialog } from '@/components/stores/StoreFormDialog';
 import { StoreDomainsTab } from '@/components/stores/StoreDomainsTab';
+import { StoreBrandingTab } from '@/components/stores/StoreBrandingTab';
+import { StoreUsersTab } from '@/components/stores/StoreUsersTab';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function StoreDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
-  const { data: store, isLoading } = useStore(id!);
+  const { data: store, isLoading } = useStore(storeId!);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const formatCurrency = (amount: number) => {
@@ -38,6 +40,7 @@ export default function StoreDetail() {
     return (
       <div className="text-center py-16">
         <h3 className="text-lg font-semibold mb-2">Store not found</h3>
+        <p className="text-muted-foreground mb-4">The store you're looking for doesn't exist or has been removed.</p>
         <Button onClick={() => navigate('/admin/stores')}>Back to Stores</Button>
       </div>
     );
@@ -107,9 +110,23 @@ export default function StoreDetail() {
       />
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="domains">Domains</TabsTrigger>
+        <TabsList className="grid grid-cols-4 w-full max-w-xl">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Branding
+          </TabsTrigger>
+          <TabsTrigger value="domains" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Domains
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -243,8 +260,16 @@ export default function StoreDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="users">
+          <StoreUsersTab storeId={storeId!} />
+        </TabsContent>
+
+        <TabsContent value="branding">
+          <StoreBrandingTab storeId={storeId!} />
+        </TabsContent>
+
         <TabsContent value="domains">
-          <StoreDomainsTab storeId={id!} />
+          <StoreDomainsTab storeId={storeId!} />
         </TabsContent>
       </Tabs>
     </div>

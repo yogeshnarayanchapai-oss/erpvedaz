@@ -155,13 +155,20 @@ export function useUpdateUserStoreAccess() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, access_level }: { id: string; access_level: string }) => {
-      const { data, error } = await supabase
+    mutationFn: async ({ id, access_level, userId, storeId }: { id?: string; access_level: string; userId?: string; storeId?: string }) => {
+      let query = supabase
         .from('user_store_access')
-        .update({ access_level })
-        .eq('id', id)
-        .select()
-        .single();
+        .update({ access_level });
+
+      if (id) {
+        query = query.eq('id', id);
+      } else if (userId && storeId) {
+        query = query.eq('user_id', userId).eq('store_id', storeId);
+      } else {
+        throw new Error('Either id or userId+storeId must be provided');
+      }
+
+      const { data, error } = await query.select().single();
 
       if (error) throw error;
       return data;
