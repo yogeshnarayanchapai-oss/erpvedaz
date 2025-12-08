@@ -246,15 +246,15 @@ export default function Stores() {
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      {/* Lovable subdomain - always available */}
+                      {/* Path-based URL - main domain + store slug */}
                       <div className="flex items-center gap-1 text-sm">
                         <a
-                          href={`https://${store.slug}.lovable.dev`}
+                          href={`${window.location.origin}/${store.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline flex items-center gap-1"
                         >
-                          {store.slug}.lovable.dev
+                          {window.location.host}/{store.slug}
                           <ExternalLink className="w-3 h-3" />
                         </a>
                         <Button
@@ -262,19 +262,13 @@ export default function Stores() {
                           size="sm"
                           className="h-6 w-6 p-0"
                           onClick={() => {
-                            navigator.clipboard.writeText(`https://${store.slug}.lovable.dev`);
+                            navigator.clipboard.writeText(`${window.location.origin}/${store.slug}`);
                             toast.success('URL copied!');
                           }}
                         >
                           <Copy className="w-3 h-3" />
                         </Button>
                       </div>
-                      {/* Custom domain if set */}
-                      {store.default_subdomain && store.default_subdomain !== store.slug && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          {store.default_subdomain}.techlaya.com
-                        </div>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell>

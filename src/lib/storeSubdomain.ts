@@ -1,60 +1,44 @@
-// Utility functions for subdomain-based store routing
-
-const LOVABLE_DOMAINS = [
-  'lovable.dev',
-  'lovable.app',
-  'localhost',
-];
+// Utility functions for path-based store routing
+// Example: vedaz.techlaya.com/kakre -> store slug = kakre
 
 /**
- * Extract store subdomain from current hostname
- * E.g., kakre.lovable.dev -> kakre
- * Returns null if on main domain or localhost
+ * Extract store slug from URL path
+ * E.g., vedaz.techlaya.com/kakre -> kakre
+ * Returns null if on root or no store path
  */
-export function getStoreSubdomain(): string | null {
-  const hostname = window.location.hostname;
+export function getStoreSlugFromPath(): string | null {
+  const pathname = window.location.pathname;
   
-  // Check if it's localhost (development)
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    // Check URL params for store subdomain in dev mode
+  // Check URL params for store in dev mode
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     const params = new URLSearchParams(window.location.search);
     return params.get('store') || null;
   }
   
-  // Check for Lovable domains
-  for (const lovableDomain of LOVABLE_DOMAINS) {
-    if (hostname.endsWith(`.${lovableDomain}`)) {
-      const subdomain = hostname.replace(`.${lovableDomain}`, '');
-      // Ignore if it's the main project subdomain (e.g., project-id.lovable.dev)
-      // Only return if it looks like a store slug (shorter, readable names)
-      if (subdomain && !subdomain.includes('-') && subdomain.length < 30) {
-        return subdomain;
-      }
-      // Also handle store subdomains like: storename-projectid.lovable.dev
-      const parts = subdomain.split('-');
-      if (parts.length > 1) {
-        // First part could be the store slug
-        return parts[0];
-      }
-      return null;
-    }
+  // Get the first path segment after root
+  // e.g., /kakre/admin/dashboard -> kakre
+  const pathParts = pathname.split('/').filter(Boolean);
+  
+  // Check if first path is a store slug (not a known route)
+  const knownRootPaths = [
+    'admin', 'auth', 'setup', 'leads', 'calling', 'followup', 
+    'logistics', 'hr', 'manager', 'marketing', 'hrm', 'training',
+    'my-hr', 'settings', 'orders', 'storefront'
+  ];
+  
+  if (pathParts.length > 0 && !knownRootPaths.includes(pathParts[0])) {
+    return pathParts[0];
   }
   
-  // Check for techlaya.com subdomain
-  if (hostname.endsWith('.techlaya.com')) {
-    return hostname.replace('.techlaya.com', '');
-  }
-  
-  // For custom domains, return null (will be handled separately via store_domains table)
   return null;
 }
 
 /**
- * Check if current hostname matches a store's subdomain
+ * Check if current path matches a store's slug
  */
-export function isStoreSubdomain(storeSlug: string): boolean {
-  const currentSubdomain = getStoreSubdomain();
-  return currentSubdomain === storeSlug;
+export function isStorePath(storeSlug: string): boolean {
+  const currentSlug = getStoreSlugFromPath();
+  return currentSlug === storeSlug;
 }
 
 /**
@@ -67,6 +51,23 @@ export function getStoreUrl(storeSlug: string): string {
     return `${window.location.origin}?store=${storeSlug}`;
   }
   
-  // For production, use techlaya.com subdomain
-  return `https://${storeSlug}.techlaya.com`;
+  // For production, use path-based routing
+  // e.g., vedaz.techlaya.com/kakre
+  return `${window.location.origin}/${storeSlug}`;
+}
+
+/**
+ * Get the base path prefix for the current store
+ * Returns empty string if no store slug in path
+ */
+export function getStoreBasePath(): string {
+  const storeSlug = getStoreSlugFromPath();
+  return storeSlug ? `/${storeSlug}` : '';
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+export function getStoreSubdomain(): string | null {
+  return getStoreSlugFromPath();
 }
