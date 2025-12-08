@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { useParams, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,21 @@ interface StoreInfo {
   name: string;
   slug: string;
   is_active: boolean;
+  logo_url?: string | null;
+  primary_color?: string | null;
 }
+
+interface StoreContextValue {
+  store: StoreInfo | null;
+  storeSlug: string | null;
+  storeId: string | null;
+}
+
+const StoreContext = createContext<StoreContextValue>({
+  store: null,
+  storeSlug: null,
+  storeId: null,
+});
 
 /**
  * StoreRouteWrapper - Validates the store slug from URL and passes it to children
@@ -17,7 +31,7 @@ interface StoreInfo {
  */
 export function StoreRouteWrapper() {
   const { storeSlug } = useParams<{ storeSlug: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [store, setStore] = useState<StoreInfo | null>(null);
@@ -35,11 +49,17 @@ export function StoreRouteWrapper() {
       // Wait for auth to complete
       if (authLoading) return;
 
+      // If no user, redirect to auth
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
       try {
         // Fetch store by slug
         const { data: storeData, error: storeError } = await supabase
           .from('stores')
-          .select('id, name, slug, is_active')
+          .select('id, name, slug, is_active, logo_url, primary_color')
           .eq('slug', storeSlug)
           .eq('is_active', true)
           .single();
@@ -50,8 +70,10 @@ export function StoreRouteWrapper() {
           return;
         }
 
-        // If user is logged in, check access
-        if (user) {
+        // Check if user has access to this store
+        const isOwner = profile?.role === 'OWNER';
+        
+        if (!isOwner) {
           const { data: accessData } = await supabase
             .rpc('get_user_accessible_stores', { p_user_id: user.id });
 
@@ -60,19 +82,9 @@ export function StoreRouteWrapper() {
           );
 
           if (!hasAccess) {
-            // Check if user is OWNER (they have access to all stores)
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', user.id)
-              .eq('role', 'OWNER')
-              .single();
-
-            if (!roleData) {
-              setError('You do not have access to this store');
-              setLoading(false);
-              return;
-            }
+            setError('You do not have access to this store');
+            setLoading(false);
+            return;
           }
         }
 
@@ -86,7 +98,7 @@ export function StoreRouteWrapper() {
     }
 
     validateStore();
-  }, [storeSlug, user, authLoading]);
+  }, [storeSlug, user, profile, authLoading, navigate]);
 
   if (authLoading || loading) {
     return (
@@ -106,10 +118,10 @@ export function StoreRouteWrapper() {
           <h1 className="text-2xl font-bold text-destructive">Store Not Found</h1>
           <p className="text-muted-foreground">{error}</p>
           <button
-            onClick={() => navigate('/auth')}
+            onClick={() => navigate('/')}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
-            Go to Login
+            Go to Home
           </button>
         </div>
       </div>
@@ -120,12 +132,40 @@ export function StoreRouteWrapper() {
     return null;
   }
 
-  // Pass store info via outlet context
-  return <Outlet context={{ store, storeSlug }} />;
+  // Pass store info via context provider and outlet context
+  return (
+    <StoreContext.Provider value={{ store, storeSlug: storeSlug || null, storeId: store.id }}>
+      <Outlet context={{ store, storeSlug, storeId: store.id }} />
+    </StoreContext.Provider>
+  );
 }
 
-// Hook to access store context in child routes
-export function useStoreContext() {
+/**
+ * Hook to access store context in child routes
+ * This provides the current store info from the URL path
+ */
+export function useStoreContext(): StoreContextValue {
+  const context = useContext(StoreContext);
   const { storeSlug } = useParams<{ storeSlug: string }>();
-  return { storeSlug };
+  
+  // If context is set, use it
+  if (context.store) {
+    return context;
+  }
+  
+  // Fallback to params
+  return { 
+    store: null, 
+    storeSlug: storeSlug || null,
+    storeId: null 
+  };
+}
+
+/**
+ * Hook to get store ID from URL route
+ * Useful for hooks that need store filtering
+ */
+export function useStoreId(): string | null {
+  const context = useContext(StoreContext);
+  return context.storeId;
 }
