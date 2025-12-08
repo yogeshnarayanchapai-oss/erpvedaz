@@ -50,41 +50,38 @@ export default function CallingMyOrders() {
     to: endOfDay(today),
   });
 
-  // Filter states
+  // Filter states - initialize from URL if present
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>(urlStatus || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<string>('all');
 
-  // Sync status filter with URL params
-  useEffect(() => {
-    if (urlStatus) {
-      setSelectedStatus(urlStatus);
-      setActiveTab('all');
-      setDateRange({
-        from: startOfDay(subDays(today, 30)),
-        to: endOfDay(today),
-      });
-    }
-  }, [urlStatus]);
-
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  // Update date range when tab changes
+  // Sync status filter with URL params when URL changes
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status) {
+      setSelectedStatus(status);
+      setActiveTab('all');
+    }
+  }, [searchParams]);
+
+  // Update date range when tab changes (only if not from URL)
   useEffect(() => {
     if (activeTab === 'today') {
       setDateRange({
-        from: startOfDay(today),
-        to: endOfDay(today),
+        from: startOfDay(new Date()),
+        to: endOfDay(new Date()),
       });
-    } else {
+    } else if (!urlStatus) {
       setDateRange({
-        from: startOfDay(subDays(today, 30)),
-        to: endOfDay(today),
+        from: startOfDay(subDays(new Date(), 30)),
+        to: endOfDay(new Date()),
       });
     }
-  }, [activeTab]);
+  }, [activeTab, urlStatus]);
 
   const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
   const dateTo = format(dateRange.to, 'yyyy-MM-dd');
