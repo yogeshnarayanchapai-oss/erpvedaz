@@ -368,7 +368,7 @@ const App = () => (
               <Route path="/setup" element={<SetupAdmin />} />
 
               {/* Store-based routes - /:storeSlug/* */}
-              <Route path="/:storeSlug" element={<StoreRouteWrapper />}>
+              <Route path="/:storeSlug/*" element={<StoreRouteWrapper />}>
                 <Route element={<StoreDashboardLayout />}>
                   {/* Default redirect to admin dashboard */}
                   <Route index element={<Navigate to="admin/dashboard" replace />} />
