@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 type StockMovementType = Database['public']['Enums']['stock_movement_type'];
 
@@ -27,7 +28,7 @@ export interface StockMovement {
   remark: string | null;
   created_at: string;
   updated_at: string;
-  products?: { id: string; name: string; wholesale_price?: number };
+  products?: { id: string; name: string; wholesale_price?: number; store_id?: string | null };
   warehouses?: { id: string; name: string; code: string };
   parties?: { id: string; name: string };
 }
@@ -40,17 +41,21 @@ interface MovementFilters {
   movementType?: StockMovementType;
   movementReason?: string;
   saleCategory?: 'RETAIL' | 'WHOLESALE';
+  storeId?: string;
 }
 
 export function useStockMovements(filters: MovementFilters = {}) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = filters.storeId || currentStoreId;
+
   return useQuery({
-    queryKey: ['stock_movements', filters],
+    queryKey: ['stock_movements', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('stock_movements')
         .select(`
           *,
-          products:product_id(id, name, wholesale_price),
+          products:product_id(id, name, wholesale_price, store_id),
           warehouses:warehouse_id(id, name, code),
           parties:party_id(id, name)
         `)
@@ -81,8 +86,17 @@ export function useStockMovements(filters: MovementFilters = {}) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as StockMovement[];
+      
+      let result = data as StockMovement[];
+      
+      // Filter by store_id via product relation
+      if (storeId) {
+        result = result.filter((sm) => sm.products?.store_id === storeId);
+      }
+      
+      return result;
     },
+    enabled: !!storeId,
   });
 }
 
