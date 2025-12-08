@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Truck, CheckCircle, Clock, Download, Search, MapPin, Globe, History, Upload } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, Download, Search, MapPin, Globe, History, Upload, FileDown } from 'lucide-react';
+import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format } from 'date-fns';
 import { OrderHistoryTimeline } from '@/components/logistics/OrderHistoryTimeline';
 import { getOrderStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -189,9 +190,16 @@ export default function LogisticsOrders() {
             <Upload className="w-4 h-4 mr-2" />
             Import
           </Button>
-          <Button onClick={exportCSV}>
+          <Button onClick={exportCSV} variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
+          </Button>
+          <Button 
+            onClick={() => exportOrdersToCourierFormat(filteredOrders, `courier_orders_${activeTab.toLowerCase()}_${dateFrom}_to_${dateTo}.xlsx`)} 
+            variant="outline"
+          >
+            <FileDown className="w-4 h-4 mr-2" />
+            Courier Excel
           </Button>
         </div>
       </div>
