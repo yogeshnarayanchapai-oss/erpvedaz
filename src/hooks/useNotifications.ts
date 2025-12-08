@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -67,41 +67,24 @@ export function useNotifications() {
     };
   }, []);
 
-  // Fetch notifications for current user/role filtered by store
+  // Fetch notifications for current user/role - RLS handles store filtering
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications', profile?.id, profile?.role, currentStore?.id, isOwner],
+    queryKey: ['notifications', profile?.id, profile?.role],
     queryFn: async () => {
       if (!profile?.id) return [];
 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // For non-OWNER users, we need to filter by BOTH (user/role) AND (store)
-      // Using PostgREST filter syntax with proper AND/OR logic
-      let query = supabase
+      // RLS policies handle store filtering automatically
+      // Just filter by user/role and RLS takes care of the rest
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(100);
-
-      if (isOwner) {
-        // OWNER sees all notifications for their user/role across all stores
-        query = query.or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`);
-      } else if (currentStore?.id) {
-        // Non-OWNER: must match (user OR role) AND (store OR null store)
-        // We need to filter notifications that:
-        // 1. Are targeted to this user OR this role
-        // 2. AND belong to this store OR have no store (global)
-        query = query
-          .or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`)
-          .or(`store_id.eq.${currentStore.id},store_id.is.null`);
-      } else {
-        // Fallback: just user/role filter
-        query = query.or(`target_user_id.eq.${profile.id},target_role.eq.${profile.role}`);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       return data as Notification[];
