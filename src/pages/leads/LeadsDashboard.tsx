@@ -65,8 +65,8 @@ export default function LeadsDashboard() {
   });
   
   // Today's breakdown
-  const todayNewCount = todayAllLeads.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED').length;
-  const todayFUCount = todayAllLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL').length;
+  const todayNewCount = todayAllLeads.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED' && l.status !== 'FOLLOW_UP').length;
+  const todayFUCount = todayAllLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL' || l.current_team === 'FOLLOWUP' || l.status === 'FOLLOW_UP').length;
   const todayCNRCount = todayAllLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED').length;
   
   // New leads bucket count - only NEW bucket (not CNR or FU)
