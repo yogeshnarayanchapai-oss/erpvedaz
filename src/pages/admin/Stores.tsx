@@ -6,12 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Store as StoreIcon, ExternalLink, Settings, ArrowRight, Trash2, Copy } from 'lucide-react';
+import { Plus, Store as StoreIcon, Settings, ArrowRight, Trash2 } from 'lucide-react';
 import { StoreFormDialog } from '@/components/stores/StoreFormDialog';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
-import { getStoreUrl, getStoreDisplayUrl } from '@/lib/storeSubdomain';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -200,7 +198,6 @@ export default function Stores() {
               <TableRow>
                 <TableHead>Store</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Primary Domain</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Orders (30d)</TableHead>
                 <TableHead className="text-right">Revenue (30d)</TableHead>
@@ -244,36 +241,6 @@ export default function Stores() {
                   </TableCell>
                   <TableCell>
                     <code className="text-xs bg-muted px-2 py-1 rounded">{store.slug}</code>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {/* Path-based URL - main domain + store slug */}
-                      <div className="flex items-center gap-1 text-sm">
-                        <a
-                          href={getStoreUrl(store.slug)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          {getStoreDisplayUrl(store.slug)}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => {
-                            navigator.clipboard.writeText(getStoreUrl(store.slug));
-                            toast.success('URL copied!');
-                          }}
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Admin: {getStoreDisplayUrl(store.slug)}/admin
-                      </div>
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
