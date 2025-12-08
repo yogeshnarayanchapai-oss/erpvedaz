@@ -50,6 +50,7 @@ export function useBulkCreateLeads() {
           createdByName: profile?.name || 'Staff',
           createdById: user.id,
           portal: 'LEADS',
+          storeId: currentStore?.id,
         });
       } catch (e) {
         console.error('Failed to send notification:', e);

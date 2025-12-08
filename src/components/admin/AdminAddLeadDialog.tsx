@@ -119,6 +119,7 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
           createdByName: profile?.name || 'Admin',
           createdById: profile?.id || '',
           portal: 'ADMIN',
+          storeId: currentStore?.id,
         });
       } catch (e) {
         console.error('Failed to send notification:', e);

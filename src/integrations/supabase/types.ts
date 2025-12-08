@@ -3237,6 +3237,7 @@ export type Database = {
           meta: Json | null
           portal: string | null
           read_at: string | null
+          store_id: string | null
           target_role: string | null
           target_user_id: string | null
           title: string
@@ -3252,6 +3253,7 @@ export type Database = {
           meta?: Json | null
           portal?: string | null
           read_at?: string | null
+          store_id?: string | null
           target_role?: string | null
           target_user_id?: string | null
           title: string
@@ -3267,12 +3269,21 @@ export type Database = {
           meta?: Json | null
           portal?: string | null
           read_at?: string | null
+          store_id?: string | null
           target_role?: string | null
           target_user_id?: string | null
           title?: string
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       office_expenses: {
         Row: {
