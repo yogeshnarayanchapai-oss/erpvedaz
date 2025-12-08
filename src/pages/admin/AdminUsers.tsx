@@ -179,6 +179,7 @@ const usersWithEmployee = useMemo(() => {
 
   const [editFormData, setEditFormData] = useState({
     name: '',
+    email: '',
     phone: '',
     role: 'CALLING' as AppRole,
   });
@@ -247,6 +248,7 @@ const usersWithEmployee = useMemo(() => {
     setEditingUser(user);
     setEditFormData({
       name: user.name,
+      email: user.email,
       phone: user.phone || '',
       role: user.role,
     });
@@ -259,6 +261,38 @@ const usersWithEmployee = useMemo(() => {
     
     setIsSubmitting(true);
     try {
+      // Check if email changed - need to call edge function
+      if (editFormData.email !== editingUser.email) {
+        const response = await supabase.functions.invoke('update-user-email', {
+          body: {
+            userId: editingUser.id,
+            newEmail: editFormData.email.trim(),
+          },
+        });
+
+        if (response.error) {
+          let errorMsg = 'Failed to update email';
+          const errorMessage = response.error.message || '';
+          try {
+            const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.error) errorMsg = parsed.error;
+            }
+          } catch {
+            if (errorMessage && errorMessage !== 'FunctionsHttpError') {
+              errorMsg = errorMessage;
+            }
+          }
+          throw new Error(errorMsg);
+        }
+
+        if (response.data?.error) {
+          throw new Error(response.data.error);
+        }
+      }
+
+      // Update profile (name, phone, role)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -636,6 +670,16 @@ const usersWithEmployee = useMemo(() => {
                 id="edit-name"
                 value={editFormData.name}
                 onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                 required
               />
             </div>
