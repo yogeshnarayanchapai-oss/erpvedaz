@@ -180,6 +180,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       ]
     },
     { title: 'Products', url: '/admin/products', icon: Package },
+    { title: 'Stores', url: '/admin/stores', icon: Store },
     { title: 'Branches', url: '/admin/branches', icon: Building2 },
     {
       title: 'Inventory',

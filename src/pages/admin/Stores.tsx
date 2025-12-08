@@ -22,6 +22,12 @@ export default function Stores() {
 
   const isOwner = profile?.role === 'OWNER';
 
+  // Redirect non-OWNER users to dashboard
+  if (!isOwner) {
+    navigate('/admin/dashboard');
+    return null;
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NP', {
       style: 'currency',
