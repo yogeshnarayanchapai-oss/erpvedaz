@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { notifyOrderConfirmed, notifyInsideDeliveryUpdate, notifyLogisticsStatusUpdate } from '@/lib/notificationHelpers';
+import { notifyOrderConfirmed, notifyInsideDeliveryUpdate, notifyLogisticsStatusUpdate, notifyOrderEdited } from '@/lib/notificationHelpers';
 
 type OrderStatus = 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'SENT_FOR_DELIVERY' | 'LOCATION_CNR' | 'PENDING' | 'CANCELLED' | 'REDIRECT' | 'SENT_FOR_NCM' | 'SENT_FOR_PATHAO';
 type PaymentStatus = 'PENDING' | 'PAID' | 'COD';
@@ -575,7 +575,7 @@ export function canEditDeliveryStatus(
   return true;
 }
 
-// Admin update order - full edit capability
+// Admin update order - full edit capability with history logging
 export function useAdminUpdateOrder() {
   const queryClient = useQueryClient();
 
@@ -604,6 +604,68 @@ export function useAdminUpdateOrder() {
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      // Fetch current order state for comparison
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          leads:leads!orders_lead_id_fkey (client_name, contact_number, alt_phone, full_address, destination_branch),
+          products:products!orders_product_id_fkey (name)
+        `)
+        .eq('id', input.orderId)
+        .single();
+
+      // Get actor profile
+      const { data: actorProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      const actorName = actorProfile?.name || 'Staff';
+
+      // Build list of changes for history
+      const changes: { field: string; oldValue: string; newValue: string }[] = [];
+
+      if (currentOrder) {
+        // Check order field changes
+        if (input.fullAddress !== undefined && input.fullAddress !== currentOrder.full_address) {
+          changes.push({ field: 'Address', oldValue: currentOrder.full_address || '-', newValue: input.fullAddress || '-' });
+        }
+        if (input.destinationBranch !== undefined && input.destinationBranch !== currentOrder.destination_branch) {
+          changes.push({ field: 'Branch', oldValue: currentOrder.destination_branch || '-', newValue: input.destinationBranch || '-' });
+        }
+        if (input.deliveryLocation !== undefined && input.deliveryLocation !== currentOrder.delivery_location) {
+          changes.push({ field: 'Delivery Location', oldValue: currentOrder.delivery_location || '-', newValue: input.deliveryLocation || '-' });
+        }
+        if (input.orderStatus !== undefined && input.orderStatus !== currentOrder.order_status) {
+          changes.push({ field: 'Order Status', oldValue: currentOrder.order_status || '-', newValue: input.orderStatus || '-' });
+        }
+        if (input.paymentStatus !== undefined && input.paymentStatus !== currentOrder.payment_status) {
+          changes.push({ field: 'Payment Status', oldValue: currentOrder.payment_status || '-', newValue: input.paymentStatus || '-' });
+        }
+        if (input.deliveryNotes !== undefined && input.deliveryNotes !== currentOrder.delivery_notes) {
+          changes.push({ field: 'Delivery Notes', oldValue: currentOrder.delivery_notes || '-', newValue: input.deliveryNotes || '-' });
+        }
+        if (input.grandTotal !== currentOrder.amount) {
+          changes.push({ field: 'Amount', oldValue: `Rs. ${currentOrder.amount || 0}`, newValue: `Rs. ${input.grandTotal}` });
+        }
+
+        // Check lead field changes
+        const lead = currentOrder.leads as any;
+        if (lead) {
+          if (input.clientName !== undefined && input.clientName !== lead.client_name) {
+            changes.push({ field: 'Customer Name', oldValue: lead.client_name || '-', newValue: input.clientName || '-' });
+          }
+          if (input.contactNumber !== undefined && input.contactNumber !== lead.contact_number) {
+            changes.push({ field: 'Contact Number', oldValue: lead.contact_number || '-', newValue: input.contactNumber || '-' });
+          }
+          if (input.altPhone !== undefined && input.altPhone !== lead.alt_phone) {
+            changes.push({ field: 'Alt Phone', oldValue: lead.alt_phone || '-', newValue: input.altPhone || '-' });
+          }
+        }
+      }
 
       // 1. Update the order row
       const orderUpdates: Record<string, any> = {
@@ -678,10 +740,39 @@ export function useAdminUpdateOrder() {
         }
       }
 
+      // 5. Log changes to order_history
+      if (changes.length > 0) {
+        const historyEntries = changes.map(change => ({
+          order_id: input.orderId,
+          event_type: 'ORDER_EDITED',
+          description: `${change.field} changed from "${change.oldValue}" to "${change.newValue}"`,
+          old_value: change.oldValue,
+          new_value: change.newValue,
+          changed_by: user.id,
+        }));
+
+        await supabase.from('order_history').insert(historyEntries);
+
+        // 6. Notify admins about the edit
+        try {
+          const customerName = input.clientName || (currentOrder?.leads as any)?.client_name || 'Customer';
+          await notifyOrderEdited({
+            orderId: input.orderId,
+            customerName,
+            changeCount: changes.length,
+            actorId: user.id,
+            actorName,
+          });
+        } catch (notifyError) {
+          console.error('Failed to send order edit notification:', notifyError);
+        }
+      }
+
       return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-history'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Order updated successfully');
     },
