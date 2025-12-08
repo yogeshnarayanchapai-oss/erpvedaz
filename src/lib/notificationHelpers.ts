@@ -1,5 +1,34 @@
 import { createNotification, createNotifications, CreateNotificationParams } from '@/hooks/useNotifications';
 
+// Helper to notify when new leads are created
+export async function notifyNewLeadsCreated({
+  count,
+  productName,
+  createdByName,
+  createdById,
+  portal,
+}: {
+  count: number;
+  productName?: string;
+  createdByName: string;
+  createdById: string;
+  portal: string;
+}) {
+  await createNotifications([
+    {
+      type: 'LEAD_TRANSFER',
+      title: 'New Leads Created',
+      message: `${createdByName} created ${count} new lead${count > 1 ? 's' : ''}${productName ? ` for ${productName}` : ''} via ${portal}`,
+      actorId: createdById,
+      actorName: createdByName,
+      targetRole: 'ADMIN',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { count, productName, portal },
+    },
+  ]);
+}
+
 // Helper to create lead transfer notification
 export async function notifyLeadTransfer({
   count,

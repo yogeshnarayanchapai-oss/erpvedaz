@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
 
 const SOURCE_OPTIONS = ['Facebook Ads', 'Shopify', 'Website', 'TikTok', 'Calling'];
 
@@ -268,6 +269,18 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
 
       const { error } = await supabase.from('leads').insert(leadsToInsert);
       if (error) throw error;
+
+      // Send notification to Admin about imported leads
+      try {
+        await notifyNewLeadsCreated({
+          count: leadsToInsert.length,
+          createdByName: profile?.name || 'Staff',
+          createdById: profile?.id || '',
+          portal: portalType,
+        });
+      } catch (e) {
+        console.error('Failed to send notification:', e);
+      }
 
       toast.success(`${leadsToInsert.length} leads imported successfully`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });

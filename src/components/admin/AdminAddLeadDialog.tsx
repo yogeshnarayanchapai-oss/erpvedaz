@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
 
 const SOURCE_OPTIONS = [
   { value: 'Facebook Ads', label: 'Facebook Ads' },
@@ -107,6 +108,18 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
 
       const { error } = await supabase.from('leads').insert(leadsToInsert);
       if (error) throw error;
+
+      // Send notification about new leads created
+      try {
+        await notifyNewLeadsCreated({
+          count: rows.length,
+          createdByName: profile?.name || 'Admin',
+          createdById: profile?.id || '',
+          portal: 'ADMIN',
+        });
+      } catch (e) {
+        console.error('Failed to send notification:', e);
+      }
 
       toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
