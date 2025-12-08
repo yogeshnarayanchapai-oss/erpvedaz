@@ -109,7 +109,12 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
         followUp: leads.filter(l => l.status === 'FOLLOW_UP').length,
         cancelled: leads.filter(l => l.status === 'CANCELLED').length,
         redirect: leads.filter(l => l.status === 'REDIRECT').length,
-        pendingTransfer: leads.filter(l => l.assigned_to_user_id === null).length,
+        // Pending transfer: unassigned leads that are NOT confirmed (exclude converted leads)
+        pendingTransfer: leads.filter(l => 
+          l.assigned_to_user_id === null && 
+          l.status !== 'CONFIRMED' && 
+          l.order_id === null
+        ).length,
         newLeads: leads.filter(l => l.status === 'NEW').length,
         assigned: leads.filter(l => l.status === 'ASSIGNED').length,
       };

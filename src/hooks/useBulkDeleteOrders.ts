@@ -31,11 +31,14 @@ export function useBulkDeleteOrders() {
 
       console.log('[useBulkDeleteOrders] Orders soft deleted successfully');
 
-      // Get all OWNER users to notify
-      const { data: owners, error: ownerError } = await supabase
-        .from('profiles')
-        .select('id')
+      // Get all OWNER users to notify - query user_roles table instead of profiles.role
+      const { data: ownerRoles, error: ownerError } = await supabase
+        .from('user_roles')
+        .select('user_id')
         .eq('role', 'OWNER');
+
+      // Map to expected format
+      const owners = ownerRoles?.map(r => ({ id: r.user_id })) || [];
 
       console.log('[useBulkDeleteOrders] OWNER users:', owners, 'Error:', ownerError);
 
