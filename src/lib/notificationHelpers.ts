@@ -29,6 +29,19 @@ export async function notifyNewLeadsCreated({
       meta: { count, productName, portal },
       storeId,
     },
+    // Notify OWNER
+    {
+      type: 'LEAD_TRANSFER',
+      title: 'New Leads Created',
+      message: `${createdByName} created ${count} new lead${count > 1 ? 's' : ''}${productName ? ` for ${productName}` : ''} via ${portal}`,
+      actorId: createdById,
+      actorName: createdByName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { count, productName, portal },
+      storeId,
+    },
   ]);
 }
 
@@ -80,6 +93,20 @@ export async function notifyLeadTransfer({
     storeId,
   });
 
+  // Notify OWNER
+  notifications.push({
+    type: 'LEAD_TRANSFER',
+    title: 'Leads transferred',
+    message: `${actorName} transferred ${count} lead${count > 1 ? 's' : ''} to ${targetUserName}${productName ? ` for ${productName}` : ''}.`,
+    actorId,
+    actorName,
+    targetRole: 'OWNER',
+    portal: 'ADMIN',
+    linkPath: '/admin/leads',
+    meta: { count, productName, targetUserName, targetUserId },
+    storeId,
+  });
+
   await createNotifications(notifications);
 }
 
@@ -123,6 +150,19 @@ export async function notifyLeadReturnedToCNR({
       actorId,
       actorName,
       targetRole: 'ADMIN',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { leadId, customerName, phone, productName },
+      storeId,
+    },
+    // Notify OWNER
+    {
+      type: 'LEAD_CNR',
+      title: 'Lead marked as CNR',
+      message: `${customerName} (${phone}) marked as CNR by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: '/admin/leads',
       meta: { leadId, customerName, phone, productName },
@@ -201,6 +241,19 @@ export async function notifyOrderConfirmed({
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
       storeId,
     },
+    // Notify OWNER
+    {
+      type: 'ORDER_CONFIRMED',
+      title: `New ${locationLabel.toLowerCase()} order confirmed`,
+      message: `${actorName} confirmed: ${productName} x${quantity} for ${customerName} - Rs.${amount}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/orders',
+      meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
+      storeId,
+    },
   ];
 
   await createNotifications(notifications);
@@ -266,6 +319,19 @@ export async function notifyOrderRedirected({
       meta: { orderId, productName, customerName, amount },
       storeId,
     },
+    // Notify OWNER
+    {
+      type: 'ORDER_REDIRECTED',
+      title: 'Order redirected',
+      message: `${actorName} redirected order for ${customerName} (${productName}, Rs.${amount})`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/orders',
+      meta: { orderId, productName, customerName, amount },
+      storeId,
+    },
   ];
 
   await createNotifications(notifications);
@@ -318,6 +384,20 @@ export async function notifyDeliveryUpdated({
     actorId,
     actorName,
     targetRole: 'ADMIN',
+    portal: 'ADMIN',
+    linkPath: '/admin/orders',
+    meta: { orderId, customerName, newStatus, deliveryLocation },
+    storeId,
+  });
+
+  // Notify OWNER
+  notifications.push({
+    type: 'DELIVERY_UPDATED',
+    title: 'Delivery status updated',
+    message: `${actorName} updated order for ${customerName} to "${statusLabel}"`,
+    actorId,
+    actorName,
+    targetRole: 'OWNER',
     portal: 'ADMIN',
     linkPath: '/admin/orders',
     meta: { orderId, customerName, newStatus, deliveryLocation },
@@ -390,6 +470,19 @@ export async function notifyInsideDeliveryUpdate({
       meta: { orderId, customerName, deliveryStatus, remark },
       storeId,
     },
+    // Notify OWNER
+    {
+      type: 'DELIVERY_UPDATED',
+      title: 'Inside valley delivery update',
+      message: `${actorName} updated ${customerName}'s order to "${statusLabel}"${remark ? ` - ${remark}` : ''}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/orders',
+      meta: { orderId, customerName, deliveryStatus, remark },
+      storeId,
+    },
   ];
 
   await createNotifications(notifications);
@@ -425,7 +518,8 @@ export async function notifyLeadStatusChange({
     CANCELLED: 'Cancelled',
   };
 
-  await createNotifications([
+  const notifications: CreateNotificationParams[] = [
+    // Notify Admin
     {
       type: typeMap[newStatus],
       title: `Lead status: ${labelMap[newStatus]}`,
@@ -438,7 +532,38 @@ export async function notifyLeadStatusChange({
       meta: { leadId, customerName, phone, newStatus },
       storeId,
     },
-  ]);
+    // Notify OWNER
+    {
+      type: typeMap[newStatus],
+      title: `Lead status: ${labelMap[newStatus]}`,
+      message: `${customerName} (${phone}) marked as ${labelMap[newStatus]} by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { leadId, customerName, phone, newStatus },
+      storeId,
+    },
+  ];
+
+  // Notify LEADS role for CNR and Cancelled statuses
+  if (newStatus === 'CALL_NOT_RECEIVED' || newStatus === 'CANCELLED') {
+    notifications.push({
+      type: typeMap[newStatus],
+      title: `Lead status: ${labelMap[newStatus]}`,
+      message: `${customerName} (${phone}) marked as ${labelMap[newStatus]} by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'LEADS',
+      portal: 'LEADS',
+      linkPath: '/leads/dashboard',
+      meta: { leadId, customerName, phone, newStatus },
+      storeId,
+    });
+  }
+
+  await createNotifications(notifications);
 }
 
 // Helper for logistics export
@@ -475,6 +600,19 @@ export async function notifyLogisticsExport({
       actorId,
       actorName,
       targetRole: 'MANAGER',
+      portal: 'ADMIN',
+      linkPath: '/admin/orders',
+      meta: { count, partnerName },
+      storeId,
+    },
+    // Notify OWNER
+    {
+      type: 'LOGISTICS_EXPORTED',
+      title: 'Orders exported to partner',
+      message: `${actorName} exported ${count} order${count > 1 ? 's' : ''} to ${partnerName}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { count, partnerName },
@@ -561,6 +699,19 @@ export async function notifyOrderEdited({
       actorId,
       actorName,
       targetRole: 'MANAGER',
+      portal: 'ADMIN',
+      linkPath: `/admin/orders/${orderId}`,
+      meta: { orderId, customerName, changeCount },
+      storeId,
+    },
+    // Notify OWNER
+    {
+      type: 'ORDER_EDITED',
+      title: 'Order edited',
+      message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: `/admin/orders/${orderId}`,
       meta: { orderId, customerName, changeCount },
