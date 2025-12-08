@@ -12,12 +12,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload } from 'lucide-react';
+import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { WhatsAppButton } from '@/components/messaging/WhatsAppButton';
 import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
 import { InsideValleyStatsModal } from '@/components/calling/InsideValleyStatsModal';
+import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
+import { Order } from '@/hooks/useOrders';
+import { toast } from 'sonner';
 
 type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
@@ -90,6 +93,7 @@ export default function CallingOrders() {
   // Modal state
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   
   // Clear URL params after applying
   useEffect(() => {
@@ -226,6 +230,38 @@ export default function CallingOrders() {
     a.href = url;
     a.download = `my-orders-${dateRange.from}-to-${dateRange.to}.csv`;
     a.click();
+  };
+
+  // Copy order details in specific format
+  const handleCopyOrder = (order: any) => {
+    const customerName = order.leads?.client_name || '';
+    const customerPhone = order.leads?.contact_number || '';
+    const fullAddress = order.full_address || order.destination_branch || '';
+    
+    // Get product details from order items or fallback
+    const orderItemsList = order.order_items || [];
+    let productName = '';
+    let productPrice = 0;
+    let productQuantity = 0;
+    
+    if (orderItemsList.length > 0) {
+      productName = orderItemsList.map((item: any) => item.product_name).join(', ');
+      productPrice = orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
+      productQuantity = orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+    } else {
+      productName = order.products?.name || '';
+      productPrice = (order.amount || 0) * (order.quantity || 1);
+      productQuantity = order.quantity || 1;
+    }
+    
+    // Format: %customer name% %customer phone number% %product name% %full address% %product price% %product quantity% Vedaz01
+    const copyText = `${customerName} ${customerPhone} ${productName} ${fullAddress} ${productPrice} ${productQuantity} Vedaz01`;
+    
+    navigator.clipboard.writeText(copyText).then(() => {
+      toast.success('Order details copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy order details');
+    });
   };
 
   // Inside Valley delivery stats
@@ -606,6 +642,22 @@ export default function CallingOrders() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingOrder(order)}
+                          title="Edit Order"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCopyOrder(order)}
+                          title="Copy Order"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
                         {order.leads?.contact_number && (
                           <WhatsAppButton
                             phone={order.leads.contact_number}
@@ -641,6 +693,13 @@ export default function CallingOrders() {
         delivered={ivDelivered}
         pending={ivPending}
         dateRange={dateRange}
+      />
+
+      {/* Edit Order Sheet */}
+      <AdminEditOrderSheet
+        order={editingOrder}
+        open={!!editingOrder}
+        onOpenChange={(open) => !open && setEditingOrder(null)}
       />
     </div>
   );
