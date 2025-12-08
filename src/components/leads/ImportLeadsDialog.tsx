@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
@@ -55,6 +56,7 @@ interface ImportRow {
 
 export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLeadsDialogProps) {
   const { profile } = useAuth();
+  const { currentStore } = useCurrentStore();
   const { data: products = [] } = useProducts();
   const { data: branches = [] } = useBranches();
   const queryClient = useQueryClient();
@@ -247,6 +249,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           status: validStatus,
           lead_bucket: leadBucket,
           source: 'Facebook Ads', // Default source
+          store_id: currentStore?.id || null,
         };
         
         // Portal-specific settings

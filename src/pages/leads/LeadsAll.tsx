@@ -3,6 +3,7 @@ import { useLeads, useTransferLeads } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CANCELLED';
 export default function LeadsAll() {
   const today = new Date();
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(today),
     to: endOfDay(today),
@@ -240,6 +242,7 @@ export default function LeadsAll() {
           current_team: 'LEADS',
           lead_bucket: 'NEW',
           created_by_user_id: user.id,
+          store_id: currentStore?.id || null,
         });
       }
 
