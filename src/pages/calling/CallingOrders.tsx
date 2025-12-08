@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy } from 'lucide-react';
+import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy, FileDown } from 'lucide-react';
+import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { WhatsAppButton } from '@/components/messaging/WhatsAppButton';
@@ -323,6 +324,14 @@ export default function CallingOrders() {
           <Button onClick={exportCSV} variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
+          </Button>
+          <Button 
+            onClick={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)} 
+            variant="outline" 
+            size="sm"
+          >
+            <FileDown className="w-4 h-4 mr-2" />
+            Courier Excel
           </Button>
         </div>
       </div>
