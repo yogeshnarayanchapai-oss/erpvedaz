@@ -455,3 +455,43 @@ export async function notifyLogisticsStatusUpdate({
     await createNotifications(notifications);
   }
 }
+
+// Helper to notify admins when an order is edited
+export async function notifyOrderEdited({
+  orderId,
+  customerName,
+  changeCount,
+  actorId,
+  actorName,
+}: {
+  orderId: string;
+  customerName: string;
+  changeCount: number;
+  actorId: string;
+  actorName: string;
+}) {
+  await createNotifications([
+    {
+      type: 'ORDER_EDITED',
+      title: 'Order edited',
+      message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
+      actorId,
+      actorName,
+      targetRole: 'ADMIN',
+      portal: 'ADMIN',
+      linkPath: `/admin/orders/${orderId}`,
+      meta: { orderId, customerName, changeCount },
+    },
+    {
+      type: 'ORDER_EDITED',
+      title: 'Order edited',
+      message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
+      actorId,
+      actorName,
+      targetRole: 'MANAGER',
+      portal: 'ADMIN',
+      linkPath: `/admin/orders/${orderId}`,
+      meta: { orderId, customerName, changeCount },
+    },
+  ]);
+}
