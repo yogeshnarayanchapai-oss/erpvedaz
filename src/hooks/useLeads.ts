@@ -361,6 +361,15 @@ export function useTransferToFollowup() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get user role to check permissions
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('name, role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+
       // Get current lead to capture assigned_to_user_id and verify ownership
       const { data: lead, error: fetchError } = await supabase
         .from('leads')
@@ -371,8 +380,8 @@ export function useTransferToFollowup() {
       if (fetchError) throw fetchError;
       if (!lead) throw new Error('Lead not found');
 
-      // Verify the lead is assigned to the current user (required by RLS policy)
-      if (lead.assigned_to_user_id !== user.id) {
+      // Verify the lead is assigned to the current user OR user is admin/manager
+      if (!isAdminOrManager && lead.assigned_to_user_id !== user.id) {
         throw new Error('You can only transfer leads assigned to you');
       }
 
@@ -383,9 +392,9 @@ export function useTransferToFollowup() {
           current_team: 'FOLLOWUP',
           assigned_to_user_id: null,
           tag: 'TRF',
+          status: 'FOLLOW_UP',
         })
-        .eq('id', leadId)
-        .eq('assigned_to_user_id', user.id); // Extra safety: only update if still assigned to user
+        .eq('id', leadId);
 
       if (updateError) throw updateError;
 
