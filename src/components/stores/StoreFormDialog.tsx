@@ -172,19 +172,25 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
                     className="rounded-r-none border-r-0"
                   />
                   <div className="bg-muted px-3 py-2 border border-input rounded-r-md text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    .techlaya.com
+                    .lovable.dev
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your store will be accessible at this subdomain until you add a custom domain
+                  Your store will be accessible at this Lovable subdomain
                 </p>
               </div>
               
               {subdomain && (
-                <div className="bg-background rounded-md p-3 border">
+                <div className="bg-background rounded-md p-3 border space-y-2">
                   <p className="text-sm">
-                    <span className="text-muted-foreground">Your store URL: </span>
+                    <span className="text-muted-foreground">Primary URL: </span>
                     <span className="font-medium text-primary">
+                      https://{subdomain}.lovable.dev
+                    </span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Alternate URL: </span>
+                    <span className="font-medium">
                       https://{subdomain}.techlaya.com
                     </span>
                   </p>

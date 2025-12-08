@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Store as StoreIcon, ExternalLink, Settings, ArrowRight, Trash2 } from 'lucide-react';
+import { Plus, Store as StoreIcon, ExternalLink, Settings, ArrowRight, Trash2, Copy } from 'lucide-react';
 import { StoreFormDialog } from '@/components/stores/StoreFormDialog';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
@@ -244,14 +245,37 @@ export default function Stores() {
                     <code className="text-xs bg-muted px-2 py-1 rounded">{store.slug}</code>
                   </TableCell>
                   <TableCell>
-                    {store.default_subdomain ? (
+                    <div className="space-y-1">
+                      {/* Lovable subdomain - always available */}
                       <div className="flex items-center gap-1 text-sm">
-                        {store.default_subdomain}.techlaya.com
-                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                        <a
+                          href={`https://${store.slug}.lovable.dev`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          {store.slug}.lovable.dev
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://${store.slug}.lovable.dev`);
+                            toast.success('URL copied!');
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
+                      {/* Custom domain if set */}
+                      {store.default_subdomain && store.default_subdomain !== store.slug && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          {store.default_subdomain}.techlaya.com
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

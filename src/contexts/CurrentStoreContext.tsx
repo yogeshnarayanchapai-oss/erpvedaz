@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getStoreSubdomain } from '@/lib/storeSubdomain';
 
 interface Store {
   id: string;
@@ -19,6 +20,7 @@ interface CurrentStoreContextType {
   setCurrentStore: (storeId: string) => Promise<void>;
   canSwitchStores: boolean;
   refreshStores: () => Promise<void>;
+  storeSubdomain: string | null;
 }
 
 const CurrentStoreContext = createContext<CurrentStoreContextType | undefined>(undefined);
@@ -28,9 +30,10 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
   const [availableStores, setAvailableStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [storeSubdomain] = useState<string | null>(() => getStoreSubdomain());
 
   const isOwner = profile?.role === 'OWNER';
-  const canSwitchStores = isOwner;
+  const canSwitchStores = isOwner && !storeSubdomain; // Can't switch if on a specific store subdomain
 
   const fetchStores = useCallback(async () => {
     if (!user?.id) {
@@ -42,6 +45,23 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
 
     try {
       setIsLoading(true);
+
+      // If on a store subdomain, try to find that store first
+      if (storeSubdomain) {
+        const { data: subdomainStore } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('slug', storeSubdomain)
+          .eq('is_active', true)
+          .single();
+
+        if (subdomainStore) {
+          setAvailableStores([{ ...subdomainStore, access_level: 'admin' }]);
+          setCurrentStoreState({ ...subdomainStore, access_level: 'admin' });
+          setIsLoading(false);
+          return;
+        }
+      }
 
       // Use the database function to get accessible stores
       const { data: accessibleStores, error } = await supabase
@@ -82,16 +102,25 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
           setAvailableStores(storesWithAccess);
 
           // Set current store based on priority:
-          // 1. Previously selected (localStorage)
-          // 2. User's default store
-          // 3. First available store
-          const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
-          const defaultStoreId = profile?.default_store_id;
-
-          let selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
-          if (!selectedStore && defaultStoreId) {
-            selectedStore = storesWithAccess.find(s => s.id === defaultStoreId);
+          // 1. Store subdomain (if on one)
+          // 2. Previously selected (localStorage)
+          // 3. User's default store
+          // 4. First available store
+          let selectedStore: Store | undefined;
+          
+          if (storeSubdomain) {
+            selectedStore = storesWithAccess.find(s => s.slug === storeSubdomain);
           }
+          
+          if (!selectedStore) {
+            const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
+            selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
+          }
+          
+          if (!selectedStore && profile?.default_store_id) {
+            selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
+          }
+          
           if (!selectedStore) {
             selectedStore = storesWithAccess[0];
           }
@@ -109,7 +138,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isOwner, profile?.default_store_id]);
+  }, [user?.id, isOwner, profile?.default_store_id, storeSubdomain]);
 
   useEffect(() => {
     fetchStores();
@@ -143,6 +172,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         setCurrentStore,
         canSwitchStores,
         refreshStores,
+        storeSubdomain,
       }}
     >
       {children}
