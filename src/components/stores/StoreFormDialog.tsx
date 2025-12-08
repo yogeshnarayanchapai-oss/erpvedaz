@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Globe, User } from 'lucide-react';
 import { useCreateStore, useUpdateStore, type Store, type CreateStoreInput } from '@/hooks/useStores';
+import { getStoreDisplayUrl } from '@/lib/storeSubdomain';
 
 interface StoreFormData extends CreateStoreInput {
   admin_name?: string;
@@ -158,7 +159,7 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                Store Path
+                Store URL
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -176,7 +177,7 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your store will be accessible at this path
+                  Your store will be accessible at this unique URL path
                 </p>
               </div>
               
@@ -185,8 +186,11 @@ export function StoreFormDialog({ open, onOpenChange, store }: StoreFormDialogPr
                   <p className="text-sm">
                     <span className="text-muted-foreground">Store URL: </span>
                     <span className="font-medium text-primary">
-                      {window.location.origin}/{subdomain}
+                      {getStoreDisplayUrl(subdomain)}
                     </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Admin: {getStoreDisplayUrl(subdomain)}/admin
                   </p>
                 </div>
               )}
