@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 // Nepal timezone offset: UTC+5:45
 const NEPAL_TIMEZONE = 'Asia/Kathmandu';
@@ -55,9 +56,12 @@ interface OrderStatsResult {
 /**
  * Hook to fetch lead statistics for dashboard - includes ALL leads including confirmed
  * Uses Nepal timezone for date filtering
+ * Filters by current store
  */
 export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
   
   // Set up realtime subscription
   useEffect(() => {
@@ -74,11 +78,16 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ['lead-dashboard-stats', dateFrom, dateTo],
+    queryKey: ['lead-dashboard-stats', dateFrom, dateTo, storeId],
     queryFn: async (): Promise<LeadStatsResult> => {
       let query = supabase
         .from('leads')
-        .select('id, status, assigned_to_user_id, order_id, created_at');
+        .select('id, status, assigned_to_user_id, order_id, created_at, store_id');
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       // Apply date filters using Nepal timezone
       if (dateFrom) {
@@ -105,15 +114,19 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
         assigned: leads.filter(l => l.status === 'ASSIGNED').length,
       };
     },
+    enabled: !!storeId,
   });
 }
 
 /**
  * Hook to fetch order statistics for dashboard
  * Uses Nepal timezone for date filtering
+ * Filters by current store
  */
 export function useOrderDashboardStats(dateFrom?: string, dateTo?: string) {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
   
   // Set up realtime subscription
   useEffect(() => {
@@ -130,12 +143,17 @@ export function useOrderDashboardStats(dateFrom?: string, dateTo?: string) {
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ['order-dashboard-stats', dateFrom, dateTo],
+    queryKey: ['order-dashboard-stats', dateFrom, dateTo, storeId],
     queryFn: async (): Promise<OrderStatsResult> => {
       let query = supabase
         .from('orders')
-        .select('id, order_status, delivery_location, amount, is_deleted')
+        .select('id, order_status, delivery_location, amount, is_deleted, store_id')
         .eq('is_deleted', false);
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       // Apply date filters using Nepal timezone
       if (dateFrom) {
@@ -164,15 +182,19 @@ export function useOrderDashboardStats(dateFrom?: string, dateTo?: string) {
         totalSales: salesOrders.reduce((sum, o) => sum + (o.amount || 0), 0),
       };
     },
+    enabled: !!storeId,
   });
 }
 
 /**
  * Hook for staff-specific lead stats (CallingDashboard)
  * Fetches leads assigned to OR created by a specific user
+ * Filters by current store
  */
 export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: string) {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
   
   useEffect(() => {
     if (!userId) return;
@@ -200,15 +222,20 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
   }, [queryClient, userId]);
 
   return useQuery({
-    queryKey: ['staff-lead-stats', userId, dateFrom, dateTo],
+    queryKey: ['staff-lead-stats', userId, dateFrom, dateTo, storeId],
     queryFn: async () => {
       if (!userId) return null;
 
       // Fetch leads assigned to user
       let assignedQuery = supabase
         .from('leads')
-        .select('id, status, order_id, assigned_at, current_team, created_by_user_id')
+        .select('id, status, order_id, assigned_at, current_team, created_by_user_id, store_id')
         .eq('assigned_to_user_id', userId);
+
+      // Filter by store_id
+      if (storeId) {
+        assignedQuery = assignedQuery.eq('store_id', storeId);
+      }
 
       // Filter by assigned_at date using Nepal timezone
       if (dateFrom) {
@@ -221,8 +248,13 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       // Fetch leads created by user (self-entry)
       let createdQuery = supabase
         .from('leads')
-        .select('id, status, order_id, created_at, current_team, created_by_user_id, assigned_to_user_id')
+        .select('id, status, order_id, created_at, current_team, created_by_user_id, assigned_to_user_id, store_id')
         .eq('created_by_user_id', userId);
+
+      // Filter by store_id
+      if (storeId) {
+        createdQuery = createdQuery.eq('store_id', storeId);
+      }
 
       // Filter by created_at date using Nepal timezone for self-created leads
       if (dateFrom) {
@@ -267,15 +299,18 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         ).length,
       };
     },
-    enabled: !!userId,
+    enabled: !!userId && !!storeId,
   });
 }
 
 /**
  * Hook for staff-specific order stats
+ * Filters by current store
  */
 export function useStaffOrderStats(userId?: string, dateFrom?: string, dateTo?: string) {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
   
   useEffect(() => {
     if (!userId) return;
@@ -297,15 +332,20 @@ export function useStaffOrderStats(userId?: string, dateFrom?: string, dateTo?: 
   }, [queryClient, userId]);
 
   return useQuery({
-    queryKey: ['staff-order-stats', userId, dateFrom, dateTo],
+    queryKey: ['staff-order-stats', userId, dateFrom, dateTo, storeId],
     queryFn: async () => {
       if (!userId) return null;
 
       let query = supabase
         .from('orders')
-        .select('id, order_status, delivery_location, inside_delivery_status, amount, is_deleted')
+        .select('id, order_status, delivery_location, inside_delivery_status, amount, is_deleted, store_id')
         .eq('sales_person_id', userId)
         .eq('is_deleted', false);
+
+      // Filter by store_id
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (dateFrom) {
         query = query.gte('order_date', getNepalDayStart(dateFrom));
@@ -332,6 +372,6 @@ export function useStaffOrderStats(userId?: string, dateFrom?: string, dateTo?: 
         outsideValley: orders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length,
       };
     },
-    enabled: !!userId,
+    enabled: !!userId && !!storeId,
   });
 }
