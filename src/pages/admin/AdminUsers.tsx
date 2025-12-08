@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 const roleColors: Record<string, string> = {
   OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
@@ -52,6 +53,7 @@ function generatePassword(length = 12): string {
 
 export default function AdminUsers() {
   const { profile } = useAuth();
+  const { currentStore } = useCurrentStore();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
@@ -77,7 +79,7 @@ export default function AdminUsers() {
   const [isImpersonating, setIsImpersonating] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
+  const isOwner = profile?.role === 'OWNER';
   const handleImpersonate = async (user: StaffMember) => {
     if (user.id === profile?.id) {
       toast.error("You cannot login as yourself");
@@ -299,6 +301,13 @@ const usersWithEmployee = useMemo(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Non-OWNER users must have a current store to create users
+    if (!isOwner && !currentStore?.id) {
+      toast.error('No store context. Please access this page from a store portal.');
+      return;
+    }
+    
     setIsSubmitting(true);
     setCreatedCredentials(null);
 
@@ -312,6 +321,8 @@ const usersWithEmployee = useMemo(() => {
           name: formData.name,
           phone: formData.phone || null,
           role: formData.role,
+          // Always pass current store_id for non-OWNER users
+          store_id: isOwner ? undefined : currentStore?.id,
         },
       });
 
