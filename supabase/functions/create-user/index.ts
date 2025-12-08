@@ -50,7 +50,9 @@ serve(async (req: Request) => {
     }
 
     // Check if user is admin or owner via user_roles table
-    const { data: roleData, error: roleError } = await userClient
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: roleData, error: roleError } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", callingUser.id)
@@ -63,6 +65,8 @@ serve(async (req: Request) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const isOwner = roleData.role === "OWNER";
 
     // Parse request body
     const requestData: CreateUserRequest = await req.json();
@@ -77,10 +81,36 @@ serve(async (req: Request) => {
       );
     }
 
+    // Non-OWNER users MUST provide a store_id to scope the new user
+    if (!isOwner && !store_id) {
+      return new Response(
+        JSON.stringify({ error: "Store context required. Please create users from within a store portal." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Non-OWNER users can only create users in stores they have access to
+    if (!isOwner && store_id) {
+      const { data: callerAccess, error: accessError } = await adminClient
+        .from("user_store_access")
+        .select("access_level")
+        .eq("user_id", callingUser.id)
+        .eq("store_id", store_id)
+        .eq("is_active", true)
+        .single();
+
+      if (accessError || !callerAccess) {
+        return new Response(
+          JSON.stringify({ error: "You do not have access to create users for this store" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Generate a random password if not provided
     const userPassword = password || Math.random().toString(36).slice(-12) + "Aa1!";
 
-    // Validate role
+    // Validate role - non-OWNER cannot create OWNER users
     const validRoles = ["ADMIN", "LEADS", "CALLING", "FOLLOWUP", "LOGISTICS", "MARKETING", "MANAGER", "HR", "OWNER"];
     if (!validRoles.includes(role)) {
       return new Response(
@@ -89,8 +119,13 @@ serve(async (req: Request) => {
       );
     }
 
-    // Create admin client with service role key
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Non-OWNER users cannot create OWNER users
+    if (!isOwner && role === "OWNER") {
+      return new Response(
+        JSON.stringify({ error: "Only owners can create other owner accounts" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Create the user in Supabase Auth with auto-confirmed email
     const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
@@ -150,14 +185,22 @@ serve(async (req: Request) => {
       console.error("Error upserting user_roles:", userRoleError);
     }
 
-    // If store_id is provided, also add user_store_access
+    // If store_id is provided, add user_store_access (required for store scoping)
     if (store_id) {
+      // Determine access level based on role
+      let accessLevel = 'staff';
+      if (role === 'ADMIN') {
+        accessLevel = 'admin';
+      } else if (role === 'MANAGER') {
+        accessLevel = 'manager';
+      }
+
       const { error: storeAccessError } = await adminClient
         .from("user_store_access")
         .upsert({
           user_id: newUserId,
           store_id: store_id,
-          access_level: 'admin',
+          access_level: accessLevel,
           is_active: true,
         }, { onConflict: 'user_id,store_id' });
 
@@ -168,7 +211,6 @@ serve(async (req: Request) => {
 
     // User created successfully with auto-confirmed email - can log in immediately
     console.log("User created successfully and can log in immediately:", email);
-    console.log("Generated password:", userPassword);
 
     return new Response(
       JSON.stringify({
@@ -178,6 +220,7 @@ serve(async (req: Request) => {
           email: authData.user.email,
           name: userName,
           role,
+          store_id: store_id || null,
         },
         temp_password: userPassword,
       }),
