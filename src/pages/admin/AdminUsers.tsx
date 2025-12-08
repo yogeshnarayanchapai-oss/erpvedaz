@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useStaff, StaffMember, ALL_ROLES, AppRole } from '@/hooks/useStaff';
 import { useEmployees } from '@/hooks/useHRM';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,12 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2, LogIn } from 'lucide-react';
+import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2, LogIn, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { useStores } from '@/hooks/useStores';
 
 const roleColors: Record<string, string> = {
   OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
@@ -54,9 +56,48 @@ function generatePassword(length = 12): string {
 export default function AdminUsers() {
   const { profile } = useAuth();
   const { currentStore } = useCurrentStore();
+  const isOwner = profile?.role === 'OWNER';
+  
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
+  const [storeFilter, setStoreFilter] = useState<string>('ALL');
+  
+  // Fetch all stores for OWNER filter
+  const { data: allStores = [] } = useStores();
+  
+  // Fetch user store associations for OWNER view
+  const { data: userStoreAccess = [] } = useQuery({
+    queryKey: ['all-user-store-access'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_store_access')
+        .select(`
+          user_id,
+          store_id,
+          access_level,
+          store:stores(id, name, slug)
+        `)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isOwner,
+  });
+  
+  // Create a map of user_id -> store info
+  const userStoreMap = useMemo(() => {
+    const map = new Map<string, Array<{ id: string; name: string; slug: string }>>();
+    userStoreAccess.forEach((access: any) => {
+      if (access.store) {
+        const existing = map.get(access.user_id) || [];
+        existing.push(access.store);
+        map.set(access.user_id, existing);
+      }
+    });
+    return map;
+  }, [userStoreAccess]);
   
   // Determine includeInactive based on statusFilter
   const includeInactive = statusFilter === 'ALL' || statusFilter === 'INACTIVE';
@@ -79,7 +120,7 @@ export default function AdminUsers() {
   const [isImpersonating, setIsImpersonating] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const isOwner = profile?.role === 'OWNER';
+
   const handleImpersonate = async (user: StaffMember) => {
     if (user.id === profile?.id) {
       toast.error("You cannot login as yourself");
@@ -153,7 +194,14 @@ const usersWithEmployee = useMemo(() => {
       (statusFilter === 'ACTIVE' && s.is_active) ||
       (statusFilter === 'INACTIVE' && !s.is_active);
     
-    return matchesSearch && matchesRole && matchesStatus;
+    // Store filter (OWNER only)
+    let matchesStore = true;
+    if (isOwner && storeFilter !== 'ALL') {
+      const userStores = userStoreMap.get(s.id) || [];
+      matchesStore = userStores.some(store => store.id === storeFilter);
+    }
+    
+    return matchesSearch && matchesRole && matchesStatus && matchesStore;
   });
 
 
@@ -657,6 +705,20 @@ const usersWithEmployee = useMemo(() => {
                   <SelectItem value="ALL">All Status</SelectItem>
                 </SelectContent>
               </Select>
+              {isOwner && (
+                <Select value={storeFilter} onValueChange={setStoreFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <Store className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="All Stores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Stores</SelectItem>
+                    {allStores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -669,6 +731,7 @@ const usersWithEmployee = useMemo(() => {
                   <TableHead className="table-header">Email</TableHead>
                   <TableHead className="table-header">Phone</TableHead>
                   <TableHead className="table-header">Role</TableHead>
+                  {isOwner && <TableHead className="table-header">Store</TableHead>}
                   <TableHead className="table-header">Employee</TableHead>
                   <TableHead className="table-header">Status</TableHead>
                   <TableHead className="table-header">Actions</TableHead>
@@ -677,6 +740,7 @@ const usersWithEmployee = useMemo(() => {
               <TableBody>
                 {filteredStaff.map((user) => {
                   const hasEmployee = usersWithEmployee.has(user.id);
+                  const userStores = userStoreMap.get(user.id) || [];
                   return (
                     <TableRow key={user.id} className={!user.is_active ? 'opacity-60' : ''}>
                       <TableCell className="font-medium">{user.name}</TableCell>
@@ -687,6 +751,26 @@ const usersWithEmployee = useMemo(() => {
                           {user.role}
                         </Badge>
                       </TableCell>
+                      {isOwner && (
+                        <TableCell>
+                          {user.role === 'OWNER' ? (
+                            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                              All Stores
+                            </Badge>
+                          ) : userStores.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {userStores.map(store => (
+                                <Badge key={store.id} variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs">
+                                  <Store className="w-3 h-3 mr-1" />
+                                  {store.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No store</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         {hasEmployee ? (
                           <Badge 
