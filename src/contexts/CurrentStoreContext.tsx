@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStoreSubdomain } from '@/lib/storeSubdomain';
+import { getStoreSlugFromPath } from '@/lib/storeSubdomain';
 
 interface Store {
   id: string;
@@ -30,7 +30,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
   const [availableStores, setAvailableStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [storeSubdomain] = useState<string | null>(() => getStoreSubdomain());
+  const [storeSubdomain] = useState<string | null>(() => getStoreSlugFromPath());
 
   const isOwner = profile?.role === 'OWNER';
   const canSwitchStores = isOwner && !storeSubdomain; // Can't switch if on a specific store subdomain
