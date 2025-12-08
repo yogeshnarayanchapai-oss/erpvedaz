@@ -2,8 +2,15 @@
 // Example: erp.techlaya.com/vedaz -> store slug = vedaz
 
 /**
+ * Primary domain for store URLs
+ * This is the custom domain connected to the Lovable project
+ * Update this when you connect a custom domain
+ */
+const PRIMARY_DOMAIN = 'erp.techlaya.com';
+
+/**
  * Get the base domain for store URLs
- * Uses the current hostname for production, localhost for dev
+ * Uses the primary domain for production, localhost for dev
  */
 export function getBaseDomain(): string {
   const hostname = window.location.hostname;
@@ -13,8 +20,22 @@ export function getBaseDomain(): string {
     return window.location.origin;
   }
   
-  // For production - use the current origin (e.g., https://erp.techlaya.com)
-  return window.location.origin;
+  // For production - use the primary domain with https
+  return `https://${PRIMARY_DOMAIN}`;
+}
+
+/**
+ * Get the display domain (without protocol)
+ */
+export function getDisplayDomain(): string {
+  const hostname = window.location.hostname;
+  
+  // For local development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return window.location.host;
+  }
+  
+  return PRIMARY_DOMAIN;
 }
 
 /**
@@ -39,7 +60,8 @@ export function getStoreSlugFromPath(): string | null {
   const knownRootPaths = [
     'admin', 'auth', 'setup', 'leads', 'calling', 'followup', 
     'logistics', 'hr', 'manager', 'marketing', 'hrm', 'training',
-    'my-hr', 'settings', 'orders', 'storefront'
+    'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting',
+    'logistics-portal'
   ];
   
   if (pathParts.length > 0 && !knownRootPaths.includes(pathParts[0])) {
@@ -69,8 +91,7 @@ export function getStoreUrl(storeSlug: string): string {
     return `${baseDomain}?store=${storeSlug}`;
   }
   
-  // For production, use path-based routing
-  // e.g., erp.techlaya.com/vedaz
+  // For production, use path-based routing with primary domain
   return `${baseDomain}/${storeSlug}`;
 }
 
@@ -85,7 +106,7 @@ export function getStoreDisplayUrl(storeSlug: string): string {
     return `${window.location.host}?store=${storeSlug}`;
   }
   
-  return `${window.location.host}/${storeSlug}`;
+  return `${PRIMARY_DOMAIN}/${storeSlug}`;
 }
 
 /**
@@ -102,4 +123,11 @@ export function getStoreBasePath(): string {
  */
 export function getStoreSubdomain(): string | null {
   return getStoreSlugFromPath();
+}
+
+/**
+ * Get primary domain for external display
+ */
+export function getPrimaryDomain(): string {
+  return PRIMARY_DOMAIN;
 }
