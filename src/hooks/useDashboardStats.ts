@@ -169,7 +169,7 @@ export function useOrderDashboardStats(dateFrom?: string, dateTo?: string) {
 
 /**
  * Hook for staff-specific lead stats (CallingDashboard)
- * Fetches leads assigned to a specific user
+ * Fetches leads assigned to OR created by a specific user
  */
 export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: string) {
   const queryClient = useQueryClient();
@@ -180,10 +180,15 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
     const channel = supabase
       .channel(`staff-leads-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
-        // Only invalidate if the lead is assigned to this user
+        // Invalidate if the lead is assigned to or created by this user
         const newData = payload.new as any;
         const oldData = payload.old as any;
-        if (newData?.assigned_to_user_id === userId || oldData?.assigned_to_user_id === userId) {
+        if (
+          newData?.assigned_to_user_id === userId || 
+          oldData?.assigned_to_user_id === userId ||
+          newData?.created_by_user_id === userId ||
+          oldData?.created_by_user_id === userId
+        ) {
           queryClient.invalidateQueries({ queryKey: ['staff-lead-stats', userId] });
         }
       })
@@ -199,35 +204,66 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
     queryFn: async () => {
       if (!userId) return null;
 
-      let query = supabase
+      // Fetch leads assigned to user
+      let assignedQuery = supabase
         .from('leads')
-        .select('id, status, order_id, assigned_at, current_team')
+        .select('id, status, order_id, assigned_at, current_team, created_by_user_id')
         .eq('assigned_to_user_id', userId);
 
       // Filter by assigned_at date using Nepal timezone
       if (dateFrom) {
-        query = query.gte('assigned_at', getNepalDayStart(dateFrom));
+        assignedQuery = assignedQuery.gte('assigned_at', getNepalDayStart(dateFrom));
       }
       if (dateTo) {
-        query = query.lte('assigned_at', getNepalDayEnd(dateTo));
+        assignedQuery = assignedQuery.lte('assigned_at', getNepalDayEnd(dateTo));
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      // Fetch leads created by user (self-entry)
+      let createdQuery = supabase
+        .from('leads')
+        .select('id, status, order_id, created_at, current_team, created_by_user_id, assigned_to_user_id')
+        .eq('created_by_user_id', userId);
 
-      const leads = data || [];
-      const callingLeads = leads.filter(l => l.current_team === 'CALLING');
+      // Filter by created_at date using Nepal timezone for self-created leads
+      if (dateFrom) {
+        createdQuery = createdQuery.gte('created_at', getNepalDayStart(dateFrom));
+      }
+      if (dateTo) {
+        createdQuery = createdQuery.lte('created_at', getNepalDayEnd(dateTo));
+      }
+
+      const [assignedResult, createdResult] = await Promise.all([
+        assignedQuery,
+        createdQuery
+      ]);
+
+      if (assignedResult.error) throw assignedResult.error;
+      if (createdResult.error) throw createdResult.error;
+
+      const assignedLeads = assignedResult.data || [];
+      // Filter out self-created leads that are already in assigned leads (to avoid duplicates)
+      const selfCreatedLeads = (createdResult.data || []).filter(
+        (createdLead: any) => !assignedLeads.some((assignedLead: any) => assignedLead.id === createdLead.id)
+      );
+      
+      // Combine both lists
+      const allLeads = [...assignedLeads, ...selfCreatedLeads];
+      const callingLeads = allLeads.filter(l => l.current_team === 'CALLING');
+      
+      // Pending statuses for "Remain to Call" - leads that haven't been processed yet
+      const pendingStatuses = ['NEW', 'ASSIGNED', null, ''];
       
       return {
-        total: leads.length,
+        total: allLeads.length,
         callingTotal: callingLeads.length,
-        confirmed: leads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
-        callNotReceived: leads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
-        followUp: leads.filter(l => l.status === 'FOLLOW_UP').length,
-        cancelled: leads.filter(l => l.status === 'CANCELLED').length,
-        pending: leads.filter(l => ['NEW', 'ASSIGNED'].includes(l.status)).length,
+        confirmed: allLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
+        callNotReceived: allLeads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
+        followUp: allLeads.filter(l => l.status === 'FOLLOW_UP').length,
+        cancelled: allLeads.filter(l => l.status === 'CANCELLED').length,
+        pending: allLeads.filter(l => pendingStatuses.includes(l.status)).length,
+        // Remain to call = leads with pending/no status (not yet processed)
         remainingToCall: callingLeads.filter(l => 
-          !['CONFIRMED', 'CANCELLED'].includes(l.status)
+          pendingStatuses.includes(l.status) || !l.status
         ).length,
       };
     },
