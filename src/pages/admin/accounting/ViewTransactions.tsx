@@ -37,6 +37,7 @@ export default function ViewTransactions() {
     if (!filters.search) return true;
     const searchLower = filters.search.toLowerCase();
     return (
+      t.transaction_code?.toLowerCase().includes(searchLower) ||
       t.reference_no?.toLowerCase().includes(searchLower) ||
       t.note?.toLowerCase().includes(searchLower) ||
       t.parties?.name.toLowerCase().includes(searchLower)
@@ -44,8 +45,9 @@ export default function ViewTransactions() {
   });
 
   const exportCSV = () => {
-    const headers = ['Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
+    const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
     const rows = filteredTransactions.map(t => [
+      t.transaction_code || '',
       t.date,
       t.type,
       t.from_account?.name || t.to_account?.name || 'N/A',
@@ -206,6 +208,7 @@ export default function ViewTransactions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Code</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Account</TableHead>
@@ -220,18 +223,19 @@ export default function ViewTransactions() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
               )}
               {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
+                  <TableCell className="font-mono text-sm font-medium">{transaction.transaction_code || '-'}</TableCell>
                   <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
                     <Badge className={getTypeColor(transaction.type)}>

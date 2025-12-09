@@ -6103,6 +6103,7 @@ export type Database = {
           reference_no: string | null
           store_id: string | null
           to_account_id: string | null
+          transaction_code: string | null
           type: string
           updated_at: string | null
         }
@@ -6124,6 +6125,7 @@ export type Database = {
           reference_no?: string | null
           store_id?: string | null
           to_account_id?: string | null
+          transaction_code?: string | null
           type: string
           updated_at?: string | null
         }
@@ -6145,6 +6147,7 @@ export type Database = {
           reference_no?: string | null
           store_id?: string | null
           to_account_id?: string | null
+          transaction_code?: string | null
           type?: string
           updated_at?: string | null
         }

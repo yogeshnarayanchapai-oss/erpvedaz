@@ -21,6 +21,7 @@ export interface Transaction {
   is_cleared: boolean;
   created_by: string | null;
   store_id: string | null;
+  transaction_code: string | null;
   created_at: string;
   updated_at: string;
   from_account?: { id: string; name: string } | null;
@@ -97,7 +98,7 @@ export function useCreateTransaction() {
   const storeId = useCurrentStoreId();
   
   return useMutation({
-    mutationFn: async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'accounts' | 'from_account' | 'to_account' | 'transaction_categories' | 'parties' | 'store_id'>) => {
+    mutationFn: async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'accounts' | 'from_account' | 'to_account' | 'transaction_categories' | 'parties' | 'store_id' | 'transaction_code'>) => {
       const { data, error } = await supabase
         .from('transactions')
         .insert({ ...transaction, store_id: storeId })
@@ -105,6 +106,18 @@ export function useCreateTransaction() {
         .single();
       
       if (error) throw error;
+
+      // Log activity for new transaction
+      const typeLabel = transaction.type === 'income' ? 'Deposit' : transaction.type === 'expense' ? 'Expense' : 'Transfer';
+      await supabase.from('accounting_activity_logs').insert({
+        entity_type: 'transaction',
+        entity_id: data.id,
+        action_type: 'CREATE',
+        description: `New ${typeLabel} ${data.transaction_code} created - Rs. ${transaction.amount.toLocaleString()}`,
+        amount: transaction.amount,
+        store_id: storeId,
+        performed_by: (await supabase.auth.getUser()).data.user?.id || null,
+      });
 
       // Update account balances
       if (transaction.type === 'income' && transaction.account_id) {
@@ -154,6 +167,7 @@ export function useCreateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['party-payments'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-activity-logs'] });
       toast.success('Transaction created successfully');
     },
     onError: (error: Error) => {
@@ -167,6 +181,13 @@ export function useUpdateTransaction() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Transaction> & { id: string }) => {
+      // Get old transaction for logging
+      const { data: oldData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { data, error } = await supabase
         .from('transactions')
         .update(updates)
@@ -175,11 +196,29 @@ export function useUpdateTransaction() {
         .single();
       
       if (error) throw error;
+
+      // Log activity for edited transaction
+      if (oldData) {
+        const typeLabel = data.type === 'income' ? 'Deposit' : data.type === 'expense' ? 'Expense' : 'Transfer';
+        await supabase.from('accounting_activity_logs').insert({
+          entity_type: 'transaction',
+          entity_id: data.id,
+          action_type: 'UPDATE',
+          description: `${typeLabel} ${data.transaction_code} edited`,
+          amount: data.amount,
+          store_id: data.store_id,
+          performed_by: (await supabase.auth.getUser()).data.user?.id || null,
+          old_values: oldData,
+          new_values: data,
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-activity-logs'] });
       toast.success('Transaction updated successfully');
     },
     onError: (error: Error) => {
