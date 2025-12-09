@@ -136,7 +136,7 @@ export function useOrderDetail(orderId: string) {
         .from('orders')
         .select(`
           *,
-          leads:lead_id(client_name, contact_number, alt_phone, full_address),
+          leads:lead_id(client_name, contact_number, alt_phone, full_address, reference_id),
           products:product_id(name),
           customers:customer_id(customer_name, phone_number, email, city, full_address),
           branches:branch_id(branch_name, district),
