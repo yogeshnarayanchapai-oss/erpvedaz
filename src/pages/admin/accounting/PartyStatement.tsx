@@ -10,13 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { FileSpreadsheet, ArrowLeft, Eye } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Eye, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function PartyStatement() {
   const [searchParams] = useSearchParams();
   const partyIdFromUrl = searchParams.get('party');
+  const { canEdit } = useAccountingEditAccess();
 
   const [selectedPartyId, setSelectedPartyId] = useState(partyIdFromUrl || '');
   const [startDate, setStartDate] = useState('');
@@ -172,7 +175,13 @@ export default function PartyStatement() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div><h1 className="text-2xl font-bold">Party Statement</h1><p className="text-muted-foreground">View all party balances and statements</p></div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Party Statement</h1>
+          <p className="text-muted-foreground">View all party balances and statements</p>
+        </div>
+        {canEdit && <AddPartyDialog />}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Parties</CardTitle></CardHeader>
           <CardContent><span className="text-2xl font-bold">{summaryStats.partyCount}</span></CardContent></Card>

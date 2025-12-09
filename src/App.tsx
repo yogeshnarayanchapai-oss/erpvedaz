@@ -78,6 +78,7 @@ import Receivables from "./pages/admin/accounting/Receivables";
 import Payables from "./pages/admin/accounting/Payables";
 import CashBank from "./pages/admin/accounting/CashBank";
 import PartyStatement from "./pages/admin/accounting/PartyStatement";
+import CategoryManagement from "./pages/admin/accounting/CategoryManagement";
 
 // Inventory pages
 import StockSummary from "./pages/inventory/StockSummary";
@@ -203,6 +204,7 @@ function StoreRoutes() {
       <Route path="admin/accounting/payables" element={<Payables />} />
       <Route path="admin/accounting/cash-bank" element={<CashBank />} />
       <Route path="admin/accounting/party-statement" element={<PartyStatement />} />
+      <Route path="admin/accounting/categories" element={<CategoryManagement />} />
       <Route path="admin/accounting/audit" element={<AuditDashboard />} />
       <Route path="admin/staff-targets" element={<AdminStaffTargets />} />
       <Route path="admin/staff/:staffId" element={<StaffDetail />} />
@@ -341,6 +343,7 @@ function StoreRoutes() {
       <Route path="accounting/payables" element={<Payables />} />
       <Route path="accounting/cash-bank" element={<CashBank />} />
       <Route path="accounting/party-statement" element={<PartyStatement />} />
+      <Route path="accounting/categories" element={<CategoryManagement />} />
       <Route path="accounting/audit" element={<AuditDashboard />} />
 
       {/* Settings Routes */}
