@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useTransactions } from '@/hooks/useTransactions';
+import { useTransactions, Transaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
 import { format, subDays } from 'date-fns';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, Pencil } from 'lucide-react';
 
 export default function ViewTransactions() {
   const [filters, setFilters] = useState({
@@ -23,11 +25,13 @@ export default function ViewTransactions() {
     categoryId: '',
     search: '',
   });
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const { data: transactions = [], isLoading } = useTransactions(filters);
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
+  const { canEdit } = useAccountingEditAccess();
 
   const filteredTransactions = transactions.filter(t => {
     if (!filters.search) return true;
@@ -210,17 +214,18 @@ export default function ViewTransactions() {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Reference</TableHead>
                 <TableHead>Cleared</TableHead>
+                {canEdit && <TableHead className="w-16">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
@@ -251,12 +256,29 @@ export default function ViewTransactions() {
                       {transaction.is_cleared ? 'Cleared' : 'Pending'}
                     </Badge>
                   </TableCell>
+                  {canEdit && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingTransaction(transaction)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <EditTransactionDialog
+        transaction={editingTransaction}
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
+      />
     </div>
   );
 }

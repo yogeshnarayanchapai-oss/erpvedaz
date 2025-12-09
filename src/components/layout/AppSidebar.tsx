@@ -161,6 +161,7 @@ const accountingItems: MenuItem[] = [
   { title: 'New Expense', url: '/admin/accounting/new-expense', icon: Receipt },
   { title: 'Transfer', url: '/admin/accounting/new-transfer', icon: ArrowLeftRight },
   { title: 'View Transactions', url: '/admin/accounting/transactions', icon: FileText },
+  { title: 'Activity Log', url: '/admin/accounting/activity-log', icon: History },
   { title: 'Accounts', url: '/admin/accounting/accounts', icon: Wallet },
   { title: 'Categories', url: '/admin/accounting/categories', icon: ClipboardList },
   { title: 'Party Statement', url: '/admin/accounting/party-statement', icon: FileText },
