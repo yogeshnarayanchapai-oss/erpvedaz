@@ -45,6 +45,23 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
 
   const [rows, setRows] = useState<LeadRow[]>([createEmptyRow()]);
 
+  // Reset rows when dialog opens or lead sources load
+  useEffect(() => {
+    if (open) {
+      const source = leadSources.length > 0 ? leadSources[0].name : '';
+      setRows([{
+        id: crypto.randomUUID(),
+        date: new Date().toISOString().split('T')[0],
+        client_name: '',
+        contact_number: '',
+        alt_phone: '',
+        product_id: '',
+        source: source,
+        remark: '',
+      }]);
+    }
+  }, [open, leadSources]);
+
   const addRows = (count: number) => {
     const newRows = Array.from({ length: count }, () => createEmptyRow());
     setRows([...rows, ...newRows]);
@@ -158,12 +175,18 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
                 
                 <Select value={row.source} onValueChange={(v) => updateRow(row.id, 'source', v)}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Select source" />
+                    <SelectValue placeholder={leadSources.length === 0 ? "No sources configured" : "Select source"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {leadSources.map(s => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                    ))}
+                    {leadSources.length === 0 ? (
+                      <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                        No lead sources found.<br />Add sources in Data Tools.
+                      </div>
+                    ) : (
+                      leadSources.map(s => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 

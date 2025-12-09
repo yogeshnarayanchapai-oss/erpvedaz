@@ -52,12 +52,22 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
   const [rows, setRows] = useState<LeadRow[]>([createEmptyRow()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset when dialog opens
+  // Reset when dialog opens or lead sources change
   useEffect(() => {
     if (open) {
-      setRows([createEmptyRow()]);
+      const source = leadSources.length > 0 ? leadSources[0].name : '';
+      setRows([{
+        id: crypto.randomUUID(),
+        date: new Date().toISOString().split('T')[0],
+        client_name: '',
+        contact_number: '',
+        alt_phone: '',
+        product_id: '',
+        source: source,
+        remark: '',
+      }]);
     }
-  }, [open]);
+  }, [open, leadSources]);
 
   const addRows = (count: number) => {
     const newRows = Array.from({ length: count }, () => createEmptyRow());
@@ -203,12 +213,18 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
                 
                 <Select value={row.source} onValueChange={(v) => updateRow(row.id, 'source', v)}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Select source" />
+                    <SelectValue placeholder={leadSources.length === 0 ? "No sources configured" : "Select source"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {leadSources.map(s => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                    ))}
+                    {leadSources.length === 0 ? (
+                      <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                        No lead sources found.<br />Add sources in Data Tools.
+                      </div>
+                    ) : (
+                      leadSources.map(s => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 

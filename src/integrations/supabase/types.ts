@@ -2360,6 +2360,7 @@ export type Database = {
           is_active: boolean | null
           is_default: boolean | null
           name: string
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2368,6 +2369,7 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           name: string
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2376,9 +2378,18 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           name?: string
+          store_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lead_sources_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_transfers: {
         Row: {
