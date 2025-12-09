@@ -275,18 +275,23 @@ const usersWithEmployee = useMemo(() => {
 
   // Effect to populate store state when editing user's store access loads
   useEffect(() => {
-    if (editingUser && editingUserStoreAccess.length > 0 && isEditOpen) {
-      const storeIds = editingUserStoreAccess.map(a => a.store_id);
-      const storeRoles: Record<string, AppRole> = {};
-      editingUserStoreAccess.forEach(a => {
-        if (a.store_role) {
-          storeRoles[a.store_id] = a.store_role;
-        }
-      });
-      setEditSelectedStoreIds(storeIds);
-      setEditSelectedStoreRoles(storeRoles);
+    if (editingUser && isEditOpen) {
+      if (editingUserStoreAccess.length > 0) {
+        const storeIds = editingUserStoreAccess.map(a => a.store_id);
+        const storeRoles: Record<string, AppRole> = {};
+        editingUserStoreAccess.forEach(a => {
+          // Use store_role if set, otherwise fall back to user's global role
+          storeRoles[a.store_id] = (a.store_role as AppRole) || editingUser.role;
+        });
+        setEditSelectedStoreIds(storeIds);
+        setEditSelectedStoreRoles(storeRoles);
+      } else {
+        // No store access records - reset state
+        setEditSelectedStoreIds([]);
+        setEditSelectedStoreRoles({});
+      }
     }
-  }, [editingUser?.id, editingUserStoreAccess, isEditOpen]);
+  }, [editingUser?.id, editingUserStoreAccess, isEditOpen, editingUser?.role]);
 
   const toggleEditStoreSelection = (storeId: string) => {
     setEditSelectedStoreIds(prev => {
