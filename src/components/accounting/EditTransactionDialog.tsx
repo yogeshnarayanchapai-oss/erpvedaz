@@ -23,6 +23,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   const [formData, setFormData] = useState({
     date: '',
     amount: 0,
+    account_id: '',
     category_id: '',
     party_id: '',
     reference_no: '',
@@ -41,6 +42,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       setFormData({
         date: transaction.date,
         amount: transaction.amount,
+        account_id: transaction.account_id || '',
         category_id: transaction.category_id || '',
         party_id: transaction.party_id || '',
         reference_no: transaction.reference_no || '',
@@ -57,6 +59,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     const oldValues = {
       date: transaction.date,
       amount: transaction.amount,
+      account_id: transaction.account_id,
       category_id: transaction.category_id,
       party_id: transaction.party_id,
       reference_no: transaction.reference_no,
@@ -69,6 +72,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         id: transaction.id,
         date: formData.date,
         amount: formData.amount,
+        account_id: formData.account_id || null,
         category_id: formData.category_id || null,
         party_id: formData.party_id || null,
         reference_no: formData.reference_no || null,
@@ -128,6 +132,20 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="account">Bank/Account</Label>
+            <Select value={formData.account_id} onValueChange={(value) => setFormData({ ...formData, account_id: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map(acc => (
+                  <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
