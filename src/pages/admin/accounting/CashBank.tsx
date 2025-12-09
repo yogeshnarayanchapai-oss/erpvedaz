@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useBanks, useCreateBank, useCashLedger, useCreateCashEntry } from '@/hooks/useAccounting';
 import { Plus, Wallet, CreditCard, TrendingUp, TrendingDown } from 'lucide-react';
 import { format, subDays } from 'date-fns';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function CashBank() {
   const [bankDialog, setBankDialog] = useState(false);
@@ -38,6 +39,7 @@ export default function CashBank() {
   const { data: cashLedger } = useCashLedger(dateRange.startDate, dateRange.endDate);
   const createBank = useCreateBank();
   const createCashEntry = useCreateCashEntry();
+  const { canEdit } = useAccountingEditAccess();
 
   const handleAddBank = () => {
     createBank.mutate(bankForm, {
@@ -81,83 +83,85 @@ export default function CashBank() {
           <h1 className="text-3xl font-bold">Cash & Bank Management</h1>
           <p className="text-muted-foreground">Track cash and bank transactions</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={bankDialog} onOpenChange={setBankDialog}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Add Bank Account</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Bank Account</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Bank Name *</Label>
-                  <Input value={bankForm.bank_name} onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })} />
+        {canEdit && (
+          <div className="flex gap-2">
+            <Dialog open={bankDialog} onOpenChange={setBankDialog}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" /> Add Bank Account</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Bank Account</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Bank Name *</Label>
+                    <Input value={bankForm.bank_name} onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Account Number</Label>
+                    <Input value={bankForm.account_number} onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Account Holder</Label>
+                    <Input value={bankForm.account_holder} onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Branch Name</Label>
+                    <Input value={bankForm.branch_name} onChange={(e) => setBankForm({ ...bankForm, branch_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>IFSC Code</Label>
+                    <Input value={bankForm.ifsc_code} onChange={(e) => setBankForm({ ...bankForm, ifsc_code: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Opening Balance</Label>
+                    <Input type="number" value={bankForm.opening_balance} onChange={(e) => setBankForm({ ...bankForm, opening_balance: Number(e.target.value) })} />
+                  </div>
                 </div>
-                <div>
-                  <Label>Account Number</Label>
-                  <Input value={bankForm.account_number} onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Account Holder</Label>
-                  <Input value={bankForm.account_holder} onChange={(e) => setBankForm({ ...bankForm, account_holder: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Branch Name</Label>
-                  <Input value={bankForm.branch_name} onChange={(e) => setBankForm({ ...bankForm, branch_name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>IFSC Code</Label>
-                  <Input value={bankForm.ifsc_code} onChange={(e) => setBankForm({ ...bankForm, ifsc_code: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Opening Balance</Label>
-                  <Input type="number" value={bankForm.opening_balance} onChange={(e) => setBankForm({ ...bankForm, opening_balance: Number(e.target.value) })} />
-                </div>
-              </div>
-              <Button onClick={handleAddBank} className="w-full">Add Bank Account</Button>
-            </DialogContent>
-          </Dialog>
+                <Button onClick={handleAddBank} className="w-full">Add Bank Account</Button>
+              </DialogContent>
+            </Dialog>
 
-          <Dialog open={cashEntryDialog} onOpenChange={setCashEntryDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline"><Wallet className="h-4 w-4 mr-2" /> Add Cash Entry</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Cash Entry</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Transaction Type</Label>
-                  <Select value={cashForm.transaction_type} onValueChange={(v) => setCashForm({ ...cashForm, transaction_type: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IN">Cash In</SelectItem>
-                      <SelectItem value="OUT">Cash Out</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <Dialog open={cashEntryDialog} onOpenChange={setCashEntryDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><Wallet className="h-4 w-4 mr-2" /> Add Cash Entry</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Cash Entry</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Transaction Type</Label>
+                    <Select value={cashForm.transaction_type} onValueChange={(v) => setCashForm({ ...cashForm, transaction_type: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="IN">Cash In</SelectItem>
+                        <SelectItem value="OUT">Cash Out</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Amount *</Label>
+                    <Input type="number" value={cashForm.amount} onChange={(e) => setCashForm({ ...cashForm, amount: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <Label>Date</Label>
+                    <Input type="date" value={cashForm.transaction_date} onChange={(e) => setCashForm({ ...cashForm, transaction_date: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Description *</Label>
+                    <Textarea value={cashForm.description} onChange={(e) => setCashForm({ ...cashForm, description: e.target.value })} />
+                  </div>
                 </div>
-                <div>
-                  <Label>Amount *</Label>
-                  <Input type="number" value={cashForm.amount} onChange={(e) => setCashForm({ ...cashForm, amount: Number(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Date</Label>
-                  <Input type="date" value={cashForm.transaction_date} onChange={(e) => setCashForm({ ...cashForm, transaction_date: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Description *</Label>
-                  <Textarea value={cashForm.description} onChange={(e) => setCashForm({ ...cashForm, description: e.target.value })} />
-                </div>
-              </div>
-              <Button onClick={handleAddCashEntry} className="w-full">Add Entry</Button>
-            </DialogContent>
-          </Dialog>
-        </div>
+                <Button onClick={handleAddCashEntry} className="w-full">Add Entry</Button>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

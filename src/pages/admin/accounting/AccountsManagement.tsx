@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, Account } from '@/hooks/useAccounts';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -28,6 +29,7 @@ export default function AccountsManagement() {
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
+  const { canEdit } = useAccountingEditAccess();
 
   const openDialog = (account?: Account) => {
     if (account) {
@@ -86,13 +88,14 @@ export default function AccountsManagement() {
           <h1 className="text-2xl font-bold">Accounts Management</h1>
           <p className="text-muted-foreground">Manage bank accounts, cash, and wallets</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => openDialog()}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Account
-            </Button>
-          </DialogTrigger>
+        {canEdit && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => openDialog()}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Account
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingAccount ? 'Edit Account' : 'New Account'}</DialogTitle>
@@ -176,6 +179,7 @@ export default function AccountsManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>
@@ -235,22 +239,24 @@ export default function AccountsManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDialog(account)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(account.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDialog(account)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(account.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

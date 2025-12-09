@@ -14,12 +14,14 @@ import { format } from 'date-fns';
 import { DollarSign, FileText, Download, Search, TrendingDown } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useNavigate } from 'react-router-dom';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function Payables() {
   const navigate = useNavigate();
   const { data: allParties = [], isLoading } = usePartiesWithBalances();
   const { data: accounts = [] } = useActiveAccounts();
   const createPayment = useCreatePartyPayment();
+  const { canEdit } = useAccountingEditAccess();
   const [selectedParty, setSelectedParty] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentData, setPaymentData] = useState<{
@@ -225,22 +227,23 @@ export default function Payables() {
                       >
                         <FileText className="w-4 h-4" />
                       </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedParty(party.id);
-                              setPaymentData(prev => ({
-                                ...prev,
-                                amount: party.net_payable.toString(),
-                              }));
-                            }}
-                          >
-                            Pay Supplier
-                          </Button>
-                        </DialogTrigger>
+                      {canEdit && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedParty(party.id);
+                                setPaymentData(prev => ({
+                                  ...prev,
+                                  amount: party.net_payable.toString(),
+                                }));
+                              }}
+                            >
+                              Pay Supplier
+                            </Button>
+                          </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Pay {party.name}</DialogTitle>
@@ -335,6 +338,7 @@ export default function Payables() {
                         </div>
                         </DialogContent>
                       </Dialog>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
