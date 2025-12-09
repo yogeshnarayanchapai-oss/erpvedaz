@@ -6,15 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useTransactions, Transaction } from '@/hooks/useTransactions';
+import { useTransactions, Transaction, useDeleteTransaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
-import { Download, Search, Pencil } from 'lucide-react';
-
+import { Download, Search, Pencil, Trash2 } from 'lucide-react';
 export default function ViewTransactions() {
   const [filters, setFilters] = useState({
     startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -32,6 +33,10 @@ export default function ViewTransactions() {
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
   const { canEdit } = useAccountingEditAccess();
+  const { effectiveRole } = useEffectiveRole();
+  const deleteTransaction = useDeleteTransaction();
+  
+  const isOwner = effectiveRole === 'OWNER';
 
   const filteredTransactions = transactions.filter(t => {
     if (!filters.search) return true;
@@ -217,18 +222,18 @@ export default function ViewTransactions() {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Reference</TableHead>
                 <TableHead>Cleared</TableHead>
-                {canEdit && <TableHead className="w-16">Action</TableHead>}
+                {(canEdit || isOwner) && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={(canEdit || isOwner) ? 10 : 9} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={(canEdit || isOwner) ? 10 : 9} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
@@ -260,15 +265,45 @@ export default function ViewTransactions() {
                       {transaction.is_cleared ? 'Cleared' : 'Pending'}
                     </Badge>
                   </TableCell>
-                  {canEdit && (
+                  {(canEdit || isOwner) && (
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditingTransaction(transaction)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingTransaction(transaction)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {isOwner && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete transaction {transaction.transaction_code}. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteTransaction.mutate(transaction.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

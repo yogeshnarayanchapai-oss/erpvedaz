@@ -248,3 +248,27 @@ export function useMarkTransactionsCleared() {
     },
   });
 }
+
+export function useDeleteTransaction() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      toast.success('Transaction deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete transaction: ${error.message}`);
+    },
+  });
+}

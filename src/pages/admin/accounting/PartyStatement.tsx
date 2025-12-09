@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { usePartyStatement } from '@/hooks/usePartyStatement';
 import { useProducts } from '@/hooks/useProducts';
+import { useDeletePartyTransaction } from '@/hooks/usePartyTransactions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { FileSpreadsheet, ArrowLeft, Eye, Plus } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { FileSpreadsheet, ArrowLeft, Eye, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
@@ -20,6 +23,10 @@ export default function PartyStatement() {
   const [searchParams] = useSearchParams();
   const partyIdFromUrl = searchParams.get('party');
   const { canEdit } = useAccountingEditAccess();
+  const { effectiveRole } = useEffectiveRole();
+  const deletePartyTransaction = useDeletePartyTransaction();
+  
+  const isOwner = effectiveRole === 'OWNER';
 
   const [selectedPartyId, setSelectedPartyId] = useState(partyIdFromUrl || '');
   const [startDate, setStartDate] = useState('');
@@ -148,11 +155,12 @@ export default function PartyStatement() {
                   <TableHead>Date</TableHead><TableHead>Particulars</TableHead><TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Rate</TableHead><TableHead className="text-right">Debit</TableHead>
                   <TableHead className="text-right">Credit</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Remarks</TableHead>
+                  {isOwner && <TableHead className="w-16">Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementLoading && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {statementLoading && <TableRow><TableCell colSpan={isOwner ? 9 : 8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={isOwner ? 9 : 8} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
                 {statement.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
@@ -163,6 +171,34 @@ export default function PartyStatement() {
                     <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
+                    {isOwner && (
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete this ledger entry. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deletePartyTransaction.mutate(entry.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
