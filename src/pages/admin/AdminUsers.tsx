@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useStaff, StaffMember, ALL_ROLES, AppRole } from '@/hooks/useStaff';
 import { useEmployees } from '@/hooks/useHRM';
@@ -273,9 +273,9 @@ const usersWithEmployee = useMemo(() => {
     setIsEditOpen(true);
   };
 
-  // Populate edit store state when editingUserStoreAccess loads
-  const populateEditStoreState = () => {
-    if (editingUserStoreAccess.length > 0 && editingUser) {
+  // Effect to populate store state when editing user's store access loads
+  useEffect(() => {
+    if (editingUser && editingUserStoreAccess.length > 0 && isEditOpen) {
       const storeIds = editingUserStoreAccess.map(a => a.store_id);
       const storeRoles: Record<string, AppRole> = {};
       editingUserStoreAccess.forEach(a => {
@@ -286,12 +286,7 @@ const usersWithEmployee = useMemo(() => {
       setEditSelectedStoreIds(storeIds);
       setEditSelectedStoreRoles(storeRoles);
     }
-  };
-
-  // Effect to populate store state when editing user changes
-  if (editingUser && editingUserStoreAccess.length > 0 && editSelectedStoreIds.length === 0) {
-    populateEditStoreState();
-  }
+  }, [editingUser?.id, editingUserStoreAccess, isEditOpen]);
 
   const toggleEditStoreSelection = (storeId: string) => {
     setEditSelectedStoreIds(prev => {

@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -69,7 +70,7 @@ import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 import { useBranding } from '@/hooks/useBranding';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
@@ -441,14 +442,64 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: myHRItems,
     },
   ],
+  ACCOUNTANT: [
+    { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
+    {
+      title: 'Accounting',
+      url: '/admin/accounting/dashboard-new',
+      icon: Calculator,
+      children: accountingItems,
+    },
+    {
+      title: 'Inventory',
+      url: '/admin/inventory/stock-summary',
+      icon: Warehouse,
+      children: inventoryItems,
+    },
+    {
+      title: 'My Training',
+      url: '/training/my-courses',
+      icon: GraduationCap,
+      children: myTrainingItems,
+    },
+    {
+      title: 'My HR',
+      url: '/my-hr',
+      icon: Briefcase,
+      children: myHRItems,
+    },
+  ],
+  WAREHOUSE: [
+    { title: 'Dashboard', url: '/admin/inventory/stock-summary', icon: LayoutDashboard },
+    {
+      title: 'Inventory',
+      url: '/admin/inventory/stock-summary',
+      icon: Warehouse,
+      children: inventoryItems,
+    },
+    { title: 'Products', url: '/admin/products', icon: Package },
+    {
+      title: 'My Training',
+      url: '/training/my-courses',
+      icon: GraduationCap,
+      children: myTrainingItems,
+    },
+    {
+      title: 'My HR',
+      url: '/my-hr',
+      icon: Briefcase,
+      children: myHRItems,
+    },
+  ],
 };
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
+  const { effectiveRole } = useEffectiveRole();
   const location = useLocation();
   const { data: badges } = useSidebarBadges();
   const { branding } = useBranding();
-  const role = (profile?.role || 'CALLING') as AppRole;
+  const role = effectiveRole;
   const items = menuItems[role] || menuItems.CALLING;
   
   const isChildActive = (item: MenuItem) => {

@@ -15,7 +15,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -34,7 +34,7 @@ export default function Auth() {
         toast.error('No role assigned to your account. Please contact admin.');
         return;
       }
-      redirectToRoleDashboard(profile.role);
+      redirectToRoleDashboard(profile.role as AppRole);
     }
   }, [user, profile, navigate]);
 
@@ -49,6 +49,8 @@ export default function Auth() {
       MARKETING: '/marketing/dashboard',
       MANAGER: '/manager/dashboard',
       HR: '/hr/dashboard',
+      ACCOUNTANT: '/admin/accounting/dashboard-new',
+      WAREHOUSE: '/admin/inventory/stock-summary',
     };
     navigate(routes[userRole] || '/');
   };
