@@ -1,30 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 // Banks
 export function useBanks() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-banks'],
+    queryKey: ['accounting-banks', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounting_banks')
         .select('*')
         .eq('is_active', true)
         .order('bank_name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateBank() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (bank: any) => {
       const { data, error } = await supabase
         .from('accounting_banks')
-        .insert([{ ...bank, current_balance: bank.opening_balance }])
+        .insert([{ ...bank, current_balance: bank.opening_balance, store_id: storeId }])
         .select()
         .single();
       if (error) throw error;
@@ -42,26 +54,37 @@ export function useCreateBank() {
 
 // Wholesalers
 export function useWholesalers() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-wholesalers'],
+    queryKey: ['accounting-wholesalers', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounting_wholesalers')
         .select('*')
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateWholesaler() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (wholesaler: any) => {
       const { data, error } = await supabase
         .from('accounting_wholesalers')
-        .insert([{ ...wholesaler, current_balance: wholesaler.opening_balance }])
+        .insert([{ ...wholesaler, current_balance: wholesaler.opening_balance, store_id: storeId }])
         .select()
         .single();
       if (error) throw error;
@@ -79,26 +102,37 @@ export function useCreateWholesaler() {
 
 // Suppliers
 export function useSuppliers() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-suppliers'],
+    queryKey: ['accounting-suppliers', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounting_suppliers')
         .select('*')
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateSupplier() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (supplier: any) => {
       const { data, error } = await supabase
         .from('accounting_suppliers')
-        .insert([{ ...supplier, current_balance: supplier.opening_balance }])
+        .insert([{ ...supplier, current_balance: supplier.opening_balance, store_id: storeId }])
         .select()
         .single();
       if (error) throw error;
@@ -116,72 +150,119 @@ export function useCreateSupplier() {
 
 // Expense Categories
 export function useExpenseCategories() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-expense-categories'],
+    queryKey: ['accounting-expense-categories', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounting_expense_categories')
         .select('*')
         .eq('is_active', true)
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 // Dashboard Summary
 export function useAccountingDashboard(startDate: string, endDate: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-dashboard', startDate, endDate],
+    queryKey: ['accounting-dashboard', startDate, endDate, storeId],
     queryFn: async () => {
       // Cash Balance
-      const { data: cashData } = await supabase
+      let cashQuery = supabase
         .from('accounting_cash_ledger')
         .select('transaction_type, amount')
         .lte('transaction_date', endDate);
+      
+      if (storeId) {
+        cashQuery = cashQuery.eq('store_id', storeId);
+      }
+
+      const { data: cashData } = await cashQuery;
       
       const cashIn = cashData?.filter(t => t.transaction_type === 'IN').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const cashOut = cashData?.filter(t => t.transaction_type === 'OUT').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const cashBalance = cashIn - cashOut;
 
       // Bank Balance
-      const { data: banks } = await supabase
+      let bankQuery = supabase
         .from('accounting_banks')
         .select('current_balance')
         .eq('is_active', true);
+      
+      if (storeId) {
+        bankQuery = bankQuery.eq('store_id', storeId);
+      }
+
+      const { data: banks } = await bankQuery;
       const bankBalance = banks?.reduce((sum, b) => sum + Number(b.current_balance), 0) || 0;
 
       // Today's Cashflow
       const today = new Date().toISOString().split('T')[0];
-      const { data: todayCash } = await supabase
+      let todayCashQuery = supabase
         .from('accounting_cash_ledger')
         .select('transaction_type, amount')
         .eq('transaction_date', today);
+      
+      if (storeId) {
+        todayCashQuery = todayCashQuery.eq('store_id', storeId);
+      }
+
+      const { data: todayCash } = await todayCashQuery;
       
       const todayCashIn = todayCash?.filter(t => t.transaction_type === 'IN').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const todayCashOut = todayCash?.filter(t => t.transaction_type === 'OUT').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
       // Receivables
-      const { data: invoices } = await supabase
+      let invoicesQuery = supabase
         .from('accounting_invoices')
         .select('outstanding_amount')
         .in('status', ['SENT', 'PARTIALLY_PAID', 'OVERDUE']);
+      
+      if (storeId) {
+        invoicesQuery = invoicesQuery.eq('store_id', storeId);
+      }
+
+      const { data: invoices } = await invoicesQuery;
       const totalReceivable = invoices?.reduce((sum, i) => sum + Number(i.outstanding_amount), 0) || 0;
 
       // Payables
-      const { data: bills } = await supabase
+      let billsQuery = supabase
         .from('accounting_bills')
         .select('outstanding_amount')
         .in('status', ['PENDING', 'PARTIALLY_PAID', 'OVERDUE']);
+      
+      if (storeId) {
+        billsQuery = billsQuery.eq('store_id', storeId);
+      }
+
+      const { data: bills } = await billsQuery;
       const totalPayable = bills?.reduce((sum, b) => sum + Number(b.outstanding_amount), 0) || 0;
 
       // Monthly P/L from daily_pl
-      const { data: plData } = await supabase
+      let plQuery = supabase
         .from('daily_pl')
         .select('actual_profit')
         .gte('date', startDate)
         .lte('date', endDate);
+      
+      if (storeId) {
+        plQuery = plQuery.eq('store_id', storeId);
+      }
+
+      const { data: plData } = await plQuery;
       const monthlyProfit = plData?.reduce((sum, d) => sum + Number(d.actual_profit), 0) || 0;
 
       return {
@@ -194,13 +275,16 @@ export function useAccountingDashboard(startDate: string, endDate: string) {
         monthlyProfit,
       };
     },
+    enabled: !!storeId,
   });
 }
 
 // Invoices
 export function useInvoices(filters?: { status?: string; startDate?: string; endDate?: string }) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-invoices', filters],
+    queryKey: ['accounting-invoices', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('accounting_invoices')
@@ -210,6 +294,10 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
           items:accounting_invoice_items(*)
         `)
         .order('invoice_date', { ascending: false });
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (filters?.status && filters.status !== 'ALL') {
         query = query.eq('status', filters.status as any);
@@ -225,29 +313,31 @@ export function useInvoices(filters?: { status?: string; startDate?: string; end
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async ({ invoice, items }: { invoice: any; items: any[] }) => {
       const { data: user } = await supabase.auth.getUser();
       
-      // Create invoice
       const { data: newInvoice, error: invoiceError } = await supabase
         .from('accounting_invoices')
         .insert([{ 
           ...invoice, 
           created_by: user.user?.id,
-          outstanding_amount: invoice.total_amount 
+          outstanding_amount: invoice.total_amount,
+          store_id: storeId,
         }])
         .select()
         .single();
       
       if (invoiceError) throw invoiceError;
 
-      // Create invoice items
       const itemsWithInvoiceId = items.map(item => ({
         ...item,
         invoice_id: newInvoice.id,
@@ -274,8 +364,10 @@ export function useCreateInvoice() {
 
 // Bills
 export function useBills(filters?: { status?: string; startDate?: string; endDate?: string }) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-bills', filters],
+    queryKey: ['accounting-bills', filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from('accounting_bills')
@@ -285,6 +377,10 @@ export function useBills(filters?: { status?: string; startDate?: string; endDat
           category:accounting_expense_categories(name)
         `)
         .order('bill_date', { ascending: false });
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (filters?.status && filters.status !== 'ALL') {
         query = query.eq('status', filters.status as any);
@@ -300,11 +396,14 @@ export function useBills(filters?: { status?: string; startDate?: string; endDat
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateBill() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (bill: any) => {
       const { data: user } = await supabase.auth.getUser();
@@ -314,7 +413,8 @@ export function useCreateBill() {
         .insert([{ 
           ...bill, 
           created_by: user.user?.id,
-          outstanding_amount: bill.total_amount 
+          outstanding_amount: bill.total_amount,
+          store_id: storeId,
         }])
         .select()
         .single();
@@ -336,11 +436,11 @@ export function useCreateBill() {
 // Payments
 export function useCreatePayment() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (payment: any) => {
       const { data: user } = await supabase.auth.getUser();
       
-      // Create payment
       const { data: newPayment, error: paymentError } = await supabase
         .from('accounting_payments')
         .insert([{ ...payment, created_by: user.user?.id }])
@@ -349,7 +449,6 @@ export function useCreatePayment() {
       
       if (paymentError) throw paymentError;
 
-      // Update invoice or bill
       if (payment.invoice_id) {
         const { data: invoice } = await supabase
           .from('accounting_invoices')
@@ -396,7 +495,6 @@ export function useCreatePayment() {
         }
       }
 
-      // Update bank balance if payment method is BANK
       if (payment.payment_method === 'BANK' && payment.bank_id) {
         const { data: bank } = await supabase
           .from('accounting_banks')
@@ -432,13 +530,19 @@ export function useCreatePayment() {
 
 // Cash Ledger
 export function useCashLedger(startDate?: string, endDate?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['accounting-cash-ledger', startDate, endDate],
+    queryKey: ['accounting-cash-ledger', startDate, endDate, storeId],
     queryFn: async () => {
       let query = supabase
         .from('accounting_cash_ledger')
         .select('*')
         .order('transaction_date', { ascending: false });
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (startDate) query = query.gte('transaction_date', startDate);
       if (endDate) query = query.lte('transaction_date', endDate);
@@ -447,18 +551,21 @@ export function useCashLedger(startDate?: string, endDate?: string) {
       if (error) throw error;
       return data;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateCashEntry() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (entry: any) => {
       const { data: user } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
         .from('accounting_cash_ledger')
-        .insert([{ ...entry, created_by: user.user?.id }])
+        .insert([{ ...entry, created_by: user.user?.id, store_id: storeId }])
         .select()
         .single();
       

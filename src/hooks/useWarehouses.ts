@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface Warehouse {
   id: string;
@@ -11,45 +12,65 @@ export interface Warehouse {
   remarks: string | null;
   created_at: string;
   updated_at: string;
+  store_id: string | null;
 }
 
 export function useWarehouses() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouses'],
+    queryKey: ['warehouses', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('warehouses')
         .select('*')
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Warehouse[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useActiveWarehouses() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouses', 'active'],
+    queryKey: ['warehouses', 'active', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('warehouses')
         .select('*')
         .eq('is_active', true)
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Warehouse[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateWarehouse() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (input: { name: string; code: string; location?: string; is_active?: boolean; remarks?: string }) => {
       const { data, error } = await supabase
         .from('warehouses')
-        .insert(input)
+        .insert({ ...input, store_id: storeId })
         .select()
         .single();
       if (error) throw error;

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCurrentStoreId } from "@/hooks/useCurrentStoreId";
 
 export interface Influencer {
   id: string;
@@ -35,9 +36,10 @@ export interface Influencer {
   instagram_url: string | null;
   youtube_url: string | null;
   facebook_url: string | null;
+  store_id: string | null;
 }
 
-export type InfluencerInput = Omit<Influencer, "id" | "created_at" | "updated_at">;
+export type InfluencerInput = Omit<Influencer, "id" | "created_at" | "updated_at" | "store_id">;
 
 export const useInfluencers = (filters?: {
   platform?: string;
@@ -47,13 +49,19 @@ export const useInfluencers = (filters?: {
   todayFollowups?: boolean;
   thisWeekFollowups?: boolean;
 }) => {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ["influencers", filters],
+    queryKey: ["influencers", filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from("influencers")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (storeId) {
+        query = query.eq("store_id", storeId);
+      }
 
       if (filters?.platform && filters.platform !== "All") {
         query = query.eq("platform", filters.platform);
@@ -88,19 +96,27 @@ export const useInfluencers = (filters?: {
       if (error) throw error;
       return data as Influencer[];
     },
+    enabled: !!storeId,
   });
 };
 
 export const useInfluencerStats = () => {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ["influencer-stats"],
+    queryKey: ["influencer-stats", storeId],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
       
-      const { data: all, error: allError } = await supabase
+      let query = supabase
         .from("influencers")
         .select("id, status, next_followup_date");
-      
+
+      if (storeId) {
+        query = query.eq("store_id", storeId);
+      }
+
+      const { data: all, error: allError } = await query;
       if (allError) throw allError;
 
       const total = all?.length || 0;
@@ -116,16 +132,19 @@ export const useInfluencerStats = () => {
 
       return { total, active, todayFollowups, confirmedOrPending };
     },
+    enabled: !!storeId,
   });
 };
 
 export const useCreateInfluencer = () => {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (input: InfluencerInput) => {
       const { data, error } = await supabase
         .from("influencers")
-        .insert(input)
+        .insert({ ...input, store_id: storeId })
         .select()
         .single();
       if (error) throw error;
