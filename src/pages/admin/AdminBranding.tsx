@@ -27,8 +27,8 @@ export default function AdminBranding() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
-  // Only ADMIN can access
-  if (profile?.role !== 'ADMIN') {
+  // Only ADMIN and OWNER can access
+  if (profile?.role !== 'ADMIN' && profile?.role !== 'OWNER') {
     return <Navigate to="/" replace />;
   }
 
