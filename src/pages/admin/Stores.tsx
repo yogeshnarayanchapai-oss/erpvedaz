@@ -1,34 +1,22 @@
 import { useState } from 'react';
-import { useStores, useUpdateStore, useDeleteStore } from '@/hooks/useStores';
+import { useStores, useUpdateStore } from '@/hooks/useStores';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Store as StoreIcon, Settings, ArrowRight, Trash2 } from 'lucide-react';
+import { Plus, Store as StoreIcon, Settings, ArrowRight } from 'lucide-react';
 import { StoreFormDialog } from '@/components/stores/StoreFormDialog';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 export default function Stores() {
   const { data: stores = [], isLoading } = useStores();
   const { profile } = useAuth();
   const { currentStore, setCurrentStore, canSwitchStores } = useCurrentStore();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [deleteStoreId, setDeleteStoreId] = useState<string | null>(null);
   const updateStore = useUpdateStore();
-  const deleteStore = useDeleteStore();
   const navigate = useNavigate();
 
   const isOwner = profile?.role === 'OWNER';
@@ -60,23 +48,6 @@ export default function Stores() {
     navigate('/admin/dashboard');
   };
 
-  const handleDeleteStore = async () => {
-    if (!deleteStoreId) return;
-    
-    // If deleting current store, switch to another store first
-    if (currentStore?.id === deleteStoreId) {
-      const otherStore = stores.find(s => s.id !== deleteStoreId);
-      if (otherStore) {
-        await setCurrentStore(otherStore.id);
-      }
-    }
-    
-    await deleteStore.mutateAsync(deleteStoreId);
-    setDeleteStoreId(null);
-  };
-
-  const storeToDelete = stores.find(s => s.id === deleteStoreId);
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -97,29 +68,6 @@ export default function Stores() {
       </div>
 
       <StoreFormDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteStoreId} onOpenChange={(open) => !open && setDeleteStoreId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Store</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{storeToDelete?.name}</strong>? 
-              This will permanently remove the store and all its data including domains, branding, and user access. 
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteStore}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteStore.isPending ? 'Deleting...' : 'Delete Store'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Summary Cards for OWNER */}
       {isOwner && stores.length > 0 && (
@@ -282,16 +230,6 @@ export default function Stores() {
                         <Settings className="w-4 h-4 mr-2" />
                         Manage
                       </Button>
-                      {isOwner && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteStoreId(store.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>
