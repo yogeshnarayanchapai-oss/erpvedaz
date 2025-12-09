@@ -6449,6 +6449,10 @@ export type Database = {
           table_name: string
         }[]
       }
+      recalculate_account_balance: {
+        Args: { p_account_id: string }
+        Returns: undefined
+      }
       refresh_courier_stats: { Args: { p_date?: string }; Returns: undefined }
       reset_order_number_sequence: {
         Args: { start_value?: number }
