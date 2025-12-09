@@ -413,8 +413,8 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   // FOLLOWUP role now uses LOGISTICS portal menu
   FOLLOWUP: [
-    { title: 'Dashboard', url: '/logistics-portal/dashboard', icon: LayoutDashboard },
-    { title: 'Orders', url: '/logistics-portal/orders', icon: Truck },
+    { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+    { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
       url: '/training/my-courses',
@@ -429,8 +429,8 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
   ],
   LOGISTICS: [
-    { title: 'Dashboard', url: '/logistics-portal/dashboard', icon: LayoutDashboard },
-    { title: 'Orders', url: '/logistics-portal/orders', icon: Truck },
+    { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+    { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
       url: '/training/my-courses',

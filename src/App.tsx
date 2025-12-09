@@ -313,15 +313,12 @@ function StoreRoutes() {
       <Route path="marketing/performance" element={<AdminReports />} />
 
       {/* Logistics Routes */}
-      <Route path="logistics/dashboard" element={<LogisticsDashboard />} />
-      <Route path="logistics/orders" element={<LogisticsOrders />} />
-      <Route path="logistics/orders/inside-valley" element={<LogisticsInsideValley />} />
-      <Route path="logistics/orders/outside-valley" element={<LogisticsOutsideValley />} />
+      <Route path="logistics/dashboard" element={<LogisticsPortalOrders />} />
+      <Route path="logistics/orders" element={<LogisticsPortalOrders />} />
       <Route path="logistics/self-service" element={<StaffSelfService />} />
 
-      {/* Logistics Portal Routes */}
-      <Route path="logistics-portal/dashboard" element={<LogisticsPortalOrders />} />
-      <Route path="logistics-portal/orders" element={<LogisticsPortalOrders />} />
+      {/* Redirect old logistics-portal routes to /logistics */}
+      <Route path="logistics-portal/*" element={<Navigate to="logistics/orders" replace />} />
 
       {/* Inventory Routes */}
       <Route path="inventory/stock-summary" element={<StockSummary />} />
@@ -522,17 +519,13 @@ const App = () => (
               </Route>
 
               <Route element={<DashboardLayout />}>
-                <Route path="/logistics/dashboard" element={<LogisticsDashboard />} />
-                <Route path="/logistics/orders" element={<LogisticsOrders />} />
-                <Route path="/logistics/orders/inside-valley" element={<LogisticsInsideValley />} />
-                <Route path="/logistics/orders/outside-valley" element={<LogisticsOutsideValley />} />
+                <Route path="/logistics/dashboard" element={<LogisticsPortalOrders />} />
+                <Route path="/logistics/orders" element={<LogisticsPortalOrders />} />
                 <Route path="/logistics/self-service" element={<StaffSelfService />} />
               </Route>
 
-              <Route element={<DashboardLayout />}>
-                <Route path="/logistics-portal/dashboard" element={<LogisticsPortalOrders />} />
-                <Route path="/logistics-portal/orders" element={<LogisticsPortalOrders />} />
-              </Route>
+              {/* Redirect old logistics-portal routes to /logistics */}
+              <Route path="/logistics-portal/*" element={<Navigate to="/logistics/orders" replace />} />
 
               <Route element={<DashboardLayout />}>
                 <Route path="/inventory/stock-summary" element={<StockSummary />} />

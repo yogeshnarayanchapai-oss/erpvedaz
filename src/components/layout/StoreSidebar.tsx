@@ -407,8 +407,8 @@ const getMenuItems = (role: AppRole): MenuItem[] => {
       },
     ],
     FOLLOWUP: [
-      { title: 'Dashboard', url: '/logistics-portal/dashboard', icon: LayoutDashboard },
-      { title: 'Orders', url: '/logistics-portal/orders', icon: Truck },
+      { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+      { title: 'Orders', url: '/logistics/orders', icon: Truck },
       {
         title: 'My Training',
         url: '/training/my-courses',
@@ -423,8 +423,8 @@ const getMenuItems = (role: AppRole): MenuItem[] => {
       },
     ],
     LOGISTICS: [
-      { title: 'Dashboard', url: '/logistics-portal/dashboard', icon: LayoutDashboard },
-      { title: 'Orders', url: '/logistics-portal/orders', icon: Truck },
+      { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+      { title: 'Orders', url: '/logistics/orders', icon: Truck },
       {
         title: 'My Training',
         url: '/training/my-courses',
