@@ -3377,6 +3377,38 @@ export type Database = {
           },
         ]
       }
+      order_copy_templates: {
+        Row: {
+          created_at: string
+          id: string
+          store_id: string
+          template: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          store_id: string
+          template?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          store_id?: string
+          template?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_copy_templates_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_courier: {
         Row: {
           awb_number: string | null
