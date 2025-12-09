@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -64,7 +65,7 @@ import { useState } from 'react';
 import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
@@ -437,6 +438,20 @@ const getMenuItems = (role: AppRole): MenuItem[] => {
         children: getMyHRItems(),
       },
     ],
+    ACCOUNTANT: [
+      { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
+      { title: 'Accounting', url: '/admin/accounting/dashboard-new', icon: Calculator, children: getAccountingItems() },
+      { title: 'Inventory', url: '/admin/inventory/stock-summary', icon: Warehouse, children: getInventoryItems() },
+      { title: 'My Training', url: '/training/my-courses', icon: GraduationCap, children: getMyTrainingItems() },
+      { title: 'My HR', url: '/my-hr', icon: Briefcase, children: getMyHRItems() },
+    ],
+    WAREHOUSE: [
+      { title: 'Dashboard', url: '/admin/inventory/stock-summary', icon: LayoutDashboard },
+      { title: 'Inventory', url: '/admin/inventory/stock-summary', icon: Warehouse, children: getInventoryItems() },
+      { title: 'Products', url: '/admin/products', icon: Package },
+      { title: 'My Training', url: '/training/my-courses', icon: GraduationCap, children: getMyTrainingItems() },
+      { title: 'My HR', url: '/my-hr', icon: Briefcase, children: getMyHRItems() },
+    ],
   };
 
   return menuItems[role] || menuItems.CALLING;
@@ -449,9 +464,10 @@ interface StoreSidebarProps {
 
 export function StoreSidebar({ storeSlug, storeName }: StoreSidebarProps) {
   const { profile, signOut } = useAuth();
+  const { effectiveRole } = useEffectiveRole();
   const location = useLocation();
   const { data: badges } = useSidebarBadges();
-  const role = (profile?.role || 'CALLING') as AppRole;
+  const role = effectiveRole;
   
   // Get base menu items and prefix with store slug
   const baseItems = getMenuItems(role);

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStoreSlugFromPath } from '@/lib/storeSubdomain';
-import { getStoreSlugFromPathname } from '@/hooks/useStoreNavigation';
 
 // Note: This context doesn't use useLocation because it needs to work outside BrowserRouter
 // The store slug is extracted from window.location.pathname directly
+
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 interface Store {
   id: string;
@@ -15,6 +15,7 @@ interface Store {
   primary_color: string;
   is_active: boolean;
   access_level?: string;
+  store_role?: AppRole | null;
 }
 
 interface CurrentStoreContextType {
@@ -77,6 +78,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     
     return null;
   }, [pathname]);
+  
   const isOwner = profile?.role === 'OWNER';
   const canSwitchStores = isOwner; // OWNER can always switch stores
 
@@ -91,91 +93,94 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
 
-      // If on a store path (e.g., /vedaz/admin/dashboard), fetch that store first
-      if (storeSubdomain) {
-        const { data: pathStore } = await supabase
+      // Fetch user's store access with store_role
+      const { data: userStoreAccess, error: accessError } = await supabase
+        .from('user_store_access')
+        .select(`
+          store_id,
+          access_level,
+          store_role,
+          store:stores(*)
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      // For OWNER, also get all stores they might not have explicit access to
+      let allStoresData: any[] = [];
+      if (isOwner) {
+        const { data: allStores } = await supabase
           .from('stores')
           .select('*')
-          .eq('slug', storeSubdomain)
           .eq('is_active', true)
-          .single();
-
-        if (pathStore) {
-          setCurrentStoreState({ ...pathStore, access_level: 'admin' });
-        }
+          .order('name');
+        allStoresData = allStores || [];
       }
 
-      // Use the database function to get accessible stores
-      const { data: accessibleStores, error } = await supabase
-        .rpc('get_user_accessible_stores', { p_user_id: user.id });
-
-      if (error) {
-        console.error('Error fetching accessible stores:', error);
-        // Fallback: fetch all stores for OWNER
-        if (isOwner) {
-          const { data: allStores } = await supabase
-            .from('stores')
-            .select('*')
-            .eq('is_active', true)
-            .order('name');
-          
-          if (allStores) {
-            setAvailableStores(allStores.map(s => ({ ...s, access_level: 'admin' })));
-            
-            // If we don't have a current store from path, use first available
-            if (!storeSubdomain && allStores.length > 0) {
-              setCurrentStoreState({ ...allStores[0], access_level: 'admin' });
-            }
-          }
-        }
+      if (accessError && !isOwner) {
+        console.error('Error fetching user store access:', accessError);
         setIsLoading(false);
         return;
       }
 
-      if (accessibleStores && accessibleStores.length > 0) {
-        // Fetch full store details
-        const storeIds = accessibleStores.map((s: { store_id: string }) => s.store_id);
-        const { data: storeDetails } = await supabase
-          .from('stores')
-          .select('*')
-          .in('id', storeIds)
-          .eq('is_active', true);
+      // Build stores list
+      const storesWithAccess: Store[] = [];
+      
+      // Add stores from user_store_access (with store_role)
+      if (userStoreAccess) {
+        userStoreAccess.forEach((access: any) => {
+          if (access.store && access.store.is_active) {
+            storesWithAccess.push({
+              ...access.store,
+              access_level: access.access_level || 'staff',
+              store_role: access.store_role,
+            });
+          }
+        });
+      }
 
-        if (storeDetails) {
-          const storesWithAccess = storeDetails.map(store => {
-            const access = accessibleStores.find((a: { store_id: string }) => a.store_id === store.id);
-            return { ...store, access_level: access?.access_level || 'staff' };
-          });
-          setAvailableStores(storesWithAccess);
+      // For OWNER, add any stores they don't have explicit access to
+      if (isOwner && allStoresData.length > 0) {
+        allStoresData.forEach(store => {
+          if (!storesWithAccess.find(s => s.id === store.id)) {
+            storesWithAccess.push({ ...store, access_level: 'admin', store_role: 'OWNER' });
+          }
+        });
+      }
 
-          // Set current store if not set from path - always set for non-OWNER staff
-          if (!storeSubdomain) {
-            let selectedStore: Store | undefined;
-            
-            // Try saved preference
-            const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
-            selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
-            
-            // Try default store
-            if (!selectedStore && profile?.default_store_id) {
-              selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
-            }
-            
-            // Use first available (for staff this is their assigned store)
-            if (!selectedStore) {
-              selectedStore = storesWithAccess[0];
-            }
+      if (storesWithAccess.length > 0) {
+        setAvailableStores(storesWithAccess);
 
-            if (selectedStore) {
-              setCurrentStoreState(selectedStore);
-            }
+        // Set current store based on URL path first
+        if (storeSubdomain) {
+          const pathStore = storesWithAccess.find(s => s.slug === storeSubdomain);
+          if (pathStore) {
+            setCurrentStoreState(pathStore);
+          }
+        } else {
+          // Set current store if not set from path
+          let selectedStore: Store | undefined;
+          
+          // Try saved preference
+          const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
+          selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
+          
+          // Try default store
+          if (!selectedStore && profile?.default_store_id) {
+            selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
+          }
+          
+          // Use first available (for staff this is their assigned store)
+          if (!selectedStore) {
+            selectedStore = storesWithAccess[0];
+          }
+
+          if (selectedStore) {
+            setCurrentStoreState(selectedStore);
           }
         }
       } else {
         setAvailableStores([]);
-        if (!storeSubdomain) {
-          setCurrentStoreState(null);
-        }
+        setCurrentStoreState(null);
       }
     } catch (err) {
       console.error('Error in fetchStores:', err);
