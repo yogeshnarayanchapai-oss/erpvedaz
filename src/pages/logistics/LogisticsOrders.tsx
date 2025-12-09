@@ -52,6 +52,7 @@ export default function LogisticsOrders() {
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [search, setSearch] = useState('');
+  const [logisticIdSearch, setLogisticIdSearch] = useState('');
   const [activeTab, setActiveTab] = useState<DeliveryTab>('INSIDE_VALLEY');
   const [includeNotSent, setIncludeNotSent] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -73,15 +74,12 @@ export default function LogisticsOrders() {
 
   // Filter orders by search - with global logistic_order_id search
   const filteredOrders = useMemo(() => {
-    // If searching and search term looks like a logistic ID, search globally
-    if (search && search.trim().length > 0) {
-      const searchLower = search.toLowerCase();
-      const globalMatches = globalSearchOrders.filter((order) =>
+    // If logistic ID search is active, search globally
+    if (logisticIdSearch && logisticIdSearch.trim().length > 0) {
+      const searchLower = logisticIdSearch.toLowerCase();
+      return globalSearchOrders.filter((order) =>
         order.logistic_order_id?.toLowerCase().includes(searchLower)
       );
-      if (globalMatches.length > 0) {
-        return globalMatches;
-      }
     }
 
     return orders.filter(o => {
@@ -96,7 +94,7 @@ export default function LogisticsOrders() {
         o.logistic_order_id?.toLowerCase().includes(searchLower)
       );
     });
-  }, [orders, globalSearchOrders, search]);
+  }, [orders, globalSearchOrders, search, logisticIdSearch]);
 
   // Stats calculations - different for Inside vs Outside Valley
   const isInsideValley = activeTab === 'INSIDE_VALLEY';
@@ -352,6 +350,20 @@ export default function LogisticsOrders() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Logistic Order ID"
+                  value={logisticIdSearch}
+                  onChange={(e) => setLogisticIdSearch(e.target.value)}
+                  className="w-[180px]"
+                />
+                <Button 
+                  variant={logisticIdSearch ? "default" : "outline"} 
+                  size="sm"
+                >
+                  Search
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
                 <Checkbox 
                   id="includeNotSent" 
                   checked={includeNotSent}
@@ -361,6 +373,9 @@ export default function LogisticsOrders() {
                   Include not sent
                 </label>
               </div>
+              <Button variant="outline" size="sm" onClick={() => { setSearch(''); setLogisticIdSearch(''); }}>
+                Reset
+              </Button>
             </div>
           </CardContent>
         </Card>

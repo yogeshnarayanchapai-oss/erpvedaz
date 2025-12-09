@@ -54,6 +54,7 @@ export default function CallingMyOrders() {
 
   // Filter states - initialize from URL if present
   const [search, setSearch] = useState('');
+  const [logisticIdSearch, setLogisticIdSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>(urlStatus || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
   const [selectedPayment, setSelectedPayment] = useState<string>('all');
@@ -101,15 +102,12 @@ export default function CallingMyOrders() {
   });
 
   const filteredOrders = useMemo(() => {
-    // If searching and search term looks like a logistic ID, search globally
-    if (search && search.trim().length > 0) {
-      const searchLower = search.toLowerCase();
-      const globalMatches = globalSearchOrders.filter((order) =>
+    // If logistic ID search is active, search globally
+    if (logisticIdSearch && logisticIdSearch.trim().length > 0) {
+      const searchLower = logisticIdSearch.toLowerCase();
+      return globalSearchOrders.filter((order) =>
         order.logistic_order_id?.toLowerCase().includes(searchLower)
       );
-      if (globalMatches.length > 0) {
-        return globalMatches;
-      }
     }
 
     return orders.filter((order) => {
@@ -126,7 +124,7 @@ export default function CallingMyOrders() {
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
     });
-  }, [orders, globalSearchOrders, selectedStatus, selectedDelivery, selectedPayment, search]);
+  }, [orders, globalSearchOrders, selectedStatus, selectedDelivery, selectedPayment, search, logisticIdSearch]);
 
   // Helper to calculate order total from order_items or fallback
   const getOrderTotal = (order: any) => {
@@ -159,6 +157,7 @@ export default function CallingMyOrders() {
 
   const handleReset = () => {
     setSearch('');
+    setLogisticIdSearch('');
     setSelectedStatus('all');
     setSelectedDelivery('all');
     setSelectedPayment('all');
@@ -331,6 +330,21 @@ export default function CallingMyOrders() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Logistic Order ID"
+                  value={logisticIdSearch}
+                  onChange={(e) => setLogisticIdSearch(e.target.value)}
+                  className="w-[180px]"
+                />
+                <Button 
+                  variant={logisticIdSearch ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => {}}
+                >
+                  Search
+                </Button>
               </div>
               <Button variant="outline" onClick={handleReset}>
                 Reset
