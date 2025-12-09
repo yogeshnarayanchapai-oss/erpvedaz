@@ -10,7 +10,8 @@ import { Plus, Trash2, UserCog, Loader2 } from 'lucide-react';
 import { useStoreUsers, useAssignUserToStore, useRemoveUserFromStore, useUpdateUserStoreAccess } from '@/hooks/useUserStoreAccess';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +23,27 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+type AppRole = Database['public']['Enums']['app_role'];
+
+const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
+  { value: 'CALLING', label: 'Calling' },
+  { value: 'LOGISTICS', label: 'Logistics' },
+  { value: 'FOLLOWUP', label: 'Follow-up' },
+  { value: 'LEADS', label: 'Leads' },
+  { value: 'MARKETING', label: 'Marketing' },
+  { value: 'HR', label: 'HR' },
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'ADMIN', label: 'Admin' },
+];
+
 interface StoreUsersTabProps {
   storeId: string;
 }
 
 export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'OWNER';
+
   const { data: storeUsers = [], isLoading } = useStoreUsers(storeId);
   const assignMutation = useAssignUserToStore();
   const removeMutation = useRemoveUserFromStore();
@@ -35,8 +52,13 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedAccessLevel, setSelectedAccessLevel] = useState('staff');
+  const [selectedStoreRole, setSelectedStoreRole] = useState<AppRole | ''>('');
   const [removeUserId, setRemoveUserId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<{ userId: string; accessLevel: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ 
+    userId: string; 
+    accessLevel: string;
+    storeRole: AppRole | null;
+  } | null>(null);
 
   // Fetch all users for the dropdown
   const { data: allUsers = [] } = useQuery({
@@ -64,10 +86,12 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
         user_id: selectedUserId,
         store_id: storeId,
         access_level: selectedAccessLevel,
+        store_role: selectedStoreRole || null,
       });
       setIsAddOpen(false);
       setSelectedUserId('');
       setSelectedAccessLevel('staff');
+      setSelectedStoreRole('');
     } catch (error) {
       // Error handled by mutation
     }
@@ -95,6 +119,7 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
         userId: editingUser.userId,
         storeId,
         access_level: editingUser.accessLevel,
+        store_role: editingUser.storeRole,
       });
       setEditingUser(null);
     } catch (error) {
@@ -102,14 +127,10 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
     }
   };
 
-  const getAccessLevelBadge = (level: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-      admin: 'default',
-      manager: 'secondary',
-      staff: 'outline',
-      view: 'outline',
-    };
-    return <Badge variant={variants[level] || 'outline'}>{level}</Badge>;
+  const getRoleBadgeVariant = (role: AppRole | null): 'default' | 'secondary' | 'outline' => {
+    if (!role) return 'outline';
+    if (['ADMIN', 'OWNER', 'MANAGER'].includes(role)) return 'default';
+    return 'secondary';
   };
 
   if (isLoading) {
@@ -129,6 +150,7 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
               <CardTitle>Store Users</CardTitle>
               <CardDescription>
                 Manage who has access to this store and their permission levels
+                {isOwner && <span className="block text-xs mt-1">As OWNER, you can assign per-store roles</span>}
               </CardDescription>
             </div>
             <Button onClick={() => setIsAddOpen(true)}>
@@ -148,8 +170,8 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Access Level</TableHead>
+                  <TableHead>Global Role</TableHead>
+                  <TableHead>Store Role</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -166,14 +188,24 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
                       <Badge variant="outline">{access.user?.role || '-'}</Badge>
                     </TableCell>
                     <TableCell>
-                      {getAccessLevelBadge(access.access_level)}
+                      {access.store_role ? (
+                        <Badge variant={getRoleBadgeVariant(access.store_role)}>
+                          {access.store_role}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEditingUser({ userId: access.user_id, accessLevel: access.access_level })}
+                          onClick={() => setEditingUser({ 
+                            userId: access.user_id, 
+                            accessLevel: access.access_level,
+                            storeRole: access.store_role 
+                          })}
                         >
                           <UserCog className="w-4 h-4" />
                         </Button>
@@ -220,23 +252,29 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Access Level</Label>
-              <Select value={selectedAccessLevel} onValueChange={setSelectedAccessLevel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="view">View Only</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Admin users can manage all store data and other staff members
-              </p>
-            </div>
+            {isOwner && (
+              <div className="space-y-2">
+                <Label>Store Role</Label>
+                <Select
+                  value={selectedStoreRole}
+                  onValueChange={(val) => setSelectedStoreRole(val as AppRole)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role for this store" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This role will apply only in this store, overriding the global role
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
@@ -256,26 +294,32 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Update Access Level</DialogTitle>
+            <DialogTitle>Update Store Access</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Access Level</Label>
-              <Select
-                value={editingUser?.accessLevel}
-                onValueChange={(val) => setEditingUser(prev => prev ? { ...prev, accessLevel: val } : null)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="view">View Only</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {isOwner && (
+              <div className="space-y-2">
+                <Label>Store Role</Label>
+                <Select
+                  value={editingUser?.storeRole || ''}
+                  onValueChange={(val) => setEditingUser(prev => prev ? { ...prev, storeRole: val as AppRole } : null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This role will apply only in this store
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
