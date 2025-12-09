@@ -15,6 +15,7 @@ import { useFollowupOrders, useRedirectOrder } from '@/hooks/useFollowupOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 export default function FollowupOrders() {
   const { user, profile } = useAuth();
@@ -58,7 +59,12 @@ export default function FollowupOrders() {
     return orders.filter((order) => {
       const matchesDelivery = deliveryFilter === 'all' || order.delivery_location === deliveryFilter;
       const matchesStatus = statusFilter === 'all' || order.order_status === statusFilter;
+      
+      // Check for reference ID search
+      const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId((order.leads as any)?.reference_id, search);
+      
       const matchesSearch = !search || 
+        matchesRefId ||
         (order.leads as any)?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         (order.leads as any)?.contact_number?.includes(search) ||
         order.destination_branch?.toLowerCase().includes(search.toLowerCase());

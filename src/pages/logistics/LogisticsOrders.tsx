@@ -18,6 +18,7 @@ import { getOrderStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors'
 import { FormattedDate } from '@/components/FormattedDate';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 // Inside Valley specific status options
 const INSIDE_VALLEY_STATUSES = [
@@ -84,6 +85,12 @@ export default function LogisticsOrders() {
 
     return orders.filter(o => {
       if (!search) return true;
+      
+      // Check for reference ID search
+      if (isReferenceIdSearch(search) && matchesReferenceId(o.leads?.reference_id, search)) {
+        return true;
+      }
+      
       const searchLower = search.toLowerCase();
       return (
         o.leads?.client_name?.toLowerCase().includes(searchLower) ||

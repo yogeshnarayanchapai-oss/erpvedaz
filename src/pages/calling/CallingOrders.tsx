@@ -23,6 +23,7 @@ import { InsideValleyStatsModal } from '@/components/calling/InsideValleyStatsMo
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
@@ -161,18 +162,26 @@ export default function CallingOrders() {
     // Advanced search - text search
     if (advancedFilters.searchText) {
       const search = advancedFilters.searchText.toLowerCase();
-      filtered = filtered.filter(o =>
-        (o.leads?.client_name?.toLowerCase().includes(search)) ||
-        (o.leads?.contact_number?.includes(search)) ||
-        (o.id.toLowerCase().includes(search)) ||
-        (o.products?.name?.toLowerCase().includes(search))
-      );
+      
+      // Check for reference ID search
+      const isRefIdSearch = isReferenceIdSearch(search);
+      
+      filtered = filtered.filter(o => {
+        if (isRefIdSearch && matchesReferenceId(o.leads?.reference_id, search)) {
+          return true;
+        }
+        return (
+          (o.leads?.client_name?.toLowerCase().includes(search)) ||
+          (o.leads?.contact_number?.includes(search)) ||
+          (o.id.toLowerCase().includes(search)) ||
+          (o.products?.name?.toLowerCase().includes(search))
+        );
+      });
     }
     
-    // Advanced search - reference ID (using order id as reference)
+    // Advanced search - reference ID from dedicated field
     if (advancedFilters.referenceId) {
-      const refSearch = advancedFilters.referenceId.toLowerCase();
-      filtered = filtered.filter(o => o.id.toLowerCase().includes(refSearch));
+      filtered = filtered.filter(o => matchesReferenceId(o.leads?.reference_id, advancedFilters.referenceId));
     }
     
     return filtered;

@@ -14,6 +14,7 @@ import { format, subDays } from 'date-fns';
 import { OrderHistoryTimeline } from '@/components/logistics/OrderHistoryTimeline';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 const orderStatusColors: Record<string, string> = {
   PENDING: 'bg-muted/50 text-muted-foreground border-muted/20',
@@ -132,6 +133,12 @@ export default function LogisticsOutsideValley() {
     
     // Search filter
     if (!search) return true;
+    
+    // Check for reference ID search
+    if (isReferenceIdSearch(search) && matchesReferenceId(o.leads?.reference_id, search)) {
+      return true;
+    }
+    
     const searchLower = search.toLowerCase();
     return (
       o.leads?.client_name?.toLowerCase().includes(searchLower) ||

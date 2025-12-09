@@ -38,6 +38,7 @@ export interface Lead {
   last_called_by: string | null;
   last_called_at: string | null;
   last_transfer_reason: string | null;
+  reference_id: string | null;
   // Follow-up related fields
   next_followup_at: string | null;
   followup_reason: string | null;

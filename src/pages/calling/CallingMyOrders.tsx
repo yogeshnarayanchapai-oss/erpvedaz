@@ -17,6 +17,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { useOrderCopyTemplate } from '@/hooks/useOrderCopyTemplate';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 const orderStatusColors: Record<string, string> = {
   CONFIRMED: 'bg-success/10 text-success border-success/20',
@@ -116,8 +117,13 @@ export default function CallingMyOrders() {
       const matchesPayment = selectedPayment === 'all' || 
         (selectedPayment === 'COD' && order.is_cod) || 
         (selectedPayment === 'ONLINE' && !order.is_cod);
+      
+      // Check for reference ID search
+      const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(order.leads?.reference_id, search);
+      
       const matchesSearch =
         !search ||
+        matchesRefId ||
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.id.toLowerCase().includes(search.toLowerCase()) ||
