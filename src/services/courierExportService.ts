@@ -18,6 +18,7 @@ interface Order {
     contact_number: string;
     alt_phone?: string | null;
     full_address?: string | null;
+    reference_id?: string | null;
   } | null;
   customers?: {
     customer_name?: string;
@@ -53,8 +54,15 @@ export function exportOrdersToCourierFormat(orders: Order[], filename = 'courier
     const address = order.full_address || order.leads?.full_address || order.customers?.full_address || 'N/A';
     const city = order.customers?.city || '';
     const deliveryInstruction = order.delivery_notes || '';
+    
     // Staff name: prefer confirmed_by, fallback to sales_person, then created_by_staff
-    const referenceId = order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A';
+    const staffName = order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A';
+    
+    // Lead reference ID
+    const leadRefId = order.leads?.reference_id || '';
+    
+    // Format: "Staff Name #ReferenceID" or just "Staff Name" if no reference ID
+    const referenceId = leadRefId ? `${staffName} #${leadRefId}` : staffName;
 
     // Calculate COD and product description from order_items if available
     const orderItemsList = order.order_items || [];
@@ -104,7 +112,7 @@ export function exportOrdersToCourierFormat(orders: Order[], filename = 'courier
     { wch: 12 }, // COD
     { wch: 30 }, // Delivery Instruction
     { wch: 40 }, // Order Description - wider for multi-products
-    { wch: 18 }, // Vendor Reference ID
+    { wch: 25 }, // Vendor Reference ID - wider for "Staff Name #RefID"
   ];
 
   const workbook = XLSX.utils.book_new();
