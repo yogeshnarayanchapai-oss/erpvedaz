@@ -12,6 +12,7 @@ import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, Acco
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -30,6 +31,8 @@ export default function AccountsManagement() {
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
   const { canEdit } = useAccountingEditAccess();
+  const { effectiveRole } = useEffectiveRole();
+  const isOwner = effectiveRole === 'OWNER';
 
   const openDialog = (account?: Account) => {
     if (account) {
@@ -137,7 +140,7 @@ export default function AccountsManagement() {
                 />
               </div>
 
-              {!editingAccount && (
+              {(!editingAccount || isOwner) && (
                 <div className="space-y-2">
                   <Label htmlFor="opening_balance">Opening Balance</Label>
                   <Input
@@ -147,6 +150,11 @@ export default function AccountsManagement() {
                     value={formData.opening_balance}
                     onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value })}
                   />
+                  {editingAccount && isOwner && (
+                    <p className="text-xs text-muted-foreground">
+                      Editing opening balance will recalculate current balance
+                    </p>
+                  )}
                 </div>
               )}
 
