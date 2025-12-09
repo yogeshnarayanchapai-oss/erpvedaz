@@ -5,20 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
+import { useLeadSources } from '@/hooks/useLeadSources';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
-
-const SOURCE_OPTIONS = [
-  { value: 'Facebook Ads', label: 'Facebook Ads' },
-  { value: 'Shopify', label: 'Shopify' },
-  { value: 'Website', label: 'Website' },
-  { value: 'TikTok', label: 'TikTok' },
-  { value: 'Calling', label: 'Calling' },
-];
 
 interface AddLeadDialogProps {
   open: boolean;
@@ -40,7 +33,10 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
   const { profile } = useAuth();
   const { currentStore } = useCurrentStore();
   const { data: products = [] } = useProducts();
+  const { data: leadSources = [] } = useLeadSources();
   const queryClient = useQueryClient();
+
+  const defaultSource = leadSources.length > 0 ? leadSources[0].name : '';
 
   const createEmptyRow = (): LeadRow => ({
     id: crypto.randomUUID(),
@@ -49,7 +45,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
     contact_number: '',
     alt_phone: '',
     product_id: '',
-    source: 'Facebook Ads',
+    source: defaultSource,
     remark: '',
   });
 
@@ -210,8 +206,8 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
                     <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SOURCE_OPTIONS.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    {leadSources.map(s => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
