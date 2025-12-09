@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStores } from '@/hooks/useStores';
-import { useAssignUserToStore } from '@/hooks/useUserStoreAccess';
+import { useAssignUserToStore, useUserStoreAccess, useRemoveUserFromStore } from '@/hooks/useUserStoreAccess';
 
 const roleColors: Record<string, string> = {
   OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
@@ -183,6 +183,11 @@ const usersWithEmployee = useMemo(() => {
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [selectedStoreRoles, setSelectedStoreRoles] = useState<Record<string, AppRole>>({});
   const assignStoreMutation = useAssignUserToStore();
+  const removeStoreMutation = useRemoveUserFromStore();
+
+  // Edit user store state
+  const [editSelectedStoreIds, setEditSelectedStoreIds] = useState<string[]>([]);
+  const [editSelectedStoreRoles, setEditSelectedStoreRoles] = useState<Record<string, AppRole>>({});
 
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -190,6 +195,9 @@ const usersWithEmployee = useMemo(() => {
     phone: '',
     role: 'CALLING' as AppRole,
   });
+
+  // Fetch editing user's current store access
+  const { data: editingUserStoreAccess = [] } = useUserStoreAccess(editingUser?.id);
 
   const filteredStaff = staff.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -259,7 +267,47 @@ const usersWithEmployee = useMemo(() => {
       phone: user.phone || '',
       role: user.role,
     });
+    // Reset edit store state - will be populated by useEffect
+    setEditSelectedStoreIds([]);
+    setEditSelectedStoreRoles({});
     setIsEditOpen(true);
+  };
+
+  // Populate edit store state when editingUserStoreAccess loads
+  const populateEditStoreState = () => {
+    if (editingUserStoreAccess.length > 0 && editingUser) {
+      const storeIds = editingUserStoreAccess.map(a => a.store_id);
+      const storeRoles: Record<string, AppRole> = {};
+      editingUserStoreAccess.forEach(a => {
+        if (a.store_role) {
+          storeRoles[a.store_id] = a.store_role;
+        }
+      });
+      setEditSelectedStoreIds(storeIds);
+      setEditSelectedStoreRoles(storeRoles);
+    }
+  };
+
+  // Effect to populate store state when editing user changes
+  if (editingUser && editingUserStoreAccess.length > 0 && editSelectedStoreIds.length === 0) {
+    populateEditStoreState();
+  }
+
+  const toggleEditStoreSelection = (storeId: string) => {
+    setEditSelectedStoreIds(prev => {
+      if (prev.includes(storeId)) {
+        const newRoles = { ...editSelectedStoreRoles };
+        delete newRoles[storeId];
+        setEditSelectedStoreRoles(newRoles);
+        return prev.filter(id => id !== storeId);
+      } else {
+        return [...prev, storeId];
+      }
+    });
+  };
+
+  const setEditStoreRole = (storeId: string, role: AppRole) => {
+    setEditSelectedStoreRoles(prev => ({ ...prev, [storeId]: role }));
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -318,9 +366,44 @@ const usersWithEmployee = useMemo(() => {
 
       if (roleError) throw roleError;
 
+      // Handle store assignments for OWNER
+      if (isOwner && editingUser.role !== 'OWNER') {
+        const currentStoreIds = editingUserStoreAccess.map(a => a.store_id);
+        
+        // Remove stores that were deselected
+        for (const storeId of currentStoreIds) {
+          if (!editSelectedStoreIds.includes(storeId)) {
+            try {
+              await removeStoreMutation.mutateAsync({ userId: editingUser.id, storeId });
+            } catch (err) {
+              console.error('Failed to remove store:', storeId, err);
+            }
+          }
+        }
+        
+        // Add or update stores
+        for (const storeId of editSelectedStoreIds) {
+          try {
+            await assignStoreMutation.mutateAsync({
+              user_id: editingUser.id,
+              store_id: storeId,
+              access_level: 'staff',
+              store_role: editSelectedStoreRoles[storeId] || null,
+            });
+          } catch (err) {
+            console.error('Failed to assign store:', storeId, err);
+          }
+        }
+      }
+
       toast.success('User updated successfully');
       setIsEditOpen(false);
+      setEditingUser(null);
+      setEditSelectedStoreIds([]);
+      setEditSelectedStoreRoles({});
       queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['all-user-store-access'] });
+      queryClient.invalidateQueries({ queryKey: ['user-store-access'] });
     } catch (error: any) {
       toast.error(`Failed to update: ${error.message}`);
     } finally {
@@ -803,6 +886,53 @@ const usersWithEmployee = useMemo(() => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Store Assignment for OWNER (not for OWNER users) */}
+            {isOwner && allStores.length > 0 && editingUser?.role !== 'OWNER' && (
+              <div className="space-y-2">
+                <Label>Assign to Stores</Label>
+                <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {allStores.map((store) => (
+                    <div key={store.id} className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-store-${store.id}`}
+                          checked={editSelectedStoreIds.includes(store.id)}
+                          onCheckedChange={() => toggleEditStoreSelection(store.id)}
+                        />
+                        <label
+                          htmlFor={`edit-store-${store.id}`}
+                          className="text-sm font-medium cursor-pointer flex-1"
+                        >
+                          {store.name}
+                        </label>
+                      </div>
+                      {editSelectedStoreIds.includes(store.id) && (
+                        <div className="ml-6">
+                          <Select
+                            value={editSelectedStoreRoles[store.id] || ''}
+                            onValueChange={(v: AppRole) => setEditStoreRole(store.id, v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select role for this store" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getAvailableRoles().filter(r => r !== 'OWNER').map((role) => (
+                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Select stores and optionally assign different roles per store
+                </p>
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
