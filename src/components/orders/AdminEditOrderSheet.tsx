@@ -54,6 +54,7 @@ interface AdminEditOrderFormData {
   payment_status: string;
   delivery_notes: string;
   order_date: string;
+  logistic_order_id: string;
   orderItems: OrderItemLine[];
 }
 
@@ -85,6 +86,7 @@ export function AdminEditOrderSheet({
     payment_status: 'COD',
     delivery_notes: '',
     order_date: '',
+    logistic_order_id: '',
     orderItems: [],
   });
 
@@ -122,6 +124,7 @@ export function AdminEditOrderSheet({
         payment_status: order.payment_status || 'COD',
         delivery_notes: order.delivery_notes || '',
         order_date: order.order_date?.split('T')[0] || '',
+        logistic_order_id: (order as any).logistic_order_id || '',
         orderItems: initialItems,
       });
     }
@@ -208,6 +211,7 @@ export function AdminEditOrderSheet({
         paymentStatus: formData.payment_status as any,
         deliveryNotes: formData.delivery_notes || undefined,
         orderDate: formData.order_date || undefined,
+        logisticOrderId: formData.logistic_order_id || undefined,
         items: validItems.map(item => ({
           productId: item.product_id,
           productName: item.product_name,
@@ -353,14 +357,24 @@ export function AdminEditOrderSheet({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Delivery Notes / Remark</Label>
-            <Textarea
-              value={formData.delivery_notes}
-              onChange={(e) => handleFormChange({ delivery_notes: e.target.value })}
-              placeholder="Add notes..."
-              rows={2}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Logistic Order ID</Label>
+              <Input
+                value={formData.logistic_order_id}
+                onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })}
+                placeholder="Enter logistic order ID..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Delivery Notes / Remark</Label>
+              <Textarea
+                value={formData.delivery_notes}
+                onChange={(e) => handleFormChange({ delivery_notes: e.target.value })}
+                placeholder="Add notes..."
+                rows={2}
+              />
+            </div>
           </div>
 
           {/* Products Section */}

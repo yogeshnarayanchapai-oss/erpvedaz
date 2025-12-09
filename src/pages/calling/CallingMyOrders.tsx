@@ -105,7 +105,8 @@ export default function CallingMyOrders() {
         !search ||
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
-        order.id.toLowerCase().includes(search.toLowerCase());
+        order.id.toLowerCase().includes(search.toLowerCase()) ||
+        (order as any).logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
     });
   }, [orders, selectedStatus, selectedDelivery, selectedPayment, search]);

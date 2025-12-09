@@ -4041,6 +4041,7 @@ export type Database = {
           is_deleted: boolean | null
           is_duplicate: boolean | null
           lead_id: string | null
+          logistic_order_id: string | null
           logistic_raw_response: Json | null
           logistic_tracking_last_update: string | null
           logistic_tracking_status: string | null
@@ -4104,6 +4105,7 @@ export type Database = {
           is_deleted?: boolean | null
           is_duplicate?: boolean | null
           lead_id?: string | null
+          logistic_order_id?: string | null
           logistic_raw_response?: Json | null
           logistic_tracking_last_update?: string | null
           logistic_tracking_status?: string | null
@@ -4167,6 +4169,7 @@ export type Database = {
           is_deleted?: boolean | null
           is_duplicate?: boolean | null
           lead_id?: string | null
+          logistic_order_id?: string | null
           logistic_raw_response?: Json | null
           logistic_tracking_last_update?: string | null
           logistic_tracking_status?: string | null
