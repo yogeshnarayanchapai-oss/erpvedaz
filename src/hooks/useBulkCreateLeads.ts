@@ -30,15 +30,33 @@ export function useBulkCreateLeads() {
         .eq('id', user.id)
         .single();
       
-      const leadsToInsert = leads.map(lead => ({
+      // Get the current max reference_id to generate unique ones for bulk insert
+      const { data: maxRefData } = await supabase
+        .from('leads')
+        .select('reference_id')
+        .not('reference_id', 'is', null)
+        .order('reference_id', { ascending: false })
+        .limit(1)
+        .single();
+      
+      let nextRefNum = 1;
+      if (maxRefData?.reference_id) {
+        const parsed = parseInt(maxRefData.reference_id, 10);
+        if (!isNaN(parsed)) {
+          nextRefNum = parsed + 1;
+        }
+      }
+      
+      const leadsToInsert = leads.map((lead, index) => ({
         ...lead,
         created_by_user_id: user.id,
-        created_by_staff_id: user.id, // Track which staff created the lead
+        created_by_staff_id: user.id,
         status: 'NEW' as const,
         current_team: 'LEADS' as const,
         lead_bucket: 'NEW' as const,
         pool_status: 'IN_POOL' as const,
         store_id: currentStore?.id || null,
+        reference_id: String(nextRefNum + index).padStart(4, '0'),
       }));
       const { data, error } = await supabase.from('leads').insert(leadsToInsert).select();
       if (error) throw error;
