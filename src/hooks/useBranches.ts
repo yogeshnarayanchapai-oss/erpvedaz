@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface Branch {
   id: string;
@@ -38,10 +37,8 @@ export interface UpdateBranchInput extends Partial<CreateBranchInput> {
 }
 
 export function useBranches(options?: { includeInactive?: boolean }) {
-  const storeId = useCurrentStoreId();
-
   return useQuery({
-    queryKey: ['branches', options, storeId],
+    queryKey: ['branches', options],
     queryFn: async () => {
       let query = supabase
         .from('branches')
@@ -52,21 +49,15 @@ export function useBranches(options?: { includeInactive?: boolean }) {
         query = query.eq('is_active', true);
       }
 
-      if (storeId) {
-        query = query.eq('store_id', storeId);
-      }
-
       const { data, error } = await query;
       if (error) throw error;
       return data as Branch[];
     },
-    enabled: !!storeId,
   });
 }
 
 export function useCreateBranch() {
   const queryClient = useQueryClient();
-  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (input: CreateBranchInput) => {
@@ -75,7 +66,6 @@ export function useCreateBranch() {
         .insert({
           ...input,
           is_active: input.is_active ?? true,
-          store_id: storeId,
         })
         .select()
         .single();
