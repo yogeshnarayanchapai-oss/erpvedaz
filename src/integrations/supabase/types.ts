@@ -6120,6 +6120,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           store_id: string
+          store_role: Database["public"]["Enums"]["app_role"] | null
           updated_at: string | null
           user_id: string
         }
@@ -6129,6 +6130,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           store_id: string
+          store_role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string | null
           user_id: string
         }
@@ -6138,6 +6140,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           store_id?: string
+          store_role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string | null
           user_id?: string
         }

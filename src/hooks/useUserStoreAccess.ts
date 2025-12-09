@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 interface UserStoreAccess {
   id: string;
   user_id: string;
   store_id: string;
   access_level: string;
+  store_role: AppRole | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -66,7 +70,7 @@ export function useStoreUsers(storeId?: string) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as (UserStoreAccess & { user: { id: string; name: string; email: string; role: AppRole } })[];
     },
     enabled: !!storeId,
   });
@@ -76,6 +80,7 @@ interface AssignStoreInput {
   user_id: string;
   store_id: string;
   access_level?: string;
+  store_role?: AppRole | null;
 }
 
 export function useAssignUserToStore() {
@@ -90,6 +95,7 @@ export function useAssignUserToStore() {
           user_id: input.user_id,
           store_id: input.store_id,
           access_level: input.access_level || 'staff',
+          store_role: input.store_role || null,
           is_active: true,
         }, {
           onConflict: 'user_id,store_id',
@@ -150,15 +156,27 @@ export function useRemoveUserFromStore() {
   });
 }
 
+interface UpdateStoreAccessInput {
+  id?: string;
+  access_level?: string;
+  store_role?: AppRole | null;
+  userId?: string;
+  storeId?: string;
+}
+
 export function useUpdateUserStoreAccess() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, access_level, userId, storeId }: { id?: string; access_level: string; userId?: string; storeId?: string }) => {
+    mutationFn: async ({ id, access_level, store_role, userId, storeId }: UpdateStoreAccessInput) => {
+      const updateData: Record<string, unknown> = {};
+      if (access_level !== undefined) updateData.access_level = access_level;
+      if (store_role !== undefined) updateData.store_role = store_role;
+
       let query = supabase
         .from('user_store_access')
-        .update({ access_level });
+        .update(updateData);
 
       if (id) {
         query = query.eq('id', id);
@@ -178,7 +196,7 @@ export function useUpdateUserStoreAccess() {
       queryClient.invalidateQueries({ queryKey: ['store-users'] });
       toast({
         title: 'Success',
-        description: 'Access level updated',
+        description: 'Store access updated',
       });
     },
     onError: (error: Error) => {
