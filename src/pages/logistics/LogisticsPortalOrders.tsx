@@ -70,6 +70,13 @@ export default function LogisticsPortalOrders() {
 
   const { data: todayOrders = [], isLoading: loadingToday, isFetching: fetchingToday } = useLogisticsPortalOrders(todayFilters);
   const { data: allOrders = [], isLoading: loadingAll, isFetching: fetchingAll } = useLogisticsPortalOrders(allFilters);
+  
+  // Global search for reference ID (searches all orders regardless of date)
+  const globalSearchFilters = {
+    dateFrom: '2020-01-01',
+    dateTo: format(new Date(), 'yyyy-MM-dd'),
+  };
+  const { data: globalOrders = [] } = useLogisticsPortalOrders(globalSearchFilters);
 
   const orders = activeTab === 'new' ? todayOrders : allOrders;
   const isLoading = activeTab === 'new' ? loadingToday : loadingAll;
@@ -77,6 +84,11 @@ export default function LogisticsPortalOrders() {
 
   // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
+    // If reference ID search is active, search globally
+    if (search && isReferenceIdSearch(search)) {
+      return globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+    }
+
     let filtered = orders;
     
     // New Orders tab: exclude delivered/cancelled
@@ -94,21 +106,16 @@ export default function LogisticsPortalOrders() {
       filtered = filtered.filter(o => o.order_status === statusFilter);
     }
     if (search) {
-      // Check for reference ID search
-      if (isReferenceIdSearch(search)) {
-        filtered = filtered.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
-      } else {
-        const searchLower = search.toLowerCase();
-        filtered = filtered.filter(o => 
-          (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
-          (o.leads as any)?.contact_number?.includes(search) ||
-          o.destination_branch?.toLowerCase().includes(searchLower)
-        );
-      }
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(o => 
+        (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
+        (o.leads as any)?.contact_number?.includes(search) ||
+        o.destination_branch?.toLowerCase().includes(searchLower)
+      );
     }
     
     return filtered;
-  }, [orders, activeTab, deliveryFilter, statusFilter, search]);
+  }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, search]);
 
   // Stats
   const stats = useMemo(() => {
