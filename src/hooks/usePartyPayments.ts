@@ -52,26 +52,86 @@ export function useCreatePartyPayment() {
   return useMutation({
     mutationFn: async (payment: Omit<PartyPayment, 'id' | 'created_at' | 'accounts' | 'store_id'>) => {
       // Ensure bank_account_id is null if method is CASH (not bank)
+      const accountId = payment.method === 'BANK' && payment.bank_account_id ? payment.bank_account_id : null;
+      
       const paymentData = {
         ...payment,
         store_id: storeId,
-        // Set bank_account_id to null if method is CASH or OTHER, or if not provided
-        bank_account_id: payment.method === 'BANK' && payment.bank_account_id ? payment.bank_account_id : null,
+        bank_account_id: accountId,
       };
       
-      const { data, error } = await supabase
+      const { data: paymentResult, error: paymentError } = await supabase
         .from('party_payments')
         .insert(paymentData)
         .select()
         .single();
-      if (error) throw error;
-      return data;
+      if (paymentError) throw paymentError;
+
+      // Get party name for transaction description
+      const { data: party } = await supabase
+        .from('parties')
+        .select('name')
+        .eq('id', payment.party_id)
+        .single();
+      
+      const partyName = party?.name || 'Party';
+      const isReceived = payment.payment_type === 'RECEIVED';
+      const transactionType = isReceived ? 'income' : 'expense';
+      const description = isReceived 
+        ? `Payment received from ${partyName}` 
+        : `Payment made to ${partyName}`;
+
+      // Create corresponding transaction entry (marked as cleared since payment is recorded)
+      const { data: transactionResult, error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          date: payment.date,
+          type: transactionType,
+          amount: payment.amount,
+          account_id: accountId,
+          party_id: payment.party_id,
+          description: description,
+          note: payment.note,
+          reference_no: payment.reference,
+          is_cleared: true,
+          store_id: storeId,
+          currency: 'NPR',
+        })
+        .select()
+        .single();
+
+      if (transactionError) {
+        console.error('Failed to create transaction:', transactionError);
+      }
+
+      // Update account balance if an account was selected
+      if (accountId) {
+        const { data: account } = await supabase
+          .from('accounts')
+          .select('current_balance')
+          .eq('id', accountId)
+          .single();
+        
+        if (account) {
+          const newBalance = isReceived 
+            ? account.current_balance + payment.amount 
+            : account.current_balance - payment.amount;
+          
+          await supabase
+            .from('accounts')
+            .update({ current_balance: newBalance })
+            .eq('id', accountId);
+        }
+      }
+      
+      return paymentResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['party-payments'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
       toast.success('Payment recorded successfully');
     },
