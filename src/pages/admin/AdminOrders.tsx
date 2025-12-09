@@ -154,7 +154,8 @@ export default function AdminOrders() {
       const matchesSearch =
         !search ||
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-        order.leads?.contact_number?.includes(search);
+        order.leads?.contact_number?.includes(search) ||
+        order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesSearch;
     });
   }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, search]);
