@@ -99,9 +99,16 @@ export default function CallingOrderDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              Order #{order.order_number || order.id.slice(0, 8)}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">
+                Order #{order.order_number}
+              </h1>
+              {order.leads?.reference_id && (
+                <Badge variant="outline" className="text-base font-mono bg-primary/10 text-primary border-primary/30">
+                  Lead #{order.leads.reference_id}
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
               <span>Created: {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}</span>
           </div>
