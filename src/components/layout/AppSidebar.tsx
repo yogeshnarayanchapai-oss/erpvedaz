@@ -291,7 +291,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
     { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
     { title: 'Notifications', url: '/admin/notifications', icon: Bell },
-    { title: 'Branding', url: '/admin/branding', icon: Palette },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
     {
       title: 'Courier Integration',
