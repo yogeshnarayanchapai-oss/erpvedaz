@@ -8,11 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, Upload } from 'lucide-react';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImportTransactionsDialog } from '@/components/accounting/ImportTransactionsDialog';
 
 export default function NewExpense() {
   const navigate = useNavigate();
@@ -75,14 +76,25 @@ export default function NewExpense() {
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">New Expense</h1>
-          <p className="text-muted-foreground">Record money paid out</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">New Expense</h1>
+            <p className="text-muted-foreground">Record money paid out</p>
+          </div>
         </div>
+        <ImportTransactionsDialog 
+          type="expense" 
+          trigger={
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Import Expenses
+            </Button>
+          }
+        />
       </div>
 
       <Card className="max-w-2xl">
