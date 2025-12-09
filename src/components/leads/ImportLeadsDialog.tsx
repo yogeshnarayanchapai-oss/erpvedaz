@@ -13,6 +13,7 @@ import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
+import { getNepalDate } from '@/hooks/useDashboardStats';
 
 const SOURCE_OPTIONS = ['Facebook Ads', 'Shopify', 'Website', 'TikTok', 'Calling'];
 
@@ -81,7 +82,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
     // Create sample data row
     const sampleRow = [
       '1',
-      new Date().toISOString().split('T')[0],
+      getNepalDate(),
       'John Doe',
       '9841234567',
       '9851234567',
@@ -218,7 +219,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
         const statusVal = row['Status'] || row.status;
         const remark = row['Remark'] || row.remark;
         const delivery = row['Delivery'] || row.delivery;
-        const date = row['Date'] || row.date || new Date().toISOString().split('T')[0];
+        const date = row['Date'] || row.date || getNepalDate();
         
         const product = products.find(p => p.name.toLowerCase() === productName?.toString().toLowerCase());
         const branch = branches.find(b => b.branch_name.toLowerCase() === branchName?.toString().toLowerCase());
