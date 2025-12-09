@@ -41,6 +41,7 @@ export interface Order {
   confirmed_by_user_id: string | null;
   cancelled_at: string | null;
   store_id: string | null;
+  logistic_order_id: string | null;
   // Meta fields for delivery status edit permissions
   called_by_user_id: string | null;
   called_by_role: string | null;
@@ -611,6 +612,7 @@ export function useAdminUpdateOrder() {
       paymentStatus?: PaymentStatus;
       deliveryNotes?: string;
       orderDate?: string;
+      logisticOrderId?: string;
       items: {
         productId: string;
         productName: string;
@@ -701,6 +703,7 @@ export function useAdminUpdateOrder() {
       if (input.paymentStatus !== undefined) orderUpdates.payment_status = input.paymentStatus;
       if (input.deliveryNotes !== undefined) orderUpdates.delivery_notes = input.deliveryNotes;
       if (input.orderDate !== undefined) orderUpdates.order_date = input.orderDate;
+      if (input.logisticOrderId !== undefined) orderUpdates.logistic_order_id = input.logisticOrderId;
       
       // Update primary product_id to first item
       if (input.items.length > 0) {

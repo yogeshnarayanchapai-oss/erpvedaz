@@ -74,7 +74,8 @@ export default function LogisticsOrders() {
       o.leads?.contact_number?.includes(search) ||
       o.products?.name?.toLowerCase().includes(searchLower) ||
       o.shipping_partner?.toLowerCase().includes(searchLower) ||
-      o.partner_order_id?.toLowerCase().includes(searchLower)
+      o.partner_order_id?.toLowerCase().includes(searchLower) ||
+      (o as any).logistic_order_id?.toLowerCase().includes(searchLower)
     );
   });
 
