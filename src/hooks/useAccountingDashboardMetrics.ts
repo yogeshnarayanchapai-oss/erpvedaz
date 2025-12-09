@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface AccountBalance {
   id: string;
@@ -29,14 +30,22 @@ const ASSET_TYPES = ['cash', 'bank', 'savings', 'investment', 'receivable', 'ass
 const LIABILITY_TYPES = ['credit_card', 'loan', 'payable', 'liability'];
 
 export function useAccountingDashboardMetrics(startDate: string, endDate: string) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['dashboard-metrics', startDate, endDate],
+    queryKey: ['dashboard-metrics', storeId, startDate, endDate],
     queryFn: async () => {
       // Get all active accounts with their balances
-      const { data: accounts } = await supabase
+      let accountsQuery = supabase
         .from('accounts')
         .select('id, name, type, current_balance, currency')
         .eq('is_active', true);
+      
+      if (storeId) {
+        accountsQuery = accountsQuery.eq('store_id', storeId);
+      }
+      
+      const { data: accounts } = await accountsQuery;
       
       // Separate assets and liabilities based on account type
       const assetAccounts: AccountBalance[] = [];
@@ -59,29 +68,47 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
       const netWorth = totalAssets - totalLiabilities;
 
       // Get income for period from transactions table
-      const { data: incomeData } = await supabase
+      let incomeQuery = supabase
         .from('transactions')
         .select('amount')
         .in('type', ['income', 'invoice_receipt'])
         .gte('date', startDate)
         .lte('date', endDate);
       
+      if (storeId) {
+        incomeQuery = incomeQuery.eq('store_id', storeId);
+      }
+      
+      const { data: incomeData } = await incomeQuery;
       const totalIncome = incomeData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
 
       // Get expenses for period from transactions table
-      const { data: expenseData } = await supabase
+      let expenseQuery = supabase
         .from('transactions')
         .select('amount')
         .in('type', ['expense', 'bill_payment'])
         .gte('date', startDate)
         .lte('date', endDate);
       
+      if (storeId) {
+        expenseQuery = expenseQuery.eq('store_id', storeId);
+      }
+      
+      const { data: expenseData } = await expenseQuery;
       const totalExpense = expenseData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
 
       // Get receivables and payables from party transactions and payments
+      let partyTxQuery = supabase.from('party_transactions').select('party_id, direction, amount');
+      let partyPayQuery = supabase.from('party_payments').select('party_id, payment_type, amount');
+      
+      if (storeId) {
+        partyTxQuery = partyTxQuery.eq('store_id', storeId);
+        partyPayQuery = partyPayQuery.eq('store_id', storeId);
+      }
+      
       const [{ data: transactions }, { data: payments }] = await Promise.all([
-        supabase.from('party_transactions').select('party_id, direction, amount'),
-        supabase.from('party_payments').select('party_id, payment_type, amount'),
+        partyTxQuery,
+        partyPayQuery,
       ]);
 
       // Calculate totals per party
@@ -135,12 +162,15 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
         liabilityAccounts,
       } as DashboardMetrics;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useNetWorthOverTime() {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['net-worth-over-time'],
+    queryKey: ['net-worth-over-time', storeId],
     queryFn: async () => {
       // Get last 12 months of data
       const months = [];
@@ -149,13 +179,17 @@ export function useNetWorthOverTime() {
         const start = format(startOfMonth(date), 'yyyy-MM-dd');
         const end = format(endOfMonth(date), 'yyyy-MM-dd');
         
-        // This is a simplified calculation - in production, you'd want to calculate
-        // actual account balances as of the end of each month
-        const { data: transactions } = await supabase
+        let txQuery = supabase
           .from('transactions')
           .select('amount, type')
           .gte('date', start)
           .lte('date', end);
+        
+        if (storeId) {
+          txQuery = txQuery.eq('store_id', storeId);
+        }
+        
+        const { data: transactions } = await txQuery;
         
         const income = transactions?.filter(t => ['income', 'invoice_receipt'].includes(t.type))
           .reduce((sum, t) => sum + t.amount, 0) || 0;
@@ -170,14 +204,17 @@ export function useNetWorthOverTime() {
       
       return months;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useExpenseByCategory(startDate: string, endDate: string) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['expense-by-category', startDate, endDate],
+    queryKey: ['expense-by-category', storeId, startDate, endDate],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('transactions')
         .select(`
           amount,
@@ -186,6 +223,12 @@ export function useExpenseByCategory(startDate: string, endDate: string) {
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate);
+      
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data } = await query;
       
       const categoryTotals = new Map<string, number>();
       data?.forEach(t => {
@@ -198,5 +241,6 @@ export function useExpenseByCategory(startDate: string, endDate: string) {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 10); // Top 10 categories
     },
+    enabled: !!storeId,
   });
 }
