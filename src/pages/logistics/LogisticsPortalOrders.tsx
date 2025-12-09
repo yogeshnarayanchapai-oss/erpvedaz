@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
+import { Eye, RotateCcw, Package, Search, RefreshCw, Truck } from 'lucide-react';
 import { useLogisticsPortalOrders } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
@@ -117,19 +117,6 @@ export default function LogisticsPortalOrders() {
     return filtered;
   }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, search]);
 
-  // Stats
-  const stats = useMemo(() => {
-    const data = activeTab === 'new' 
-      ? orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.order_status || ''))
-      : orders;
-    return {
-      total: data.length,
-      inside: data.filter(o => o.delivery_location === 'INSIDE_VALLEY').length,
-      outside: data.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length,
-      redirected: data.filter(o => o.order_status === 'REDIRECT').length,
-      delivered: data.filter(o => o.order_status === 'DELIVERED').length,
-    };
-  }, [orders, activeTab]);
 
   const getDeliveryBadge = (location: string | null) => {
     if (location === 'INSIDE_VALLEY') {
@@ -204,150 +191,10 @@ export default function LogisticsPortalOrders() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="new" className="mt-4 space-y-4">
-          {/* Stats for Today */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Active</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100">
-                    <MapPin className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Inside Valley</p>
-                    <p className="text-2xl font-bold">{stats.inside}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100">
-                    <Globe className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Outside Valley</p>
-                    <p className="text-2xl font-bold">{stats.outside}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-100">
-                    <RotateCcw className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Redirected</p>
-                    <p className="text-2xl font-bold">{stats.redirected}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-100">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Delivered</p>
-                    <p className="text-2xl font-bold">{stats.delivered}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-4 space-y-4">
+        <TabsContent value="all" className="mt-4">
           {/* Date filter for All Orders */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mb-4">
             <DashboardDateFilter value={allOrdersDateRange} onChange={setAllOrdersDateRange} />
-          </div>
-
-          {/* Stats for All Orders */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100">
-                    <MapPin className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Inside Valley</p>
-                    <p className="text-2xl font-bold">{stats.inside}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100">
-                    <Globe className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Outside Valley</p>
-                    <p className="text-2xl font-bold">{stats.outside}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-100">
-                    <RotateCcw className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Redirected</p>
-                    <p className="text-2xl font-bold">{stats.redirected}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-100">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Delivered</p>
-                    <p className="text-2xl font-bold">{stats.delivered}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
       </Tabs>
