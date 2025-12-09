@@ -83,3 +83,26 @@ export function useCreatePartyTransaction() {
     },
   });
 }
+
+export function useDeletePartyTransaction() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (transactionId: string) => {
+      const { error } = await supabase
+        .from('party_transactions')
+        .delete()
+        .eq('id', transactionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      toast.success('Transaction deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete transaction: ${error.message}`);
+    },
+  });
+}
