@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
@@ -29,6 +30,7 @@ export default function NewDeposit() {
     party_id: '',
     reference_no: '',
     note: '',
+    is_cleared: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +47,7 @@ export default function NewDeposit() {
       reference_no: formData.reference_no || null,
       note: formData.note || null,
       description: formData.note || 'Deposit',
-      is_cleared: false,
+      is_cleared: formData.is_cleared,
       created_by: null,
       from_account_id: null,
       to_account_id: null,
@@ -182,6 +184,22 @@ export default function NewDeposit() {
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div>
+                <Label htmlFor="is_cleared" className="font-medium">Mark as Cleared</Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.is_cleared 
+                    ? 'Amount will be added to account balance immediately' 
+                    : 'Will appear as Pending in Receivables until cleared'}
+                </p>
+              </div>
+              <Switch
+                id="is_cleared"
+                checked={formData.is_cleared}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_cleared: checked })}
               />
             </div>
 

@@ -7,11 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
+import { usePendingPayables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { DollarSign, FileText, Download, Search, TrendingDown } from 'lucide-react';
+import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useNavigate } from 'react-router-dom';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
