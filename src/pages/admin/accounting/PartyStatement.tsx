@@ -12,14 +12,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { FileSpreadsheet, ArrowLeft, Eye, Plus, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function PartyStatement() {
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const partyIdFromUrl = searchParams.get('party');
   const { canEdit } = useAccountingEditAccess();
@@ -34,6 +38,9 @@ export default function PartyStatement() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: parties = [], isLoading: partiesLoading } = usePartiesWithBalances();
   const { data: products = [] } = useProducts();
@@ -71,6 +78,44 @@ export default function PartyStatement() {
     return { totalDebit, totalCredit, balance };
   }, [statement]);
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === statement.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(statement.map(e => e.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('party_transactions')
+        .delete()
+        .in('id', selectedIds);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      toast.success(`${selectedIds.length} entries deleted`);
+      setSelectedIds([]);
+      setBulkDeleteOpen(false);
+    } catch (error: any) {
+      toast.error(`Failed to delete: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const exportToCSV = () => {
     if (!selectedParty) return;
     const headers = ['Date', 'Particulars', 'Qty', 'Rate', 'Debit', 'Credit', 'Balance', 'Remarks'];
@@ -99,9 +144,39 @@ export default function PartyStatement() {
   if (selectedPartyId && selectedParty) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedPartyId('')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedPartyId(''); setSelectedIds([]); }}>
+            <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
+          </Button>
+          {isOwner && selectedIds.length > 0 && (
+            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete ({selectedIds.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedIds.length} Entries?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the selected ledger entries. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete All'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
         <div>
           <h1 className="text-2xl font-bold">{selectedParty.name}</h1>
           <p className="text-muted-foreground">{selectedParty.party_type} • {selectedParty.phone || 'No phone'}</p>
@@ -152,6 +227,14 @@ export default function PartyStatement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isOwner && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={selectedIds.length === statement.length && statement.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Date</TableHead><TableHead>Particulars</TableHead><TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Rate</TableHead><TableHead className="text-right">Debit</TableHead>
                   <TableHead className="text-right">Credit</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Remarks</TableHead>
@@ -159,10 +242,18 @@ export default function PartyStatement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementLoading && <TableRow><TableCell colSpan={isOwner ? 9 : 8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={isOwner ? 9 : 8} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {statementLoading && <TableRow><TableCell colSpan={isOwner ? 11 : 8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={isOwner ? 11 : 8} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
                 {statement.map((entry) => (
                   <TableRow key={entry.id}>
+                    {isOwner && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(entry.id)}
+                          onCheckedChange={() => toggleSelect(entry.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell>{entry.particulars}</TableCell>
                     <TableCell className="text-right">{entry.qty || '-'}</TableCell>
