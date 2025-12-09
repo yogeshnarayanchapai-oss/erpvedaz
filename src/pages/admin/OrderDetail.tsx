@@ -45,7 +45,8 @@ export default function OrderDetail() {
             client_name,
             contact_number,
             alt_phone,
-            full_address
+            full_address,
+            reference_id
           ),
           products:product_id(name),
           sales_person:sales_person_id(name),
@@ -151,19 +152,19 @@ export default function OrderDetail() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <div>
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-bold">
                 Order {orderNumber}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
-                {order.order_number && (
-                  <span className="ml-2 text-xs opacity-60">
-                    (ID: {order.id.slice(0, 8)})
-                  </span>
-                )}
-              </p>
+              {order.leads?.reference_id && (
+                <Badge variant="outline" className="text-base font-mono bg-primary/10 text-primary border-primary/30">
+                  Lead #{order.leads.reference_id}
+                </Badge>
+              )}
             </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
+            </p>
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
