@@ -94,7 +94,24 @@ export default function CallingMyOrders() {
     dateTo,
   });
 
+  // Global search for logistic_order_id across all orders
+  const { data: globalSearchOrders = [] } = useOrders({
+    dateFrom: '2020-01-01',
+    dateTo: format(new Date(), 'yyyy-MM-dd'),
+  });
+
   const filteredOrders = useMemo(() => {
+    // If searching and search term looks like a logistic ID, search globally
+    if (search && search.trim().length > 0) {
+      const searchLower = search.toLowerCase();
+      const globalMatches = globalSearchOrders.filter((order) =>
+        order.logistic_order_id?.toLowerCase().includes(searchLower)
+      );
+      if (globalMatches.length > 0) {
+        return globalMatches;
+      }
+    }
+
     return orders.filter((order) => {
       const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
@@ -106,10 +123,10 @@ export default function CallingMyOrders() {
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.id.toLowerCase().includes(search.toLowerCase()) ||
-        (order as any).logistic_order_id?.toLowerCase().includes(search.toLowerCase());
+        order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
     });
-  }, [orders, selectedStatus, selectedDelivery, selectedPayment, search]);
+  }, [orders, globalSearchOrders, selectedStatus, selectedDelivery, selectedPayment, search]);
 
   // Helper to calculate order total from order_items or fallback
   const getOrderTotal = (order: any) => {

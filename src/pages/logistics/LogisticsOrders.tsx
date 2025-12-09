@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrders, useUpdateOrderStatus, Order } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -65,19 +65,38 @@ export default function LogisticsOrders() {
   const { data: products = [] } = useProducts();
   const updateOrderStatus = useUpdateOrderStatus();
 
-  // Filter orders by search
-  const filteredOrders = orders.filter(o => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      o.leads?.client_name?.toLowerCase().includes(searchLower) ||
-      o.leads?.contact_number?.includes(search) ||
-      o.products?.name?.toLowerCase().includes(searchLower) ||
-      o.shipping_partner?.toLowerCase().includes(searchLower) ||
-      o.partner_order_id?.toLowerCase().includes(searchLower) ||
-      (o as any).logistic_order_id?.toLowerCase().includes(searchLower)
-    );
+  // Global search for logistic_order_id across all orders
+  const { data: globalSearchOrders = [] } = useOrders({
+    dateFrom: '2020-01-01',
+    dateTo: format(new Date(), 'yyyy-MM-dd'),
   });
+
+  // Filter orders by search - with global logistic_order_id search
+  const filteredOrders = useMemo(() => {
+    // If searching and search term looks like a logistic ID, search globally
+    if (search && search.trim().length > 0) {
+      const searchLower = search.toLowerCase();
+      const globalMatches = globalSearchOrders.filter((order) =>
+        order.logistic_order_id?.toLowerCase().includes(searchLower)
+      );
+      if (globalMatches.length > 0) {
+        return globalMatches;
+      }
+    }
+
+    return orders.filter(o => {
+      if (!search) return true;
+      const searchLower = search.toLowerCase();
+      return (
+        o.leads?.client_name?.toLowerCase().includes(searchLower) ||
+        o.leads?.contact_number?.includes(search) ||
+        o.products?.name?.toLowerCase().includes(searchLower) ||
+        o.shipping_partner?.toLowerCase().includes(searchLower) ||
+        o.partner_order_id?.toLowerCase().includes(searchLower) ||
+        o.logistic_order_id?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [orders, globalSearchOrders, search]);
 
   // Stats calculations - different for Inside vs Outside Valley
   const isInsideValley = activeTab === 'INSIDE_VALLEY';
