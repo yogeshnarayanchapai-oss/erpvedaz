@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Users, Plus, Search, UserX, UserCheck, Edit, UserPlus, Copy, Eye, EyeOff, Shield, CheckCircle, XCircle, Trash2, KeyRound, Loader2, LogIn, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStores } from '@/hooks/useStores';
+import { useAssignUserToStore } from '@/hooks/useUserStoreAccess';
 
 const roleColors: Record<string, string> = {
   OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
@@ -30,6 +32,8 @@ const roleColors: Record<string, string> = {
   MARKETING: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
   MANAGER: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   HR: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+  ACCOUNTANT: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+  WAREHOUSE: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
 };
 
 // Generate a secure random password
@@ -176,6 +180,9 @@ const usersWithEmployee = useMemo(() => {
     phone: '',
     role: 'CALLING' as AppRole,
   });
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+  const [selectedStoreRoles, setSelectedStoreRoles] = useState<Record<string, AppRole>>({});
+  const assignStoreMutation = useAssignUserToStore();
 
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -389,6 +396,12 @@ const usersWithEmployee = useMemo(() => {
       toast.error('No store context. Please access this page from a store portal.');
       return;
     }
+
+    // OWNER must select at least one store if stores exist
+    if (isOwner && allStores.length > 0 && selectedStoreIds.length === 0) {
+      toast.error('Please select at least one store for this user.');
+      return;
+    }
     
     setIsSubmitting(true);
     setCreatedCredentials(null);
@@ -446,10 +459,29 @@ const usersWithEmployee = useMemo(() => {
         return;
       }
 
+      const createdUserId = response.data?.user?.id;
+
+      // For OWNER: Assign selected stores with per-store roles
+      if (isOwner && createdUserId && selectedStoreIds.length > 0) {
+        for (const storeId of selectedStoreIds) {
+          try {
+            await assignStoreMutation.mutateAsync({
+              user_id: createdUserId,
+              store_id: storeId,
+              access_level: 'staff',
+              store_role: selectedStoreRoles[storeId] || null,
+            });
+          } catch (err) {
+            console.error('Failed to assign store:', storeId, err);
+          }
+        }
+      }
+
       // Success
       setCreatedCredentials({ email: formData.email, password: tempPassword });
       toast.success('User created successfully!');
       queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['all-user-store-access'] });
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast.error(error.message || 'Failed to create user');
@@ -462,7 +494,27 @@ const usersWithEmployee = useMemo(() => {
     setIsOpen(false);
     setCreatedCredentials(null);
     setFormData({ name: '', email: '', phone: '', role: 'CALLING' });
+    setSelectedStoreIds([]);
+    setSelectedStoreRoles({});
     setShowPassword(false);
+  };
+
+  const toggleStoreSelection = (storeId: string) => {
+    setSelectedStoreIds(prev => {
+      if (prev.includes(storeId)) {
+        // Remove store and its role
+        const newRoles = { ...selectedStoreRoles };
+        delete newRoles[storeId];
+        setSelectedStoreRoles(newRoles);
+        return prev.filter(id => id !== storeId);
+      } else {
+        return [...prev, storeId];
+      }
+    });
+  };
+
+  const setStoreRole = (storeId: string, role: AppRole) => {
+    setSelectedStoreRoles(prev => ({ ...prev, [storeId]: role }));
   };
 
   const copyToClipboard = (text: string) => {
@@ -645,6 +697,53 @@ const usersWithEmployee = useMemo(() => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Store Selection for OWNER */}
+                {isOwner && allStores.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Assign to Stores *</Label>
+                    <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                      {allStores.map((store) => (
+                        <div key={store.id} className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`store-${store.id}`}
+                              checked={selectedStoreIds.includes(store.id)}
+                              onCheckedChange={() => toggleStoreSelection(store.id)}
+                            />
+                            <label
+                              htmlFor={`store-${store.id}`}
+                              className="text-sm font-medium cursor-pointer flex-1"
+                            >
+                              {store.name}
+                            </label>
+                          </div>
+                          {selectedStoreIds.includes(store.id) && (
+                            <div className="ml-6">
+                              <Select
+                                value={selectedStoreRoles[store.id] || ''}
+                                onValueChange={(v: AppRole) => setStoreRole(store.id, v)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select role for this store" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getAvailableRoles().filter(r => r !== 'OWNER').map((role) => (
+                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Select stores and optionally assign different roles per store
+                    </p>
+                  </div>
+                )}
+
                 <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
                   A secure temporary password will be generated automatically.
                 </div>
