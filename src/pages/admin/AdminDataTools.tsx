@@ -28,8 +28,8 @@ export default function AdminDataTools() {
   const [resetResults, setResetResults] = useState<ResetResult[] | null>(null);
   const [backupComplete, setBackupComplete] = useState(false);
 
-  // Only ADMIN can access this
-  if (profile?.role !== 'ADMIN') {
+  // Only ADMIN or OWNER can access this
+  if (profile?.role !== 'ADMIN' && profile?.role !== 'OWNER') {
     return (
       <div className="flex items-center justify-center h-96">
         <Alert variant="destructive" className="max-w-md">
