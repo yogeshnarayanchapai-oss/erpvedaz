@@ -11,7 +11,8 @@ import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function NewExpense() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function NewExpense() {
   const { data: categories = [] } = useTransactionCategories('expense');
   const { data: parties = [] } = usePartiesWithBalances();
   const createTransaction = useCreateTransaction();
+  const { canEdit } = useAccountingEditAccess();
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -53,6 +55,25 @@ export default function NewExpense() {
 
     navigate('/admin/accounting/transactions');
   };
+
+  if (!canEdit) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">View Only Access</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have permission to create expenses. Only OWNER and ACCOUNTANT roles can create transactions.
+            </p>
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">

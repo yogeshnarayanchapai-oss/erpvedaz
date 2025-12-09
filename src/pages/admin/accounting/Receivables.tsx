@@ -14,12 +14,14 @@ import { DollarSign, FileText, TrendingUp, Download, Search } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { formatNPR } from '@/lib/currency';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function Receivables() {
   const navigate = useNavigate();
   const { data: allParties = [], isLoading } = usePartiesWithBalances();
   const { data: accounts = [] } = useActiveAccounts();
   const createPayment = useCreatePartyPayment();
+  const { canEdit } = useAccountingEditAccess();
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedParty, setSelectedParty] = useState<any>(null);
@@ -222,13 +224,15 @@ export default function Receivables() {
                       >
                         <FileText className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => openPaymentDialog(party)}
-                      >
-                        Receive Payment
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => openPaymentDialog(party)}
+                        >
+                          Receive Payment
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

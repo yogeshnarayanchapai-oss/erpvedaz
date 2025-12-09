@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShieldAlert } from 'lucide-react';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function NewTransfer() {
   const navigate = useNavigate();
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
+  const { canEdit } = useAccountingEditAccess();
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -53,6 +55,25 @@ export default function NewTransfer() {
 
     navigate('/admin/accounting/transactions');
   };
+
+  if (!canEdit) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">View Only Access</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have permission to create transfers. Only OWNER and ACCOUNTANT roles can create transactions.
+            </p>
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">

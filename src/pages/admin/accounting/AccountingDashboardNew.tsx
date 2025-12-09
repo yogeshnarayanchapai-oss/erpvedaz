@@ -8,6 +8,7 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { TrendingUp, TrendingDown, DollarSign, Wallet, CreditCard, AlertCircle, ArrowRight, Building, Scale } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
 export default function AccountingDashboardNew() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function AccountingDashboardNew() {
   const { data: netWorthData } = useNetWorthOverTime();
   const { data: expenseByCategory } = useExpenseByCategory(dateRange.startDate, dateRange.endDate);
   const { data: accounts = [] } = useActiveAccounts();
+  const { canEdit } = useAccountingEditAccess();
 
   // Calculate total balance from all accounts
   const totalAccountBalance = accounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
@@ -280,9 +282,11 @@ export default function AccountingDashboardNew() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Account Balances</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => navigate('/admin/accounting/accounts')}>
-            Manage Accounts
-          </Button>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/accounting/accounts')}>
+              Manage Accounts
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
