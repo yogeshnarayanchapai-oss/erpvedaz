@@ -187,7 +187,7 @@ export default function AccountsManagement() {
           <CardTitle>
             All Accounts ({accounts.length})
             <span className="ml-4 text-sm font-normal text-muted-foreground">
-              Total Balance: {formatNPR(accounts.reduce((sum, acc) => sum + acc.current_balance, 0))}
+              Total Balance: {formatNPR(accounts.reduce((sum, acc) => sum + (acc.current_balance ?? 0), 0))}
             </span>
           </CardTitle>
         </CardHeader>
@@ -228,10 +228,10 @@ export default function AccountsManagement() {
                     {account.account_number || '-'}
                   </TableCell>
                   <TableCell className="text-right">
-                    {account.currency} {account.opening_balance.toLocaleString()}
+                    {account.currency} {(account.opening_balance ?? 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className={`text-right font-bold ${account.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {account.currency} {account.current_balance.toLocaleString()}
+                  <TableCell className={`text-right font-bold ${(account.current_balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {account.currency} {(account.current_balance ?? 0).toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <Badge variant={account.is_active ? 'default' : 'secondary'}>
