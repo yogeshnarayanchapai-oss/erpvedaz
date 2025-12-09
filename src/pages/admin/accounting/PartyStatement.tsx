@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { usePartyStatement } from '@/hooks/usePartyStatement';
 import { useProducts } from '@/hooks/useProducts';
-import { useDeletePartyTransaction } from '@/hooks/usePartyTransactions';
+
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,7 +28,7 @@ export default function PartyStatement() {
   const partyIdFromUrl = searchParams.get('party');
   const { canEdit } = useAccountingEditAccess();
   const { effectiveRole } = useEffectiveRole();
-  const deletePartyTransaction = useDeletePartyTransaction();
+  
   
   const isOwner = effectiveRole === 'OWNER';
 
@@ -96,23 +96,73 @@ export default function PartyStatement() {
     if (selectedIds.length === 0) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('party_transactions')
-        .delete()
-        .in('id', selectedIds);
+      // Separate IDs by type (exclude opening-balance which can't be deleted)
+      const deletableIds = selectedIds.filter(id => id !== 'opening-balance');
+      const transactionIds: string[] = [];
+      const paymentIds: string[] = [];
       
-      if (error) throw error;
+      statement.forEach(entry => {
+        if (deletableIds.includes(entry.id)) {
+          if (entry.type === 'TRANSACTION') {
+            transactionIds.push(entry.id);
+          } else if (entry.type === 'PAYMENT') {
+            paymentIds.push(entry.id);
+          }
+        }
+      });
+
+      // Delete from party_transactions
+      if (transactionIds.length > 0) {
+        const { error: transError } = await supabase
+          .from('party_transactions')
+          .delete()
+          .in('id', transactionIds);
+        if (transError) throw transError;
+      }
+
+      // Delete from party_payments
+      if (paymentIds.length > 0) {
+        const { error: payError } = await supabase
+          .from('party_payments')
+          .delete()
+          .in('id', paymentIds);
+        if (payError) throw payError;
+      }
       
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
-      toast.success(`${selectedIds.length} entries deleted`);
+      queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      toast.success(`${deletableIds.length} entries deleted`);
       setSelectedIds([]);
       setBulkDeleteOpen(false);
     } catch (error: any) {
       toast.error(`Failed to delete: ${error.message}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleSingleDelete = async (entry: typeof statement[0]) => {
+    if (entry.id === 'opening-balance') {
+      toast.error('Cannot delete opening balance');
+      return;
+    }
+    try {
+      if (entry.type === 'TRANSACTION') {
+        const { error } = await supabase.from('party_transactions').delete().eq('id', entry.id);
+        if (error) throw error;
+      } else if (entry.type === 'PAYMENT') {
+        const { error } = await supabase.from('party_payments').delete().eq('id', entry.id);
+        if (error) throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      toast.success('Entry deleted');
+    } catch (error: any) {
+      toast.error(`Failed to delete: ${error.message}`);
     }
   };
 
@@ -262,7 +312,7 @@ export default function PartyStatement() {
                     <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
-                    {isOwner && (
+                    {isOwner && entry.id !== 'opening-balance' && (
                       <TableCell>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -280,7 +330,7 @@ export default function PartyStatement() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => deletePartyTransaction.mutate(entry.id)}
+                                onClick={() => handleSingleDelete(entry)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete
@@ -290,6 +340,7 @@ export default function PartyStatement() {
                         </AlertDialog>
                       </TableCell>
                     )}
+                    {isOwner && entry.id === 'opening-balance' && <TableCell>-</TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
