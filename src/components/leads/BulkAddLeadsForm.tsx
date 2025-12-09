@@ -5,16 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
+import { useLeadSources } from '@/hooks/useLeadSources';
 import { useBulkCreateLeads, type BulkLeadInput } from '@/hooks/useBulkCreateLeads';
 import { toast } from 'sonner';
-
-const SOURCE_OPTIONS = [
-  { value: 'Facebook Ads', label: 'Facebook Ads' },
-  { value: 'Shopify', label: 'Shopify' },
-  { value: 'Website', label: 'Website' },
-  { value: 'TikTok', label: 'TikTok' },
-  { value: 'Calling', label: 'Calling' },
-];
 
 interface BulkAddLeadsFormProps {
   open: boolean;
@@ -34,7 +27,10 @@ interface LeadRow {
 
 export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) {
   const { data: products = [] } = useProducts();
+  const { data: leadSources = [] } = useLeadSources();
   const bulkCreateLeads = useBulkCreateLeads();
+
+  const defaultSource = leadSources.length > 0 ? leadSources[0].name : '';
 
   const createEmptyRow = () => ({
     id: crypto.randomUUID(),
@@ -43,7 +39,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
     contact_number: '',
     alt_phone: '',
     product_id: '',
-    source: 'Facebook Ads',
+    source: defaultSource,
     remark: '',
   });
 
@@ -165,8 +161,8 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
                     <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SOURCE_OPTIONS.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    {leadSources.map(s => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
