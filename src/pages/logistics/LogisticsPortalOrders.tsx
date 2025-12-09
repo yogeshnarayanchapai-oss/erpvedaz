@@ -12,6 +12,7 @@ import { useLogisticsPortalOrders } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 // Nepal timezone helpers - returns date string in YYYY-MM-DD format for Nepal time
 function getNepalDateString(): string {
@@ -93,12 +94,17 @@ export default function LogisticsPortalOrders() {
       filtered = filtered.filter(o => o.order_status === statusFilter);
     }
     if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(o => 
-        (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
-        (o.leads as any)?.contact_number?.includes(search) ||
-        o.destination_branch?.toLowerCase().includes(searchLower)
-      );
+      // Check for reference ID search
+      if (isReferenceIdSearch(search)) {
+        filtered = filtered.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+      } else {
+        const searchLower = search.toLowerCase();
+        filtered = filtered.filter(o => 
+          (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
+          (o.leads as any)?.contact_number?.includes(search) ||
+          o.destination_branch?.toLowerCase().includes(searchLower)
+        );
+      }
     }
     
     return filtered;

@@ -26,6 +26,7 @@ import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCi
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 interface OrderSummaryItem {
   productId: string;
@@ -151,8 +152,12 @@ export default function AdminOrders() {
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
+      // Check for reference ID search
+      const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(order.leads?.reference_id, search);
+      
       const matchesSearch =
         !search ||
+        matchesRefId ||
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());

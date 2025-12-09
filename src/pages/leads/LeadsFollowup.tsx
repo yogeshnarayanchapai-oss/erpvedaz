@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 type FollowupTab = 'ALL' | 'FOLLOW_UP' | 'CNR';
 
@@ -70,7 +71,12 @@ export default function LeadsFollowup() {
         : new Date(lead.date);
       const inDateRange = effectiveDate >= startOfDay(dateRange.from) && effectiveDate <= endOfDay(dateRange.to);
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
+      
+      // Check for reference ID search
+      const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(lead.reference_id, search);
+      
       const matchesSearch = search === '' || 
+        matchesRefId ||
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
       

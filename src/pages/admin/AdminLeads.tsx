@@ -31,6 +31,7 @@ import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress'
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { toast } from 'sonner';
 import { FileSpreadsheet } from 'lucide-react';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 export default function AdminLeads() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -162,8 +163,12 @@ export default function AdminLeads() {
       selectedStatus === 'all' ? true :
       selectedStatus === 'pending_transfer' ? lead.is_transferred === false :
       lead.status === selectedStatus;
+    // Check for reference ID search
+    const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(lead.reference_id, search);
+    
     const matchesSearch =
       !search ||
+      matchesRefId ||
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
     return matchesProduct && matchesStatus && matchesSearch;

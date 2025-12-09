@@ -12,6 +12,7 @@ import { Truck, CheckCircle, Clock, Download, Search, MapPin, History, XCircle, 
 import { format } from 'date-fns';
 import { OrderHistoryTimeline } from '@/components/logistics/OrderHistoryTimeline';
 import { toast } from 'sonner';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 const orderStatusColors: Record<string, string> = {
   CONFIRMED: 'bg-info/10 text-info border-info/20',
@@ -81,6 +82,12 @@ export default function LogisticsInsideValley() {
 
   const filteredOrders = orders.filter(o => {
     if (!search) return true;
+    
+    // Check for reference ID search
+    if (isReferenceIdSearch(search) && matchesReferenceId(o.leads?.reference_id, search)) {
+      return true;
+    }
+    
     const searchLower = search.toLowerCase();
     return (
       o.leads?.client_name?.toLowerCase().includes(searchLower) ||

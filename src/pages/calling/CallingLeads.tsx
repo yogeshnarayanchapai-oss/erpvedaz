@@ -27,6 +27,7 @@ import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { FormattedDate } from '@/components/FormattedDate';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
+import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -201,16 +202,22 @@ export default function CallingLeads() {
       
       // Combined search filter - from both searchQuery and advancedFilters.searchText
       const combinedSearch = (advancedFilters.searchText || searchQuery || '').toLowerCase().trim();
+      
+      // Check if search is a reference ID format
+      const isRefIdSearch = isReferenceIdSearch(combinedSearch);
+      const matchesRefId = isRefIdSearch && matchesReferenceId(lead.reference_id, combinedSearch);
+      
       const matchesSearch = !combinedSearch || 
+        matchesRefId ||
         lead.client_name.toLowerCase().includes(combinedSearch) ||
         lead.contact_number.includes(combinedSearch) ||
         (lead.alt_phone && lead.alt_phone.includes(combinedSearch)) ||
         (lead.products?.name && lead.products.name.toLowerCase().includes(combinedSearch)) ||
         (lead.full_address && lead.full_address.toLowerCase().includes(combinedSearch));
       
-      // Reference ID search
+      // Reference ID search from advanced filter
       const matchesReference = !advancedFilters.referenceId || 
-        lead.id.toLowerCase().includes(advancedFilters.referenceId.toLowerCase());
+        matchesReferenceId(lead.reference_id, advancedFilters.referenceId);
       
       // Follow-up filtering
       let matchesFollowup = true;
