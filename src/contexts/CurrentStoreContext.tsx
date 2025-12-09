@@ -67,8 +67,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     const knownRootPaths = [
       'auth', 'setup', 'admin', 'leads', 'calling', 'followup',
       'logistics', 'hr', 'manager', 'marketing', 'hrm', 'training',
-      'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting',
-      'logistics-portal'
+      'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting'
     ];
     
     // If first part is not a known root path, it's likely a store slug

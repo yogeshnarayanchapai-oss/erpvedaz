@@ -60,8 +60,7 @@ export function getStoreSlugFromPath(): string | null {
   const knownRootPaths = [
     'admin', 'auth', 'setup', 'leads', 'calling', 'followup', 
     'logistics', 'hr', 'manager', 'marketing', 'hrm', 'training',
-    'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting',
-    'logistics-portal'
+    'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting'
   ];
   
   if (pathParts.length > 0 && !knownRootPaths.includes(pathParts[0])) {
