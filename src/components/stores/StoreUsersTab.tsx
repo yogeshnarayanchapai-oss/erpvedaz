@@ -32,6 +32,8 @@ const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'LEADS', label: 'Leads' },
   { value: 'MARKETING', label: 'Marketing' },
   { value: 'HR', label: 'HR' },
+  { value: 'ACCOUNTANT', label: 'Accountant' },
+  { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'MANAGER', label: 'Manager' },
   { value: 'ADMIN', label: 'Admin' },
 ];

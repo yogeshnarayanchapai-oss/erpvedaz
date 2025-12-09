@@ -1,0 +1,3 @@
+-- Add ACCOUNTANT and WAREHOUSE roles to app_role enum
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'ACCOUNTANT';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'WAREHOUSE';
