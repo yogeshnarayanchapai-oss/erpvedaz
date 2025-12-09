@@ -207,13 +207,16 @@ export default function CallingMyOrders() {
     let productQuantity = 0;
     
     if (orderItemsList.length > 0) {
-      productName = orderItemsList.map((item: any) => item.product_name).join(', ');
+      // Format with quantity: "Hair Oil x2" or "Hair Oil x2, Face Cream x1"
+      productName = orderItemsList.map((item: any) => `${item.product_name} x${item.quantity || 1}`).join(', ');
       productPrice = orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
       productQuantity = orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     } else {
-      productName = order.products?.name || '';
-      productPrice = (order.amount || 0) * (order.quantity || 1);
-      productQuantity = order.quantity || 1;
+      // Format with quantity for single product
+      const qty = order.quantity || 1;
+      productName = `${order.products?.name || ''} x${qty}`;
+      productPrice = (order.amount || 0) * qty;
+      productQuantity = qty;
     }
 
     const deliveryLocation = order.delivery_location === 'INSIDE_VALLEY' ? 'Inside Valley' : 'Outside Valley';
