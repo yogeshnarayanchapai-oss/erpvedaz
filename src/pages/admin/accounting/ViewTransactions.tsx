@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useTransactions, Transaction, useDeleteTransaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
@@ -16,7 +17,12 @@ import { EditTransactionDialog } from '@/components/accounting/EditTransactionDi
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
 import { Download, Search, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+
 export default function ViewTransactions() {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
@@ -27,6 +33,9 @@ export default function ViewTransactions() {
     search: '',
   });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: transactions = [], isLoading } = useTransactions(filters);
   const { data: accounts = [] } = useActiveAccounts();
@@ -48,6 +57,44 @@ export default function ViewTransactions() {
       t.parties?.name.toLowerCase().includes(searchLower)
     );
   });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredTransactions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredTransactions.map(t => t.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .in('id', selectedIds);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      toast.success(`${selectedIds.length} transactions deleted`);
+      setSelectedIds([]);
+      setBulkDeleteOpen(false);
+    } catch (error: any) {
+      toast.error(`Failed to delete: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const exportCSV = () => {
     const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
@@ -95,10 +142,40 @@ export default function ViewTransactions() {
           <h1 className="text-2xl font-bold">View Transactions</h1>
           <p className="text-muted-foreground">All accounting transactions</p>
         </div>
-        <Button onClick={exportCSV}>
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          {isOwner && selectedIds.length > 0 && (
+            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete ({selectedIds.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the selected transactions. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete All'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button onClick={exportCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -213,6 +290,14 @@ export default function ViewTransactions() {
           <Table>
             <TableHeader>
               <TableRow>
+                {isOwner && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Code</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
@@ -228,18 +313,26 @@ export default function ViewTransactions() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={(canEdit || isOwner) ? 10 : 9} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={isOwner ? 12 : 10} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={(canEdit || isOwner) ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isOwner ? 12 : 10} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
               )}
               {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
+                  {isOwner && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(transaction.id)}
+                        onCheckedChange={() => toggleSelect(transaction.id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-mono text-sm font-medium">{transaction.transaction_code || '-'}</TableCell>
                   <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
