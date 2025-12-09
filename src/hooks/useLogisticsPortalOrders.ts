@@ -42,7 +42,7 @@ export function useLogisticsPortalOrders(filters: LogisticsOrdersFilters = {}) {
         .select(`
           *,
           products (id, name),
-          leads:leads!orders_lead_id_fkey (id, client_name, contact_number, remark, full_address),
+          leads:leads!orders_lead_id_fkey (id, client_name, contact_number, remark, full_address, reference_id),
           customers:customers!orders_customer_id_fkey (id, customer_name, phone_number),
           profiles:profiles!orders_sales_person_id_fkey (id, name),
           confirmed_by_profile:profiles!orders_confirmed_by_user_id_fkey (id, name),
