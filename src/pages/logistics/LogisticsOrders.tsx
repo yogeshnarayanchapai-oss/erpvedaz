@@ -73,7 +73,7 @@ export default function LogisticsOrders() {
     dateTo: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // Filter orders by search - with global logistic_order_id search
+  // Filter orders by search - with global logistic_order_id and reference_id search
   const filteredOrders = useMemo(() => {
     // If logistic ID search is active, search globally
     if (logisticIdSearch && logisticIdSearch.trim().length > 0) {
@@ -83,13 +83,13 @@ export default function LogisticsOrders() {
       );
     }
 
+    // If reference ID search is active, search globally
+    if (search && isReferenceIdSearch(search)) {
+      return globalSearchOrders.filter(o => matchesReferenceId(o.leads?.reference_id, search));
+    }
+
     return orders.filter(o => {
       if (!search) return true;
-      
-      // Check for reference ID search
-      if (isReferenceIdSearch(search) && matchesReferenceId(o.leads?.reference_id, search)) {
-        return true;
-      }
       
       const searchLower = search.toLowerCase();
       return (
