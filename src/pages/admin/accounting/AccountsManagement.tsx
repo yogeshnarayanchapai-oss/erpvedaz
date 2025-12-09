@@ -79,8 +79,16 @@ export default function AccountsManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this account?')) {
-      await deleteAccount.mutateAsync(id);
+    if (confirm('Are you sure you want to delete this account? Accounts with transactions cannot be deleted.')) {
+      try {
+        await deleteAccount.mutateAsync(id);
+      } catch (error: any) {
+        if (error?.message?.includes('foreign key constraint')) {
+          alert('This account has linked transactions and cannot be deleted. Please deactivate it instead by editing and turning off the Active toggle.');
+        } else {
+          alert('Failed to delete account: ' + (error?.message || 'Unknown error'));
+        }
+      }
     }
   };
 
