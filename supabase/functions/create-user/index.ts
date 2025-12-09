@@ -111,7 +111,7 @@ serve(async (req: Request) => {
     const userPassword = password || Math.random().toString(36).slice(-12) + "Aa1!";
 
     // Validate role - non-OWNER cannot create OWNER users
-    const validRoles = ["ADMIN", "LEADS", "CALLING", "FOLLOWUP", "LOGISTICS", "MARKETING", "MANAGER", "HR", "OWNER"];
+    const validRoles = ["ADMIN", "LEADS", "CALLING", "FOLLOWUP", "LOGISTICS", "MARKETING", "MANAGER", "HR", "OWNER", "ACCOUNTANT", "WAREHOUSE"];
     if (!validRoles.includes(role)) {
       return new Response(
         JSON.stringify({ error: "Invalid role" }),
