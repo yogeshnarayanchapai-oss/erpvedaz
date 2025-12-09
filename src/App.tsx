@@ -410,6 +410,7 @@ const App = () => (
                 <Route path="/admin/accounting/payables" element={<Payables />} />
                 <Route path="/admin/accounting/cash-bank" element={<CashBank />} />
                 <Route path="/admin/accounting/party-statement" element={<PartyStatement />} />
+                <Route path="/admin/accounting/categories" element={<CategoryManagement />} />
                 <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
                 <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
                 <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
