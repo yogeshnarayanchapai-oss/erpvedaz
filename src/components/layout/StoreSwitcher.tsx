@@ -47,8 +47,8 @@ export function StoreSwitcher() {
     );
   }
 
-  // Non-switchable users: just show current store
-  if (!canSwitchStores || availableStores.length <= 1) {
+  // Non-switchable users: just show current store (only when they have 1 or fewer stores)
+  if (availableStores.length <= 1) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50">
         {currentStore.logo_url ? (

@@ -80,7 +80,8 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
   }, [pathname]);
   
   const isOwner = profile?.role === 'OWNER';
-  const canSwitchStores = isOwner; // OWNER can always switch stores
+  // Users can switch stores if they have access to multiple stores OR if they're OWNER
+  const canSwitchStores = isOwner || availableStores.length > 1;
 
   const fetchStores = useCallback(async () => {
     if (!user?.id) {
