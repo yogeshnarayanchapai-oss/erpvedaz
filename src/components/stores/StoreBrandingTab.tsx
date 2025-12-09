@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,18 +29,18 @@ export function StoreBrandingTab({ storeId }: StoreBrandingTabProps) {
   const { data: branding, isLoading } = useStoreBranding(storeId);
   const updateBranding = useUpsertStoreBranding();
 
-  const [primaryColor, setPrimaryColor] = useState(branding?.primary_color || '#3B82F6');
-  const [secondaryColor, setSecondaryColor] = useState(branding?.secondary_color || '#6366F1');
-  const [fontFamily, setFontFamily] = useState(branding?.font_family || 'Inter');
-  const [announcementText, setAnnouncementText] = useState(branding?.announcement_text || '');
-  const [whatsappNumber, setWhatsappNumber] = useState(branding?.whatsapp_number || '');
-  const [facebookPixel, setFacebookPixel] = useState(branding?.facebook_pixel || '');
-  const [googleAnalytics, setGoogleAnalytics] = useState(branding?.google_analytics || '');
-  const [siteUnderConstruction, setSiteUnderConstruction] = useState(branding?.site_under_construction || false);
+  const [primaryColor, setPrimaryColor] = useState('#3B82F6');
+  const [secondaryColor, setSecondaryColor] = useState('#6366F1');
+  const [fontFamily, setFontFamily] = useState('Inter');
+  const [announcementText, setAnnouncementText] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [facebookPixel, setFacebookPixel] = useState('');
+  const [googleAnalytics, setGoogleAnalytics] = useState('');
+  const [siteUnderConstruction, setSiteUnderConstruction] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
 
   // Sync state when branding loads
-  useState(() => {
+  useEffect(() => {
     if (branding) {
       setPrimaryColor(branding.primary_color || '#3B82F6');
       setSecondaryColor(branding.secondary_color || '#6366F1');
@@ -51,7 +51,7 @@ export function StoreBrandingTab({ storeId }: StoreBrandingTabProps) {
       setGoogleAnalytics(branding.google_analytics || '');
       setSiteUnderConstruction(branding.site_under_construction || false);
     }
-  });
+  }, [branding]);
 
   const handleSave = async () => {
     await updateBranding.mutateAsync({
