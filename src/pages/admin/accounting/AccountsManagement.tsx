@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, Account } from '@/hooks/useAccounts';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, useRecalculateAccountBalance, Account } from '@/hooks/useAccounts';
+import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -30,6 +30,7 @@ export default function AccountsManagement() {
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
+  const recalculateBalance = useRecalculateAccountBalance();
   const { canEdit } = useAccountingEditAccess();
   const { effectiveRole } = useEffectiveRole();
   const isOwner = effectiveRole === 'OWNER';
@@ -261,17 +262,29 @@ export default function AccountsManagement() {
                           variant="ghost"
                           size="icon"
                           onClick={() => openDialog(account)}
+                          title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         {isOwner && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(account.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => recalculateBalance.mutate(account.id)}
+                              title="Recalculate Balance"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(account.id)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     )}

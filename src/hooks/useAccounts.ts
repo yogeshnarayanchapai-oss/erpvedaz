@@ -138,3 +138,24 @@ export function useDeleteAccount() {
     },
   });
 }
+
+export function useRecalculateAccountBalance() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (accountId: string) => {
+      const { error } = await supabase.rpc('recalculate_account_balance', {
+        p_account_id: accountId
+      });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast.success('Account balance recalculated');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to recalculate: ${error.message}`);
+    },
+  });
+}
