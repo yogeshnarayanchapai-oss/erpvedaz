@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface Account {
   id: string;
@@ -12,51 +13,69 @@ export interface Account {
   currency: string;
   is_default: boolean;
   is_active: boolean;
+  store_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export function useAccounts() {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['accounts'],
+    queryKey: ['accounts', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounts')
         .select('*')
         .order('is_default', { ascending: false })
         .order('name');
       
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Account[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useActiveAccounts() {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['accounts', 'active'],
+    queryKey: ['accounts', 'active', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounts')
         .select('*')
         .eq('is_active', true)
         .order('is_default', { ascending: false })
         .order('name');
       
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Account[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateAccount() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
-    mutationFn: async (account: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (account: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'store_id'>) => {
       const { data, error } = await supabase
         .from('accounts')
-        .insert(account)
+        .insert({ ...account, store_id: storeId })
         .select()
         .single();
       

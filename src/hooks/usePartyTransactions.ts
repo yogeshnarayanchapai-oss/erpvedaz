@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface PartyTransaction {
   id: string;
@@ -21,8 +22,10 @@ export interface PartyTransaction {
 }
 
 export function usePartyTransactions(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['party-transactions', partyId, filters],
+    queryKey: ['party-transactions', storeId, partyId, filters],
     queryFn: async () => {
       let query = supabase
         .from('party_transactions')
@@ -34,6 +37,9 @@ export function usePartyTransactions(partyId: string, filters?: { startDate?: st
         .eq('party_id', partyId)
         .order('date', { ascending: false });
 
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
       if (filters?.startDate) {
         query = query.gte('date', filters.startDate);
       }
@@ -48,17 +54,19 @@ export function usePartyTransactions(partyId: string, filters?: { startDate?: st
       if (error) throw error;
       return data as PartyTransaction[];
     },
-    enabled: !!partyId,
+    enabled: !!partyId && !!storeId,
   });
 }
 
 export function useCreatePartyTransaction() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
   return useMutation({
     mutationFn: async (transaction: Omit<PartyTransaction, 'id' | 'created_at' | 'products' | 'warehouses'>) => {
       const { data, error } = await supabase
         .from('party_transactions')
-        .insert(transaction)
+        .insert({ ...transaction, store_id: storeId })
         .select()
         .single();
       if (error) throw error;

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface Party {
   id: string;
@@ -12,6 +13,7 @@ export interface Party {
   opening_balance: number;
   opening_balance_type: 'RECEIVABLE' | 'PAYABLE' | null;
   remarks: string | null;
+  store_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -27,13 +29,19 @@ export interface PartyWithBalances extends Party {
 }
 
 export function useParties(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['parties', partyType],
+    queryKey: ['parties', storeId, partyType],
     queryFn: async () => {
       let query = supabase
         .from('parties')
         .select('*')
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (partyType) {
         query = query.or(`party_type.eq.${partyType},party_type.eq.BOTH`);
@@ -43,17 +51,24 @@ export function useParties(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
       if (error) throw error;
       return data as Party[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['parties-balances', partyType],
+    queryKey: ['parties-balances', storeId, partyType],
     queryFn: async () => {
       let query = supabase
         .from('parties')
         .select('*')
         .order('name');
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (partyType) {
         query = query.or(`party_type.eq.${partyType},party_type.eq.BOTH`);
@@ -127,16 +142,19 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
 
       return partiesWithBalances;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateParty() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
   return useMutation({
-    mutationFn: async (party: Omit<Party, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (party: Omit<Party, 'id' | 'created_at' | 'updated_at' | 'store_id'>) => {
       const { data, error } = await supabase
         .from('parties')
-        .insert(party)
+        .insert({ ...party, store_id: storeId })
         .select()
         .single();
       if (error) throw error;

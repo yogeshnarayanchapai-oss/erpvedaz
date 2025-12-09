@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface Transaction {
   id: string;
@@ -19,6 +20,7 @@ export interface Transaction {
   description: string | null;
   is_cleared: boolean;
   created_by: string | null;
+  store_id: string | null;
   created_at: string;
   updated_at: string;
   from_account?: { id: string; name: string } | null;
@@ -39,8 +41,10 @@ export interface TransactionFilters {
 }
 
 export function useTransactions(filters?: TransactionFilters) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['transactions', filters],
+    queryKey: ['transactions', storeId, filters],
     queryFn: async () => {
       let query = supabase
         .from('transactions')
@@ -54,6 +58,9 @@ export function useTransactions(filters?: TransactionFilters) {
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
       if (filters?.startDate) {
         query = query.gte('date', filters.startDate);
       }
@@ -81,17 +88,19 @@ export function useTransactions(filters?: TransactionFilters) {
       if (error) throw error;
       return data as any as Transaction[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
-    mutationFn: async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'accounts' | 'from_account' | 'to_account' | 'transaction_categories' | 'parties'>) => {
+    mutationFn: async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'accounts' | 'from_account' | 'to_account' | 'transaction_categories' | 'parties' | 'store_id'>) => {
       const { data, error } = await supabase
         .from('transactions')
-        .insert(transaction)
+        .insert({ ...transaction, store_id: storeId })
         .select()
         .single();
       
@@ -131,6 +140,7 @@ export function useCreateTransaction() {
           bank_account_id: method === 'BANK' ? transaction.account_id : null,
           reference: transaction.reference_no,
           note: transaction.note || transaction.description,
+          store_id: storeId,
         });
       }
       

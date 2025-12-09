@@ -4270,6 +4270,7 @@ export type Database = {
           party_type: string
           phone: string | null
           remarks: string | null
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4283,6 +4284,7 @@ export type Database = {
           party_type: string
           phone?: string | null
           remarks?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4296,9 +4298,18 @@ export type Database = {
           party_type?: string
           phone?: string | null
           remarks?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parties_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       party_ledger: {
         Row: {
@@ -4363,6 +4374,7 @@ export type Database = {
           party_id: string
           payment_type: string
           reference: string | null
+          store_id: string | null
         }
         Insert: {
           amount: number
@@ -4375,6 +4387,7 @@ export type Database = {
           party_id: string
           payment_type: string
           reference?: string | null
+          store_id?: string | null
         }
         Update: {
           amount?: number
@@ -4387,6 +4400,7 @@ export type Database = {
           party_id?: string
           payment_type?: string
           reference?: string | null
+          store_id?: string | null
         }
         Relationships: [
           {
@@ -4401,6 +4415,13 @@ export type Database = {
             columns: ["party_id"]
             isOneToOne: false
             referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_payments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -4419,6 +4440,7 @@ export type Database = {
           reference: string | null
           remarks: string | null
           source: string
+          store_id: string | null
           warehouse_id: string | null
         }
         Insert: {
@@ -4434,6 +4456,7 @@ export type Database = {
           reference?: string | null
           remarks?: string | null
           source: string
+          store_id?: string | null
           warehouse_id?: string | null
         }
         Update: {
@@ -4449,6 +4472,7 @@ export type Database = {
           reference?: string | null
           remarks?: string | null
           source?: string
+          store_id?: string | null
           warehouse_id?: string | null
         }
         Relationships: [
@@ -4464,6 +4488,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -6025,6 +6056,7 @@ export type Database = {
           is_system: boolean | null
           name: string
           nature: string
+          store_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -6032,6 +6064,7 @@ export type Database = {
           is_system?: boolean | null
           name: string
           nature: string
+          store_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -6039,8 +6072,17 @@ export type Database = {
           is_system?: boolean | null
           name?: string
           nature?: string
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transaction_categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -6059,6 +6101,7 @@ export type Database = {
           order_id: string | null
           party_id: string | null
           reference_no: string | null
+          store_id: string | null
           to_account_id: string | null
           type: string
           updated_at: string | null
@@ -6079,6 +6122,7 @@ export type Database = {
           order_id?: string | null
           party_id?: string | null
           reference_no?: string | null
+          store_id?: string | null
           to_account_id?: string | null
           type: string
           updated_at?: string | null
@@ -6099,6 +6143,7 @@ export type Database = {
           order_id?: string | null
           party_id?: string | null
           reference_no?: string | null
+          store_id?: string | null
           to_account_id?: string | null
           type?: string
           updated_at?: string | null
@@ -6137,6 +6182,13 @@ export type Database = {
             columns: ["party_id"]
             isOneToOne: false
             referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {

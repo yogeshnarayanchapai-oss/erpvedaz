@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface PartyPayment {
   id: string;
@@ -12,15 +13,18 @@ export interface PartyPayment {
   bank_account_id: string | null;
   reference: string | null;
   note: string | null;
+  store_id: string | null;
   created_at: string;
   accounts?: { id: string; name: string };
 }
 
 export function usePartyPayments(partyId: string) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['party-payments', partyId],
+    queryKey: ['party-payments', storeId, partyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('party_payments')
         .select(`
           *,
@@ -29,20 +33,28 @@ export function usePartyPayments(partyId: string) {
         .eq('party_id', partyId)
         .order('date', { ascending: false });
 
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as PartyPayment[];
     },
-    enabled: !!partyId,
+    enabled: !!partyId && !!storeId,
   });
 }
 
 export function useCreatePartyPayment() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
   return useMutation({
-    mutationFn: async (payment: Omit<PartyPayment, 'id' | 'created_at' | 'accounts'>) => {
+    mutationFn: async (payment: Omit<PartyPayment, 'id' | 'created_at' | 'accounts' | 'store_id'>) => {
       // Ensure bank_account_id is null if method is CASH (not bank)
       const paymentData = {
         ...payment,
+        store_id: storeId,
         // Set bank_account_id to null if method is CASH or OTHER, or if not provided
         bank_account_id: payment.method === 'BANK' && payment.bank_account_id ? payment.bank_account_id : null,
       };
