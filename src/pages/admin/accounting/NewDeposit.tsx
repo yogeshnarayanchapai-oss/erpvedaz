@@ -5,20 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveAccounts } from '@/hooks/useAccounts';
-import { useTransactionCategories } from '@/hooks/useTransactionCategories';
-import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
+import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function NewDeposit() {
   const navigate = useNavigate();
   const { data: accounts = [] } = useActiveAccounts();
-  const { data: categories = [] } = useTransactionCategories('income');
-  const { data: parties = [] } = usePartiesWithBalances();
   const createTransaction = useCreateTransaction();
   const { canEdit } = useAccountingEditAccess();
 
@@ -137,34 +135,21 @@ export default function NewDeposit() {
 
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableCategorySelect
+                value={formData.category_id}
+                onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                nature="income"
+                placeholder="Select income category..."
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="party">Party (Optional)</Label>
-              <Select value={formData.party_id} onValueChange={(value) => setFormData({ ...formData, party_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select party (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {parties.map((party) => (
-                    <SelectItem key={party.id} value={party.id}>
-                      {party.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchablePartySelect
+                value={formData.party_id}
+                onValueChange={(value) => setFormData({ ...formData, party_id: value })}
+                placeholder="Select or add party..."
+              />
             </div>
 
             <div className="space-y-2">
