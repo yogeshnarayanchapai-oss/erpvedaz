@@ -113,49 +113,13 @@ export function useCreateTransaction() {
         entity_type: 'transaction',
         entity_id: data.id,
         action_type: 'CREATE',
-        description: `New ${typeLabel} ${data.transaction_code} created - Rs. ${transaction.amount.toLocaleString()}`,
+        description: `New ${typeLabel} ${data.transaction_code} created - Rs. ${transaction.amount.toLocaleString()} (${transaction.is_cleared ? 'Cleared' : 'Pending'})`,
         amount: transaction.amount,
         store_id: storeId,
         performed_by: (await supabase.auth.getUser()).data.user?.id || null,
       });
 
-      // Update account balances
-      if (transaction.type === 'income' && transaction.account_id) {
-        const { data: account } = await supabase.from('accounts').select('current_balance').eq('id', transaction.account_id).single();
-        if (account) {
-          await supabase.from('accounts').update({ current_balance: account.current_balance + transaction.amount }).eq('id', transaction.account_id);
-        }
-      } else if (transaction.type === 'expense' && transaction.account_id) {
-        const { data: account } = await supabase.from('accounts').select('current_balance').eq('id', transaction.account_id).single();
-        if (account) {
-          await supabase.from('accounts').update({ current_balance: account.current_balance - transaction.amount }).eq('id', transaction.account_id);
-        }
-      } else if (transaction.type === 'transfer' && transaction.from_account_id && transaction.to_account_id) {
-        const { data: fromAccount } = await supabase.from('accounts').select('current_balance').eq('id', transaction.from_account_id).single();
-        const { data: toAccount } = await supabase.from('accounts').select('current_balance').eq('id', transaction.to_account_id).single();
-        if (fromAccount && toAccount) {
-          await supabase.from('accounts').update({ current_balance: fromAccount.current_balance - transaction.amount }).eq('id', transaction.from_account_id);
-          await supabase.from('accounts').update({ current_balance: toAccount.current_balance + transaction.amount }).eq('id', transaction.to_account_id);
-        }
-      }
-
-      // Create party payment to update receivables/payables when party is selected
-      if (transaction.party_id) {
-        const paymentType = transaction.type === 'income' ? 'RECEIVED' : 'PAID';
-        const method = transaction.account_id ? 'BANK' : 'CASH';
-        
-        await supabase.from('party_payments').insert({
-          party_id: transaction.party_id,
-          date: transaction.date,
-          amount: transaction.amount,
-          payment_type: paymentType,
-          method: method,
-          bank_account_id: method === 'BANK' ? transaction.account_id : null,
-          reference: transaction.reference_no,
-          note: transaction.note || transaction.description,
-          store_id: storeId,
-        });
-      }
+      // Account balance is handled by database trigger - only affects balance when is_cleared = true
       
       return data;
     },
@@ -231,21 +195,86 @@ export function useMarkTransactionsCleared() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ is_cleared: true })
-        .in('id', ids);
-      
-      if (error) throw error;
+    mutationFn: async ({ ids, accountId }: { ids: string[]; accountId?: string }) => {
+      // If accountId provided, update the transaction account and mark as cleared
+      if (accountId) {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ is_cleared: true, account_id: accountId })
+          .in('id', ids);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ is_cleared: true })
+          .in('id', ids);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
       toast.success('Transactions marked as cleared');
     },
     onError: (error: Error) => {
       toast.error(`Failed to mark transactions: ${error.message}`);
     },
+  });
+}
+
+export function usePendingReceivables() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['pending-receivables', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          from_account:from_account_id(id, name),
+          to_account:to_account_id(id, name),
+          transaction_categories:category_id(id, name),
+          parties:party_id(id, name)
+        `)
+        .eq('type', 'income')
+        .eq('is_cleared', false)
+        .eq('store_id', storeId)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data as any as Transaction[];
+    },
+    enabled: !!storeId,
+  });
+}
+
+export function usePendingPayables() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['pending-payables', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          from_account:from_account_id(id, name),
+          to_account:to_account_id(id, name),
+          transaction_categories:category_id(id, name),
+          parties:party_id(id, name)
+        `)
+        .eq('type', 'expense')
+        .eq('is_cleared', false)
+        .eq('store_id', storeId)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data as any as Transaction[];
+    },
+    enabled: !!storeId,
   });
 }
 
