@@ -14,10 +14,11 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
 import { usePendingPayables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle } from 'lucide-react';
+import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle, Plus } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useNavigate } from 'react-router-dom';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { CreateReceivablePayableDialog } from '@/components/accounting/CreateReceivablePayableDialog';
 
 export default function Payables() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function Payables() {
   const { canEdit } = useAccountingEditAccess();
   const [selectedParty, setSelectedParty] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [paymentData, setPaymentData] = useState<{
     date: string;
     amount: string;
@@ -112,9 +114,16 @@ export default function Payables() {
           <h1 className="text-2xl font-bold">Payables (Suppliers)</h1>
           <p className="text-muted-foreground">Track amounts you owe to suppliers</p>
         </div>
-        <Button variant="outline" onClick={exportToCSV}>
-          <Download className="w-4 h-4 mr-2" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          {canEdit && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Create Payable
+            </Button>
+          )}
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -350,6 +359,13 @@ export default function Payables() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Create Payable Dialog */}
+      <CreateReceivablePayableDialog
+        type="payable"
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </div>
   );
 }

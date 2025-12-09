@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, FileText, TrendingUp, Download, Search, CheckCircle } from 'lucide-react';
+import { DollarSign, FileText, TrendingUp, Download, Search, CheckCircle, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { formatNPR } from '@/lib/currency';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
+import { CreateReceivablePayableDialog } from '@/components/accounting/CreateReceivablePayableDialog';
 
 export default function Receivables() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export default function Receivables() {
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedParty, setSelectedParty] = useState<any>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,9 +140,16 @@ export default function Receivables() {
           <h1 className="text-2xl font-bold">Receivables</h1>
           <p className="text-muted-foreground">Manage payments from customers & wholesalers</p>
         </div>
-        <Button variant="outline" onClick={exportToCSV}>
-          <Download className="w-4 h-4 mr-2" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          {canEdit && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Create Receivable
+            </Button>
+          )}
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -490,6 +499,13 @@ export default function Receivables() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Receivable Dialog */}
+      <CreateReceivablePayableDialog
+        type="receivable"
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </div>
   );
 }
