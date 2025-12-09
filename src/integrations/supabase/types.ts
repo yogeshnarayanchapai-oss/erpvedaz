@@ -2775,6 +2775,7 @@ export type Database = {
           order_id: string | null
           pool_status: string | null
           product_id: string | null
+          reference_id: string | null
           remark: string | null
           returned_to_leads_at: string | null
           source: string | null
@@ -2818,6 +2819,7 @@ export type Database = {
           order_id?: string | null
           pool_status?: string | null
           product_id?: string | null
+          reference_id?: string | null
           remark?: string | null
           returned_to_leads_at?: string | null
           source?: string | null
@@ -2861,6 +2863,7 @@ export type Database = {
           order_id?: string | null
           pool_status?: string | null
           product_id?: string | null
+          reference_id?: string | null
           remark?: string | null
           returned_to_leads_at?: string | null
           source?: string | null

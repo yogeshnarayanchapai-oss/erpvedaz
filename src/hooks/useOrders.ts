@@ -52,6 +52,7 @@ export interface Order {
     alt_phone: string | null;
     full_address: string | null;
     assigned_to_user_id: string | null;
+    reference_id?: string | null;
     assigned_user?: { name: string } | null;
   } | null;
   products?: { name: string } | null;
@@ -81,7 +82,7 @@ export function useOrders(filters?: {
         .from('orders')
         .select(`
           *,
-          leads:lead_id(client_name, contact_number, alt_phone, full_address, assigned_to_user_id, assigned_user:profiles!leads_assigned_to_user_id_fkey(name)),
+          leads:lead_id(client_name, contact_number, alt_phone, full_address, assigned_to_user_id, reference_id, assigned_user:profiles!leads_assigned_to_user_id_fkey(name)),
           products:product_id(name),
           sales_person:profiles!orders_sales_person_id_fkey(name),
           created_by_staff:profiles!orders_created_by_staff_id_fkey(name),
