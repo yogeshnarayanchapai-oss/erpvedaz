@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders, useUpdateOrderStatus, useUpdateInsideDeliveryStatus, InsideDeliveryStatus, canEditDeliveryStatus } from '@/hooks/useOrders';
+import { useOrderCopyTemplate } from '@/hooks/useOrderCopyTemplate';
 import { useProducts } from '@/hooks/useProducts';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,6 +67,7 @@ export default function CallingOrders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { generateOrderCopy } = useOrderCopyTemplate();
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   
@@ -233,7 +235,7 @@ export default function CallingOrders() {
     a.click();
   };
 
-  // Copy order details in specific format
+  // Copy order details using dynamic template from Data Tools
   const handleCopyOrder = (order: any) => {
     const customerName = order.leads?.client_name || '';
     const customerPhone = order.leads?.contact_number || '';
@@ -254,9 +256,24 @@ export default function CallingOrders() {
       productPrice = (order.amount || 0) * (order.quantity || 1);
       productQuantity = order.quantity || 1;
     }
+
+    const deliveryLocation = order.delivery_location === 'INSIDE_VALLEY' ? 'Inside Valley' : 'Outside Valley';
+    const paymentMethod = order.is_cod ? 'COD' : 'Online';
+    const orderBy = order.created_by_staff?.name || order.sales_person?.name || '';
     
-    // Format: %customer name% %customer phone number% %product name% %full address% %product price% %product quantity% Vedaz01
-    const copyText = `${customerName} ${customerPhone} ${productName} ${fullAddress} ${productPrice} ${productQuantity} Vedaz01`;
+    // Use dynamic template from Data Tools
+    const copyText = generateOrderCopy({
+      customerName,
+      phone: customerPhone,
+      products: productName,
+      address: fullAddress,
+      amount: productPrice,
+      quantity: productQuantity,
+      branch: order.destination_branch || '',
+      deliveryLocation,
+      paymentMethod,
+      orderBy,
+    });
     
     navigator.clipboard.writeText(copyText).then(() => {
       toast.success('Order details copied to clipboard');
