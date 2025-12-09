@@ -201,6 +201,11 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
       return;
     }
 
+    if (!currentStore?.id) {
+      toast.error('Store context not available. Please refresh and try again.');
+      return;
+    }
+
     setIsImporting(true);
     try {
       const leadsToInsert = parsedData.map(row => {
@@ -249,7 +254,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           status: validStatus,
           lead_bucket: leadBucket,
           source: 'Facebook Ads', // Default source
-          store_id: currentStore?.id || null,
+          store_id: currentStore.id,
         };
         
         // Portal-specific settings
