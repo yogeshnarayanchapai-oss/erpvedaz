@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
+import { useOrderCopyTemplate } from '@/hooks/useOrderCopyTemplate';
 
 const orderStatusColors: Record<string, string> = {
   CONFIRMED: 'bg-success/10 text-success border-success/20',
@@ -38,6 +39,7 @@ export default function CallingMyOrders() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { generateOrderCopy } = useOrderCopyTemplate();
   const today = new Date();
 
   // Read status filter from URL
@@ -192,7 +194,7 @@ export default function CallingMyOrders() {
     toast.success('Orders exported to CSV');
   };
 
-  // Copy order details in specific format
+  // Copy order details using dynamic template
   const handleCopyOrder = (order: any) => {
     const customerName = order.leads?.client_name || '';
     const customerPhone = order.leads?.contact_number || '';
@@ -213,9 +215,24 @@ export default function CallingMyOrders() {
       productPrice = (order.amount || 0) * (order.quantity || 1);
       productQuantity = order.quantity || 1;
     }
+
+    const deliveryLocation = order.delivery_location === 'INSIDE_VALLEY' ? 'Inside Valley' : 'Outside Valley';
+    const paymentMethod = order.is_cod ? 'COD' : 'Online';
+    const orderBy = order.created_by_staff?.name || order.sales_person?.name || '';
     
-    // Format: %customer name% %customer phone number% %product name% %full address% %product price% %product quantity% Vedaz01
-    const copyText = `${customerName} ${customerPhone} ${productName} ${fullAddress} ${productPrice} ${productQuantity} Vedaz01`;
+    // Use dynamic template
+    const copyText = generateOrderCopy({
+      customerName,
+      phone: customerPhone,
+      products: productName,
+      address: fullAddress,
+      amount: productPrice,
+      quantity: productQuantity,
+      branch: order.destination_branch || '',
+      deliveryLocation,
+      paymentMethod,
+      orderBy,
+    });
     
     navigator.clipboard.writeText(copyText).then(() => {
       toast.success('Order details copied to clipboard');

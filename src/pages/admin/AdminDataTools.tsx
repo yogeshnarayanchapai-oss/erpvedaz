@@ -11,6 +11,7 @@ import { Trash2, AlertTriangle, Shield, Download, FileSpreadsheet, Loader2, Rota
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { LeadSourcesManagement } from '@/components/admin/LeadSourcesManagement';
+import { OrderCopyFormatEditor } from '@/components/admin/OrderCopyFormatEditor';
 
 interface ResetResult {
   table_name: string;
@@ -230,6 +231,9 @@ export default function AdminDataTools() {
         <h1 className="text-2xl font-bold">Data Tools</h1>
         <p className="text-muted-foreground">Administrative data management utilities</p>
       </div>
+
+      {/* Order Copy Format Editor */}
+      <OrderCopyFormatEditor />
 
       {/* Lead Sources Management */}
       <LeadSourcesManagement />

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generateOrderSummary, copyToClipboard, OrderSummaryInput } from '@/lib/orderSummary';
+import { copyToClipboard } from '@/lib/orderSummary';
+import { useOrderCopyTemplate } from '@/hooks/useOrderCopyTemplate';
 import { toast } from 'sonner';
 
 interface OrderItem {
@@ -40,24 +41,32 @@ export function CopyOrderButton({
   className = '',
 }: CopyOrderButtonProps) {
   const [copied, setCopied] = useState(false);
+  const { generateOrderCopy } = useOrderCopyTemplate();
 
   const handleCopy = async () => {
-    const input: OrderSummaryInput = {
+    const productNames = orderItems.map(item => 
+      orderItems.length === 1 ? item.product_name : `${item.product_name} x${item.quantity}`
+    ).join(', ');
+    
+    const totalQty = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    const deliveryLocationDisplay = deliveryLocation === 'inside-valley' || deliveryLocation === 'INSIDE_VALLEY' 
+      ? 'Inside Valley' 
+      : 'Outside Valley';
+
+    const summary = generateOrderCopy({
       customerName,
       phone,
+      products: productNames,
       address,
-      products: orderItems.map(item => ({
-        name: item.product_name,
-        quantity: item.quantity,
-      })),
-      totalAmount,
+      amount: totalAmount,
+      quantity: totalQty,
+      branch: branch || '',
+      deliveryLocation: deliveryLocationDisplay,
       paymentMethod,
       orderBy,
-      deliveryLocation,
-      branch,
-    };
+    });
 
-    const summary = generateOrderSummary(input);
     const success = await copyToClipboard(summary);
 
     if (success) {
