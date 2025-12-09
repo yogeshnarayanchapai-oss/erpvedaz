@@ -26,6 +26,7 @@ export type Database = {
           ifsc_code: string | null
           is_active: boolean | null
           opening_balance: number | null
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           ifsc_code?: string | null
           is_active?: boolean | null
           opening_balance?: number | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -52,9 +54,18 @@ export type Database = {
           ifsc_code?: string | null
           is_active?: boolean | null
           opening_balance?: number | null
+          store_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_banks_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_bills: {
         Row: {
@@ -69,6 +80,7 @@ export type Database = {
           outstanding_amount: number | null
           paid_amount: number | null
           status: Database["public"]["Enums"]["bill_status"] | null
+          store_id: string | null
           supplier_id: string | null
           total_amount: number
           updated_at: string | null
@@ -85,6 +97,7 @@ export type Database = {
           outstanding_amount?: number | null
           paid_amount?: number | null
           status?: Database["public"]["Enums"]["bill_status"] | null
+          store_id?: string | null
           supplier_id?: string | null
           total_amount?: number
           updated_at?: string | null
@@ -101,6 +114,7 @@ export type Database = {
           outstanding_amount?: number | null
           paid_amount?: number | null
           status?: Database["public"]["Enums"]["bill_status"] | null
+          store_id?: string | null
           supplier_id?: string | null
           total_amount?: number
           updated_at?: string | null
@@ -111,6 +125,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "accounting_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_bills_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -131,6 +152,7 @@ export type Database = {
           id: string
           reference_id: string | null
           reference_type: string | null
+          store_id: string | null
           transaction_date: string
           transaction_type: string
         }
@@ -142,6 +164,7 @@ export type Database = {
           id?: string
           reference_id?: string | null
           reference_type?: string | null
+          store_id?: string | null
           transaction_date: string
           transaction_type: string
         }
@@ -153,10 +176,19 @@ export type Database = {
           id?: string
           reference_id?: string | null
           reference_type?: string | null
+          store_id?: string | null
           transaction_date?: string
           transaction_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_cash_ledger_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_expense_categories: {
         Row: {
@@ -165,6 +197,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          store_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -172,6 +205,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          store_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -179,8 +213,17 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_expense_categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_invoice_items: {
         Row: {
@@ -243,6 +286,7 @@ export type Database = {
           outstanding_amount: number | null
           paid_amount: number | null
           status: Database["public"]["Enums"]["invoice_status"] | null
+          store_id: string | null
           total_amount: number
           updated_at: string | null
           wholesaler_id: string | null
@@ -259,6 +303,7 @@ export type Database = {
           outstanding_amount?: number | null
           paid_amount?: number | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
+          store_id?: string | null
           total_amount?: number
           updated_at?: string | null
           wholesaler_id?: string | null
@@ -275,6 +320,7 @@ export type Database = {
           outstanding_amount?: number | null
           paid_amount?: number | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
+          store_id?: string | null
           total_amount?: number
           updated_at?: string | null
           wholesaler_id?: string | null
@@ -285,6 +331,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_invoices_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -372,6 +425,7 @@ export type Database = {
           opening_balance: number | null
           pan_number: string | null
           phone: string | null
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -385,6 +439,7 @@ export type Database = {
           opening_balance?: number | null
           pan_number?: string | null
           phone?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -398,9 +453,18 @@ export type Database = {
           opening_balance?: number | null
           pan_number?: string | null
           phone?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_suppliers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_transaction_lines: {
         Row: {
@@ -469,6 +533,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method_type"]
           reference_id: string | null
           reference_type: string | null
+          store_id: string | null
           transaction_date: string
           transaction_type: Database["public"]["Enums"]["transaction_type"]
         }
@@ -483,6 +548,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method_type"]
           reference_id?: string | null
           reference_type?: string | null
+          store_id?: string | null
           transaction_date: string
           transaction_type: Database["public"]["Enums"]["transaction_type"]
         }
@@ -497,6 +563,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method_type"]
           reference_id?: string | null
           reference_type?: string | null
+          store_id?: string | null
           transaction_date?: string
           transaction_type?: Database["public"]["Enums"]["transaction_type"]
         }
@@ -515,6 +582,13 @@ export type Database = {
             referencedRelation: "accounting_expense_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "accounting_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       accounting_wholesalers: {
@@ -529,6 +603,7 @@ export type Database = {
           opening_balance: number | null
           pan_number: string | null
           phone: string | null
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -542,6 +617,7 @@ export type Database = {
           opening_balance?: number | null
           pan_number?: string | null
           phone?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -555,9 +631,18 @@ export type Database = {
           opening_balance?: number | null
           pan_number?: string | null
           phone?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounting_wholesalers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounts: {
         Row: {
@@ -570,6 +655,7 @@ export type Database = {
           is_default: boolean | null
           name: string
           opening_balance: number | null
+          store_id: string | null
           type: string
           updated_at: string | null
         }
@@ -583,6 +669,7 @@ export type Database = {
           is_default?: boolean | null
           name: string
           opening_balance?: number | null
+          store_id?: string | null
           type: string
           updated_at?: string | null
         }
@@ -596,10 +683,19 @@ export type Database = {
           is_default?: boolean | null
           name?: string
           opening_balance?: number | null
+          store_id?: string | null
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ads: {
         Row: {
@@ -611,6 +707,7 @@ export type Database = {
           id: string
           platform: string
           product_id: string | null
+          store_id: string | null
           target_orders: number | null
         }
         Insert: {
@@ -622,6 +719,7 @@ export type Database = {
           id?: string
           platform: string
           product_id?: string | null
+          store_id?: string | null
           target_orders?: number | null
         }
         Update: {
@@ -633,6 +731,7 @@ export type Database = {
           id?: string
           platform?: string
           product_id?: string | null
+          store_id?: string | null
           target_orders?: number | null
         }
         Relationships: [
@@ -641,6 +740,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -660,6 +766,7 @@ export type Database = {
           rto_orders: number | null
           rto_percentage_target: number | null
           selling_price: number | null
+          store_id: string | null
           target_orders: number | null
           updated_at: string | null
           usd_amount: number | null
@@ -679,6 +786,7 @@ export type Database = {
           rto_orders?: number | null
           rto_percentage_target?: number | null
           selling_price?: number | null
+          store_id?: string | null
           target_orders?: number | null
           updated_at?: string | null
           usd_amount?: number | null
@@ -698,6 +806,7 @@ export type Database = {
           rto_orders?: number | null
           rto_percentage_target?: number | null
           selling_price?: number | null
+          store_id?: string | null
           target_orders?: number | null
           updated_at?: string | null
           usd_amount?: number | null
@@ -709,6 +818,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_spend_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -724,6 +840,7 @@ export type Database = {
           id: string
           notes: string | null
           returned_on: string | null
+          store_id: string | null
         }
         Insert: {
           asset_id: string
@@ -735,6 +852,7 @@ export type Database = {
           id?: string
           notes?: string | null
           returned_on?: string | null
+          store_id?: string | null
         }
         Update: {
           asset_id?: string
@@ -746,6 +864,7 @@ export type Database = {
           id?: string
           notes?: string | null
           returned_on?: string | null
+          store_id?: string | null
         }
         Relationships: [
           {
@@ -762,6 +881,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "asset_assignments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       assets: {
@@ -775,6 +901,7 @@ export type Database = {
           purchase_cost: number | null
           purchase_date: string | null
           status: string
+          store_id: string | null
           updated_at: string
         }
         Insert: {
@@ -787,6 +914,7 @@ export type Database = {
           purchase_cost?: number | null
           purchase_date?: string | null
           status?: string
+          store_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -799,9 +927,18 @@ export type Database = {
           purchase_cost?: number | null
           purchase_date?: string | null
           status?: string
+          store_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       attendance_records: {
         Row: {
@@ -813,6 +950,7 @@ export type Database = {
           id: string
           notes: string | null
           status: string
+          store_id: string | null
         }
         Insert: {
           check_in_time?: string | null
@@ -823,6 +961,7 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          store_id?: string | null
         }
         Update: {
           check_in_time?: string | null
@@ -833,6 +972,7 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          store_id?: string | null
         }
         Relationships: [
           {
@@ -840,6 +980,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1011,6 +1158,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           province: string | null
+          store_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1026,6 +1174,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           province?: string | null
+          store_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1041,9 +1190,18 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           province?: string | null
+          store_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "branches_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       branding: {
         Row: {
@@ -1167,6 +1325,7 @@ export type Database = {
           production_budget_npr: number | null
           start_date: string | null
           status: string | null
+          store_id: string | null
           target_orders: number | null
           target_revenue_npr: number | null
           total_budget_npr: number | null
@@ -1186,6 +1345,7 @@ export type Database = {
           production_budget_npr?: number | null
           start_date?: string | null
           status?: string | null
+          store_id?: string | null
           target_orders?: number | null
           target_revenue_npr?: number | null
           total_budget_npr?: number | null
@@ -1205,12 +1365,21 @@ export type Database = {
           production_budget_npr?: number | null
           start_date?: string | null
           status?: string | null
+          store_id?: string | null
           target_orders?: number | null
           target_revenue_npr?: number | null
           total_budget_npr?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -1768,6 +1937,7 @@ export type Database = {
           rto_rate_percent: number | null
           rto_units: number
           staff_office_cost: number
+          store_id: string | null
           target_orders: number
           target_profit: number
           total_expense: number
@@ -1796,6 +1966,7 @@ export type Database = {
           rto_rate_percent?: number | null
           rto_units?: number
           staff_office_cost?: number
+          store_id?: string | null
           target_orders?: number
           target_profit?: number
           total_expense?: number
@@ -1824,6 +1995,7 @@ export type Database = {
           rto_rate_percent?: number | null
           rto_units?: number
           staff_office_cost?: number
+          store_id?: string | null
           target_orders?: number
           target_profit?: number
           total_expense?: number
@@ -1833,6 +2005,13 @@ export type Database = {
           warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_pl_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_pl_warehouse_id_fkey"
             columns: ["warehouse_id"]
@@ -1848,20 +2027,31 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          store_id: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
           name: string
+          store_id?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
           name?: string
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "departments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_verifications: {
         Row: {
@@ -1983,6 +2173,7 @@ export type Database = {
           position: string | null
           shift: string | null
           status: string
+          store_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -2008,6 +2199,7 @@ export type Database = {
           position?: string | null
           shift?: string | null
           status?: string
+          store_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2033,6 +2225,7 @@ export type Database = {
           position?: string | null
           shift?: string | null
           status?: string
+          store_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2049,6 +2242,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -2138,6 +2338,7 @@ export type Database = {
           created_at: string
           id: string
           is_default: boolean | null
+          store_id: string | null
         }
         Insert: {
           account_name: string
@@ -2147,6 +2348,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
+          store_id?: string | null
         }
         Update: {
           account_name?: string
@@ -2156,8 +2358,17 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hr_bank_accounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hr_policies: {
         Row: {
@@ -2166,6 +2377,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          store_id: string | null
           title: string
           updated_at: string
         }
@@ -2175,6 +2387,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          store_id?: string | null
           title: string
           updated_at?: string
         }
@@ -2184,10 +2397,19 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          store_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hr_policies_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hr_settings: {
         Row: {
@@ -2237,6 +2459,7 @@ export type Database = {
           priority: string | null
           region: string | null
           status: string | null
+          store_id: string | null
           tiktok_url: string | null
           updated_at: string
           whatsapp_number: string | null
@@ -2271,6 +2494,7 @@ export type Database = {
           priority?: string | null
           region?: string | null
           status?: string | null
+          store_id?: string | null
           tiktok_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null
@@ -2305,12 +2529,21 @@ export type Database = {
           priority?: string | null
           region?: string | null
           status?: string | null
+          store_id?: string | null
           tiktok_url?: string | null
           updated_at?: string
           whatsapp_number?: string | null
           youtube_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "influencers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_history: {
         Row: {
@@ -2704,6 +2937,7 @@ export type Database = {
           leave_type_id: string
           reason: string | null
           status: string
+          store_id: string | null
           to_date: string
           total_days: number
         }
@@ -2716,6 +2950,7 @@ export type Database = {
           leave_type_id: string
           reason?: string | null
           status?: string
+          store_id?: string | null
           to_date: string
           total_days: number
         }
@@ -2728,6 +2963,7 @@ export type Database = {
           leave_type_id?: string
           reason?: string | null
           status?: string
+          store_id?: string | null
           to_date?: string
           total_days?: number
         }
@@ -2753,6 +2989,13 @@ export type Database = {
             referencedRelation: "leave_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leave_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       leave_types: {
@@ -2761,20 +3004,31 @@ export type Database = {
           default_days_per_year: number | null
           id: string
           name: string
+          store_id: string | null
         }
         Insert: {
           created_at?: string
           default_days_per_year?: number | null
           id?: string
           name: string
+          store_id?: string | null
         }
         Update: {
           created_at?: string
           default_days_per_year?: number | null
           id?: string
           name?: string
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leave_types_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       logistics_orders: {
         Row: {
@@ -2996,6 +3250,7 @@ export type Database = {
           id: string
           is_active: boolean
           send_to: Database["public"]["Enums"]["message_recipient_type"]
+          store_id: string | null
           template_id: string
           trigger_status_from: string | null
           trigger_status_to: string | null
@@ -3008,6 +3263,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           send_to?: Database["public"]["Enums"]["message_recipient_type"]
+          store_id?: string | null
           template_id: string
           trigger_status_from?: string | null
           trigger_status_to?: string | null
@@ -3020,6 +3276,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           send_to?: Database["public"]["Enums"]["message_recipient_type"]
+          store_id?: string | null
           template_id?: string
           trigger_status_from?: string | null
           trigger_status_to?: string | null
@@ -3031,6 +3288,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "message_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_automation_rules_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -3053,6 +3317,7 @@ export type Database = {
           name: string
           provider: Database["public"]["Enums"]["message_provider"]
           sender_id: string | null
+          store_id: string | null
           type: Database["public"]["Enums"]["message_channel_type"]
           updated_at: string
         }
@@ -3066,6 +3331,7 @@ export type Database = {
           name: string
           provider?: Database["public"]["Enums"]["message_provider"]
           sender_id?: string | null
+          store_id?: string | null
           type: Database["public"]["Enums"]["message_channel_type"]
           updated_at?: string
         }
@@ -3079,10 +3345,19 @@ export type Database = {
           name?: string
           provider?: Database["public"]["Enums"]["message_provider"]
           sender_id?: string | null
+          store_id?: string | null
           type?: Database["public"]["Enums"]["message_channel_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_channels_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       message_logs: {
         Row: {
@@ -3098,6 +3373,7 @@ export type Database = {
           related_reseller_order_id: string | null
           rule_id: string | null
           status: Database["public"]["Enums"]["message_status"]
+          store_id: string | null
           template_id: string | null
         }
         Insert: {
@@ -3113,6 +3389,7 @@ export type Database = {
           related_reseller_order_id?: string | null
           rule_id?: string | null
           status?: Database["public"]["Enums"]["message_status"]
+          store_id?: string | null
           template_id?: string | null
         }
         Update: {
@@ -3128,6 +3405,7 @@ export type Database = {
           related_reseller_order_id?: string | null
           rule_id?: string | null
           status?: Database["public"]["Enums"]["message_status"]
+          store_id?: string | null
           template_id?: string | null
         }
         Relationships: [
@@ -3160,6 +3438,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "message_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "message_logs_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -3178,6 +3463,7 @@ export type Database = {
           id: string
           is_active: boolean
           language: string
+          store_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3189,6 +3475,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           language?: string
+          store_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3200,9 +3487,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           language?: string
+          store_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notices: {
         Row: {
@@ -3331,6 +3627,7 @@ export type Database = {
           holiday_type: string
           id: string
           is_office_closed: boolean | null
+          store_id: string | null
           title: string
         }
         Insert: {
@@ -3340,6 +3637,7 @@ export type Database = {
           holiday_type?: string
           id?: string
           is_office_closed?: boolean | null
+          store_id?: string | null
           title: string
         }
         Update: {
@@ -3349,9 +3647,18 @@ export type Database = {
           holiday_type?: string
           id?: string
           is_office_closed?: boolean | null
+          store_id?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "office_holidays_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_comments: {
         Row: {
@@ -4128,6 +4435,7 @@ export type Database = {
           notes: string | null
           paid_on: string | null
           payment_status: string
+          store_id: string | null
         }
         Insert: {
           allowances?: number | null
@@ -4141,6 +4449,7 @@ export type Database = {
           notes?: string | null
           paid_on?: string | null
           payment_status?: string
+          store_id?: string | null
         }
         Update: {
           allowances?: number | null
@@ -4154,6 +4463,7 @@ export type Database = {
           notes?: string | null
           paid_on?: string | null
           payment_status?: string
+          store_id?: string | null
         }
         Relationships: [
           {
@@ -4161,6 +4471,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_records_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -5360,6 +5677,7 @@ export type Database = {
           is_mandatory: boolean
           level: Database["public"]["Enums"]["course_level"]
           slug: string
+          store_id: string | null
           target_roles: string[] | null
           title: string
           updated_at: string
@@ -5375,6 +5693,7 @@ export type Database = {
           is_mandatory?: boolean
           level?: Database["public"]["Enums"]["course_level"]
           slug: string
+          store_id?: string | null
           target_roles?: string[] | null
           title: string
           updated_at?: string
@@ -5390,11 +5709,20 @@ export type Database = {
           is_mandatory?: boolean
           level?: Database["public"]["Enums"]["course_level"]
           slug?: string
+          store_id?: string | null
           target_roles?: string[] | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "training_courses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_enrollments: {
         Row: {
@@ -5405,6 +5733,7 @@ export type Database = {
           progress_percent: number
           started_at: string | null
           status: Database["public"]["Enums"]["enrollment_status"]
+          store_id: string | null
           updated_at: string
           user_id: string
         }
@@ -5416,6 +5745,7 @@ export type Database = {
           progress_percent?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
+          store_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -5427,6 +5757,7 @@ export type Database = {
           progress_percent?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
+          store_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -5436,6 +5767,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "training_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -5930,6 +6268,7 @@ export type Database = {
           location: string | null
           name: string
           remarks: string | null
+          store_id: string | null
           updated_at: string
         }
         Insert: {
@@ -5940,6 +6279,7 @@ export type Database = {
           location?: string | null
           name: string
           remarks?: string | null
+          store_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -5950,9 +6290,18 @@ export type Database = {
           location?: string | null
           name?: string
           remarks?: string | null
+          store_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

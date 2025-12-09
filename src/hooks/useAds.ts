@@ -1,17 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface Ad {
   id: string;
   product_id: string | null;
   date: string;
   platform: string;
-  amount_spent: number; // NPR amount
-  amount_usd: number | null; // USD amount
-  dollar_rate: number | null; // USD to NPR rate
+  amount_spent: number;
+  amount_usd: number | null;
+  dollar_rate: number | null;
   target_orders: number | null;
   created_at: string | null;
+  store_id: string | null;
   product?: { name: string } | null;
 }
 
@@ -21,14 +23,12 @@ interface UseAdsParams {
   productId?: string;
 }
 
-// Default USD rate - can be stored in settings
 const DEFAULT_USD_RATE = 133.5;
 
 export function useDefaultUsdRate() {
   return useQuery({
     queryKey: ['default-usd-rate'],
     queryFn: async () => {
-      // Try to get from company_info or return default
       const { data } = await supabase
         .from('company_info')
         .select('other_details')
@@ -55,7 +55,6 @@ export function useUpdateDefaultUsdRate() {
 
   return useMutation({
     mutationFn: async (rate: number) => {
-      // Get existing company info
       const { data: existing } = await supabase
         .from('company_info')
         .select('id, other_details')
@@ -100,13 +99,19 @@ export function useUpdateDefaultUsdRate() {
 }
 
 export function useAds(params: UseAdsParams = {}) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['ads', params],
+    queryKey: ['ads', params, storeId],
     queryFn: async () => {
       let query = supabase
         .from('ads')
         .select('*, product:products(name)')
         .order('date', { ascending: false });
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
 
       if (params.dateFrom) {
         query = query.gte('date', params.dateFrom);
@@ -122,6 +127,7 @@ export function useAds(params: UseAdsParams = {}) {
       if (error) throw error;
       return data as Ad[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -131,18 +137,19 @@ export interface CreateAdInput {
   platform: string;
   amount_usd: number;
   dollar_rate: number;
-  amount_spent: number; // NPR calculated amount
+  amount_spent: number;
   target_orders: number | null;
 }
 
 export function useCreateAd() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (input: CreateAdInput) => {
       const { data, error } = await supabase
         .from('ads')
-        .insert(input)
+        .insert({ ...input, store_id: storeId })
         .select()
         .single();
 

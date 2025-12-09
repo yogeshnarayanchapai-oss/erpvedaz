@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCurrentStoreId } from "@/hooks/useCurrentStoreId";
 
 export interface Campaign {
   id: string;
@@ -20,13 +21,16 @@ export interface Campaign {
   status: string | null;
   owner: string | null;
   notes: string | null;
+  store_id: string | null;
 }
 
-export type CampaignInput = Omit<Campaign, "id" | "created_at" | "updated_at">;
+export type CampaignInput = Omit<Campaign, "id" | "created_at" | "updated_at" | "store_id">;
 
 export const useCampaigns = (filters?: { status?: string }) => {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ["campaigns", filters],
+    queryKey: ["campaigns", filters, storeId],
     queryFn: async () => {
       let query = supabase
         .from("campaigns")
@@ -37,21 +41,33 @@ export const useCampaigns = (filters?: { status?: string }) => {
         query = query.eq("status", filters.status);
       }
 
+      if (storeId) {
+        query = query.eq("store_id", storeId);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Campaign[];
     },
+    enabled: !!storeId,
   });
 };
 
 export const useCampaignStats = () => {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ["campaign-stats"],
+    queryKey: ["campaign-stats", storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("campaigns")
         .select("id, status, total_budget_npr, target_orders");
-      
+
+      if (storeId) {
+        query = query.eq("store_id", storeId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       const active = data?.filter(c => c.status === "Running") || [];
@@ -65,16 +81,19 @@ export const useCampaignStats = () => {
         totalCampaigns: data?.length || 0,
       };
     },
+    enabled: !!storeId,
   });
 };
 
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (input: CampaignInput) => {
       const { data, error } = await supabase
         .from("campaigns")
-        .insert(input)
+        .insert({ ...input, store_id: storeId })
         .select()
         .single();
       if (error) throw error;
