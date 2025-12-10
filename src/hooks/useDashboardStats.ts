@@ -293,6 +293,8 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       return {
         total: allLeads.length,
         callingTotal: callingLeads.length,
+        // Assigned = leads assigned TO user + leads created BY user (combined, no duplicates)
+        assigned: allLeads.length,
         confirmed: allLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
         callNotReceived: allLeads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
         followUp: allLeads.filter(l => l.status === 'FOLLOW_UP').length,
