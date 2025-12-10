@@ -61,13 +61,14 @@ export function useStaffDetailSummary(staffId: string, dateRange: DateRange) {
   return useQuery({
     queryKey: ['staff-detail-summary', staffId, dateFrom, dateTo],
     queryFn: async () => {
-      // Get leads assigned to this staff
+      // Get leads EVER assigned to this staff (using first_assigned_to_user_id - never changes)
+      // Filter by assigned_at to count leads assigned during this period
       const { data: assignedLeads, error: assignedErr } = await supabase
         .from('leads')
         .select('id, status')
-        .eq('assigned_to_user_id', staffId)
-        .gte('date', dateFrom)
-        .lte('date', dateTo);
+        .eq('first_assigned_to_user_id', staffId)
+        .gte('assigned_at', `${dateFrom}T00:00:00`)
+        .lte('assigned_at', `${dateTo}T23:59:59`);
 
       if (assignedErr) throw assignedErr;
 

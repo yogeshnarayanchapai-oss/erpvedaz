@@ -2759,6 +2759,7 @@ export type Database = {
           current_team: Database["public"]["Enums"]["team_type"] | null
           date: string
           destination_branch: string | null
+          first_assigned_to_user_id: string | null
           followup_completed: boolean | null
           followup_reason: string | null
           full_address: string | null
@@ -2804,6 +2805,7 @@ export type Database = {
           current_team?: Database["public"]["Enums"]["team_type"] | null
           date?: string
           destination_branch?: string | null
+          first_assigned_to_user_id?: string | null
           followup_completed?: boolean | null
           followup_reason?: string | null
           full_address?: string | null
@@ -2849,6 +2851,7 @@ export type Database = {
           current_team?: Database["public"]["Enums"]["team_type"] | null
           date?: string
           destination_branch?: string | null
+          first_assigned_to_user_id?: string | null
           followup_completed?: boolean | null
           followup_reason?: string | null
           full_address?: string | null

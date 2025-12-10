@@ -51,13 +51,14 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Fetch leads assigned to staff within the date range
+      // Fetch leads EVER assigned to staff (using first_assigned_to_user_id which never changes)
+      // Filter by assigned_at within date range to count leads assigned during this period
       let assignedLeadsQuery = supabase
         .from('leads')
-        .select('id, assigned_to_user_id, created_by_user_id, status, store_id, date')
-        .gte('date', dateFrom)
-        .lte('date', dateTo)
-        .not('assigned_to_user_id', 'is', null);
+        .select('id, first_assigned_to_user_id, created_by_user_id, status, store_id, date, assigned_at')
+        .gte('assigned_at', `${dateFrom}T00:00:00`)
+        .lte('assigned_at', `${dateTo}T23:59:59`)
+        .not('first_assigned_to_user_id', 'is', null);
 
       // Filter by store_id
       if (storeId) {
@@ -136,13 +137,13 @@ export function useStaffLeaderboard(dateRange: DateRange) {
       // Count leads per user: assigned TO user + created BY user (no duplicates)
       const leadsPerUser = new Map<string, Set<string>>();
       
-      // Add assigned leads
+      // Add assigned leads using first_assigned_to_user_id (original assignee, never changes)
       assignedLeads?.forEach(lead => {
-        if (!lead.assigned_to_user_id) return;
-        if (!leadsPerUser.has(lead.assigned_to_user_id)) {
-          leadsPerUser.set(lead.assigned_to_user_id, new Set());
+        if (!lead.first_assigned_to_user_id) return;
+        if (!leadsPerUser.has(lead.first_assigned_to_user_id)) {
+          leadsPerUser.set(lead.first_assigned_to_user_id, new Set());
         }
-        leadsPerUser.get(lead.assigned_to_user_id)!.add(lead.id);
+        leadsPerUser.get(lead.first_assigned_to_user_id)!.add(lead.id);
       });
       
       // Add created leads (self-created by calling staff)
