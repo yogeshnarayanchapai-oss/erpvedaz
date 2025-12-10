@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/useProducts';
 import { useLeadSources } from '@/hooks/useLeadSources';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,6 +32,7 @@ interface LeadRow {
 export function BulkEditLeadsForm({ open, onOpenChange, selectedLeads, onComplete }: BulkEditLeadsFormProps) {
   const { data: products = [] } = useProducts();
   const { data: leadSources = [] } = useLeadSources();
+  const { currentStore } = useCurrentStore();
   const queryClient = useQueryClient();
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,6 +69,20 @@ export function BulkEditLeadsForm({ open, onOpenChange, selectedLeads, onComplet
 
     setIsSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Get actor name
+      const { data: actorProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+      const actorName = actorProfile?.name || 'Unknown User';
+
+      // Get store_id from current store context
+      const storeId = currentStore?.id || null;
+
       // Update each lead
       for (const row of rows) {
         const { error } = await supabase
@@ -83,6 +99,26 @@ export function BulkEditLeadsForm({ open, onOpenChange, selectedLeads, onComplet
           .eq('id', row.id);
 
         if (error) throw error;
+      }
+
+      // Notify ADMIN and OWNER users
+      const { data: adminOwners } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['ADMIN', 'OWNER']);
+
+      if (adminOwners && adminOwners.length > 0) {
+        const notifications = adminOwners.map(profile => ({
+          target_user_id: profile.id,
+          title: 'Leads Bulk Edited',
+          message: `${rows.length} lead(s) were bulk edited by ${actorName}`,
+          type: 'LEAD_EDITED',
+          store_id: storeId,
+          actor_id: user.id,
+          actor_name: actorName,
+        }));
+
+        await supabase.from('notifications').insert(notifications);
       }
 
       toast.success(`${rows.length} leads updated successfully`);
