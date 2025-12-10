@@ -130,15 +130,19 @@ export default function LeadsAll() {
       return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch;
     });
 
-    // Sort: unassigned leads first when viewing today's leads
+    // Sort: newest first, then unassigned leads first when viewing today's leads
     if (isTodayFilter) {
       leads = leads.sort((a, b) => {
         const aUnassigned = !a.assigned_to_user_id;
         const bUnassigned = !b.assigned_to_user_id;
         if (aUnassigned && !bUnassigned) return -1;
         if (!aUnassigned && bUnassigned) return 1;
-        return 0;
+        // Within same group, sort by created_at descending
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
+    } else {
+      // For all other views, sort by created_at descending (newest first)
+      leads = leads.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     return leads;

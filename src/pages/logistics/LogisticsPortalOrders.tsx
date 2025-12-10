@@ -89,7 +89,8 @@ export default function LogisticsPortalOrders() {
   const filteredOrders = useMemo(() => {
     // If reference ID search is active, search globally
     if (search && isReferenceIdSearch(search)) {
-      return globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+      return globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     let filtered = orders;
@@ -117,7 +118,8 @@ export default function LogisticsPortalOrders() {
       );
     }
     
-    return filtered;
+    // Sort by newest first
+    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, search]);
 
   // Stats (only used on dashboard)

@@ -181,6 +181,9 @@ export default function AdminLeads() {
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
     return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch;
+  }).sort((a, b) => {
+    // Sort by created_at descending - newest first
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   // Selection handlers
