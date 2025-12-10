@@ -104,9 +104,14 @@ export default function LeadsDashboard() {
       l.current_team === 'CALLING'
     );
     
-    const todayTransfer = staffLeads.filter(l => l.date === today).length;
+    // Today Transfer = leads assigned today
+    const todayTransfer = staffLeads.filter(l => {
+      const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
+      return assignedAt === today;
+    }).length;
+    // Remaining = leads with status ASSIGNED or PENDING (null, NEW)
     const remaining = staffLeads.filter(l => 
-      l.status !== 'CONFIRMED' && l.status !== 'CANCELLED'
+      l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
     ).length;
     
     // Count products with quantities
