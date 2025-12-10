@@ -85,9 +85,9 @@ export default function AdminLeads() {
   const resendCNRToPool = useAdminResendCNRToPool();
   const [showPoolDialog, setShowPoolDialog] = useState(false);
 
-  // Check if user has permission (ADMIN or MANAGER role)
-  const canReturnLeads = profile?.role === 'ADMIN' || profile?.role === 'LEADS';
-  const canManageLeads = profile?.role === 'ADMIN' || profile?.role === 'MANAGER';
+  // Check if user has permission (ADMIN, OWNER or MANAGER role)
+  const canReturnLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'LEADS';
+  const canManageLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'MANAGER';
 
   // Update date range when tab changes
   useEffect(() => {
