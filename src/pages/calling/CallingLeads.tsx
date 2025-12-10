@@ -321,6 +321,7 @@ export default function CallingLeads() {
     amount: '',
     delivery_location: '',
     is_cod: true,
+    date: '',
     followup_preset: '',
     followup_date: '',
     followup_time: '',
@@ -516,6 +517,7 @@ Order By: ${profile?.name || 'N/A'}`;
       amount: product?.sell_price?.toString() || '',
       delivery_location: deliveryLocation,
       is_cod: isCod,
+      date: lead.date || '',
       followup_preset: '',
       followup_date: lead.next_followup_at ? lead.next_followup_at.split('T')[0] : '',
       followup_time: lead.next_followup_at ? lead.next_followup_at.split('T')[1]?.substring(0, 5) || '' : '',
@@ -557,6 +559,7 @@ Order By: ${profile?.name || 'N/A'}`;
         full_address: editForm.full_address || undefined,
         alt_phone: editForm.alt_phone || undefined,
         remark: editForm.remark || undefined,
+        date: editForm.date || undefined,
         ...followupData,
       });
 

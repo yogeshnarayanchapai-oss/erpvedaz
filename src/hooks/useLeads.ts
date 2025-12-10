@@ -74,6 +74,7 @@ export interface UpdateLeadInput {
   remark?: string;
   status?: LeadStatus;
   order_description?: string;
+  date?: string;
   // Follow-up fields
   next_followup_at?: string;
   followup_reason?: string;
