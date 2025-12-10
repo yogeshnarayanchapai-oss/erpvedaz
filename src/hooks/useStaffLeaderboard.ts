@@ -51,43 +51,25 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Fetch leads EVER assigned to staff (using first_assigned_to_user_id which never changes)
-      // Filter by assigned_at within date range to count leads assigned during this period
-      let assignedLeadsQuery = supabase
+      // Fetch ALL leads with assignment info to properly count:
+      // 1. Original assignments (first_assigned_to_user_id) - historical count that never decreases
+      // 2. Current assignments (assigned_to_user_id) - for reassigned leads to count for new staff
+      let leadsQuery = supabase
         .from('leads')
-        .select('id, first_assigned_to_user_id, created_by_user_id, status, store_id, date, assigned_at')
-        .gte('assigned_at', `${dateFrom}T00:00:00`)
-        .lte('assigned_at', `${dateTo}T23:59:59`)
-        .not('first_assigned_to_user_id', 'is', null);
+        .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, status, store_id, date, assigned_at');
 
       // Filter by store_id
       if (storeId) {
-        assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
+        leadsQuery = leadsQuery.eq('store_id', storeId);
       }
 
-      // Fetch leads created by staff (self-created) within the date range
-      let createdLeadsQuery = supabase
-        .from('leads')
-        .select('id, assigned_to_user_id, created_by_user_id, status, store_id, date')
-        .gte('date', dateFrom)
-        .lte('date', dateTo)
-        .not('created_by_user_id', 'is', null);
+      // Filter by date range (using lead date OR assigned_at)
+      leadsQuery = leadsQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
+      leadsQuery = leadsQuery.lte('date', dateTo);
 
-      // Filter by store_id
-      if (storeId) {
-        createdLeadsQuery = createdLeadsQuery.eq('store_id', storeId);
-      }
+      const { data: allLeads, error: leadsError } = await leadsQuery;
 
-      const [assignedLeadsResult, createdLeadsResult] = await Promise.all([
-        assignedLeadsQuery,
-        createdLeadsQuery
-      ]);
-
-      if (assignedLeadsResult.error) throw assignedLeadsResult.error;
-      if (createdLeadsResult.error) throw createdLeadsResult.error;
-
-      const assignedLeads = assignedLeadsResult.data || [];
-      const createdLeads = createdLeadsResult.data || [];
+      if (leadsError) throw leadsError;
 
       // Fetch all staff profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -134,25 +116,39 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         staffStats.set(order.sales_person_id, existing);
       });
 
-      // Count leads per user: assigned TO user + created BY user (no duplicates)
+      // Count leads per user with the following logic:
+      // 1. Staff A (original assignee): counts based on first_assigned_to_user_id (historical, never decreases)
+      // 2. Staff B (reassigned): counts based on assigned_to_user_id when different from first_assigned_to_user_id
+      // 3. Self-created leads: count for the creator
       const leadsPerUser = new Map<string, Set<string>>();
       
-      // Add assigned leads using first_assigned_to_user_id (original assignee, never changes)
-      assignedLeads?.forEach(lead => {
-        if (!lead.first_assigned_to_user_id) return;
-        if (!leadsPerUser.has(lead.first_assigned_to_user_id)) {
-          leadsPerUser.set(lead.first_assigned_to_user_id, new Set());
+      allLeads?.forEach(lead => {
+        // Count for original assignee (first_assigned_to_user_id) - historical count that never decreases
+        if (lead.first_assigned_to_user_id) {
+          if (!leadsPerUser.has(lead.first_assigned_to_user_id)) {
+            leadsPerUser.set(lead.first_assigned_to_user_id, new Set());
+          }
+          leadsPerUser.get(lead.first_assigned_to_user_id)!.add(lead.id);
         }
-        leadsPerUser.get(lead.first_assigned_to_user_id)!.add(lead.id);
-      });
-      
-      // Add created leads (self-created by calling staff)
-      createdLeads?.forEach(lead => {
-        if (!lead.created_by_user_id) return;
-        if (!leadsPerUser.has(lead.created_by_user_id)) {
-          leadsPerUser.set(lead.created_by_user_id, new Set());
+        
+        // Count for current assignee if different from original (reassigned leads)
+        // This ensures Staff B gets +1 when lead is reassigned to them
+        if (lead.assigned_to_user_id && lead.assigned_to_user_id !== lead.first_assigned_to_user_id) {
+          if (!leadsPerUser.has(lead.assigned_to_user_id)) {
+            leadsPerUser.set(lead.assigned_to_user_id, new Set());
+          }
+          leadsPerUser.get(lead.assigned_to_user_id)!.add(lead.id);
         }
-        leadsPerUser.get(lead.created_by_user_id)!.add(lead.id);
+        
+        // Count for creator (self-created leads) if not already counted via assignment
+        if (lead.created_by_user_id && 
+            lead.created_by_user_id !== lead.first_assigned_to_user_id && 
+            lead.created_by_user_id !== lead.assigned_to_user_id) {
+          if (!leadsPerUser.has(lead.created_by_user_id)) {
+            leadsPerUser.set(lead.created_by_user_id, new Set());
+          }
+          leadsPerUser.get(lead.created_by_user_id)!.add(lead.id);
+        }
       });
 
       // Build leaderboard
