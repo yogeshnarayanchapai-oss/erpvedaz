@@ -147,7 +147,7 @@ export default function LogisticsOutsideValley() {
       o.destination_branch?.toLowerCase().includes(searchLower) ||
       o.products?.name?.toLowerCase().includes(searchLower)
     );
-  });
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Stats calculations - using specific status rules for Outside Valley
   // CONFIRMED = sent to logistics but not yet exported to any partner

@@ -94,7 +94,7 @@ export default function LogisticsInsideValley() {
       o.leads?.contact_number?.includes(search) ||
       o.products?.name?.toLowerCase().includes(searchLower)
     );
-  });
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Stats calculations
   const confirmedOrders = filteredOrders.filter(o => o.order_status === 'CONFIRMED');
