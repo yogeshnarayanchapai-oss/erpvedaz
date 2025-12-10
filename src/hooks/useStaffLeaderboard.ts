@@ -51,12 +51,10 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Fetch all leads with assigned user info, filtered by store
+      // Fetch all leads assigned to staff (no date filter - matches what staff see in their Leads page)
       let leadsQuery = supabase
         .from('leads')
         .select('id, assigned_to_user_id, status, store_id')
-        .gte('date', dateFrom)
-        .lte('date', dateTo)
         .not('assigned_to_user_id', 'is', null);
 
       // Filter by store_id
@@ -137,12 +135,15 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         if (!name) return;
 
         const stats = staffStats.get(staffId) || { totalOrders: 0, confirmedOrders: 0, vdNotDeliver: 0, totalSales: 0 };
-        const totalLeads = leadsPerUser.get(staffId) || 0;
+        const leadsCount = leadsPerUser.get(staffId) || 0;
+        
+        // Total Leads = assigned leads + total orders (matches what staff see across Leads + My Orders pages)
+        const totalLeads = leadsCount + stats.totalOrders;
         
         // Only include staff with some activity
-        if (stats.totalOrders === 0 && totalLeads === 0) return;
+        if (stats.totalOrders === 0 && leadsCount === 0) return;
 
-        // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Leads * 100
+        // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Total Leads * 100
         const effectiveOrders = stats.confirmedOrders - stats.vdNotDeliver;
         const conversionRate = totalLeads > 0 
           ? (effectiveOrders / totalLeads) * 100 
