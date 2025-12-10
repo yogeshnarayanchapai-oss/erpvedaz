@@ -96,7 +96,7 @@ export function useStaffDetailSummary(staffId: string, dateRange: DateRange) {
       assignedLeads?.forEach(l => uniqueLeadIds.add(l.id));
       createdLeads?.forEach(l => uniqueLeadIds.add(l.id));
 
-      const leadsReceived = uniqueLeadIds.size;
+      const uniqueLeadsCount = uniqueLeadIds.size;
       const ordersHandled = orders?.length || 0;
       const confirmedOrders = orders?.filter((o: any) => 
         ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status)
@@ -113,11 +113,11 @@ export function useStaffDetailSummary(staffId: string, dateRange: DateRange) {
         ?.filter((o: any) => ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status))
         .reduce((sum: number, o: any) => sum + (o.amount || 0), 0) || 0;
       
-      // Total leads = unique leads + orders (matching leaderboard logic)
-      const totalLeads = leadsReceived + ordersHandled;
+      // Leads Received = unique leads + orders (matching leaderboard "Leads" column formula)
+      const leadsReceived = uniqueLeadsCount + ordersHandled;
       
       // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Total Leads * 100
-      const conversionRate = totalLeads > 0 ? ((confirmedOrders - vdNotDeliver) / totalLeads) * 100 : 0;
+      const conversionRate = leadsReceived > 0 ? ((confirmedOrders - vdNotDeliver) / leadsReceived) * 100 : 0;
       const avgOrderValue = confirmedOrders > 0 ? totalSales / confirmedOrders : 0;
 
       return {
