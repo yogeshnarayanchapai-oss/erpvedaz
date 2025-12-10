@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Send, Users, FileText, Phone, Package, ArrowRight, Clock, TrendingUp, BarChart3, PhoneOff, FileSpreadsheet } from 'lucide-react';
+import { Plus, Send, Users, FileText, Phone, Package, Clock, TrendingUp, BarChart3, PhoneOff, FileSpreadsheet } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval, parseISO, isToday } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from 'recharts';
@@ -21,6 +21,8 @@ import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsModal';
+import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
+import { useOrders } from '@/hooks/useOrders';
 
 export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
@@ -31,6 +33,7 @@ export default function LeadsDashboard() {
   const { data: allLeads = [], isLoading } = useLeads();
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
+  const { data: orders = [] } = useOrders({ dateFrom: today, dateTo: today });
 
   useEffect(() => {
     const channel = supabase
@@ -83,19 +86,6 @@ export default function LeadsDashboard() {
   // Total in Queue: Only NEW leads pending assignment (not CNR, not FU)
   const totalInQueue = newLeads.length;
 
-  // Calculate today's transfer progress
-  // Total to transfer today = all leads in pool for today
-  const todayAllInPool = todayAllLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id).length;
-  
-  // Transferred today = leads assigned today (using assigned_at)
-  const todayTransferredLeads = allLeads.filter(l => {
-    if (!l.assigned_at) return false;
-    return isToday(new Date(l.assigned_at));
-  });
-  
-  const todayTransferredCount = todayTransferredLeads.length;
-  const todayTotalForProgress = todayAllInPool + todayTransferredCount;
-  const transferProgress = todayTotalForProgress > 0 ? (todayTransferredCount / todayTotalForProgress) * 100 : 0;
 
   // Staff Transfer Summary - count ALL leads assigned today (not just CALLING team)
   const staffTransferSummary = callingStaff.map(staff => {
@@ -161,6 +151,35 @@ export default function LeadsDashboard() {
       remainingInPool,
     };
   });
+
+  // Today's Progress Stats (like AdminLeads)
+  const todayProgressStats = useMemo(() => {
+    const todayLeads = allLeads.filter(l => l.date === today);
+    const totalTodayLeads = todayLeads.length;
+    const transferredToday = allLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      return isToday(new Date(l.assigned_at));
+    }).length;
+    const remainingTodayLeads = allLeads.filter(l => 
+      l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
+    ).length;
+    
+    // Today's order stats
+    const confirmedOrders = orders.filter(o => 
+      ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status || '')
+    ).length;
+    const insideValley = orders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
+    const outsideValley = orders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+    
+    // Total remaining in pool (all leads)
+    const totalRemainingInPool = leadsInPool.length;
+    
+    return { 
+      totalTodayLeads, transferredToday, remainingTodayLeads, 
+      confirmedOrders, insideValley, outsideValley,
+      totalRemainingInPool
+    };
+  }, [allLeads, orders, today, leadsInPool]);
 
   // Bucket Conversion Analytics
   const bucketAnalytics = useMemo(() => {
@@ -309,32 +328,16 @@ export default function LeadsDashboard() {
         />
       </div>
 
-      {/* Transfer Progress Indicator */}
-      <Card className="bg-gradient-to-r from-primary/5 to-success/5 border-primary/20">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <ArrowRight className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Today's Transfer Progress</h3>
-                <p className="text-sm text-muted-foreground">
-                  {todayTransferredCount} of {todayTotalForProgress} today's leads transferred to calling staff
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-2xl font-bold text-primary">{Math.round(transferProgress)}%</span>
-            </div>
-          </div>
-          <Progress value={transferProgress} className="h-3" />
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>Remaining in pool (today): {todayAllInPool}</span>
-            <span>Transferred (today): {todayTransferredCount}</span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Today's Transfer Progress Widget with Stats */}
+      <TodayTransferProgress
+        totalTodayLeads={todayProgressStats.totalTodayLeads}
+        transferredToday={todayProgressStats.transferredToday}
+        remainingTodayLeads={todayProgressStats.remainingTodayLeads}
+        confirmedOrders={todayProgressStats.confirmedOrders}
+        insideValley={todayProgressStats.insideValley}
+        outsideValley={todayProgressStats.outsideValley}
+        totalRemainingInPool={todayProgressStats.totalRemainingInPool}
+      />
 
       {/* Bucket Conversion Analytics */}
       <div className="space-y-4">
