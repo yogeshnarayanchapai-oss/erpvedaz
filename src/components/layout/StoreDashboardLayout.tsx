@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, Outlet, useParams, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { StoreSidebar } from './StoreSidebar';
 import { Separator } from '@/components/ui/separator';
@@ -31,7 +30,7 @@ interface StoreContext {
 }
 
 export function StoreDashboardLayout() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const { storeSlug } = useParams<{ storeSlug: string }>();
   const context = useOutletContext<StoreContext>();
   const navigate = useNavigate();
@@ -129,7 +128,7 @@ export function StoreDashboardLayout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={async () => {
-                      await supabase.auth.signOut();
+                      await signOut();
                       navigate('/auth');
                     }}
                     className="text-destructive focus:text-destructive"

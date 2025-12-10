@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { CurrentStoreProvider, useCurrentStore } from '@/contexts/CurrentStoreContext';
-import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
@@ -23,7 +22,7 @@ import {
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 
 function DashboardLayoutInner() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const { currentStore } = useCurrentStore();
   const navigate = useNavigate();
 
@@ -120,7 +119,7 @@ function DashboardLayoutInner() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={async () => {
-                      await supabase.auth.signOut();
+                      await signOut();
                       navigate('/auth');
                     }}
                     className="text-destructive focus:text-destructive"
