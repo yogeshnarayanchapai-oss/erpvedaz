@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoMarkSeen } from '@/hooks/useViewState';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,7 @@ export default function AdminLeads() {
   const today = new Date();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+  const storeId = useCurrentStoreId();
   
   // Read initial values from URL params
   const initialFromParam = searchParams.get('from');
@@ -148,13 +150,15 @@ export default function AdminLeads() {
   // Fetch lead_transfers for Staff Transfer Summary (aggregated from ALL transferring users)
   useEffect(() => {
     const fetchLeadTransfers = async () => {
+      if (!storeId) return;
       const todayStr = format(today, 'yyyy-MM-dd');
       const { data } = await supabase
         .from('lead_transfers')
-        .select('to_user_id, transferred_at, lead_id')
+        .select('to_user_id, transferred_at, lead_id, leads!inner(store_id)')
+        .eq('leads.store_id', storeId)
         .gte('transferred_at', `${todayStr}T00:00:00`)
         .lte('transferred_at', `${todayStr}T23:59:59`);
-      setLeadTransfers(data || []);
+      setLeadTransfers(data?.map(d => ({ to_user_id: d.to_user_id, transferred_at: d.transferred_at, lead_id: d.lead_id })) || []);
     };
     fetchLeadTransfers();
 
@@ -169,7 +173,7 @@ export default function AdminLeads() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [today]);
+  }, [today, storeId]);
 
   // Mark section as seen when data loads (for badge clearing)
   useAutoMarkSeen('all_leads', isFetched && !isLoading);
