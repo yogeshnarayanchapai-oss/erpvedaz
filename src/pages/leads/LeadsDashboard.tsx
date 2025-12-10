@@ -109,19 +109,26 @@ export default function LeadsDashboard() {
       l.status !== 'CONFIRMED' && l.status !== 'CANCELLED'
     ).length;
     
-    const productsTransferred = [...new Set(
-      staffLeads
-        .filter(l => l.date === today && l.product_id)
-        .map(l => products.find(p => p.id === l.product_id)?.name)
-        .filter(Boolean)
-    )];
+    // Count products with quantities
+    const todayLeadsWithProducts = staffLeads.filter(l => l.date === today && l.product_id);
+    const productCounts: Record<string, number> = {};
+    todayLeadsWithProducts.forEach(lead => {
+      const productName = products.find(p => p.id === lead.product_id)?.name;
+      if (productName) {
+        productCounts[productName] = (productCounts[productName] || 0) + 1;
+      }
+    });
+    
+    const productsWithQty = Object.entries(productCounts)
+      .map(([name, qty]) => `${name} (${qty})`)
+      .join(', ');
 
     return {
       id: staff.id,
       name: staff.name,
       todayTransfer,
       remaining,
-      products: productsTransferred.join(', ') || '-',
+      products: productsWithQty || '-',
     };
   }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
 
@@ -475,7 +482,10 @@ export default function LeadsDashboard() {
                           {staff.remaining}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">
+                      <TableCell 
+                        className={`text-muted-foreground max-w-[200px] ${staff.products.length > 40 ? 'text-xs' : 'text-sm'}`}
+                        title={staff.products}
+                      >
                         {staff.products}
                       </TableCell>
                     </TableRow>
