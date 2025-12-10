@@ -52,21 +52,41 @@ export function useStaffLeaderboard(dateRange: DateRange) {
       if (ordersError) throw ordersError;
 
       // Fetch leads assigned to staff within the date range
-      let leadsQuery = supabase
+      let assignedLeadsQuery = supabase
         .from('leads')
-        .select('id, assigned_to_user_id, status, store_id, date')
+        .select('id, assigned_to_user_id, created_by_user_id, status, store_id, date')
         .gte('date', dateFrom)
         .lte('date', dateTo)
         .not('assigned_to_user_id', 'is', null);
 
       // Filter by store_id
       if (storeId) {
-        leadsQuery = leadsQuery.eq('store_id', storeId);
+        assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
       }
 
-      const { data: leads, error: leadsError } = await leadsQuery;
+      // Fetch leads created by staff (self-created) within the date range
+      let createdLeadsQuery = supabase
+        .from('leads')
+        .select('id, assigned_to_user_id, created_by_user_id, status, store_id, date')
+        .gte('date', dateFrom)
+        .lte('date', dateTo)
+        .not('created_by_user_id', 'is', null);
 
-      if (leadsError) throw leadsError;
+      // Filter by store_id
+      if (storeId) {
+        createdLeadsQuery = createdLeadsQuery.eq('store_id', storeId);
+      }
+
+      const [assignedLeadsResult, createdLeadsResult] = await Promise.all([
+        assignedLeadsQuery,
+        createdLeadsQuery
+      ]);
+
+      if (assignedLeadsResult.error) throw assignedLeadsResult.error;
+      if (createdLeadsResult.error) throw createdLeadsResult.error;
+
+      const assignedLeads = assignedLeadsResult.data || [];
+      const createdLeads = createdLeadsResult.data || [];
 
       // Fetch all staff profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -113,14 +133,25 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         staffStats.set(order.sales_person_id, existing);
       });
 
-      // Count leads per assigned user
-      const leadsPerUser = new Map<string, number>();
-      leads?.forEach(lead => {
+      // Count leads per user: assigned TO user + created BY user (no duplicates)
+      const leadsPerUser = new Map<string, Set<string>>();
+      
+      // Add assigned leads
+      assignedLeads?.forEach(lead => {
         if (!lead.assigned_to_user_id) return;
-        leadsPerUser.set(
-          lead.assigned_to_user_id,
-          (leadsPerUser.get(lead.assigned_to_user_id) || 0) + 1
-        );
+        if (!leadsPerUser.has(lead.assigned_to_user_id)) {
+          leadsPerUser.set(lead.assigned_to_user_id, new Set());
+        }
+        leadsPerUser.get(lead.assigned_to_user_id)!.add(lead.id);
+      });
+      
+      // Add created leads (self-created by calling staff)
+      createdLeads?.forEach(lead => {
+        if (!lead.created_by_user_id) return;
+        if (!leadsPerUser.has(lead.created_by_user_id)) {
+          leadsPerUser.set(lead.created_by_user_id, new Set());
+        }
+        leadsPerUser.get(lead.created_by_user_id)!.add(lead.id);
       });
 
       // Build leaderboard
@@ -137,9 +168,10 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         if (!name) return;
 
         const stats = staffStats.get(staffId) || { totalOrders: 0, confirmedOrders: 0, vdNotDeliver: 0, totalSales: 0 };
-        const leadsCount = leadsPerUser.get(staffId) || 0;
+        const leadsSet = leadsPerUser.get(staffId);
+        const leadsCount = leadsSet ? leadsSet.size : 0;
         
-        // Total Leads = assigned leads + total orders (matches what staff see across Leads + My Orders pages)
+        // Total Leads = assigned leads + created leads (unique, no duplicates) + total orders
         const totalLeads = leadsCount + stats.totalOrders;
         
         // Only include staff with some activity
