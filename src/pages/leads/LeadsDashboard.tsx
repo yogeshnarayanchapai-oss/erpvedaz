@@ -23,17 +23,42 @@ import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsModal';
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { useOrders } from '@/hooks/useOrders';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
   const today = getNepalDate();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const { effectiveRole } = useEffectiveRole();
+  
+  // Check if user is Admin/Owner (sees all store data) or LEADS role (sees only own data)
+  const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER';
+  const currentUserId = user?.id;
   
   const { data: allLeads = [], isLoading } = useLeads();
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const { data: orders = [] } = useOrders({ dateFrom: today, dateTo: today });
+  
+  // Filter leads based on role: Admin/Owner sees all, LEADS role sees only their own created/handled leads
+  const filteredLeads = useMemo(() => {
+    if (isAdminOrOwner) return allLeads;
+    // LEADS role: only show leads they created
+    return allLeads.filter(l => l.created_by_user_id === currentUserId);
+  }, [allLeads, isAdminOrOwner, currentUserId]);
+  
+  // Filter orders based on role
+  const filteredOrders = useMemo(() => {
+    if (isAdminOrOwner) return orders;
+    // LEADS role: only show orders from leads they created
+    return orders.filter(o => {
+      const lead = allLeads.find(l => l.id === o.lead_id);
+      return lead?.created_by_user_id === currentUserId;
+    });
+  }, [orders, allLeads, isAdminOrOwner, currentUserId]);
 
   useEffect(() => {
     const channel = supabase
@@ -58,10 +83,10 @@ export default function LeadsDashboard() {
   });
 
   // Filter leads in LEADS team pool with IN_POOL status
-  const leadsInPool = allLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
+  const leadsInPool = filteredLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
   
   // Today's leads: all leads created today (New + FU + CNR combined)
-  const todayAllLeads = allLeads.filter(l => {
+  const todayAllLeads = filteredLeads.filter(l => {
     const isCreatedToday = l.date === today;
     const isReturnedToday = l.returned_to_leads_at && isToday(new Date(l.returned_to_leads_at));
     return isCreatedToday || isReturnedToday;
@@ -76,102 +101,142 @@ export default function LeadsDashboard() {
   const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED');
   
   // Follow-up leads count - includes leads with FOLLOW_UP status or sent to FOLLOWUP team
-  const followupLeads = allLeads.filter(l => 
+  const followupLeads = filteredLeads.filter(l => 
     l.lead_bucket === 'FOLLOW_UP_POOL' || l.current_team === 'FOLLOWUP' || l.status === 'FOLLOW_UP'
   );
   
   // CNR leads count - includes both teams (LEADS and CALLING)
-  const cnrLeads = allLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
+  const cnrLeads = filteredLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
   
   // Total in Queue: Only NEW leads pending assignment (not CNR, not FU)
   const totalInQueue = newLeads.length;
 
 
-  // Staff Transfer Summary - count ALL leads assigned today (not just CALLING team)
-  const staffTransferSummary = callingStaff.map(staff => {
-    // All leads assigned to this staff
-    const staffLeads = allLeads.filter(l => l.assigned_to_user_id === staff.id);
-    
-    // Today Transfer = leads assigned today using isToday for consistency with modal
-    const todayTransfer = staffLeads.filter(l => {
-      if (!l.assigned_at) return false;
-      return isToday(new Date(l.assigned_at));
-    }).length;
-    
-    // Remaining = leads with pending statuses (not yet called/processed)
-    const remaining = staffLeads.filter(l => 
-      l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
-    ).length;
-    
-    // Count products with quantities for today's assigned leads
-    const todayAssignedLeads = staffLeads.filter(l => {
-      if (!l.assigned_at) return false;
-      return isToday(new Date(l.assigned_at)) && l.product_id;
-    });
-    const productCounts: Record<string, number> = {};
-    todayAssignedLeads.forEach(lead => {
-      const productName = products.find(p => p.id === lead.product_id)?.name;
-      if (productName) {
-        productCounts[productName] = (productCounts[productName] || 0) + 1;
+  // Staff Transfer Summary - for LEADS role, show only their own row
+  // For Admin/Owner, show all calling staff summary
+  const staffTransferSummary = useMemo(() => {
+    // For LEADS role users, we calculate their own stats as "creator" - leads they created that were transferred
+    if (!isAdminOrOwner && currentUserId) {
+      const userCreatedLeads = filteredLeads;
+      const todayTransfer = userCreatedLeads.filter(l => {
+        if (!l.assigned_at) return false;
+        return isToday(new Date(l.assigned_at));
+      }).length;
+      const remaining = userCreatedLeads.filter(l => 
+        l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
+      ).length;
+      
+      // Count products with quantities
+      const todayAssignedLeads = userCreatedLeads.filter(l => {
+        if (!l.assigned_at) return false;
+        return isToday(new Date(l.assigned_at)) && l.product_id;
+      });
+      const productCounts: Record<string, number> = {};
+      todayAssignedLeads.forEach(lead => {
+        const productName = products.find(p => p.id === lead.product_id)?.name;
+        if (productName) {
+          productCounts[productName] = (productCounts[productName] || 0) + 1;
+        }
+      });
+      const productEntries = Object.entries(productCounts);
+      const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
+      const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
+      const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
+      
+      if (todayTransfer > 0 || remaining > 0) {
+        return [{
+          id: currentUserId,
+          name: profile?.name || 'You',
+          todayTransfer,
+          remaining,
+          products: displayProducts || '-',
+          fullProducts: fullProductList || '-',
+        }];
       }
-    });
+      return [];
+    }
     
-    const productEntries = Object.entries(productCounts);
-    const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
-    // If too long, show first word of each product name
-    const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
-    const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
+    // Admin/Owner: show all calling staff
+    return callingStaff.map(staff => {
+      const staffLeads = allLeads.filter(l => l.assigned_to_user_id === staff.id);
+      const todayTransfer = staffLeads.filter(l => {
+        if (!l.assigned_at) return false;
+        return isToday(new Date(l.assigned_at));
+      }).length;
+      const remaining = staffLeads.filter(l => 
+        l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
+      ).length;
+      
+      const todayAssignedLeads = staffLeads.filter(l => {
+        if (!l.assigned_at) return false;
+        return isToday(new Date(l.assigned_at)) && l.product_id;
+      });
+      const productCounts: Record<string, number> = {};
+      todayAssignedLeads.forEach(lead => {
+        const productName = products.find(p => p.id === lead.product_id)?.name;
+        if (productName) {
+          productCounts[productName] = (productCounts[productName] || 0) + 1;
+        }
+      });
+      
+      const productEntries = Object.entries(productCounts);
+      const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
+      const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
+      const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
 
-    return {
-      id: staff.id,
-      name: staff.name,
-      todayTransfer,
-      remaining,
-      products: displayProducts || '-',
-      fullProducts: fullProductList || '-',
-    };
-  }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
+      return {
+        id: staff.id,
+        name: staff.name,
+        todayTransfer,
+        remaining,
+        products: displayProducts || '-',
+        fullProducts: fullProductList || '-',
+      };
+    }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
+  }, [isAdminOrOwner, currentUserId, filteredLeads, allLeads, callingStaff, products, profile?.name]);
 
-  // Product Leads Summary
-  const productSummary = products.map(product => {
-    const productLeads = allLeads.filter(l => l.product_id === product.id);
-    const leadsToday = productLeads.filter(l => l.date === today).length;
-    const transferredToday = productLeads.filter(l => 
-      l.date === today && l.assigned_to_user_id !== null
-    ).length;
-    const remainingInPool = productLeads.filter(l => 
-      l.current_team === 'LEADS' && !l.assigned_to_user_id
-    ).length;
+  // Product Leads Summary - uses filtered leads based on role
+  const productSummary = useMemo(() => {
+    return products.map(product => {
+      const productLeads = filteredLeads.filter(l => l.product_id === product.id);
+      const leadsToday = productLeads.filter(l => l.date === today).length;
+      const transferredToday = productLeads.filter(l => 
+        l.date === today && l.assigned_to_user_id !== null
+      ).length;
+      const remainingInPool = productLeads.filter(l => 
+        l.current_team === 'LEADS' && !l.assigned_to_user_id
+      ).length;
 
-    return {
-      id: product.id,
-      name: product.name,
-      leadsToday,
-      transferredToday,
-      remainingInPool,
-    };
-  });
+      return {
+        id: product.id,
+        name: product.name,
+        leadsToday,
+        transferredToday,
+        remainingInPool,
+      };
+    });
+  }, [products, filteredLeads, today]);
 
-  // Today's Progress Stats (like AdminLeads)
+  // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
   const todayProgressStats = useMemo(() => {
-    const todayLeads = allLeads.filter(l => l.date === today);
+    const todayLeads = filteredLeads.filter(l => l.date === today);
     const totalTodayLeads = todayLeads.length;
-    const transferredToday = allLeads.filter(l => {
+    const transferredToday = filteredLeads.filter(l => {
       if (!l.assigned_at) return false;
       return isToday(new Date(l.assigned_at));
     }).length;
-    const remainingTodayLeads = allLeads.filter(l => 
+    const remainingTodayLeads = filteredLeads.filter(l => 
       l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
     ).length;
     
-    // Today's order stats
-    const confirmedOrders = orders.filter(o => 
+    // Today's order stats - use filtered orders
+    const confirmedOrders = filteredOrders.filter(o => 
       ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status || '')
     ).length;
-    const insideValley = orders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
-    const outsideValley = orders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+    const insideValley = filteredOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
+    const outsideValley = filteredOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
     
-    // Total remaining in pool (all leads)
+    // Total remaining in pool (filtered leads)
     const totalRemainingInPool = leadsInPool.length;
     
     return { 
@@ -179,19 +244,19 @@ export default function LeadsDashboard() {
       confirmedOrders, insideValley, outsideValley,
       totalRemainingInPool
     };
-  }, [allLeads, orders, today, leadsInPool]);
+  }, [filteredLeads, filteredOrders, today, leadsInPool]);
 
-  // Bucket Conversion Analytics
+  // Bucket Conversion Analytics - uses role-filtered leads
   const bucketAnalytics = useMemo(() => {
-    const filteredLeads = allLeads.filter(l => {
+    const dateRangeLeads = filteredLeads.filter(l => {
       if (!l.date) return false;
       const leadDate = parseISO(l.date);
       return isWithinInterval(leadDate, { start: analyticsDateRange.from, end: analyticsDateRange.to });
     });
 
-    const newBucketLeads = filteredLeads.filter(l => l.lead_bucket === 'NEW');
-    const followupBucketLeads = filteredLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL' || l.lead_bucket === 'FOLLOWUP');
-    const cnrBucketLeads = filteredLeads.filter(l => l.lead_bucket === 'CNR_POOL');
+    const newBucketLeads = dateRangeLeads.filter(l => l.lead_bucket === 'NEW');
+    const followupBucketLeads = dateRangeLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL' || l.lead_bucket === 'FOLLOWUP');
+    const cnrBucketLeads = dateRangeLeads.filter(l => l.lead_bucket === 'CNR_POOL');
     
     const newConfirmed = newBucketLeads.filter(l => l.status === 'CONFIRMED').length;
     const newTotal = newBucketLeads.length;
@@ -205,7 +270,7 @@ export default function LeadsDashboard() {
     const cnrTotal = cnrBucketLeads.length;
     const cnrConversionRate = cnrTotal > 0 ? ((cnrConfirmed / cnrTotal) * 100) : 0;
     
-    const cancelledLeads = filteredLeads.filter(l => l.lead_bucket === 'CANCELLED' || l.status === 'CANCELLED').length;
+    const cancelledLeads = dateRangeLeads.filter(l => l.lead_bucket === 'CANCELLED' || l.status === 'CANCELLED').length;
     
     return {
       new: { total: newTotal, confirmed: newConfirmed, rate: newConversionRate },
@@ -213,7 +278,7 @@ export default function LeadsDashboard() {
       cnr: { total: cnrTotal, confirmed: cnrConfirmed, rate: cnrConversionRate },
       cancelled: cancelledLeads,
     };
-  }, [allLeads, analyticsDateRange]);
+  }, [filteredLeads, analyticsDateRange]);
 
   const conversionChartData = useMemo(() => [
     { 
@@ -248,7 +313,9 @@ export default function LeadsDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Leads Dashboard</h1>
-          <p className="text-muted-foreground">Manage and distribute leads</p>
+          <p className="text-muted-foreground">
+            {isAdminOrOwner ? 'All leads in store' : 'Your leads and transfers'}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsTransferOpen(true)}>
