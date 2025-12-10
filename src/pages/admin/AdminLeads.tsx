@@ -218,16 +218,19 @@ export default function AdminLeads() {
         }
       });
       
-      const productsWithQty = Object.entries(productCounts)
-        .map(([name, qty]) => `${name} (${qty})`)
-        .join(', ');
+      const productEntries = Object.entries(productCounts);
+      const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
+      const displayProducts = productEntries.length > 1 && fullProductList.length > 30
+        ? `${productEntries[0][0]} (${productEntries[0][1]})`
+        : fullProductList;
 
       return {
         id: staff.id,
         name: staff.name,
         todayTransfer,
         remaining,
-        products: productsWithQty || '-',
+        products: displayProducts || '-',
+        fullProducts: fullProductList || '-',
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0)
       .sort((a, b) => b.todayTransfer - a.todayTransfer);
@@ -467,8 +470,8 @@ export default function AdminLeads() {
                             </Badge>
                           </TableCell>
                           <TableCell 
-                            className={`text-muted-foreground max-w-[200px] ${staff.products.length > 40 ? 'text-xs' : 'text-sm'}`}
-                            title={staff.products}
+                            className="text-sm text-muted-foreground max-w-[200px]"
+                            title={staff.fullProducts}
                           >
                             {staff.products}
                           </TableCell>
