@@ -51,10 +51,12 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Fetch all leads assigned to staff (no date filter - matches what staff see in their Leads page)
+      // Fetch leads assigned to staff within the date range (matches My Leads page with date filter)
       let leadsQuery = supabase
         .from('leads')
         .select('id, assigned_to_user_id, status, store_id')
+        .gte('date', dateFrom)
+        .lte('date', dateTo)
         .not('assigned_to_user_id', 'is', null);
 
       // Filter by store_id
