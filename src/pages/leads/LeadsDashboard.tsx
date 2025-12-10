@@ -134,10 +134,11 @@ export default function LeadsDashboard() {
       return { displayProducts: displayProducts || '-', fullProductList: fullProductList || '-' };
     };
 
-    // For LEADS role: Show calling staff who received leads from this LEADS user
+    // For LEADS role: Show calling staff who received leads CREATED by this LEADS user
+    // (regardless of who did the transfer/assignment - could be Admin or the user themselves)
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        // Leads created by this LEADS user AND assigned to this calling staff
+        // Leads CREATED by this LEADS user AND assigned to this calling staff (by anyone)
         const staffLeads = allLeads.filter(l => 
           l.created_by_user_id === currentUserId && 
           l.assigned_to_user_id === staff.id
