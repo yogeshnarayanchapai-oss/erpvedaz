@@ -121,9 +121,9 @@ export default function LeadsDashboard() {
     
     const productEntries = Object.entries(productCounts);
     const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
-    const displayProducts = productEntries.length > 1 && fullProductList.length > 30
-      ? `${productEntries[0][0]} (${productEntries[0][1]})`
-      : fullProductList;
+    // If too long, show first word of each product name
+    const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
+    const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
 
     return {
       id: staff.id,
