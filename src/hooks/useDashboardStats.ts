@@ -363,10 +363,16 @@ export function useStaffOrderStats(userId?: string, dateFrom?: string, dateTo?: 
         total: orders.length,
         insideValley: {
           total: insideValleyOrders.length,
-          delivered: insideValleyOrders.filter(o => o.inside_delivery_status === 'DELIVERED').length,
-          pending: insideValleyOrders.filter(o => !o.inside_delivery_status || o.inside_delivery_status === 'PENDING').length,
-          reachedCNR: insideValleyOrders.filter(o => o.inside_delivery_status === 'REACHED_CNR').length,
-          customerCancelled: insideValleyOrders.filter(o => o.inside_delivery_status === 'CUSTOMER_CANCELLED').length,
+          // IV Delivered: Inside Valley + order_status = DELIVERED
+          delivered: insideValleyOrders.filter(o => o.order_status === 'DELIVERED').length,
+          // IV Pending: Inside Valley + order_status = CONFIRMED + delivery_status != DELIVERED
+          pending: insideValleyOrders.filter(o => 
+            o.order_status === 'CONFIRMED' && o.inside_delivery_status !== 'DELIVERED'
+          ).length,
+          // IV Reached CNR: Inside Valley + order_status = LOCATION_CNR
+          reachedCNR: insideValleyOrders.filter(o => o.order_status === 'LOCATION_CNR').length,
+          // IV Customer Cancel: Inside Valley + order_status = CANCELLED
+          customerCancelled: insideValleyOrders.filter(o => o.order_status === 'CANCELLED').length,
         },
         outsideValley: orders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length,
       };
