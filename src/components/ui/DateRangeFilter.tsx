@@ -29,6 +29,7 @@ interface DateRangeFilterProps {
 
 const presets = [
   { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last 7 days', value: '7days' },
   { label: 'Last 30 days', value: '30days' },
   { label: 'Custom', value: 'custom' },
@@ -44,6 +45,10 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
     switch (newPreset) {
       case 'today':
         onChange({ from: startOfDay(today), to: endOfDay(today) });
+        break;
+      case 'yesterday':
+        const yesterday = subDays(today, 1);
+        onChange({ from: startOfDay(yesterday), to: endOfDay(yesterday) });
         break;
       case '7days':
         onChange({ from: startOfDay(subDays(today, 6)), to: endOfDay(today) });
