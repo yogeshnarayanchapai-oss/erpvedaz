@@ -47,6 +47,7 @@ export default function LeadsAll() {
   const [productFilter, setProductFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [bucketFilter, setBucketFilter] = useState<LeadBucketFilter>(initialBucket);
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -96,6 +97,14 @@ export default function LeadsAll() {
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
       
+      // Assigned to filter
+      let matchesAssignedTo = assignedToFilter === 'ALL';
+      if (assignedToFilter === 'UNASSIGNED') {
+        matchesAssignedTo = !lead.assigned_to_user_id;
+      } else if (assignedToFilter !== 'ALL') {
+        matchesAssignedTo = lead.assigned_to_user_id === assignedToFilter;
+      }
+      
       // Bucket filter logic
       let matchesBucket = bucketFilter === 'ALL';
       if (bucketFilter === 'CNR') {
@@ -116,7 +125,7 @@ export default function LeadsAll() {
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
       
-      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesSearch;
+      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch;
     });
 
     // Sort: unassigned leads first when viewing today's leads
@@ -131,7 +140,7 @@ export default function LeadsAll() {
     }
 
     return leads;
-  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, search, isTodayFilter]);
+  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
   const bucketCounts = useMemo(() => {
@@ -390,6 +399,21 @@ export default function LeadsAll() {
                     <SelectItem key={s} value={s}>
                       {s === 'ALL' ? 'All Statuses' : s === 'CALL_NOT_RECEIVED' ? 'CNR' : s.replace(/_/g, ' ')}
                     </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assigned To</label>
+              <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Staff</SelectItem>
+                  <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+                  {callingStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
