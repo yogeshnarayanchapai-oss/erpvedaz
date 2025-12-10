@@ -1154,23 +1154,25 @@ const usersWithEmployee = useMemo(() => {
               <div className="relative">
                 <Input
                   id="newPassword"
-                  type={showNewPassword ? 'text' : 'password'}
+                  type={(profile?.role === 'OWNER' || profile?.role === 'ADMIN') && showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password (min 8 characters)"
                   disabled={isResettingPassword}
-                  className="pr-10"
+                  className={(profile?.role === 'OWNER' || profile?.role === 'ADMIN') ? "pr-10" : ""}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  disabled={isResettingPassword}
-                >
-                  {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                </Button>
+                {(profile?.role === 'OWNER' || profile?.role === 'ADMIN') && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    disabled={isResettingPassword}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -1178,23 +1180,25 @@ const usersWithEmployee = useMemo(() => {
               <div className="relative">
                 <Input
                   id="confirmNewPassword"
-                  type={showConfirmNewPassword ? 'text' : 'password'}
+                  type={(profile?.role === 'OWNER' || profile?.role === 'ADMIN') && showConfirmNewPassword ? 'text' : 'password'}
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
                   placeholder="Re-enter new password"
                   disabled={isResettingPassword}
-                  className="pr-10"
+                  className={(profile?.role === 'OWNER' || profile?.role === 'ADMIN') ? "pr-10" : ""}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                  disabled={isResettingPassword}
-                >
-                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                </Button>
+                {(profile?.role === 'OWNER' || profile?.role === 'ADMIN') && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    disabled={isResettingPassword}
+                  >
+                    {showConfirmNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
