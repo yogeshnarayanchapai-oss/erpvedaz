@@ -243,6 +243,13 @@ export default function LeadsAll() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get current user's profile for notification
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
       const { error: updateError } = await supabase
         .from('leads')
         .update({
@@ -265,6 +272,19 @@ export default function LeadsAll() {
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
+
+      // Send notification to the new assigned staff
+      await supabase.from('notifications').insert({
+        type: 'LEAD_ASSIGNED',
+        title: 'New Leads Reassigned',
+        message: `Assigned new ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''} to you.`,
+        target_user_id: reassignStaffId,
+        actor_id: user.id,
+        actor_name: currentProfile?.name || 'Leads Staff',
+        portal: 'CALLING',
+        link_path: '/calling/leads',
+        store_id: currentStore?.id || null,
+      });
 
       toast.success(`${selectedLeads.length} leads reassigned successfully`);
       setSelectedLeads([]);
