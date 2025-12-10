@@ -112,88 +112,94 @@ export default function LeadsDashboard() {
   const totalInQueue = newLeads.length;
 
 
-  // Staff Transfer Summary - for LEADS role, show only their own row
-  // For Admin/Owner, show all calling staff summary
+  // Staff Transfer Summary - shows Calling Staff list
+  // For LEADS role: shows calling staff who received leads from THIS user
+  // For Admin/Owner: shows calling staff with combined data from ALL LEADS staff in store
   const staffTransferSummary = useMemo(() => {
-    // For LEADS role users, we calculate their own stats as "creator" - leads they created that were transferred
-    if (!isAdminOrOwner && currentUserId) {
-      const userCreatedLeads = filteredLeads;
-      const todayTransfer = userCreatedLeads.filter(l => {
-        if (!l.assigned_at) return false;
-        return isToday(new Date(l.assigned_at));
-      }).length;
-      const remaining = userCreatedLeads.filter(l => 
-        l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
-      ).length;
-      
-      // Count products with quantities
-      const todayAssignedLeads = userCreatedLeads.filter(l => {
-        if (!l.assigned_at) return false;
-        return isToday(new Date(l.assigned_at)) && l.product_id;
-      });
+    // Helper function to calculate product counts
+    const calculateProducts = (leads: typeof allLeads) => {
       const productCounts: Record<string, number> = {};
-      todayAssignedLeads.forEach(lead => {
-        const productName = products.find(p => p.id === lead.product_id)?.name;
-        if (productName) {
-          productCounts[productName] = (productCounts[productName] || 0) + 1;
+      leads.forEach(lead => {
+        if (lead.product_id) {
+          const productName = products.find(p => p.id === lead.product_id)?.name;
+          if (productName) {
+            productCounts[productName] = (productCounts[productName] || 0) + 1;
+          }
         }
       });
       const productEntries = Object.entries(productCounts);
       const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
       const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
       const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
-      
-      if (todayTransfer > 0 || remaining > 0) {
-        return [{
-          id: currentUserId,
-          name: profile?.name || 'You',
+      return { displayProducts: displayProducts || '-', fullProductList: fullProductList || '-' };
+    };
+
+    // For LEADS role: Show calling staff who received leads from this LEADS user
+    if (!isAdminOrOwner && currentUserId) {
+      return callingStaff.map(staff => {
+        // Leads created by this LEADS user AND assigned to this calling staff
+        const staffLeads = allLeads.filter(l => 
+          l.created_by_user_id === currentUserId && 
+          l.assigned_to_user_id === staff.id
+        );
+        
+        // Today Transfer = assigned today
+        const todayTransfer = staffLeads.filter(l => {
+          if (!l.assigned_at) return false;
+          return isToday(new Date(l.assigned_at));
+        }).length;
+        
+        // Remaining = status is NEW/ASSIGNED/null
+        const remaining = staffLeads.filter(l => 
+          l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
+        ).length;
+        
+        // Products count from today's assigned leads
+        const todayAssignedLeads = staffLeads.filter(l => 
+          l.assigned_at && isToday(new Date(l.assigned_at))
+        );
+        const { displayProducts, fullProductList } = calculateProducts(todayAssignedLeads);
+        
+        return {
+          id: staff.id,
+          name: staff.name,
           todayTransfer,
           remaining,
-          products: displayProducts || '-',
-          fullProducts: fullProductList || '-',
-        }];
-      }
-      return [];
+          products: displayProducts,
+          fullProducts: fullProductList,
+        };
+      }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
     }
     
-    // Admin/Owner: show all calling staff
+    // Admin/Owner: show all calling staff with combined data from all LEADS staff in store
     return callingStaff.map(staff => {
+      // All leads assigned to this calling staff (from any LEADS user in store)
       const staffLeads = allLeads.filter(l => l.assigned_to_user_id === staff.id);
+      
       const todayTransfer = staffLeads.filter(l => {
         if (!l.assigned_at) return false;
         return isToday(new Date(l.assigned_at));
       }).length;
+      
       const remaining = staffLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      const todayAssignedLeads = staffLeads.filter(l => {
-        if (!l.assigned_at) return false;
-        return isToday(new Date(l.assigned_at)) && l.product_id;
-      });
-      const productCounts: Record<string, number> = {};
-      todayAssignedLeads.forEach(lead => {
-        const productName = products.find(p => p.id === lead.product_id)?.name;
-        if (productName) {
-          productCounts[productName] = (productCounts[productName] || 0) + 1;
-        }
-      });
-      
-      const productEntries = Object.entries(productCounts);
-      const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
-      const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
-      const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
+      const todayAssignedLeads = staffLeads.filter(l => 
+        l.assigned_at && isToday(new Date(l.assigned_at))
+      );
+      const { displayProducts, fullProductList } = calculateProducts(todayAssignedLeads);
 
       return {
         id: staff.id,
         name: staff.name,
         todayTransfer,
         remaining,
-        products: displayProducts || '-',
-        fullProducts: fullProductList || '-',
+        products: displayProducts,
+        fullProducts: fullProductList,
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
-  }, [isAdminOrOwner, currentUserId, filteredLeads, allLeads, callingStaff, products, profile?.name]);
+  }, [isAdminOrOwner, currentUserId, allLeads, callingStaff, products]);
 
   // Product Leads Summary - uses filtered leads based on role
   const productSummary = useMemo(() => {
