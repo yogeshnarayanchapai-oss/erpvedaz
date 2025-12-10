@@ -231,10 +231,10 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
     queryFn: async () => {
       if (!userId) return null;
 
-      // Fetch leads assigned to user
+      // Fetch leads assigned to user - filter by 'date' column (matches My Leads page)
       let assignedQuery = supabase
         .from('leads')
-        .select('id, status, order_id, assigned_at, current_team, created_by_user_id, store_id')
+        .select('id, status, order_id, date, current_team, created_by_user_id, store_id')
         .eq('assigned_to_user_id', userId);
 
       // Filter by store_id
@@ -242,18 +242,18 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         assignedQuery = assignedQuery.eq('store_id', storeId);
       }
 
-      // Filter by assigned_at date using Nepal timezone
+      // Filter by date column (matches My Leads page filtering)
       if (dateFrom) {
-        assignedQuery = assignedQuery.gte('assigned_at', getNepalDayStart(dateFrom));
+        assignedQuery = assignedQuery.gte('date', dateFrom);
       }
       if (dateTo) {
-        assignedQuery = assignedQuery.lte('assigned_at', getNepalDayEnd(dateTo));
+        assignedQuery = assignedQuery.lte('date', dateTo);
       }
 
-      // Fetch leads created by user (self-entry)
+      // Fetch leads created by user (self-entry) - filter by 'date' column
       let createdQuery = supabase
         .from('leads')
-        .select('id, status, order_id, created_at, current_team, created_by_user_id, assigned_to_user_id, store_id')
+        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_to_user_id, store_id')
         .eq('created_by_user_id', userId);
 
       // Filter by store_id
@@ -261,12 +261,12 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         createdQuery = createdQuery.eq('store_id', storeId);
       }
 
-      // Filter by created_at date using Nepal timezone for self-created leads
+      // Filter by date column for self-created leads
       if (dateFrom) {
-        createdQuery = createdQuery.gte('created_at', getNepalDayStart(dateFrom));
+        createdQuery = createdQuery.gte('date', dateFrom);
       }
       if (dateTo) {
-        createdQuery = createdQuery.lte('created_at', getNepalDayEnd(dateTo));
+        createdQuery = createdQuery.lte('date', dateTo);
       }
 
       const [assignedResult, createdResult] = await Promise.all([
