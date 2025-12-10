@@ -19,7 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
@@ -80,6 +81,9 @@ export default function AdminLeads() {
   const [showTransferLeadsModal, setShowTransferLeadsModal] = useState(false);
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
+  const [isReassignOpen, setIsReassignOpen] = useState(false);
+  const [reassignStaffId, setReassignStaffId] = useState('');
 
   const returnLeadsToQueue = useReturnLeadsToQueue();
   const resendCNRToPool = useAdminResendCNRToPool();
@@ -163,6 +167,11 @@ export default function AdminLeads() {
       selectedStatus === 'all' ? true :
       selectedStatus === 'pending_transfer' ? lead.is_transferred === false :
       lead.status === selectedStatus;
+    // Handle assigned to filter
+    const matchesAssignedTo = 
+      assignedToFilter === 'all' ? true :
+      assignedToFilter === 'UNASSIGNED' ? !lead.assigned_to_user_id :
+      lead.assigned_to_user_id === assignedToFilter;
     // Check for reference ID search
     const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(lead.reference_id, search);
     
@@ -171,7 +180,7 @@ export default function AdminLeads() {
       matchesRefId ||
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
-    return matchesProduct && matchesStatus && matchesSearch;
+    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch;
   });
 
   // Selection handlers
@@ -342,6 +351,40 @@ export default function AdminLeads() {
 
   const handleWhatsAppLead = (phone: string) => {
     window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+  };
+
+  const handleBulkReassign = async () => {
+    if (!reassignStaffId || selectedLeads.length === 0) return;
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({
+          assigned_to_user_id: reassignStaffId,
+          status: 'ASSIGNED',
+          current_team: 'CALLING',
+          assigned_at: new Date().toISOString(),
+        })
+        .in('id', selectedLeads);
+
+      if (error) throw error;
+
+      // Log transfers
+      const transfers = selectedLeads.map(leadId => ({
+        lead_id: leadId,
+        from_user_id: profile?.id,
+        to_user_id: reassignStaffId,
+        transferred_at: new Date().toISOString(),
+      }));
+      await supabase.from('lead_transfers').insert(transfers);
+
+      toast.success(`Reassigned ${selectedLeads.length} leads`);
+      setSelectedLeads([]);
+      setIsReassignOpen(false);
+      setReassignStaffId('');
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to reassign leads');
+    }
   };
 
   return (
@@ -526,7 +569,7 @@ export default function AdminLeads() {
               </SelectContent>
             </Select>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -540,6 +583,18 @@ export default function AdminLeads() {
                 <SelectItem value="CALL_NOT_RECEIVED">Call Not Received</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 <SelectItem value="REDIRECT">Redirect</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Assigned To" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+                {callingStaff.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="relative flex-1 min-w-[200px]">
@@ -596,6 +651,17 @@ export default function AdminLeads() {
                   Send back to Leads {selectedLeads.length > 0 && `(${selectedLeads.length})`}
                 </Button>
               </>
+            )}
+            {selectedLeads.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsReassignOpen(true)}
+                className="gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Reassign ({selectedLeads.length})
+              </Button>
             )}
             <DeleteLeadsButton 
               selectedIds={selectedLeads} 
@@ -769,6 +835,32 @@ export default function AdminLeads() {
         onCall={handleCallLead}
         onWhatsApp={handleWhatsAppLead}
       />
+
+      {/* Reassign Dialog */}
+      <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign {selectedLeads.length} Lead(s)</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium">Select Staff</label>
+            <Select value={reassignStaffId} onValueChange={setReassignStaffId}>
+              <SelectTrigger className="mt-2">
+                <SelectValue placeholder="Choose staff member" />
+              </SelectTrigger>
+              <SelectContent>
+                {callingStaff.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReassignOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkReassign} disabled={!reassignStaffId}>Reassign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
