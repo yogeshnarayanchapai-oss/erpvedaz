@@ -259,6 +259,7 @@ export function useUpdateLeadStatus() {
 
 export function useTransferLeads() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async ({
@@ -272,6 +273,7 @@ export function useTransferLeads() {
       count: number;
       leadBucket?: 'NEW' | 'FOLLOW_UP_POOL' | 'CNR_POOL';
     }) => {
+      if (!storeId) throw new Error('Store context not available');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -286,7 +288,7 @@ export function useTransferLeads() {
       const productName = productResult.data?.name || 'Unknown';
       const actorName = actorResult.data?.name || 'Admin';
 
-      // Get leads for the product filtered by bucket and pool status
+      // Get leads for the product filtered by bucket, pool status, and store
       // Exclude confirmed leads - they cannot be transferred
       let query = supabase
         .from('leads')
@@ -294,6 +296,7 @@ export function useTransferLeads() {
         .eq('product_id', productId)
         .eq('current_team', 'LEADS')
         .eq('pool_status', 'IN_POOL')
+        .eq('store_id', storeId)
         .is('assigned_to_user_id', null)
         .neq('status', 'CONFIRMED')
         .is('order_id', null)
