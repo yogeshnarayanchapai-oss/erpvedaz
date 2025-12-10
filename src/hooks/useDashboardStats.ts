@@ -249,32 +249,23 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         currentQuery = currentQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
       }
 
-      // Also fetch historical leads (first_assigned_to_user_id) - this count NEVER decreases
-      let historicalQuery = supabase
-        .from('leads')
-        .select('id, status, order_id, date, current_team, assigned_at, store_id')
-        .eq('first_assigned_to_user_id', userId);
+      // Fetch total_leads_ever_assigned from profiles - this NEVER decreases even if leads are deleted/reassigned
+      const profileQuery = supabase
+        .from('profiles')
+        .select('total_leads_ever_assigned')
+        .eq('id', userId)
+        .single();
 
-      if (storeId) {
-        historicalQuery = historicalQuery.eq('store_id', storeId);
-      }
-
-      if (dateFrom && dateTo) {
-        historicalQuery = historicalQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
-      } else if (dateFrom) {
-        historicalQuery = historicalQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
-      }
-
-      const [currentResult, historicalResult] = await Promise.all([
+      const [currentResult, profileResult] = await Promise.all([
         currentQuery,
-        historicalQuery
+        profileQuery
       ]);
 
       if (currentResult.error) throw currentResult.error;
-      if (historicalResult.error) throw historicalResult.error;
+      // Don't throw on profile error, just use 0 as fallback
 
       const currentLeads = currentResult.data || [];
-      const historicalLeads = historicalResult.data || [];
+      const totalEverAssigned = profileResult.data?.total_leads_ever_assigned ?? 0;
       const callingLeads = currentLeads.filter(l => l.current_team === 'CALLING');
       
       // Pending statuses for "Remain to Call" - leads that haven't been processed yet
@@ -283,8 +274,8 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       return {
         total: currentLeads.length,
         callingTotal: callingLeads.length,
-        // Assigned = historical count (first_assigned_to_user_id) - NEVER decreases
-        assigned: historicalLeads.length,
+        // Assigned = total from profiles table - NEVER decreases even if leads deleted/reassigned
+        assigned: totalEverAssigned,
         // Current = only leads currently assigned to this user
         currentAssigned: currentLeads.length,
         confirmed: currentLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
