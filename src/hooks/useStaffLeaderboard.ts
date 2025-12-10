@@ -10,6 +10,7 @@ export interface StaffLeaderboardEntry {
   totalOrders: number;
   confirmedOrders: number;
   totalLeads: number;
+  vdNotDeliver: number;
   conversionRate: number;
   totalSales: number;
 }
@@ -32,7 +33,9 @@ export function useStaffLeaderboard(dateRange: DateRange) {
           order_status,
           sales_person_id,
           order_date,
-          store_id
+          store_id,
+          delivery_location,
+          inside_delivery_status
         `)
         .eq('is_deleted', false)
         .gte('order_date', `${dateFrom}T00:00:00`)
@@ -80,6 +83,7 @@ export function useStaffLeaderboard(dateRange: DateRange) {
       const staffStats = new Map<string, {
         totalOrders: number;
         confirmedOrders: number;
+        vdNotDeliver: number;
         totalSales: number;
       }>();
 
@@ -89,6 +93,7 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         const existing = staffStats.get(order.sales_person_id) || {
           totalOrders: 0,
           confirmedOrders: 0,
+          vdNotDeliver: 0,
           totalSales: 0,
         };
 
@@ -96,6 +101,13 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         if (order.order_status === 'DELIVERED' || order.order_status === 'DISPATCHED' || order.order_status === 'CONFIRMED') {
           existing.confirmedOrders++;
           existing.totalSales += order.amount || 0;
+          
+          // Count VD Not Deliver: Valley orders that are confirmed but not delivered
+          const isValley = order.delivery_location === 'INSIDE_VALLEY';
+          const isNotDelivered = order.inside_delivery_status !== 'DELIVERED';
+          if (isValley && isNotDelivered) {
+            existing.vdNotDeliver++;
+          }
         }
 
         staffStats.set(order.sales_person_id, existing);
@@ -124,14 +136,16 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         const name = profileMap.get(staffId);
         if (!name) return;
 
-        const stats = staffStats.get(staffId) || { totalOrders: 0, confirmedOrders: 0, totalSales: 0 };
+        const stats = staffStats.get(staffId) || { totalOrders: 0, confirmedOrders: 0, vdNotDeliver: 0, totalSales: 0 };
         const totalLeads = leadsPerUser.get(staffId) || 0;
         
         // Only include staff with some activity
         if (stats.totalOrders === 0 && totalLeads === 0) return;
 
-        const conversionRate = totalLeads > 0 
-          ? (stats.confirmedOrders / totalLeads) * 100 
+        // Conversion Rate = Leads / (Confirmed Orders - VD Not Deliver)
+        const effectiveOrders = stats.confirmedOrders - stats.vdNotDeliver;
+        const conversionRate = effectiveOrders > 0 
+          ? (totalLeads / effectiveOrders) * 100 
           : 0;
 
         leaderboard.push({
@@ -140,6 +154,7 @@ export function useStaffLeaderboard(dateRange: DateRange) {
           totalOrders: stats.totalOrders,
           confirmedOrders: stats.confirmedOrders,
           totalLeads,
+          vdNotDeliver: stats.vdNotDeliver,
           conversionRate,
           totalSales: stats.totalSales,
         });

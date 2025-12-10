@@ -85,6 +85,7 @@ export function StaffLeaderboard({ data, periodLabel, isLoading }: StaffLeaderbo
                   <TableHead>Staff</TableHead>
                   <TableHead className="text-right">Leads</TableHead>
                   <TableHead className="text-right">Orders</TableHead>
+                  <TableHead className="text-right">VD Not Deliver</TableHead>
                   <TableHead className="text-right">Conv. Rate</TableHead>
                   <TableHead className="text-right">Sales</TableHead>
                   <TableHead className="w-24">Progress</TableHead>
@@ -119,6 +120,11 @@ export function StaffLeaderboard({ data, periodLabel, isLoading }: StaffLeaderbo
                             /{staff.totalOrders}
                           </span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={staff.vdNotDeliver > 0 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
+                          {staff.vdNotDeliver}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className={`flex items-center justify-end gap-1 ${getConversionColor(staff.conversionRate)}`}>
