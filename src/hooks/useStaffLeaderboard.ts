@@ -171,8 +171,8 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         const leadsSet = leadsPerUser.get(staffId);
         const leadsCount = leadsSet ? leadsSet.size : 0;
         
-        // Total Leads = assigned leads + created leads (unique, no duplicates) + total orders
-        const totalLeads = leadsCount + stats.totalOrders;
+        // Total Leads = assigned leads + created leads (unique, no duplicates) - Orders are NOT included
+        const totalLeads = leadsCount;
         
         // Only include staff with some activity
         if (stats.totalOrders === 0 && leadsCount === 0) return;

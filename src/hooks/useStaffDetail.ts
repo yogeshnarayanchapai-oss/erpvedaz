@@ -113,8 +113,8 @@ export function useStaffDetailSummary(staffId: string, dateRange: DateRange) {
         ?.filter((o: any) => ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status))
         .reduce((sum: number, o: any) => sum + (o.amount || 0), 0) || 0;
       
-      // Leads Received = unique leads + orders (matching leaderboard "Leads" column formula)
-      const leadsReceived = uniqueLeadsCount + ordersHandled;
+      // Leads Received = only unique leads (assigned + created) - Orders are NOT included
+      const leadsReceived = uniqueLeadsCount;
       
       // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Total Leads * 100
       const conversionRate = leadsReceived > 0 ? ((confirmedOrders - vdNotDeliver) / leadsReceived) * 100 : 0;
