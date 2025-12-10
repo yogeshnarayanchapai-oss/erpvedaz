@@ -11,7 +11,8 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
-import { notifyNewLeadsCreated } from '@/lib/notificationHelpers';
+import { notifyNewLeadsCreated, notifyDuplicatePhoneDetected } from '@/lib/notificationHelpers';
+import { checkPhoneDuplicate } from '@/hooks/useStoreDuplicateCheck';
 
 interface AddLeadDialogProps {
   open: boolean;
@@ -98,7 +99,24 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
 
     setIsSubmitting(true);
     try {
-      const leadsToInsert = rows.map(row => ({
+      // Check for duplicates first
+      const duplicateResults: Array<{
+        row: LeadRow;
+        result: Awaited<ReturnType<typeof checkPhoneDuplicate>>;
+        productName: string;
+      }> = [];
+
+      for (const row of rows) {
+        const duplicateResult = await checkPhoneDuplicate(row.contact_number, currentStore?.id);
+        const product = products.find(p => p.id === row.product_id);
+        duplicateResults.push({
+          row,
+          result: duplicateResult,
+          productName: product?.name || '',
+        });
+      }
+
+      const leadsToInsert = duplicateResults.map(({ row, result }) => ({
         date: row.date,
         client_name: row.client_name.trim(),
         contact_number: row.contact_number.trim(),
@@ -113,10 +131,39 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
         lead_bucket: 'NEW' as const,
         pool_status: 'ASSIGNED' as const,
         store_id: currentStore?.id || null,
+        is_duplicate: result.isDuplicate,
       }));
 
-      const { error } = await supabase.from('leads').insert(leadsToInsert);
+      const { data: insertedLeads, error } = await supabase
+        .from('leads')
+        .insert(leadsToInsert)
+        .select('id, client_name, contact_number, product_id');
       if (error) throw error;
+
+      // Send duplicate notifications for each duplicate lead
+      if (insertedLeads) {
+        for (let i = 0; i < insertedLeads.length; i++) {
+          const { result, productName } = duplicateResults[i];
+          if (result.isDuplicate) {
+            try {
+              await notifyDuplicatePhoneDetected({
+                leadId: insertedLeads[i].id,
+                customerName: insertedLeads[i].client_name,
+                phone: insertedLeads[i].contact_number,
+                productName,
+                existingCustomerName: result.existingCustomer?.name,
+                existingCustomerOrders: result.existingCustomer?.total_orders,
+                existingLeadName: result.existingLead?.name,
+                actorId: profile?.id || '',
+                actorName: profile?.name || 'Staff',
+                storeId: currentStore?.id,
+              });
+            } catch (e) {
+              console.error('Failed to send duplicate notification:', e);
+            }
+          }
+        }
+      }
 
       // Send notification to Admin about new leads
       try {
@@ -131,7 +178,12 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
         console.error('Failed to send notification:', e);
       }
 
-      toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
+      const duplicateCount = duplicateResults.filter(d => d.result.isDuplicate).length;
+      if (duplicateCount > 0) {
+        toast.warning(`${rows.length} lead${rows.length > 1 ? 's' : ''} created. ${duplicateCount} marked as duplicate.`);
+      } else {
+        toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
+      }
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       onOpenChange(false);
       setRows([createEmptyRow()]);

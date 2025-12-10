@@ -719,3 +719,76 @@ export async function notifyOrderEdited({
     },
   ]);
 }
+
+// Helper to notify when duplicate phone number is detected
+export async function notifyDuplicatePhoneDetected({
+  leadId,
+  customerName,
+  phone,
+  productName,
+  existingCustomerName,
+  existingCustomerOrders,
+  existingLeadName,
+  actorId,
+  actorName,
+  storeId,
+}: {
+  leadId: string;
+  customerName: string;
+  phone: string;
+  productName?: string;
+  existingCustomerName?: string | null;
+  existingCustomerOrders?: number | null;
+  existingLeadName?: string | null;
+  actorId: string;
+  actorName: string;
+  storeId?: string;
+}) {
+  const duplicateInfo = existingCustomerName 
+    ? `existing customer "${existingCustomerName}" (${existingCustomerOrders || 0} orders)`
+    : `existing lead "${existingLeadName}"`;
+
+  const notifications: CreateNotificationParams[] = [
+    // Notify ADMIN
+    {
+      type: 'LEAD_DUPLICATE',
+      title: 'Duplicate phone detected',
+      message: `${customerName} (${phone}) matches ${duplicateInfo}. Created by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'ADMIN',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
+      storeId,
+    },
+    // Notify LEADS role
+    {
+      type: 'LEAD_DUPLICATE',
+      title: 'Duplicate phone detected',
+      message: `${customerName} (${phone}) matches ${duplicateInfo}`,
+      actorId,
+      actorName,
+      targetRole: 'LEADS',
+      portal: 'LEADS',
+      linkPath: '/leads/all',
+      meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
+      storeId,
+    },
+    // Notify OWNER
+    {
+      type: 'LEAD_DUPLICATE',
+      title: 'Duplicate phone detected',
+      message: `${customerName} (${phone}) matches ${duplicateInfo}. Created by ${actorName}`,
+      actorId,
+      actorName,
+      targetRole: 'OWNER',
+      portal: 'ADMIN',
+      linkPath: '/admin/leads',
+      meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
+      storeId,
+    },
+  ];
+
+  await createNotifications(notifications);
+}

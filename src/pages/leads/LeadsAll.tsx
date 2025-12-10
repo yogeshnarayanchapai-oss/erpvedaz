@@ -514,7 +514,16 @@ export default function LeadsAll() {
                       <TableCell className="text-muted-foreground">
                         <FormattedDate date={lead.date} />
                       </TableCell>
-                      <TableCell className="font-medium">{lead.client_name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {lead.client_name}
+                          {lead.is_duplicate && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              DOUBLE
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{lead.contact_number}</TableCell>
                       <TableCell>{lead.products?.name || '-'}</TableCell>
                       <TableCell>{lead.source || '-'}</TableCell>

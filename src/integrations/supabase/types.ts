@@ -2763,6 +2763,7 @@ export type Database = {
           followup_reason: string | null
           full_address: string | null
           id: string
+          is_duplicate: boolean | null
           is_followup_reminded: boolean | null
           is_transferred: boolean
           last_called_at: string | null
@@ -2807,6 +2808,7 @@ export type Database = {
           followup_reason?: string | null
           full_address?: string | null
           id?: string
+          is_duplicate?: boolean | null
           is_followup_reminded?: boolean | null
           is_transferred?: boolean
           last_called_at?: string | null
@@ -2851,6 +2853,7 @@ export type Database = {
           followup_reason?: string | null
           full_address?: string | null
           id?: string
+          is_duplicate?: boolean | null
           is_followup_reminded?: boolean | null
           is_transferred?: boolean
           last_called_at?: string | null
