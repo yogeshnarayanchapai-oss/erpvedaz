@@ -556,7 +556,7 @@ export default function LeadsDashboard() {
                 <TableRow>
                   <TableHead>Staff Name</TableHead>
                   <TableHead className="text-center">Today Transfer</TableHead>
-                  <TableHead className="text-center">Remaining</TableHead>
+                  <TableHead className="text-center">New</TableHead>
                   <TableHead>Products</TableHead>
                 </TableRow>
               </TableHeader>
@@ -609,7 +609,7 @@ export default function LeadsDashboard() {
                   <TableHead>Product</TableHead>
                   <TableHead className="text-center">Leads Today</TableHead>
                   <TableHead className="text-center">Transferred</TableHead>
-                  <TableHead className="text-center">Remaining</TableHead>
+                  <TableHead className="text-center">New</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
