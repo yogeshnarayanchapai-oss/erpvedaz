@@ -338,6 +338,16 @@ export function AdminTransferLeadsModal({
 
       if (updateError) throw updateError;
 
+      // Create transfer records for Staff Transfer Summary tracking
+      const transferRecords = leadIds.map(leadId => ({
+        lead_id: leadId,
+        from_user_id: null,
+        to_user_id: staffId,
+        transferred_by_user_id: user.id,
+        transferred_at: new Date().toISOString(),
+      }));
+      await supabase.from('lead_transfers').insert(transferRecords);
+
       // Create history records
       const historyRecords = leadIds.map(leadId => ({
         lead_id: leadId,
