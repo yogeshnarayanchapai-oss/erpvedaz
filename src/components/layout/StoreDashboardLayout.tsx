@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
+import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
 
 interface StoreContext {
   store: {
@@ -36,7 +37,7 @@ export function StoreDashboardLayout() {
   const navigate = useNavigate();
 
   const store = context?.store;
-  const portalName = profile?.role ? `${profile.role.charAt(0)}${profile.role.slice(1).toLowerCase()}` : '';
+  const portalName = getRoleDisplayLabel(profile?.role);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,8 +86,8 @@ export function StoreDashboardLayout() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="text-sm font-medium capitalize">
-                    {profile.role.toLowerCase()} Dashboard
+                  <BreadcrumbPage className="text-sm font-medium">
+                    {portalName} Dashboard
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -101,7 +102,7 @@ export function StoreDashboardLayout() {
               </div>
               <Separator orientation="vertical" className="h-4 hidden sm:block" />
               <UnifiedNotificationBell 
-                showViewAll={profile.role === 'ADMIN' || profile.role === 'MANAGER' || profile.role === 'OWNER'}
+                showViewAll={isAdminOrManager(profile.role)}
                 viewAllPath={storeSlug ? `/${storeSlug}/admin/notifications` : '/admin/notifications'}
               />
               <DateModeToggle />
@@ -117,7 +118,7 @@ export function StoreDashboardLayout() {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{profile.name}</p>
                       <p className="text-xs text-muted-foreground">{profile.email}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{profile.role.toLowerCase()}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(profile.role)}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

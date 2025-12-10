@@ -20,13 +20,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
+import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
 
 function DashboardLayoutInner() {
   const { user, profile, loading, signOut } = useAuth();
   const { currentStore } = useCurrentStore();
   const navigate = useNavigate();
 
-  const portalName = profile?.role ? `${profile.role.charAt(0)}${profile.role.slice(1).toLowerCase()}` : '';
+  const portalName = getRoleDisplayLabel(profile?.role);
   const storeName = currentStore?.name || 'Dashboard';
 
   useEffect(() => {
@@ -76,8 +77,8 @@ function DashboardLayoutInner() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="text-sm font-medium capitalize">
-                    {profile.role.toLowerCase()} Dashboard
+                  <BreadcrumbPage className="text-sm font-medium">
+                    {portalName} Dashboard
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -92,7 +93,7 @@ function DashboardLayoutInner() {
               </div>
               <Separator orientation="vertical" className="h-4 hidden sm:block" />
               <UnifiedNotificationBell 
-                showViewAll={profile.role === 'ADMIN' || profile.role === 'MANAGER'}
+                showViewAll={isAdminOrManager(profile.role)}
                 viewAllPath="/admin/notifications"
               />
               <DateModeToggle />
@@ -104,11 +105,11 @@ function DashboardLayoutInner() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
+                <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{profile.name}</p>
                       <p className="text-xs text-muted-foreground">{profile.email}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{profile.role.toLowerCase()}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(profile.role)}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
