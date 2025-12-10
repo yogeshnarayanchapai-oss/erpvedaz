@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Search, Send, Edit } from 'lucide-react';
+import { Download, Upload, Search, Send, Edit, UserPlus } from 'lucide-react';
 import { format, startOfDay, endOfDay, isToday } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,10 +51,12 @@ export default function LeadsAll() {
   const [search, setSearch] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [reassignStaffId, setReassignStaffId] = useState<string>('');
 
   const { data: allLeads = [], isLoading, refetch } = useLeads();
   const { data: products = [] } = useProducts();
@@ -227,6 +229,45 @@ export default function LeadsAll() {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (error: any) {
       toast.error(`Transfer failed: ${error.message}`);
+    }
+  };
+
+  const handleBulkReassign = async () => {
+    if (!reassignStaffId || selectedLeads.length === 0) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({
+          assigned_to_user_id: reassignStaffId,
+          status: 'ASSIGNED',
+          current_team: 'CALLING',
+          assigned_at: new Date().toISOString(),
+        })
+        .in('id', selectedLeads);
+
+      if (updateError) throw updateError;
+
+      const transfers = selectedLeads.map(leadId => ({
+        lead_id: leadId,
+        from_team: 'LEADS' as const,
+        to_team: 'CALLING' as const,
+        to_user_id: reassignStaffId,
+        transferred_by_user_id: user.id,
+      }));
+
+      await supabase.from('lead_transfers').insert(transfers);
+
+      toast.success(`${selectedLeads.length} leads reassigned successfully`);
+      setSelectedLeads([]);
+      setIsReassignOpen(false);
+      setReassignStaffId('');
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    } catch (error: any) {
+      toast.error(`Reassign failed: ${error.message}`);
     }
   };
 
@@ -440,14 +481,47 @@ export default function LeadsAll() {
           <CardTitle>Leads ({filteredLeads.length})</CardTitle>
           <div className="flex items-center gap-2">
             {selectedLeads.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsBulkEditOpen(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Bulk Edit ({selectedLeads.length})
-              </Button>
+              <>
+                <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Reassign ({selectedLeads.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Reassign {selectedLeads.length} Leads</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Select Staff</Label>
+                        <Select value={reassignStaffId} onValueChange={setReassignStaffId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose staff member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {callingStaff.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={handleBulkReassign} className="w-full" disabled={!reassignStaffId}>
+                        Reassign Leads
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsBulkEditOpen(true)}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Bulk Edit ({selectedLeads.length})
+                </Button>
+              </>
             )}
             {selectedUnassignedLeads.length > 0 && (
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
