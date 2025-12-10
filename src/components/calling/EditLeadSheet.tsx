@@ -58,6 +58,8 @@ export interface EditLeadFormData {
   amount: string;
   delivery_location: string;
   is_cod: boolean;
+  // Lead date field
+  date: string;
   // Follow-up fields
   followup_preset: string;
   followup_date: string;
@@ -246,6 +248,15 @@ export function EditLeadSheet({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left Column */}
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Lead Date</Label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => onFormChange({ ...formData, date: e.target.value })}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>Order Status</Label>
                 <Select value={formData.status} onValueChange={(v) => onFormChange({ ...formData, status: v })}>
