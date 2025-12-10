@@ -116,42 +116,46 @@ export default function LeadsDashboard() {
   const totalInQueue = newLeads.length;
 
 
-  // Fetch lead_transfers for historical assignment counting
-  const [leadTransfers, setLeadTransfers] = useState<any[]>([]);
+  // Fetch leads assigned today for Staff Transfer Summary (uses leads.assigned_at for accurate counts)
+  const [todayAssignedLeads, setTodayAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
   
   useEffect(() => {
-    async function fetchLeadTransfers() {
+    async function fetchTodayAssignedLeads() {
       const todayDate = getNepalDate();
       const { data, error } = await supabase
-        .from('lead_transfers')
-        .select('id, lead_id, to_user_id, transferred_at, from_team, to_team')
-        .eq('to_team', 'CALLING')
-        .gte('transferred_at', `${todayDate}T00:00:00+05:45`)
-        .lte('transferred_at', `${todayDate}T23:59:59+05:45`);
+        .from('leads')
+        .select('id, assigned_to_user_id, product_id')
+        .not('assigned_to_user_id', 'is', null)
+        .gte('assigned_at', `${todayDate}T00:00:00+05:45`)
+        .lte('assigned_at', `${todayDate}T23:59:59+05:45`);
       
       if (!error && data) {
-        setLeadTransfers(data);
+        setTodayAssignedLeads(data.map(d => ({
+          assigned_to_user_id: d.assigned_to_user_id!,
+          lead_id: d.id,
+          product_id: d.product_id
+        })));
       }
     }
-    fetchLeadTransfers();
+    fetchTodayAssignedLeads();
     
-    // Subscribe to lead_transfers changes for real-time updates
-    const transfersChannel = supabase
-      .channel('lead-transfers-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_transfers' }, () => {
-        fetchLeadTransfers();
+    // Subscribe to leads changes for real-time updates
+    const leadsChannel = supabase
+      .channel('leads-assigned-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        fetchTodayAssignedLeads();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(transfersChannel);
+      supabase.removeChannel(leadsChannel);
     };
   }, [today]);
 
   // Staff Transfer Summary - shows Calling Staff list
-  // Uses lead_transfers table for historical counting - NEVER decreases even on reassignment
+  // Uses leads.assigned_at for historical counting - aggregates ALL assignments today
   // For LEADS role: shows calling staff who received leads from THIS user
-  // For Admin/Owner: shows calling staff with combined data from ALL LEADS staff in store
+  // For Admin/Owner: shows calling staff with combined data from ALL creators in store
   const staffTransferSummary = useMemo(() => {
     // Helper function to calculate product counts
     type TransferLead = { product_id: string | null; products?: { name: string } | null };
@@ -173,16 +177,15 @@ export default function LeadsDashboard() {
     };
 
     // For LEADS role: Show calling staff who received leads CREATED by this LEADS user
-    // Use lead_transfers for historical "Today Transfer" count that never decreases
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        // Today Transfer = count from lead_transfers where to_user_id = staff.id
-        // and the lead was created by current LEADS user
-        const transfersToStaff = leadTransfers.filter(t => t.to_user_id === staff.id);
+        // Today Transfer = count leads assigned to this staff today, created by current LEADS user
         const leadsCreatedByUser = allLeadsForTransferSummary.filter(l => l.created_by_user_id === currentUserId);
-        const todayTransfer = transfersToStaff.filter(t => 
+        const assignedToStaffToday = todayAssignedLeads.filter(t => 
+          t.assigned_to_user_id === staff.id && 
           leadsCreatedByUser.some(l => l.id === t.lead_id)
-        ).length;
+        );
+        const todayTransfer = assignedToStaffToday.length;
         
         // Remaining = leads currently assigned with pending status (from created leads)
         const currentStaffLeads = allLeadsForTransferSummary.filter(l => 
@@ -193,10 +196,8 @@ export default function LeadsDashboard() {
           l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
         ).length;
         
-        // Products from today's transferred leads (use lead_transfers to find lead_ids)
-        const todayLeadIds = transfersToStaff
-          .filter(t => leadsCreatedByUser.some(l => l.id === t.lead_id))
-          .map(t => t.lead_id);
+        // Products from today's assigned leads
+        const todayLeadIds = assignedToStaffToday.map(t => t.lead_id);
         const todayTransferredLeads = allLeadsForTransferSummary.filter(l => todayLeadIds.includes(l.id));
         const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
         
@@ -211,11 +212,10 @@ export default function LeadsDashboard() {
       }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
     }
     
-    // Admin/Owner: show all calling staff with combined data from all LEADS staff in store
-    // Use lead_transfers for historical "Today Transfer" count that never decreases
+    // Admin/Owner: show all calling staff with combined data from ALL creators in store
     return callingStaff.map(staff => {
-      // Today Transfer = count from lead_transfers where to_user_id = staff.id (today)
-      const todayTransfer = leadTransfers.filter(t => t.to_user_id === staff.id).length;
+      // Today Transfer = count leads assigned to this staff today (from ALL creators)
+      const todayTransfer = todayAssignedLeads.filter(t => t.assigned_to_user_id === staff.id).length;
       
       // Remaining = leads currently assigned to this staff with pending status
       const currentStaffLeads = allLeadsForTransferSummary.filter(l => l.assigned_to_user_id === staff.id);
@@ -223,8 +223,8 @@ export default function LeadsDashboard() {
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products from today's transferred leads
-      const todayLeadIds = leadTransfers.filter(t => t.to_user_id === staff.id).map(t => t.lead_id);
+      // Products from today's assigned leads
+      const todayLeadIds = todayAssignedLeads.filter(t => t.assigned_to_user_id === staff.id).map(t => t.lead_id);
       const todayTransferredLeads = allLeadsForTransferSummary.filter(l => todayLeadIds.includes(l.id));
       const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
 
@@ -237,7 +237,7 @@ export default function LeadsDashboard() {
         fullProducts: fullProductList,
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
-  }, [isAdminOrOwner, currentUserId, leadTransfers, allLeadsForTransferSummary, callingStaff, products]);
+  }, [isAdminOrOwner, currentUserId, todayAssignedLeads, allLeadsForTransferSummary, callingStaff, products]);
 
   // Product Leads Summary - uses filtered leads based on role
   const productSummary = useMemo(() => {
