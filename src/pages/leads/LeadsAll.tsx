@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Upload, Search, Send } from 'lucide-react';
+import { Download, Upload, Search, Send, Edit } from 'lucide-react';
 import { format, startOfDay, endOfDay, isToday } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +25,7 @@ import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 
 const STATUS_OPTIONS = ['ALL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
@@ -49,6 +50,7 @@ export default function LeadsAll() {
   const [search, setSearch] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
@@ -413,6 +415,16 @@ export default function LeadsAll() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Leads ({filteredLeads.length})</CardTitle>
           <div className="flex items-center gap-2">
+            {selectedLeads.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsBulkEditOpen(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Bulk Edit ({selectedLeads.length})
+              </Button>
+            )}
             {selectedUnassignedLeads.length > 0 && (
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
                 <DialogTrigger asChild>
@@ -530,6 +542,14 @@ export default function LeadsAll() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Edit Dialog */}
+      <BulkEditLeadsForm
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        selectedLeads={filteredLeads.filter(l => selectedLeads.includes(l.id))}
+        onComplete={() => setSelectedLeads([])}
+      />
     </div>
   );
 }
