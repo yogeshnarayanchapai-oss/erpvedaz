@@ -97,27 +97,29 @@ export default function LeadsDashboard() {
   const todayTotalForProgress = todayAllInPool + todayTransferredCount;
   const transferProgress = todayTotalForProgress > 0 ? (todayTransferredCount / todayTotalForProgress) * 100 : 0;
 
-  // Staff Transfer Summary
+  // Staff Transfer Summary - count ALL leads assigned today (not just CALLING team)
   const staffTransferSummary = callingStaff.map(staff => {
-    const staffLeads = allLeads.filter(l => 
-      l.assigned_to_user_id === staff.id && 
-      l.current_team === 'CALLING'
-    );
+    // All leads assigned to this staff
+    const staffLeads = allLeads.filter(l => l.assigned_to_user_id === staff.id);
     
-    // Today Transfer = leads assigned today
+    // Today Transfer = leads assigned today using isToday for consistency with modal
     const todayTransfer = staffLeads.filter(l => {
-      const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
-      return assignedAt === today;
+      if (!l.assigned_at) return false;
+      return isToday(new Date(l.assigned_at));
     }).length;
-    // Remaining = leads with status ASSIGNED or PENDING (null, NEW)
+    
+    // Remaining = leads with pending statuses (not yet called/processed)
     const remaining = staffLeads.filter(l => 
       l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
     ).length;
     
-    // Count products with quantities
-    const todayLeadsWithProducts = staffLeads.filter(l => l.date === today && l.product_id);
+    // Count products with quantities for today's assigned leads
+    const todayAssignedLeads = staffLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      return isToday(new Date(l.assigned_at)) && l.product_id;
+    });
     const productCounts: Record<string, number> = {};
-    todayLeadsWithProducts.forEach(lead => {
+    todayAssignedLeads.forEach(lead => {
       const productName = products.find(p => p.id === lead.product_id)?.name;
       if (productName) {
         productCounts[productName] = (productCounts[productName] || 0) + 1;
