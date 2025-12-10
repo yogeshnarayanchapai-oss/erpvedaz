@@ -204,7 +204,8 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
   useEffect(() => {
     if (!userId) return;
     
-    const channel = supabase
+    // Subscribe to leads changes
+    const leadsChannel = supabase
       .channel(`staff-leads-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
         // Invalidate if the lead is assigned to or created by this user
@@ -220,9 +221,18 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         }
       })
       .subscribe();
+    
+    // Subscribe to profiles changes for total_leads_ever_assigned updates
+    const profilesChannel = supabase
+      .channel(`staff-profile-${userId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['staff-lead-stats', userId] });
+      })
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(profilesChannel);
     };
   }, [queryClient, userId]);
 
