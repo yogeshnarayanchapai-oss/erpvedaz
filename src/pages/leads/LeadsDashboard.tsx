@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLeads, useCreateLead } from '@/hooks/useLeads';
+import { useLeads, useCreateLead, useLeadsForTransferSummary } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { useQueryClient } from '@tanstack/react-query';
@@ -42,6 +42,10 @@ export default function LeadsDashboard() {
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const { data: orders = [] } = useOrders({ dateFrom: today, dateTo: today });
+  
+  // Separate query for Staff Transfer Summary - includes ALL leads (including confirmed)
+  // This ensures "Today Transfer" count doesn't decrease when leads are confirmed
+  const { data: allLeadsForTransferSummary = [] } = useLeadsForTransferSummary();
   
   // Filter leads based on role: Admin/Owner sees all, LEADS role sees only their own created/handled leads
   const filteredLeads = useMemo(() => {
@@ -117,11 +121,12 @@ export default function LeadsDashboard() {
   // For Admin/Owner: shows calling staff with combined data from ALL LEADS staff in store
   const staffTransferSummary = useMemo(() => {
     // Helper function to calculate product counts
-    const calculateProducts = (leads: typeof allLeads) => {
+    type TransferLead = { product_id: string | null; products?: { name: string } | null };
+    const calculateProducts = (leads: TransferLead[]) => {
       const productCounts: Record<string, number> = {};
       leads.forEach(lead => {
         if (lead.product_id) {
-          const productName = products.find(p => p.id === lead.product_id)?.name;
+          const productName = lead.products?.name || products.find(p => p.id === lead.product_id)?.name;
           if (productName) {
             productCounts[productName] = (productCounts[productName] || 0) + 1;
           }
@@ -138,13 +143,13 @@ export default function LeadsDashboard() {
     // (regardless of who did the transfer/assignment - could be Admin or the user themselves)
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        // Leads CREATED by this LEADS user AND assigned to this calling staff (by anyone)
-        const staffLeads = allLeads.filter(l => 
+        // Use allLeadsForTransferSummary (includes confirmed leads) for accurate Today Transfer count
+        const staffLeads = allLeadsForTransferSummary.filter(l => 
           l.created_by_user_id === currentUserId && 
           l.assigned_to_user_id === staff.id
         );
         
-        // Today Transfer = assigned today
+        // Today Transfer = assigned today (includes all statuses, even CONFIRMED)
         const todayTransfer = staffLeads.filter(l => {
           if (!l.assigned_at) return false;
           return isToday(new Date(l.assigned_at));
@@ -174,9 +179,10 @@ export default function LeadsDashboard() {
     
     // Admin/Owner: show all calling staff with combined data from all LEADS staff in store
     return callingStaff.map(staff => {
-      // All leads assigned to this calling staff (from any LEADS user in store)
-      const staffLeads = allLeads.filter(l => l.assigned_to_user_id === staff.id);
+      // Use allLeadsForTransferSummary (includes confirmed leads) for accurate Today Transfer count
+      const staffLeads = allLeadsForTransferSummary.filter(l => l.assigned_to_user_id === staff.id);
       
+      // Today Transfer = assigned today (includes all statuses, even CONFIRMED)
       const todayTransfer = staffLeads.filter(l => {
         if (!l.assigned_at) return false;
         return isToday(new Date(l.assigned_at));
@@ -200,7 +206,7 @@ export default function LeadsDashboard() {
         fullProducts: fullProductList,
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
-  }, [isAdminOrOwner, currentUserId, allLeads, callingStaff, products]);
+  }, [isAdminOrOwner, currentUserId, allLeadsForTransferSummary, allLeads, callingStaff, products]);
 
   // Product Leads Summary - uses filtered leads based on role
   const productSummary = useMemo(() => {
