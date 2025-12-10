@@ -231,10 +231,11 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
     queryFn: async () => {
       if (!userId) return null;
 
-      // Fetch leads assigned to user - filter by 'date' column (matches My Leads page)
+      // ONLY fetch leads CURRENTLY assigned to this user
+      // When lead is reassigned to another staff, it should NOT appear in old staff's count
       let assignedQuery = supabase
         .from('leads')
-        .select('id, status, order_id, date, current_team, created_by_user_id, store_id')
+        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_at, store_id')
         .eq('assigned_to_user_id', userId);
 
       // Filter by store_id
@@ -242,49 +243,22 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         assignedQuery = assignedQuery.eq('store_id', storeId);
       }
 
-      // Filter by date column (matches My Leads page filtering)
+      // Filter by assigned_at date (when lead was assigned to this staff) 
+      // This ensures recently reassigned leads appear as "new" for the new staff
       if (dateFrom) {
-        assignedQuery = assignedQuery.gte('date', dateFrom);
+        // Use assigned_at for "Today" filter to show recently transferred leads
+        assignedQuery = assignedQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
       }
       if (dateTo) {
         assignedQuery = assignedQuery.lte('date', dateTo);
       }
 
-      // Fetch leads created by user (self-entry) - filter by 'date' column
-      let createdQuery = supabase
-        .from('leads')
-        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_to_user_id, store_id')
-        .eq('created_by_user_id', userId);
+      const { data, error } = await assignedQuery;
 
-      // Filter by store_id
-      if (storeId) {
-        createdQuery = createdQuery.eq('store_id', storeId);
-      }
+      if (error) throw error;
 
-      // Filter by date column for self-created leads
-      if (dateFrom) {
-        createdQuery = createdQuery.gte('date', dateFrom);
-      }
-      if (dateTo) {
-        createdQuery = createdQuery.lte('date', dateTo);
-      }
-
-      const [assignedResult, createdResult] = await Promise.all([
-        assignedQuery,
-        createdQuery
-      ]);
-
-      if (assignedResult.error) throw assignedResult.error;
-      if (createdResult.error) throw createdResult.error;
-
-      const assignedLeads = assignedResult.data || [];
-      // Filter out self-created leads that are already in assigned leads (to avoid duplicates)
-      const selfCreatedLeads = (createdResult.data || []).filter(
-        (createdLead: any) => !assignedLeads.some((assignedLead: any) => assignedLead.id === createdLead.id)
-      );
-      
-      // Combine both lists
-      const allLeads = [...assignedLeads, ...selfCreatedLeads];
+      // Only use currently assigned leads - DO NOT include self-created leads that are reassigned elsewhere
+      const allLeads = data || [];
       const callingLeads = allLeads.filter(l => l.current_team === 'CALLING');
       
       // Pending statuses for "Remain to Call" - leads that haven't been processed yet
@@ -293,7 +267,7 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       return {
         total: allLeads.length,
         callingTotal: callingLeads.length,
-        // Assigned = leads assigned TO user + leads created BY user (combined, no duplicates)
+        // Assigned = ONLY leads currently assigned to this user
         assigned: allLeads.length,
         confirmed: allLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
         callNotReceived: allLeads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
