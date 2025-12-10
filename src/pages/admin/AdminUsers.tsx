@@ -103,6 +103,8 @@ export default function AdminUsers() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
@@ -450,6 +452,8 @@ const usersWithEmployee = useMemo(() => {
       setResetPasswordUser(null);
       setNewPassword('');
       setConfirmNewPassword('');
+      setShowNewPassword(false);
+      setShowConfirmNewPassword(false);
     } catch (error: any) {
       console.error('Reset password error:', error);
       toast.error(error.message || "Failed to reset password. Please try again.");
@@ -1147,25 +1151,51 @@ const usersWithEmployee = useMemo(() => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password (min 8 characters)"
-                disabled={isResettingPassword}
-              />
+              <div className="relative">
+                <Input
+                  id="newPassword"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 8 characters)"
+                  disabled={isResettingPassword}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  disabled={isResettingPassword}
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
-              <Input
-                id="confirmNewPassword"
-                type="password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                disabled={isResettingPassword}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmNewPassword"
+                  type={showConfirmNewPassword ? 'text' : 'password'}
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  disabled={isResettingPassword}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                  disabled={isResettingPassword}
+                >
+                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -1176,6 +1206,8 @@ const usersWithEmployee = useMemo(() => {
                 setResetPasswordUser(null);
                 setNewPassword('');
                 setConfirmNewPassword('');
+                setShowNewPassword(false);
+                setShowConfirmNewPassword(false);
               }}
               disabled={isResettingPassword}
             >
