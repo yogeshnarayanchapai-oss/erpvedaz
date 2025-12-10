@@ -69,7 +69,7 @@ export default function FollowupOrders() {
         (order.leads as any)?.contact_number?.includes(search) ||
         order.destination_branch?.toLowerCase().includes(search.toLowerCase());
       return matchesDelivery && matchesStatus && matchesSearch;
-    });
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, deliveryFilter, statusFilter, search]);
 
   const getDeliveryBadge = (location: string | null) => {

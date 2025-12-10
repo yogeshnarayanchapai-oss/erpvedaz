@@ -184,7 +184,7 @@ export default function CallingOrders() {
       filtered = filtered.filter(o => matchesReferenceId(o.leads?.reference_id, advancedFilters.referenceId));
     }
     
-    return filtered;
+    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, advancedFilters]);
   
   // Real-time subscription

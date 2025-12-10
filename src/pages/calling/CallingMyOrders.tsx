@@ -108,7 +108,7 @@ export default function CallingMyOrders() {
       const searchLower = logisticIdSearch.toLowerCase();
       return globalSearchOrders.filter((order) =>
         order.logistic_order_id?.toLowerCase().includes(searchLower)
-      );
+      ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     return orders.filter((order) => {
@@ -129,7 +129,7 @@ export default function CallingMyOrders() {
         order.id.toLowerCase().includes(search.toLowerCase()) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
-    });
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, globalSearchOrders, selectedStatus, selectedDelivery, selectedPayment, search, logisticIdSearch]);
 
   // Helper to calculate order total from order_items or fallback
