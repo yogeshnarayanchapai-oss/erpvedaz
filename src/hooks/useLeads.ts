@@ -315,19 +315,31 @@ export function useTransferLeads() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get user role to check permissions
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('name, role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // CALLING role cannot transfer leads between calling staff
+      if (userProfile?.role === 'CALLING') {
+        throw new Error('Calling staff cannot transfer leads. Only LEADS, Admin, or Manager can transfer.');
+      }
+
       // Fetch staff name and product name for notification
-      const [staffResult, productResult, actorResult] = await Promise.all([
+      const [staffResult, productResult] = await Promise.all([
         supabase.from('profiles').select('name').eq('id', staffId).single(),
         supabase.from('products').select('name').eq('id', productId).single(),
-        supabase.from('profiles').select('name').eq('id', user.id).single(),
       ]);
 
       const staffName = staffResult.data?.name || 'Unknown';
       const productName = productResult.data?.name || 'Unknown';
-      const actorName = actorResult.data?.name || 'Admin';
+      const actorName = userProfile?.name || 'Admin';
 
       // Get leads for the product filtered by bucket, pool status, and store
       // Exclude confirmed leads - they cannot be transferred
+      // LEADS role: only transfer leads they created
       let query = supabase
         .from('leads')
         .select('id, store_id')
@@ -343,6 +355,11 @@ export function useTransferLeads() {
       
       // Filter by lead_bucket
       query = query.eq('lead_bucket', leadBucket);
+      
+      // LEADS role: only transfer leads they created
+      if (userProfile?.role === 'LEADS') {
+        query = query.eq('created_by_user_id', user.id);
+      }
 
       const { data: leads, error: fetchError } = await query;
 
