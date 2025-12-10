@@ -20,22 +20,7 @@ import { X, Edit2 } from 'lucide-react';
 import { useStores } from '@/hooks/useStores';
 import { useUserStoreAccess, useAssignUserToStore, useRemoveUserFromStore, useUpdateUserStoreAccess } from '@/hooks/useUserStoreAccess';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Database } from '@/integrations/supabase/types';
-
-type AppRole = Database['public']['Enums']['app_role'];
-
-const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
-  { value: 'CALLING', label: 'Calling' },
-  { value: 'LOGISTICS', label: 'Logistics' },
-  { value: 'FOLLOWUP', label: 'Follow-up' },
-  { value: 'LEADS', label: 'Leads' },
-  { value: 'MARKETING', label: 'Marketing' },
-  { value: 'HR', label: 'HR' },
-  { value: 'ACCOUNTANT', label: 'Accountant' },
-  { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'MANAGER', label: 'Manager' },
-  { value: 'ADMIN', label: 'Admin' },
-];
+import { ROLE_OPTIONS, getRoleDisplayLabel, isAdminRole, type AppRole } from '@/lib/roleUtils';
 
 interface UserStoreAccessModalProps {
   open: boolean;
@@ -50,7 +35,7 @@ interface UserStoreAccessModalProps {
 
 export function UserStoreAccessModal({ open, onOpenChange, user }: UserStoreAccessModalProps) {
   const { profile } = useAuth();
-  const isOwner = profile?.role === 'OWNER';
+  const isAdmin = isAdminRole(profile?.role);
   
   const { data: stores = [] } = useStores();
   const { data: userAccess = [], isLoading } = useUserStoreAccess(user.id);
@@ -110,8 +95,8 @@ export function UserStoreAccessModal({ open, onOpenChange, user }: UserStoreAcce
         <DialogHeader>
           <DialogTitle>Manage Store Access</DialogTitle>
           <DialogDescription>
-            Assign stores to {user.name} ({user.role})
-            {isOwner && <span className="block text-xs mt-1">As OWNER, you can assign per-store roles</span>}
+            Assign stores to {user.name} ({getRoleDisplayLabel(user.role)})
+            {isAdmin && <span className="block text-xs mt-1">As Admin, you can assign per-store roles</span>}
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +119,7 @@ export function UserStoreAccessModal({ open, onOpenChange, user }: UserStoreAcce
                       <span className="font-medium text-sm">{access.store?.name || 'Unknown Store'}</span>
                       {access.store_role ? (
                         <Badge variant={getRoleBadgeVariant(access.store_role)}>
-                          {access.store_role}
+                          {getRoleDisplayLabel(access.store_role)}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-muted-foreground">
@@ -143,7 +128,7 @@ export function UserStoreAccessModal({ open, onOpenChange, user }: UserStoreAcce
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {isOwner && (
+                      {isAdmin && (
                         editingAccessId === access.id ? (
                           <div className="flex items-center gap-1">
                             <Select
@@ -231,7 +216,7 @@ export function UserStoreAccessModal({ open, onOpenChange, user }: UserStoreAcce
                   </SelectContent>
                 </Select>
 
-                {isOwner && (
+                {isAdmin && (
                   <Select
                     value={selectedStoreRole}
                     onValueChange={(val) => setSelectedStoreRole(val as AppRole)}

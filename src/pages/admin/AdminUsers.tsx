@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useStaff, StaffMember, ALL_ROLES, AppRole } from '@/hooks/useStaff';
+import { useStaff, StaffMember } from '@/hooks/useStaff';
 import { useEmployees } from '@/hooks/useHRM';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,20 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStores } from '@/hooks/useStores';
 import { useAssignUserToStore, useUserStoreAccess, useRemoveUserFromStore } from '@/hooks/useUserStoreAccess';
-
-const roleColors: Record<string, string> = {
-  OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
-  ADMIN: 'bg-primary/10 text-primary border-primary/20',
-  LEADS: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  CALLING: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  FOLLOWUP: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  LOGISTICS: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  MARKETING: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
-  MANAGER: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
-  HR: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
-  ACCOUNTANT: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-  WAREHOUSE: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
-};
+import { roleColors, ROLE_OPTIONS, ALL_ROLES, getRoleDisplayLabel, isAdminRole, type AppRole } from '@/lib/roleUtils';
 
 // Generate a secure random password
 function generatePassword(length = 12): string {
@@ -60,7 +47,7 @@ function generatePassword(length = 12): string {
 export default function AdminUsers() {
   const { profile } = useAuth();
   const { currentStore } = useCurrentStore();
-  const isOwner = profile?.role === 'OWNER';
+  const isAdmin = isAdminRole(profile?.role);
   
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -87,7 +74,7 @@ export default function AdminUsers() {
       if (error) throw error;
       return data || [];
     },
-    enabled: isOwner,
+    enabled: isAdmin,
   });
   
   // Create a map of user_id -> store info
@@ -212,7 +199,7 @@ const usersWithEmployee = useMemo(() => {
     
     // Store filter (OWNER only)
     let matchesStore = true;
-    if (isOwner && storeFilter !== 'ALL') {
+    if (isAdmin && storeFilter !== 'ALL') {
       const userStores = userStoreMap.get(s.id) || [];
       matchesStore = userStores.some(store => store.id === storeFilter);
     }
@@ -367,7 +354,7 @@ const usersWithEmployee = useMemo(() => {
       if (roleError) throw roleError;
 
       // Handle store assignments for OWNER
-      if (isOwner && editingUser.role !== 'OWNER') {
+      if (isAdmin && editingUser.role !== 'OWNER') {
         const currentStoreIds = editingUserStoreAccess.map(a => a.store_id);
         
         // Remove stores that were deselected
@@ -475,13 +462,13 @@ const usersWithEmployee = useMemo(() => {
     e.preventDefault();
     
     // Non-OWNER users must have a current store to create users
-    if (!isOwner && !currentStore?.id) {
+    if (!isAdmin && !currentStore?.id) {
       toast.error('No store context. Please access this page from a store portal.');
       return;
     }
 
     // OWNER must select at least one store if stores exist
-    if (isOwner && allStores.length > 0 && selectedStoreIds.length === 0) {
+    if (isAdmin && allStores.length > 0 && selectedStoreIds.length === 0) {
       toast.error('Please select at least one store for this user.');
       return;
     }
@@ -500,7 +487,7 @@ const usersWithEmployee = useMemo(() => {
           phone: formData.phone || null,
           role: formData.role,
           // Always pass current store_id for non-OWNER users
-          store_id: isOwner ? undefined : currentStore?.id,
+          store_id: isAdmin ? undefined : currentStore?.id,
         },
       });
 
@@ -545,7 +532,7 @@ const usersWithEmployee = useMemo(() => {
       const createdUserId = response.data?.user?.id;
 
       // For OWNER: Assign selected stores with per-store roles
-      if (isOwner && createdUserId && selectedStoreIds.length > 0) {
+      if (isAdmin && createdUserId && selectedStoreIds.length > 0) {
         for (const storeId of selectedStoreIds) {
           try {
             await assignStoreMutation.mutateAsync({
@@ -775,14 +762,14 @@ const usersWithEmployee = useMemo(() => {
                     </SelectTrigger>
                     <SelectContent>
                       {getAvailableRoles().map((role) => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                        <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Store Selection for OWNER */}
-                {isOwner && allStores.length > 0 && (
+                {isAdmin && allStores.length > 0 && (
                   <div className="space-y-2">
                     <Label>Assign to Stores *</Label>
                     <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
@@ -881,14 +868,14 @@ const usersWithEmployee = useMemo(() => {
                 </SelectTrigger>
                 <SelectContent>
                   {getAvailableRoles().map((role) => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                    <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Store Assignment for OWNER (not for OWNER users) */}
-            {isOwner && allStores.length > 0 && editingUser?.role !== 'OWNER' && (
+            {isAdmin && allStores.length > 0 && editingUser?.role !== 'OWNER' && (
               <div className="space-y-2">
                 <Label>Assign to Stores</Label>
                 <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
@@ -964,7 +951,7 @@ const usersWithEmployee = useMemo(() => {
                 <SelectContent>
                   <SelectItem value="ALL">All Roles</SelectItem>
                   {ALL_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                    <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -978,7 +965,7 @@ const usersWithEmployee = useMemo(() => {
                   <SelectItem value="ALL">All Status</SelectItem>
                 </SelectContent>
               </Select>
-              {isOwner && (
+              {isAdmin && (
                 <Select value={storeFilter} onValueChange={setStoreFilter}>
                   <SelectTrigger className="w-[150px]">
                     <Store className="w-4 h-4 mr-2" />
@@ -1004,7 +991,7 @@ const usersWithEmployee = useMemo(() => {
                   <TableHead className="table-header">Email</TableHead>
                   <TableHead className="table-header">Phone</TableHead>
                   <TableHead className="table-header">Role</TableHead>
-                  {isOwner && <TableHead className="table-header">Store</TableHead>}
+                  {isAdmin && <TableHead className="table-header">Store</TableHead>}
                   <TableHead className="table-header">Employee</TableHead>
                   <TableHead className="table-header">Status</TableHead>
                   <TableHead className="table-header">Actions</TableHead>
@@ -1021,10 +1008,10 @@ const usersWithEmployee = useMemo(() => {
                       <TableCell className="text-muted-foreground">{user.phone || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={roleColors[user.role]}>
-                          {user.role}
+                          {getRoleDisplayLabel(user.role)}
                         </Badge>
                       </TableCell>
-                      {isOwner && (
+                      {isAdmin && (
                         <TableCell>
                           {user.role === 'OWNER' ? (
                             <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
@@ -1116,7 +1103,7 @@ const usersWithEmployee = useMemo(() => {
                 })}
                 {filteredStaff.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isOwner ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
