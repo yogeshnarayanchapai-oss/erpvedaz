@@ -11,7 +11,6 @@ import { useStoreUsers, useAssignUserToStore, useRemoveUserFromStore, useUpdateU
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Database } from '@/integrations/supabase/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,21 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-type AppRole = Database['public']['Enums']['app_role'];
-
-const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
-  { value: 'CALLING', label: 'Calling' },
-  { value: 'LOGISTICS', label: 'Logistics' },
-  { value: 'FOLLOWUP', label: 'Follow-up' },
-  { value: 'LEADS', label: 'Leads' },
-  { value: 'MARKETING', label: 'Marketing' },
-  { value: 'HR', label: 'HR' },
-  { value: 'ACCOUNTANT', label: 'Accountant' },
-  { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'MANAGER', label: 'Manager' },
-  { value: 'ADMIN', label: 'Admin' },
-];
+import { ROLE_OPTIONS, getRoleDisplayLabel, isAdminRole, type AppRole } from '@/lib/roleUtils';
 
 interface StoreUsersTabProps {
   storeId: string;
@@ -44,7 +29,7 @@ interface StoreUsersTabProps {
 
 export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
   const { profile } = useAuth();
-  const isOwner = profile?.role === 'OWNER';
+  const isAdmin = isAdminRole(profile?.role);
 
   const { data: storeUsers = [], isLoading } = useStoreUsers(storeId);
   const assignMutation = useAssignUserToStore();
@@ -152,7 +137,7 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
               <CardTitle>Store Users</CardTitle>
               <CardDescription>
                 Manage who has access to this store and their permission levels
-                {isOwner && <span className="block text-xs mt-1">As OWNER, you can assign per-store roles</span>}
+                {isAdmin && <span className="block text-xs mt-1">As Admin, you can assign per-store roles</span>}
               </CardDescription>
             </div>
             <Button onClick={() => setIsAddOpen(true)}>
@@ -187,12 +172,12 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{access.user?.role || '-'}</Badge>
+                      <Badge variant="outline">{getRoleDisplayLabel(access.user?.role)}</Badge>
                     </TableCell>
                     <TableCell>
                       {access.store_role ? (
                         <Badge variant={getRoleBadgeVariant(access.store_role)}>
-                          {access.store_role}
+                          {getRoleDisplayLabel(access.store_role)}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
@@ -254,7 +239,7 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
               )}
             </div>
 
-            {isOwner && (
+            {isAdmin && (
               <div className="space-y-2">
                 <Label>Store Role</Label>
                 <Select
@@ -299,7 +284,7 @@ export function StoreUsersTab({ storeId }: StoreUsersTabProps) {
             <DialogTitle>Update Store Access</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {isOwner && (
+            {isAdmin && (
               <div className="space-y-2">
                 <Label>Store Role</Label>
                 <Select
