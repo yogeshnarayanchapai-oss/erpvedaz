@@ -203,9 +203,14 @@ export default function AdminLeads() {
         l.current_team === 'CALLING'
       );
       
-      const todayTransfer = staffLeads.filter(l => l.date === todayStr).length;
+      // Today Transfer = leads assigned today
+      const todayTransfer = staffLeads.filter(l => {
+        const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
+        return assignedAt === todayStr;
+      }).length;
+      // Remaining = leads with status ASSIGNED or PENDING (null, NEW)
       const remaining = staffLeads.filter(l => 
-        l.status !== 'CONFIRMED' && l.status !== 'CANCELLED'
+        l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
       // Count products with quantities
@@ -264,8 +269,15 @@ export default function AdminLeads() {
     const todayStr = format(today, 'yyyy-MM-dd');
     const todayLeads = leads.filter(l => l.date === todayStr);
     const totalTodayLeads = todayLeads.length;
-    const transferredToday = todayLeads.filter(l => l.assigned_to_user_id !== null).length;
-    const remainingTodayLeads = totalTodayLeads - transferredToday;
+    // Today Transfer = leads assigned today (assigned_at date matches today)
+    const transferredToday = leads.filter(l => {
+      const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
+      return assignedAt === todayStr;
+    }).length;
+    // Remaining = all leads with status ASSIGNED or PENDING (null, NEW)
+    const remainingTodayLeads = leads.filter(l => 
+      l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
+    ).length;
     
     // Today's order stats
     const todayOrders = orders.filter(o => o.order_date === todayStr);
