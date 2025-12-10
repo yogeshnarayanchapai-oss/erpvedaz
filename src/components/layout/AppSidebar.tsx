@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { NavLink } from '@/components/NavLink';
+import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import {
   Sidebar,
   SidebarContent,
@@ -552,7 +553,7 @@ export function AppSidebar() {
             <h2 className="font-semibold text-sidebar-foreground text-sm truncate max-w-[140px]">
               {brandName.split(' ').slice(0, 2).join(' ')}
             </h2>
-            <p className="text-xs text-sidebar-muted capitalize">{role.toLowerCase()} portal</p>
+            <p className="text-xs text-sidebar-muted">{getRoleDisplayLabel(role)} Portal</p>
           </div>
         </div>
       </SidebarHeader>
