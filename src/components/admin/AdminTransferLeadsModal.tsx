@@ -44,6 +44,9 @@ export function AdminTransferLeadsModal({
   const { currentStore } = useCurrentStore();
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'MANAGER';
+  const isLeadsRole = profile?.role === 'LEADS';
+  const canSeeAllLeads = isOwner || isAdmin; // Admin/Owner sees ALL leads, LEADS role sees only their created leads
   const queryClient = useQueryClient();
   
   const [leadType, setLeadType] = useState<LeadType>('NEW');
@@ -56,14 +59,15 @@ export function AdminTransferLeadsModal({
   const [inputError, setInputError] = useState<string>('');
 
   // Fetch available leads grouped by product for the selected lead type
+  // LEADS role only sees leads they created; Admin/Owner sees ALL leads
   const { data: productLeadCounts = [], refetch: refetchProductCounts } = useQuery({
-    queryKey: ['product-lead-counts', leadType, open, profile?.id, isOwner, currentStore?.id],
+    queryKey: ['product-lead-counts', leadType, open, profile?.id, isOwner, isLeadsRole, canSeeAllLeads, currentStore?.id],
     queryFn: async () => {
       if (!open || !profile?.id) return [];
       
       // Use currentStore.id for OWNER, or get user's store for non-OWNER
       let storeId: string | null = currentStore?.id || null;
-      if (!isOwner && !storeId) {
+      if (!canSeeAllLeads && !storeId) {
         const { data: userStoreAccess } = await supabase
           .from('user_store_access')
           .select('store_id')
@@ -79,7 +83,7 @@ export function AdminTransferLeadsModal({
       // Get all unassigned leads for this lead type filtered by store (exclude confirmed leads)
       let query = supabase
         .from('leads')
-        .select('product_id, products!inner(id, name, store_id)')
+        .select('product_id, created_by_user_id, products!inner(id, name, store_id)')
         .eq('lead_bucket', leadType)
         .eq('pool_status', 'IN_POOL')
         .is('assigned_to_user_id', null)
@@ -87,6 +91,11 @@ export function AdminTransferLeadsModal({
         .is('order_id', null)
         .eq('store_id', storeId)
         .eq('products.store_id', storeId);
+      
+      // LEADS role: only see leads they created
+      if (isLeadsRole && !canSeeAllLeads) {
+        query = query.eq('created_by_user_id', profile.id);
+      }
       
       const { data: leads, error } = await query;
 
@@ -264,7 +273,7 @@ export function AdminTransferLeadsModal({
 
       // Get store_id for filtering
       let storeId: string | null = currentStore?.id || null;
-      if (!isOwner && !storeId) {
+      if (!canSeeAllLeads && !storeId) {
         const { data: userStoreAccess } = await supabase
           .from('user_store_access')
           .select('store_id')
@@ -286,7 +295,8 @@ export function AdminTransferLeadsModal({
       const staffName = selectedStaff?.name || 'Unknown';
 
       // Get available leads filtered by store (exclude confirmed leads - cannot be transferred)
-      const { data: leads, error: fetchError } = await supabase
+      // LEADS role: only transfer leads they created
+      let leadsQuery = supabase
         .from('leads')
         .select('id, store_id')
         .eq('product_id', productId)
@@ -298,6 +308,13 @@ export function AdminTransferLeadsModal({
         .is('order_id', null)
         .order('created_at', { ascending: true })
         .limit(count);
+      
+      // LEADS role: filter by created_by_user_id
+      if (isLeadsRole && !canSeeAllLeads) {
+        leadsQuery = leadsQuery.eq('created_by_user_id', user.id);
+      }
+      
+      const { data: leads, error: fetchError } = await leadsQuery;
 
       if (fetchError) throw fetchError;
       if (!leads || leads.length === 0) {
