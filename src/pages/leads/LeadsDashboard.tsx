@@ -25,6 +25,7 @@ import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress'
 import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
@@ -33,6 +34,8 @@ export default function LeadsDashboard() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { effectiveRole } = useEffectiveRole();
+  const { currentStore } = useCurrentStore();
+  const currentStoreId = currentStore?.id;
   
   // Check if user is Admin/Owner (sees all store data) or LEADS role (sees only own data)
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER';
@@ -121,12 +124,15 @@ export default function LeadsDashboard() {
   
   useEffect(() => {
     async function fetchTodayTransfers() {
+      if (!currentStoreId) return;
+      
       const todayDate = getNepalDate();
-      // Fetch from lead_transfers table with lead info (created_by_user_id, product_id)
+      // Fetch from lead_transfers table with lead info (created_by_user_id, product_id, store_id)
       const { data, error } = await supabase
         .from('lead_transfers')
-        .select('to_user_id, lead_id, leads!inner(created_by_user_id, product_id)')
+        .select('to_user_id, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
         .not('to_user_id', 'is', null)
+        .eq('leads.store_id', currentStoreId)
         .gte('transferred_at', `${todayDate}T00:00:00+05:45`)
         .lte('transferred_at', `${todayDate}T23:59:59+05:45`);
       
@@ -152,7 +158,7 @@ export default function LeadsDashboard() {
     return () => {
       supabase.removeChannel(transfersChannel);
     };
-  }, [today]);
+  }, [today, currentStoreId]);
 
   // Staff Transfer Summary - shows Calling Staff list
   // Uses leads.assigned_at for historical counting - aggregates ALL assignments today
