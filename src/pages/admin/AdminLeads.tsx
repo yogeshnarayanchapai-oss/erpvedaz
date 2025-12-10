@@ -384,6 +384,18 @@ export default function AdminLeads() {
       }));
       await supabase.from('lead_transfers').insert(transfers);
 
+      // Send notification to the new assigned staff
+      await supabase.from('notifications').insert({
+        type: 'LEAD_ASSIGNED',
+        title: 'New Leads Reassigned',
+        message: `Assigned new ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''} to you.`,
+        target_user_id: reassignStaffId,
+        actor_id: profile?.id,
+        actor_name: profile?.name || 'Admin',
+        portal: 'CALLING',
+        link_path: '/calling/leads',
+      });
+
       toast.success(`Reassigned ${selectedLeads.length} leads`);
       setSelectedLeads([]);
       setIsReassignOpen(false);
