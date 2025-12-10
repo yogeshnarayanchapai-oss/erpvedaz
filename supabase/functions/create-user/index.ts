@@ -201,6 +201,7 @@ serve(async (req: Request) => {
           user_id: newUserId,
           store_id: store_id,
           access_level: accessLevel,
+          store_role: role, // Set store-specific role automatically
           is_active: true,
         }, { onConflict: 'user_id,store_id' });
 
