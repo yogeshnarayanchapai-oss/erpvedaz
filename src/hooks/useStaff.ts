@@ -27,10 +27,10 @@ export function useStaff(role?: AppRole, includeInactive = false) {
     queryFn: async () => {
       // If storeId exists, filter by store (even for OWNER)
       if (storeId) {
-        // Get user IDs that have access to this store
+        // Get user IDs that have access to this store, including store_role
         const { data: storeUsers, error: storeError } = await supabase
           .from('user_store_access')
-          .select('user_id')
+          .select('user_id, store_role')
           .eq('store_id', storeId)
           .eq('is_active', true);
 
@@ -40,21 +40,47 @@ export function useStaff(role?: AppRole, includeInactive = false) {
           return [];
         }
 
-        const userIds = storeUsers.map(u => u.user_id);
+        // If role filter is specified, filter by store_role first
+        let filteredUserIds: string[];
+        if (role) {
+          // Use store_role for filtering when available
+          filteredUserIds = storeUsers
+            .filter(u => u.store_role === role)
+            .map(u => u.user_id);
+          
+          // If no store_role matches, also check profiles.role for users without store_role
+          const usersWithoutStoreRole = storeUsers
+            .filter(u => !u.store_role)
+            .map(u => u.user_id);
+          
+          if (usersWithoutStoreRole.length > 0) {
+            const { data: profilesWithRole } = await supabase
+              .from('profiles')
+              .select('id')
+              .in('id', usersWithoutStoreRole)
+              .eq('role', role);
+            
+            if (profilesWithRole) {
+              filteredUserIds = [...filteredUserIds, ...profilesWithRole.map(p => p.id)];
+            }
+          }
+        } else {
+          filteredUserIds = storeUsers.map(u => u.user_id);
+        }
+
+        if (filteredUserIds.length === 0) {
+          return [];
+        }
 
         let query = supabase
           .from('profiles')
           .select('*')
-          .in('id', userIds)
+          .in('id', filteredUserIds)
           .neq('role', 'OWNER') // Never show OWNER in store-specific views
           .order('name');
 
         if (!includeInactive) {
           query = query.eq('is_active', true);
-        }
-
-        if (role) {
-          query = query.eq('role', role);
         }
 
         const { data, error } = await query;
