@@ -369,15 +369,15 @@ export default function LeadsAll() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Date Range</label>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Date Range</label>
               <DateRangeFilter value={dateRange} onChange={setDateRange} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product</label>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Product</label>
               <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[130px] h-9">
                   <SelectValue placeholder="All products" />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,10 +388,10 @@ export default function LeadsAll() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[120px] h-9">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -403,10 +403,10 @@ export default function LeadsAll() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Assigned To</label>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Assigned To</label>
               <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[130px] h-9">
                   <SelectValue placeholder="All Staff" />
                 </SelectTrigger>
                 <SelectContent>
@@ -418,15 +418,15 @@ export default function LeadsAll() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 flex-1 min-w-[200px]">
-              <label className="text-sm font-medium">Search</label>
+            <div className="space-y-1 flex-1 min-w-[150px]">
+              <label className="text-xs font-medium">Search</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or contact..."
+                  placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-8 h-9"
                 />
               </div>
             </div>
