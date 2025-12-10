@@ -133,7 +133,7 @@ export default function AdminLeads() {
 
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
-  const [leadTransfers, setLeadTransfers] = useState<{ to_user_id: string; transferred_at: string; lead_id: string }[]>([]);
+  const [todayAssignedLeads, setTodayAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
   
   useEffect(() => {
     const fetchPoolCount = async () => {
@@ -147,26 +147,31 @@ export default function AdminLeads() {
     fetchPoolCount();
   }, [leads]); // Refresh when leads change
 
-  // Fetch lead_transfers for Staff Transfer Summary (aggregated from ALL transferring users)
+  // Fetch leads assigned today from leads table (aggregates ALL assignments regardless of creator)
   useEffect(() => {
-    const fetchLeadTransfers = async () => {
+    const fetchTodayAssignedLeads = async () => {
       if (!storeId) return;
       const todayStr = format(today, 'yyyy-MM-dd');
       const { data } = await supabase
-        .from('lead_transfers')
-        .select('to_user_id, transferred_at, lead_id, leads!inner(store_id)')
-        .eq('leads.store_id', storeId)
-        .gte('transferred_at', `${todayStr}T00:00:00`)
-        .lte('transferred_at', `${todayStr}T23:59:59`);
-      setLeadTransfers(data?.map(d => ({ to_user_id: d.to_user_id, transferred_at: d.transferred_at, lead_id: d.lead_id })) || []);
+        .from('leads')
+        .select('id, assigned_to_user_id, product_id')
+        .eq('store_id', storeId)
+        .not('assigned_to_user_id', 'is', null)
+        .gte('assigned_at', `${todayStr}T00:00:00`)
+        .lte('assigned_at', `${todayStr}T23:59:59`);
+      setTodayAssignedLeads(data?.map(d => ({ 
+        assigned_to_user_id: d.assigned_to_user_id!, 
+        lead_id: d.id,
+        product_id: d.product_id 
+      })) || []);
     };
-    fetchLeadTransfers();
+    fetchTodayAssignedLeads();
 
     // Subscribe to real-time changes
     const channel = supabase
-      .channel('admin-lead-transfers-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_transfers' }, () => {
-        fetchLeadTransfers();
+      .channel('admin-leads-assigned-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        fetchTodayAssignedLeads();
       })
       .subscribe();
 
@@ -238,11 +243,11 @@ export default function AdminLeads() {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
-  // Staff Transfer Summary calculation - aggregated from ALL transferring users
+  // Staff Transfer Summary calculation - aggregated from ALL assignments (via assigned_at)
   const staffTransferSummary = useMemo(() => {
     return callingStaff.map(staff => {
-      // Today Transfer = count from lead_transfers table (aggregated from ALL transferring users)
-      const todayTransfer = leadTransfers.filter(t => t.to_user_id === staff.id).length;
+      // Today Transfer = count leads assigned to this staff today (from ALL creators)
+      const todayTransfer = todayAssignedLeads.filter(l => l.assigned_to_user_id === staff.id).length;
       
       // Remaining = leads currently assigned to this staff with pending status
       const staffLeads = leads.filter(l => 
@@ -253,12 +258,12 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products: get leads that were transferred today to this staff
-      const todayTransferLeadIds = leadTransfers
-        .filter(t => t.to_user_id === staff.id)
-        .map(t => t.lead_id);
+      // Products: get leads that were assigned today to this staff
+      const todayAssignedLeadIds = todayAssignedLeads
+        .filter(l => l.assigned_to_user_id === staff.id)
+        .map(l => l.lead_id);
       const todayLeadsWithProducts = leads.filter(l => 
-        todayTransferLeadIds.includes(l.id) && l.product_id
+        todayAssignedLeadIds.includes(l.id) && l.product_id
       );
       
       const productCounts: Record<string, number> = {};
@@ -284,7 +289,7 @@ export default function AdminLeads() {
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0)
       .sort((a, b) => b.todayTransfer - a.todayTransfer);
-  }, [callingStaff, leads, leadTransfers, products]);
+  }, [callingStaff, leads, todayAssignedLeads, products]);
 
   // Product Leads Summary calculation
   const productSummary = useMemo(() => {
