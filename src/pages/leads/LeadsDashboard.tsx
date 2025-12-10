@@ -609,7 +609,7 @@ export default function LeadsDashboard() {
                   <TableHead>Product</TableHead>
                   <TableHead className="text-center">Leads Today</TableHead>
                   <TableHead className="text-center">Transferred</TableHead>
-                  <TableHead className="text-center">New</TableHead>
+                  <TableHead className="text-center">Remaining</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
