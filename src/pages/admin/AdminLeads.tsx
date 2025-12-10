@@ -131,6 +131,8 @@ export default function AdminLeads() {
 
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
+  const [leadTransfers, setLeadTransfers] = useState<{ to_user_id: string; transferred_at: string; lead_id: string }[]>([]);
+  
   useEffect(() => {
     const fetchPoolCount = async () => {
       const { count } = await supabase
@@ -142,6 +144,32 @@ export default function AdminLeads() {
     };
     fetchPoolCount();
   }, [leads]); // Refresh when leads change
+
+  // Fetch lead_transfers for Staff Transfer Summary (aggregated from ALL transferring users)
+  useEffect(() => {
+    const fetchLeadTransfers = async () => {
+      const todayStr = format(today, 'yyyy-MM-dd');
+      const { data } = await supabase
+        .from('lead_transfers')
+        .select('to_user_id, transferred_at, lead_id')
+        .gte('transferred_at', `${todayStr}T00:00:00`)
+        .lte('transferred_at', `${todayStr}T23:59:59`);
+      setLeadTransfers(data || []);
+    };
+    fetchLeadTransfers();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('admin-lead-transfers-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_transfers' }, () => {
+        fetchLeadTransfers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [today]);
 
   // Mark section as seen when data loads (for badge clearing)
   useAutoMarkSeen('all_leads', isFetched && !isLoading);
@@ -206,30 +234,29 @@ export default function AdminLeads() {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
-  // Staff Transfer Summary calculation
+  // Staff Transfer Summary calculation - aggregated from ALL transferring users
   const staffTransferSummary = useMemo(() => {
-    const todayStr = format(today, 'yyyy-MM-dd');
     return callingStaff.map(staff => {
+      // Today Transfer = count from lead_transfers table (aggregated from ALL transferring users)
+      const todayTransfer = leadTransfers.filter(t => t.to_user_id === staff.id).length;
+      
+      // Remaining = leads currently assigned to this staff with pending status
       const staffLeads = leads.filter(l => 
         l.assigned_to_user_id === staff.id && 
         l.current_team === 'CALLING'
       );
-      
-      // Today Transfer = leads assigned today
-      const todayTransfer = staffLeads.filter(l => {
-        const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
-        return assignedAt === todayStr;
-      }).length;
-      // Remaining = leads with status ASSIGNED or PENDING (null, NEW)
       const remaining = staffLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Count products with quantities - use assigned_at for reassigned leads
-      const todayLeadsWithProducts = staffLeads.filter(l => {
-        const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
-        return assignedAt === todayStr && l.product_id;
-      });
+      // Products: get leads that were transferred today to this staff
+      const todayTransferLeadIds = leadTransfers
+        .filter(t => t.to_user_id === staff.id)
+        .map(t => t.lead_id);
+      const todayLeadsWithProducts = leads.filter(l => 
+        todayTransferLeadIds.includes(l.id) && l.product_id
+      );
+      
       const productCounts: Record<string, number> = {};
       todayLeadsWithProducts.forEach(lead => {
         const productName = products.find(p => p.id === lead.product_id)?.name;
@@ -240,7 +267,6 @@ export default function AdminLeads() {
       
       const productEntries = Object.entries(productCounts);
       const fullProductList = productEntries.map(([name, qty]) => `${name} (${qty})`).join(', ');
-      // If too long, show first word of each product name
       const shortProductList = productEntries.map(([name, qty]) => `${name.split(' ')[0]} (${qty})`).join(', ');
       const displayProducts = fullProductList.length > 40 ? shortProductList : fullProductList;
 
@@ -254,7 +280,7 @@ export default function AdminLeads() {
       };
     }).filter(s => s.todayTransfer > 0 || s.remaining > 0)
       .sort((a, b) => b.todayTransfer - a.todayTransfer);
-  }, [callingStaff, leads, products, today]);
+  }, [callingStaff, leads, leadTransfers, products]);
 
   // Product Leads Summary calculation
   const productSummary = useMemo(() => {
