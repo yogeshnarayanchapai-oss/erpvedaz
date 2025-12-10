@@ -262,19 +262,37 @@ export function AdminTransferLeadsModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get store_id for filtering
+      let storeId: string | null = currentStore?.id || null;
+      if (!isOwner && !storeId) {
+        const { data: userStoreAccess } = await supabase
+          .from('user_store_access')
+          .select('store_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single();
+        
+        storeId = userStoreAccess?.store_id || null;
+      }
+      
+      if (!storeId) {
+        throw new Error('Store context not available');
+      }
+
       // Get names for toast message
       const selectedProduct = productLeadCounts.find(p => p.productId === productId);
       const selectedStaff = staffWithCounts.find(s => s.id === staffId);
       const productName = selectedProduct?.productName || 'Unknown';
       const staffName = selectedStaff?.name || 'Unknown';
 
-      // Get available leads (exclude confirmed leads - cannot be transferred)
+      // Get available leads filtered by store (exclude confirmed leads - cannot be transferred)
       const { data: leads, error: fetchError } = await supabase
         .from('leads')
         .select('id, store_id')
         .eq('product_id', productId)
         .eq('lead_bucket', leadType)
         .eq('pool_status', 'IN_POOL')
+        .eq('store_id', storeId)
         .is('assigned_to_user_id', null)
         .neq('status', 'CONFIRMED')
         .is('order_id', null)
