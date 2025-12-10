@@ -147,6 +147,43 @@ export function useLeads(filters?: {
   });
 }
 
+// Hook for Staff Transfer Summary - includes ALL leads (including confirmed ones)
+// This ensures "Today Transfer" count doesn't decrease when leads get confirmed
+export function useLeadsForTransferSummary() {
+  const storeId = useCurrentStoreId();
+
+  return useQuery({
+    queryKey: ['leads-transfer-summary', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          id,
+          created_by_user_id,
+          assigned_to_user_id,
+          assigned_at,
+          status,
+          product_id,
+          products:product_id(name)
+        `)
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        created_by_user_id: string | null;
+        assigned_to_user_id: string | null;
+        assigned_at: string | null;
+        status: string | null;
+        product_id: string | null;
+        products?: { name: string } | null;
+      }>;
+    },
+    enabled: !!storeId,
+  });
+}
+
 export function useCreateLead() {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
