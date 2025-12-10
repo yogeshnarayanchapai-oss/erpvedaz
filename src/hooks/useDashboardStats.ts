@@ -231,49 +231,67 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
     queryFn: async () => {
       if (!userId) return null;
 
-      // ONLY fetch leads CURRENTLY assigned to this user
-      // When lead is reassigned to another staff, it should NOT appear in old staff's count
-      let assignedQuery = supabase
+      // Fetch leads CURRENTLY assigned to this user (for active workload)
+      let currentQuery = supabase
         .from('leads')
-        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_at, store_id')
+        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_at, store_id, first_assigned_to_user_id')
         .eq('assigned_to_user_id', userId);
 
       // Filter by store_id
       if (storeId) {
-        assignedQuery = assignedQuery.eq('store_id', storeId);
+        currentQuery = currentQuery.eq('store_id', storeId);
       }
 
-      // Filter by assigned_at date (when lead was assigned to this staff) 
-      // This ensures recently reassigned leads appear as "new" for the new staff
-      if (dateFrom) {
-        // Use assigned_at for "Today" filter to show recently transferred leads
-        assignedQuery = assignedQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
-      }
-      if (dateTo) {
-        assignedQuery = assignedQuery.lte('date', dateTo);
+      // Filter by date - include leads where date OR assigned_at is within range
+      if (dateFrom && dateTo) {
+        currentQuery = currentQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+      } else if (dateFrom) {
+        currentQuery = currentQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
       }
 
-      const { data, error } = await assignedQuery;
+      // Also fetch historical leads (first_assigned_to_user_id) - this count NEVER decreases
+      let historicalQuery = supabase
+        .from('leads')
+        .select('id, status, order_id, date, current_team, assigned_at, store_id')
+        .eq('first_assigned_to_user_id', userId);
 
-      if (error) throw error;
+      if (storeId) {
+        historicalQuery = historicalQuery.eq('store_id', storeId);
+      }
 
-      // Only use currently assigned leads - DO NOT include self-created leads that are reassigned elsewhere
-      const allLeads = data || [];
-      const callingLeads = allLeads.filter(l => l.current_team === 'CALLING');
+      if (dateFrom && dateTo) {
+        historicalQuery = historicalQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+      } else if (dateFrom) {
+        historicalQuery = historicalQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
+      }
+
+      const [currentResult, historicalResult] = await Promise.all([
+        currentQuery,
+        historicalQuery
+      ]);
+
+      if (currentResult.error) throw currentResult.error;
+      if (historicalResult.error) throw historicalResult.error;
+
+      const currentLeads = currentResult.data || [];
+      const historicalLeads = historicalResult.data || [];
+      const callingLeads = currentLeads.filter(l => l.current_team === 'CALLING');
       
       // Pending statuses for "Remain to Call" - leads that haven't been processed yet
       const pendingStatuses = ['NEW', 'ASSIGNED', null, ''];
       
       return {
-        total: allLeads.length,
+        total: currentLeads.length,
         callingTotal: callingLeads.length,
-        // Assigned = ONLY leads currently assigned to this user
-        assigned: allLeads.length,
-        confirmed: allLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
-        callNotReceived: allLeads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
-        followUp: allLeads.filter(l => l.status === 'FOLLOW_UP').length,
-        cancelled: allLeads.filter(l => l.status === 'CANCELLED').length,
-        pending: allLeads.filter(l => pendingStatuses.includes(l.status)).length,
+        // Assigned = historical count (first_assigned_to_user_id) - NEVER decreases
+        assigned: historicalLeads.length,
+        // Current = only leads currently assigned to this user
+        currentAssigned: currentLeads.length,
+        confirmed: currentLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
+        callNotReceived: currentLeads.filter(l => l.status === 'CALL_NOT_RECEIVED').length,
+        followUp: currentLeads.filter(l => l.status === 'FOLLOW_UP').length,
+        cancelled: currentLeads.filter(l => l.status === 'CANCELLED').length,
+        pending: currentLeads.filter(l => pendingStatuses.includes(l.status)).length,
         // Remain to call = leads with pending/no status (not yet processed)
         remainingToCall: callingLeads.filter(l => 
           pendingStatuses.includes(l.status) || !l.status

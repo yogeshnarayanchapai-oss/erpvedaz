@@ -63,9 +63,11 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         leadsQuery = leadsQuery.eq('store_id', storeId);
       }
 
-      // Filter by date range (using lead date OR assigned_at)
-      leadsQuery = leadsQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
-      leadsQuery = leadsQuery.lte('date', dateTo);
+      // Filter by date range - include leads where:
+      // - date is within range (original lead date)
+      // - OR assigned_at is within range (for reassigned leads)
+      // Don't use strict date filter to avoid excluding historical assignments
+      leadsQuery = leadsQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
 
       const { data: allLeads, error: leadsError } = await leadsQuery;
 

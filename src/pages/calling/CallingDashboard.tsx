@@ -74,7 +74,8 @@ export default function CallingDashboard() {
   const followupStats = useFollowupStats(leads);
 
   // Use stats from realtime hooks, fallback to computed values if not yet loaded
-  const assignedCount = leadStats?.total ?? 0;
+  // assigned = historical count (first_assigned_to_user_id) - NEVER decreases even after reassignment
+  const assignedCount = leadStats?.assigned ?? 0;
   // Confirmed count = orders with CONFIRMED status created by this user within date range
   const confirmedCount = orders.filter(o => o.order_status === 'CONFIRMED').length;
   const cnrCount = leadStats?.callNotReceived ?? 0;
