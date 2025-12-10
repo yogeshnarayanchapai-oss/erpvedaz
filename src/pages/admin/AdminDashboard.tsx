@@ -283,7 +283,7 @@ export default function AdminDashboard() {
         />
         <StatCard 
           title="Confirmed" 
-          value={stats.confirmed} 
+          value={orders.confirmed} 
           icon={<CheckCircle className="w-5 h-5" />} 
           variant="success" 
           onClick={() => handleStatCardClick('confirmed')}
