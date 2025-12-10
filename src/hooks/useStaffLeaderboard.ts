@@ -142,10 +142,10 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         // Only include staff with some activity
         if (stats.totalOrders === 0 && totalLeads === 0) return;
 
-        // Conversion Rate = Leads / (Confirmed Orders - VD Not Deliver)
+        // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Leads * 100
         const effectiveOrders = stats.confirmedOrders - stats.vdNotDeliver;
-        const conversionRate = effectiveOrders > 0 
-          ? (totalLeads / effectiveOrders) * 100 
+        const conversionRate = totalLeads > 0 
+          ? (effectiveOrders / totalLeads) * 100 
           : 0;
 
         leaderboard.push({
