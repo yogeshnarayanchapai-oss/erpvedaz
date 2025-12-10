@@ -365,6 +365,7 @@ export function useTransferLeads() {
           pool_status: 'ASSIGNED',
           assigned_at: new Date().toISOString(),
           is_transferred: true,
+          remark: '', // Clear remark when transferring to new staff
         })
         .in('id', leadIds);
 

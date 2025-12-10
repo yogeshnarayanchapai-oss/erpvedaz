@@ -366,6 +366,7 @@ export default function AdminLeads() {
           status: 'ASSIGNED',
           current_team: 'CALLING',
           assigned_at: new Date().toISOString(),
+          remark: '', // Clear remark when reassigning to new staff
         })
         .in('id', selectedLeads);
 
