@@ -73,13 +73,17 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (leadsError) throw leadsError;
 
-      // Fetch all staff profiles
+      // Fetch only CALLING staff profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, name')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('role', 'CALLING');
 
       if (profilesError) throw profilesError;
+
+      // Create a set of calling staff IDs for filtering
+      const callingStaffIds = new Set(profiles?.map(p => p.id) || []);
 
       // Create a map of profile names
       const profileMap = new Map(profiles?.map(p => [p.id, p.name]) || []);
@@ -153,16 +157,11 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         }
       });
 
-      // Build leaderboard
+      // Build leaderboard - only include CALLING staff
       const leaderboard: StaffLeaderboardEntry[] = [];
       
-      // Combine all staff IDs from both orders and leads
-      const allStaffIds = new Set([
-        ...staffStats.keys(),
-        ...leadsPerUser.keys(),
-      ]);
-
-      allStaffIds.forEach(staffId => {
+      // Only use calling staff IDs
+      callingStaffIds.forEach(staffId => {
         const name = profileMap.get(staffId);
         if (!name) return;
 
