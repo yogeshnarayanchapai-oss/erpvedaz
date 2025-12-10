@@ -62,34 +62,62 @@ export function useStaffDetailSummary(staffId: string, dateRange: DateRange) {
     queryKey: ['staff-detail-summary', staffId, dateFrom, dateTo],
     queryFn: async () => {
       // Get leads assigned to this staff
-      const { data: leads, error: leadsErr } = await supabase
+      const { data: assignedLeads, error: assignedErr } = await supabase
         .from('leads')
         .select('id, status')
         .eq('assigned_to_user_id', staffId)
         .gte('date', dateFrom)
         .lte('date', dateTo);
 
-      if (leadsErr) throw leadsErr;
+      if (assignedErr) throw assignedErr;
+
+      // Get leads created by this staff
+      const { data: createdLeads, error: createdErr } = await supabase
+        .from('leads')
+        .select('id, status')
+        .eq('created_by_user_id', staffId)
+        .gte('date', dateFrom)
+        .lte('date', dateTo);
+
+      if (createdErr) throw createdErr;
 
       // Get orders by this staff
       const { data: orders, error: ordersErr } = await supabase
         .from('orders')
-        .select('id, amount, order_status')
+        .select('id, amount, order_status, delivery_location, inside_delivery_status')
         .eq('sales_person_id', staffId)
         .gte('order_date', `${dateFrom}T00:00:00`)
         .lte('order_date', `${dateTo}T23:59:59`);
 
       if (ordersErr) throw ordersErr;
 
-      const leadsReceived = leads?.length || 0;
+      // Use Set to count unique leads (assigned + created, no duplicates)
+      const uniqueLeadIds = new Set<string>();
+      assignedLeads?.forEach(l => uniqueLeadIds.add(l.id));
+      createdLeads?.forEach(l => uniqueLeadIds.add(l.id));
+
+      const leadsReceived = uniqueLeadIds.size;
       const ordersHandled = orders?.length || 0;
       const confirmedOrders = orders?.filter((o: any) => 
         ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status)
       ).length || 0;
+      
+      // VD Not Deliver: confirmed orders in INSIDE_VALLEY that are not delivered
+      const vdNotDeliver = orders?.filter((o: any) => 
+        ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status) &&
+        o.delivery_location === 'INSIDE_VALLEY' &&
+        o.inside_delivery_status !== 'DELIVERED'
+      ).length || 0;
+      
       const totalSales = orders
         ?.filter((o: any) => ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status))
         .reduce((sum: number, o: any) => sum + (o.amount || 0), 0) || 0;
-      const conversionRate = leadsReceived > 0 ? (confirmedOrders / leadsReceived) * 100 : 0;
+      
+      // Total leads = unique leads + orders (matching leaderboard logic)
+      const totalLeads = leadsReceived + ordersHandled;
+      
+      // Conversion Rate = (Confirmed Orders - VD Not Deliver) / Total Leads * 100
+      const conversionRate = totalLeads > 0 ? ((confirmedOrders - vdNotDeliver) / totalLeads) * 100 : 0;
       const avgOrderValue = confirmedOrders > 0 ? totalSales / confirmedOrders : 0;
 
       return {
@@ -112,17 +140,35 @@ export function useStaffLeads(staffId: string, dateRange: DateRange) {
   return useQuery({
     queryKey: ['staff-leads', staffId, dateFrom, dateTo],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch assigned leads
+      const { data: assignedLeads, error: assignedErr } = await supabase
         .from('leads')
         .select('id, date, client_name, source, status, contact_number')
         .eq('assigned_to_user_id', staffId)
         .gte('date', dateFrom)
-        .lte('date', dateTo)
-        .order('date', { ascending: false })
-        .limit(50);
+        .lte('date', dateTo);
 
-      if (error) throw error;
-      return data as StaffLead[];
+      if (assignedErr) throw assignedErr;
+
+      // Fetch created leads
+      const { data: createdLeads, error: createdErr } = await supabase
+        .from('leads')
+        .select('id, date, client_name, source, status, contact_number')
+        .eq('created_by_user_id', staffId)
+        .gte('date', dateFrom)
+        .lte('date', dateTo);
+
+      if (createdErr) throw createdErr;
+
+      // Combine and deduplicate by id
+      const leadMap = new Map<string, StaffLead>();
+      assignedLeads?.forEach(l => leadMap.set(l.id, l as StaffLead));
+      createdLeads?.forEach(l => leadMap.set(l.id, l as StaffLead));
+
+      // Sort by date descending and limit to 50
+      return Array.from(leadMap.values())
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 50);
     },
     enabled: !!staffId,
   });
