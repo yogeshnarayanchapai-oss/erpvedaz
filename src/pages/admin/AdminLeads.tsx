@@ -225,8 +225,11 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Count products with quantities
-      const todayLeadsWithProducts = staffLeads.filter(l => l.date === todayStr && l.product_id);
+      // Count products with quantities - use assigned_at for reassigned leads
+      const todayLeadsWithProducts = staffLeads.filter(l => {
+        const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
+        return assignedAt === todayStr && l.product_id;
+      });
       const productCounts: Record<string, number> = {};
       todayLeadsWithProducts.forEach(lead => {
         const productName = products.find(p => p.id === lead.product_id)?.name;
