@@ -162,7 +162,7 @@ export default function AdminOrders() {
         order.leads?.contact_number?.includes(search) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesSearch;
-    });
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, search]);
 
   // Order Summary - grouped by product for CONFIRMED orders

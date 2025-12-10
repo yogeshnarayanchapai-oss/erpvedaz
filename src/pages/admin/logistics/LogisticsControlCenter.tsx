@@ -55,7 +55,7 @@ export default function LogisticsControlCenter() {
     if (cityFilter && !order.full_address?.toLowerCase().includes(cityFilter.toLowerCase())) return false;
     if (productFilter && !order.product_name?.toLowerCase().includes(productFilter.toLowerCase())) return false;
     return true;
-  });
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Today stats
   const todayOrders = orders.filter(o => format(new Date(o.created_at), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'));
