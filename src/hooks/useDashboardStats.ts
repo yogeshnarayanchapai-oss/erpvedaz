@@ -283,21 +283,39 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         
         // Count unique leads where this user was involved (same logic as Staff Leaderboard)
         const assignedLeadIds = new Set<string>();
+        let firstAssignedCount = 0;
+        let reassignedInCount = 0;
+        let selfCreatedCount = 0;
+        
         (allLeadsInRange || []).forEach(lead => {
-          // Original assignment
+          // Original assignment (historical - includes reassigned OUT)
           if (lead.first_assigned_to_user_id === userId) {
             assignedLeadIds.add(lead.id);
+            firstAssignedCount++;
           }
           // Reassigned to this user (different from original)
           if (lead.assigned_to_user_id === userId && lead.assigned_to_user_id !== lead.first_assigned_to_user_id) {
             assignedLeadIds.add(lead.id);
+            reassignedInCount++;
           }
           // Self-created (when not already counted)
           if (lead.created_by_user_id === userId && 
               lead.first_assigned_to_user_id !== userId && 
               lead.assigned_to_user_id !== userId) {
             assignedLeadIds.add(lead.id);
+            selfCreatedCount++;
           }
+        });
+        
+        console.log('[useStaffLeadStats] Lead counts:', {
+          userId,
+          dateFrom,
+          dateTo,
+          totalLeadsInRange: allLeadsInRange?.length,
+          firstAssignedCount,
+          reassignedInCount,
+          selfCreatedCount,
+          uniqueTotal: assignedLeadIds.size
         });
         
         assignedCount = assignedLeadIds.size;
