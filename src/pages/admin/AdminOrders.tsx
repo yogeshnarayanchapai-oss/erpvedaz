@@ -6,6 +6,9 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStaff } from '@/hooks/useStaff';
 import { useAutoMarkSeen } from '@/hooks/useViewState';
 import { useBulkDeleteOrders } from '@/hooks/useBulkDeleteOrders';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,14 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { OrderBulkActions } from '@/components/orders/OrderBulkActions';
 import { SendToCourierModal } from '@/components/orders/SendToCourierModal';
 import { SubmitToCourierModal } from '@/components/orders/SubmitToCourierModal';
 import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
-import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil } from 'lucide-react';
+import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2 } from 'lucide-react';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
@@ -55,7 +58,11 @@ const paymentStatusColors: Record<string, string> = {
 export default function AdminOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { effectiveRole } = useEffectiveRole();
   const today = new Date();
+  
+  const isAdmin = effectiveRole === 'OWNER'; // OWNER displays as "Admin"
   
   // Bulk selection state
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
@@ -64,12 +71,33 @@ export default function AdminOrders() {
   const [printViewOpen, setPrintViewOpen] = useState(false);
   const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const bulkDeleteOrders = useBulkDeleteOrders();
+  
+  // Single order delete function
+  const handleDeleteOrder = async (orderId: string) => {
+    setDeletingOrderId(orderId);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_deleted: true })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      
+      toast.success('Order deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    } catch (error: any) {
+      toast.error(`Failed to delete order: ${error.message}`);
+    } finally {
+      setDeletingOrderId(null);
+    }
+  };
   
   // Read initial values from URL params
   const initialFromParam = searchParams.get('from');
@@ -680,18 +708,52 @@ export default function AdminOrders() {
                       })()}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingOrder(order);
-                          setEditSheetOpen(true);
-                        }}
-                        className="h-8 w-8 p-0"
-                        title="Edit Order"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingOrder(order);
+                            setEditSheetOpen(true);
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="Edit Order"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingOrderId === order.id}
+                                title="Delete Order"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Order?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will delete the order for {order.leads?.client_name || 'this customer'}. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                   );
