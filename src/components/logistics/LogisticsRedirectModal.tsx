@@ -48,7 +48,7 @@ export function LogisticsRedirectModal({
     if (order) {
       setNewBranch(order.destination_branch || '');
       setNewDeliveryLocation(order.delivery_location || '');
-      setNewCourier(order.courier || '');
+      setNewCourier(order.courier_provider || '');
       setRemark('');
     }
   }, [order]);
@@ -81,7 +81,7 @@ export function LogisticsRedirectModal({
         orderId: order.id,
         branch: newBranch !== order.destination_branch ? newBranch : undefined,
         deliveryLocation: newDeliveryLocation !== order.delivery_location ? newDeliveryLocation : undefined,
-        courier: newCourier !== order.courier ? newCourier : undefined,
+        courier: newCourier !== order.courier_provider ? newCourier : undefined,
         remark,
         userId,
         userName,
