@@ -26,6 +26,7 @@ import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
 export default function LeadsDashboard() {
   // Use Nepal timezone for today's date
@@ -710,7 +711,12 @@ export default function LeadsDashboard() {
                   <TableCell className="text-muted-foreground">
                     {format(new Date(lead.date), 'dd MMM')}
                   </TableCell>
-                  <TableCell className="font-medium">{lead.client_name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {lead.client_name}
+                      <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
+                    </div>
+                  </TableCell>
                   <TableCell>{lead.contact_number}</TableCell>
                   <TableCell>{lead.products?.name || '-'}</TableCell>
                   <TableCell>{lead.source || '-'}</TableCell>

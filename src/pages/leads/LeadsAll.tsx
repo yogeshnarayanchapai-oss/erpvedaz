@@ -26,6 +26,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
+import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
 const STATUS_OPTIONS = ['ALL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
@@ -641,11 +642,7 @@ export default function LeadsAll() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {lead.client_name}
-                          {lead.is_duplicate && (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                              DOUBLE
-                            </Badge>
-                          )}
+                          <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
                         </div>
                       </TableCell>
                       <TableCell>{lead.contact_number}</TableCell>

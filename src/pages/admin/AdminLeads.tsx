@@ -32,6 +32,7 @@ import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsMo
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { toast } from 'sonner';
+import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
@@ -784,7 +785,12 @@ export default function AdminLeads() {
                       />
                     </TableCell>
                     <TableCell><FormattedDate date={lead.date} /></TableCell>
-                    <TableCell className="font-medium">{lead.client_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {lead.client_name}
+                        <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
+                      </div>
+                    </TableCell>
                     <TableCell>{lead.contact_number}</TableCell>
                     <TableCell>{lead.products?.name || '-'}</TableCell>
                     <TableCell>{lead.destination_branch || '-'}</TableCell>
