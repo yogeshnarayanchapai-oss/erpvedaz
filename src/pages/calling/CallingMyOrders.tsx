@@ -389,6 +389,7 @@ export default function CallingMyOrders() {
                   <SelectItem value="PACKED">Packed</SelectItem>
                   <SelectItem value="DISPATCHED">Dispatched</SelectItem>
                   <SelectItem value="DELIVERED">Delivered</SelectItem>
+                  <SelectItem value="REDIRECT">Redirect</SelectItem>
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                   <SelectItem value="RETURNED">RTO</SelectItem>
                 </SelectContent>
