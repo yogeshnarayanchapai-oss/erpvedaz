@@ -19,6 +19,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useStaff } from '@/hooks/useStaff';
 
 // Inside Valley specific status options
 const INSIDE_VALLEY_STATUSES = [
@@ -57,7 +58,9 @@ export default function LogisticsOrders() {
   const [activeTab, setActiveTab] = useState<DeliveryTab>('INSIDE_VALLEY');
   const [includeNotSent, setIncludeNotSent] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
 
+  const { data: staff = [] } = useStaff();
   const { data: orders = [], isLoading } = useOrders({
     dateFrom,
     dateTo,
@@ -78,17 +81,30 @@ export default function LogisticsOrders() {
     // If logistic ID search is active, search globally
     if (logisticIdSearch && logisticIdSearch.trim().length > 0) {
       const searchLower = logisticIdSearch.toLowerCase();
-      return globalSearchOrders.filter((order) =>
+      let result = globalSearchOrders.filter((order) =>
         order.logistic_order_id?.toLowerCase().includes(searchLower)
       );
+      if (selectedStaffId !== 'all') {
+        result = result.filter(o => o.called_by_user_id === selectedStaffId);
+      }
+      return result;
     }
 
     // If reference ID search is active, search globally
     if (search && isReferenceIdSearch(search)) {
-      return globalSearchOrders.filter(o => matchesReferenceId(o.leads?.reference_id, search));
+      let result = globalSearchOrders.filter(o => matchesReferenceId(o.leads?.reference_id, search));
+      if (selectedStaffId !== 'all') {
+        result = result.filter(o => o.called_by_user_id === selectedStaffId);
+      }
+      return result;
     }
 
     return orders.filter(o => {
+      // Staff filter
+      if (selectedStaffId !== 'all' && o.called_by_user_id !== selectedStaffId) {
+        return false;
+      }
+      
       if (!search) return true;
       
       const searchLower = search.toLowerCase();
@@ -101,7 +117,7 @@ export default function LogisticsOrders() {
         o.logistic_order_id?.toLowerCase().includes(searchLower)
       );
     });
-  }, [orders, globalSearchOrders, search, logisticIdSearch]);
+  }, [orders, globalSearchOrders, search, logisticIdSearch, selectedStaffId]);
 
   // Stats calculations - different for Inside vs Outside Valley
   const isInsideValley = activeTab === 'INSIDE_VALLEY';
@@ -380,7 +396,18 @@ export default function LogisticsOrders() {
                   Include not sent
                 </label>
               </div>
-              <Button variant="outline" size="sm" onClick={() => { setSearch(''); setLogisticIdSearch(''); }}>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={() => { setSearch(''); setLogisticIdSearch(''); setSelectedStaffId('all'); }}>
                 Reset
               </Button>
             </div>

@@ -9,15 +9,19 @@ import { CourierComparisonChart } from '@/components/logistics/CourierComparison
 import { DeliveryRateChart } from '@/components/logistics/DeliveryRateChart';
 import { useLogisticsStats, useCourierComparison } from '@/hooks/useLogisticsStats';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useStaff } from '@/hooks/useStaff';
 
 export default function LogisticsDashboardMain() {
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(new Date(), 30),
     to: new Date(),
   });
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
 
-  const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to);
-  const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to);
+  const { data: staff = [] } = useStaff();
+  const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
+  const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
 
   return (
     <div className="space-y-6 p-6 animate-fade-in">
@@ -27,7 +31,20 @@ export default function LogisticsDashboardMain() {
           <h1 className="text-3xl font-bold">Logistics Dashboard</h1>
           <p className="text-muted-foreground">Multi-courier performance overview</p>
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <div className="flex items-center gap-3">
+          <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Staff" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Staff</SelectItem>
+              {staff.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        </div>
       </div>
 
       {/* KPI Cards */}

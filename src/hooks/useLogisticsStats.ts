@@ -27,18 +27,24 @@ export interface CourierStats {
   deliveryRate: number;
 }
 
-export function useLogisticsStats(dateFrom?: Date, dateTo?: Date) {
+export function useLogisticsStats(dateFrom?: Date, dateTo?: Date, staffId?: string) {
   const from = dateFrom || subDays(new Date(), 30);
   const to = dateTo || new Date();
 
   return useQuery({
-    queryKey: ['logistics-stats', format(from, 'yyyy-MM-dd'), format(to, 'yyyy-MM-dd')],
+    queryKey: ['logistics-stats', format(from, 'yyyy-MM-dd'), format(to, 'yyyy-MM-dd'), staffId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('logistics_orders')
-        .select('*')
+        .select('*, orders!inner(created_by_user_id)')
         .gte('created_at', format(from, 'yyyy-MM-dd'))
         .lte('created_at', format(to, 'yyyy-MM-dd') + 'T23:59:59');
+
+      if (staffId) {
+        query = query.eq('orders.created_by_user_id', staffId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -68,18 +74,24 @@ export function useLogisticsStats(dateFrom?: Date, dateTo?: Date) {
   });
 }
 
-export function useCourierComparison(dateFrom?: Date, dateTo?: Date) {
+export function useCourierComparison(dateFrom?: Date, dateTo?: Date, staffId?: string) {
   const from = dateFrom || subDays(new Date(), 30);
   const to = dateTo || new Date();
 
   return useQuery({
-    queryKey: ['courier-comparison', format(from, 'yyyy-MM-dd'), format(to, 'yyyy-MM-dd')],
+    queryKey: ['courier-comparison', format(from, 'yyyy-MM-dd'), format(to, 'yyyy-MM-dd'), staffId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('logistics_orders')
-        .select('*')
+        .select('*, orders!inner(created_by_user_id)')
         .gte('created_at', format(from, 'yyyy-MM-dd'))
         .lte('created_at', format(to, 'yyyy-MM-dd') + 'T23:59:59');
+
+      if (staffId) {
+        query = query.eq('orders.created_by_user_id', staffId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
