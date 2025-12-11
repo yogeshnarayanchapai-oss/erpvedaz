@@ -49,9 +49,9 @@ export function getLastOrderAgoLabel(lastOrderDate: string | null): string {
   return `Last order: ${diffMonths} months ago`;
 }
 
-export function useCustomerInsight(phone: string, enabled = true) {
+export function useCustomerInsight(phone: string, storeId?: string | null, enabled = true) {
   return useQuery({
-    queryKey: ['customer-insight', phone],
+    queryKey: ['customer-insight', phone, storeId],
     queryFn: async (): Promise<CustomerInsight> => {
       if (!phone || phone.length < 10) {
         return { exists: false };
@@ -59,11 +59,17 @@ export function useCustomerInsight(phone: string, enabled = true) {
 
       const cleanPhone = phone.replace(/\D/g, '');
 
-      const { data: customer, error } = await supabase
+      let query = supabase
         .from('customers')
         .select('id, customer_name, total_orders, total_order_value, rto_orders, delivered_orders, last_order_date')
-        .eq('phone_number', cleanPhone)
-        .maybeSingle();
+        .eq('phone_number', cleanPhone);
+      
+      // Filter by store if storeId provided
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data: customer, error } = await query.maybeSingle();
 
       if (error) {
         console.error('Customer insight error:', error);

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { FollowupHistorySection } from './FollowupHistorySection';
 import { CustomerInsightCard } from '@/components/customers/CustomerInsightCard';
 import { useCustomerInsight } from '@/hooks/useCustomerInsight';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { addHours, addDays, format } from 'date-fns';
 import { useProducts } from '@/hooks/useProducts';
 import { SearchableProductSelect } from '@/components/orders/SearchableProductSelect';
@@ -91,7 +92,8 @@ export function EditLeadSheet({
   isSaving,
 }: EditLeadSheetProps) {
   const { data: products = [] } = useProducts();
-  const { data: customerInsight, isLoading: insightLoading } = useCustomerInsight(lead?.contact_number || '', !!lead);
+  const { currentStore } = useCurrentStore();
+  const { data: customerInsight, isLoading: insightLoading } = useCustomerInsight(lead?.contact_number || '', currentStore?.id, !!lead);
   
   if (!lead) return null;
 

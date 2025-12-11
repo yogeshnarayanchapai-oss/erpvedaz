@@ -17,9 +17,9 @@ export interface DuplicateCheckResult {
   } | null;
 }
 
-export function useDuplicatePhoneCheck(phone: string, enabled = true) {
+export function useDuplicatePhoneCheck(phone: string, storeId?: string | null, enabled = true) {
   return useQuery({
-    queryKey: ['duplicate-phone-check', phone],
+    queryKey: ['duplicate-phone-check', phone, storeId],
     queryFn: async (): Promise<DuplicateCheckResult> => {
       if (!phone || phone.length < 10) {
         return { isDuplicate: false, existingCustomer: null, existingLead: null };
@@ -27,25 +27,35 @@ export function useDuplicatePhoneCheck(phone: string, enabled = true) {
 
       const cleanPhone = phone.replace(/\D/g, '');
 
-      // Check customers table
-      const { data: customer } = await supabase
+      // Check customers table for same store
+      let customerQuery = supabase
         .from('customers')
         .select('id, customer_name, total_orders, rto_orders')
-        .eq('phone_number', cleanPhone)
-        .maybeSingle();
+        .eq('phone_number', cleanPhone);
+      
+      if (storeId) {
+        customerQuery = customerQuery.eq('store_id', storeId);
+      }
+      
+      const { data: customer } = await customerQuery.maybeSingle();
 
-      // Check leads table (recent leads within 30 days)
+      // Check leads table for same store (recent leads within 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data: lead } = await supabase
+      let leadQuery = supabase
         .from('leads')
         .select('id, client_name, status, products:product_id(name)')
         .eq('contact_number', cleanPhone)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+      
+      if (storeId) {
+        leadQuery = leadQuery.eq('store_id', storeId);
+      }
+      
+      const { data: lead } = await leadQuery.maybeSingle();
 
       const existingCustomer = customer ? {
         id: customer.id,
