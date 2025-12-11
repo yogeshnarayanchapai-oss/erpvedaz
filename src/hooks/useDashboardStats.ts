@@ -259,23 +259,63 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         currentQuery = currentQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
       }
 
-      // Fetch total_leads_ever_assigned from profiles - this NEVER decreases even if leads are deleted/reassigned
-      const profileQuery = supabase
-        .from('profiles')
-        .select('total_leads_ever_assigned')
-        .eq('id', userId)
-        .single();
+      // For date-filtered "Assigned" count - use same logic as Staff Leaderboard
+      // Count unique leads assigned to this user within date range
+      let assignedCount = 0;
+      
+      if (dateFrom && dateTo) {
+        // Date filter is applied - count from leads table with date filtering
+        // Same logic as Staff Leaderboard: count leads where user was original assignee, reassigned to, or self-created
+        let assignedLeadsQuery = supabase
+          .from('leads')
+          .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, date, assigned_at');
+        
+        if (storeId) {
+          assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
+        }
+        
+        // Apply date filter on date or assigned_at
+        assignedLeadsQuery = assignedLeadsQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+        
+        const { data: allLeadsInRange, error: assignedError } = await assignedLeadsQuery;
+        
+        if (assignedError) throw assignedError;
+        
+        // Count unique leads where this user was involved (same logic as Staff Leaderboard)
+        const assignedLeadIds = new Set<string>();
+        (allLeadsInRange || []).forEach(lead => {
+          // Original assignment
+          if (lead.first_assigned_to_user_id === userId) {
+            assignedLeadIds.add(lead.id);
+          }
+          // Reassigned to this user (different from original)
+          if (lead.assigned_to_user_id === userId && lead.assigned_to_user_id !== lead.first_assigned_to_user_id) {
+            assignedLeadIds.add(lead.id);
+          }
+          // Self-created (when not already counted)
+          if (lead.created_by_user_id === userId && 
+              lead.first_assigned_to_user_id !== userId && 
+              lead.assigned_to_user_id !== userId) {
+            assignedLeadIds.add(lead.id);
+          }
+        });
+        
+        assignedCount = assignedLeadIds.size;
+      } else {
+        // No date filter - use all-time counter from profiles (never decreases)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('total_leads_ever_assigned')
+          .eq('id', userId)
+          .single();
+        
+        assignedCount = profileData?.total_leads_ever_assigned ?? 0;
+      }
 
-      const [currentResult, profileResult] = await Promise.all([
-        currentQuery,
-        profileQuery
-      ]);
-
+      const currentResult = await currentQuery;
       if (currentResult.error) throw currentResult.error;
-      // Don't throw on profile error, just use 0 as fallback
 
       const currentLeads = currentResult.data || [];
-      const totalEverAssigned = profileResult.data?.total_leads_ever_assigned ?? 0;
       const callingLeads = currentLeads.filter(l => l.current_team === 'CALLING');
       
       // Pending statuses for "Remain to Call" - leads that haven't been processed yet
@@ -284,8 +324,8 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       return {
         total: currentLeads.length,
         callingTotal: callingLeads.length,
-        // Assigned = total from profiles table - NEVER decreases even if leads deleted/reassigned
-        assigned: totalEverAssigned,
+        // Assigned = date-filtered count when filter applied, otherwise all-time counter
+        assigned: assignedCount,
         // Current = only leads currently assigned to this user
         currentAssigned: currentLeads.length,
         confirmed: currentLeads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
