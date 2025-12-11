@@ -1,12 +1,58 @@
-import { User, Clock, AlertTriangle } from 'lucide-react';
+import { User, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CustomerInsight } from '@/hooks/useCustomerInsight';
+import { formatStatusLabel } from '@/lib/statusColors';
 
 interface CustomerInsightCardProps {
   insight: CustomerInsight | undefined;
   isLoading: boolean;
   phone: string;
+}
+
+// Determine card color based on order status
+function getCardColorClass(status: string | null | undefined): string {
+  if (!status) {
+    return 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
+  }
+  
+  const upperStatus = status.toUpperCase();
+  
+  // Red statuses: Cancelled, CNR, RTO, etc.
+  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
+    return 'p-3 bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700';
+  }
+  
+  // Yellow for confirmed and other statuses
+  return 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
+}
+
+function getTextColorClass(status: string | null | undefined): string {
+  if (!status) {
+    return 'text-yellow-800 dark:text-yellow-300';
+  }
+  
+  const upperStatus = status.toUpperCase();
+  
+  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
+    return 'text-red-800 dark:text-red-300';
+  }
+  
+  return 'text-yellow-800 dark:text-yellow-300';
+}
+
+function getIconColorClass(status: string | null | undefined): string {
+  if (!status) {
+    return 'text-yellow-600';
+  }
+  
+  const upperStatus = status.toUpperCase();
+  
+  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
+    return 'text-red-600';
+  }
+  
+  return 'text-yellow-600';
 }
 
 export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsightCardProps) {
@@ -42,43 +88,33 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
     );
   }
 
-  // Check if customer has RTO or cancelled orders - Red
-  const hasRtoOrCancel = (insight.rto_count || 0) > 0;
-
-  // Card color: Red for RTO/Cancel, Yellow for existing
-  const cardClass = hasRtoOrCancel
-    ? 'p-3 bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700'
-    : 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
-
-  const iconClass = hasRtoOrCancel ? 'text-red-600' : 'text-yellow-600';
-  const textClass = hasRtoOrCancel 
-    ? 'text-red-800 dark:text-red-300' 
-    : 'text-yellow-800 dark:text-yellow-300';
+  // Existing customer - color based on last order status
+  const cardClass = getCardColorClass(insight.last_order_status);
+  const textClass = getTextColorClass(insight.last_order_status);
+  const iconClass = getIconColorClass(insight.last_order_status);
 
   return (
     <Card className={cardClass}>
       <div className="flex items-start gap-2">
-        {hasRtoOrCancel ? (
-          <AlertTriangle className={`h-4 w-4 mt-0.5 ${iconClass}`} />
-        ) : (
-          <User className={`h-4 w-4 mt-0.5 ${iconClass}`} />
-        )}
+        <User className={`h-4 w-4 mt-0.5 ${iconClass}`} />
         <div className="flex-1 space-y-0.5">
-          {/* Line 1: Customer Name, Product (Price) */}
+          {/* Line 1: Customer Name */}
           <div className={`text-sm ${textClass}`}>
+            <span className="font-medium">Customer Name: </span>
             <span className="font-semibold">{insight.name || 'Unknown'}</span>
-            {insight.last_product_name && (
-              <>
-                <span className="mx-1">•</span>
-                <span>{insight.last_product_name}</span>
-                {insight.last_product_price && (
-                  <span className="opacity-80"> (Rs {insight.last_product_price.toLocaleString()})</span>
-                )}
-              </>
-            )}
           </div>
 
-          {/* Line 2: Store, Handled by, Last Order */}
+          {/* Line 2: Order Status */}
+          <div className={`text-sm ${textClass}`}>
+            <span className="font-medium">Order Status: </span>
+            <span className="font-semibold">
+              {insight.last_order_status 
+                ? formatStatusLabel(insight.last_order_status) 
+                : 'N/A'}
+            </span>
+          </div>
+
+          {/* Line 3: Store, Handled by, Last Order */}
           <div className={`text-xs flex flex-wrap items-center gap-x-1.5 ${textClass} opacity-90`}>
             {insight.store_name && (
               <span>Store: <span className="font-medium">{insight.store_name}</span></span>
@@ -95,14 +131,6 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
                 <span className="inline-flex items-center gap-0.5">
                   <Clock className="h-3 w-3" />
                   {insight.last_order_ago_label}
-                </span>
-              </>
-            )}
-            {hasRtoOrCancel && (
-              <>
-                <span>•</span>
-                <span className="font-semibold text-red-700 dark:text-red-400">
-                  RTO/Cancel: {insight.rto_count}
                 </span>
               </>
             )}
