@@ -1,9 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Note: This context doesn't use useLocation because it needs to work outside BrowserRouter
-// The store slug is extracted from window.location.pathname directly
 
 type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
@@ -25,58 +22,15 @@ interface CurrentStoreContextType {
   setCurrentStore: (storeId: string) => Promise<void>;
   canSwitchStores: boolean;
   refreshStores: () => Promise<void>;
-  storeSubdomain: string | null;
 }
 
 const CurrentStoreContext = createContext<CurrentStoreContextType | undefined>(undefined);
-
+  
 export function CurrentStoreProvider({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuth();
   const [currentStore, setCurrentStoreState] = useState<Store | null>(null);
   const [availableStores, setAvailableStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [pathname, setPathname] = useState(window.location.pathname);
-  
-  // Listen for pathname changes
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setPathname(window.location.pathname);
-    };
-    
-    // Listen for popstate (back/forward navigation)
-    window.addEventListener('popstate', handleLocationChange);
-    
-    // Also check periodically for SPA navigation
-    const interval = setInterval(() => {
-      if (window.location.pathname !== pathname) {
-        setPathname(window.location.pathname);
-      }
-    }, 100);
-    
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-      clearInterval(interval);
-    };
-  }, [pathname]);
-  
-  // Get store slug from URL path (e.g., /vedaz/admin/dashboard -> vedaz)
-  const storeSubdomain = useMemo(() => {
-    const pathParts = pathname.split('/').filter(Boolean);
-    if (pathParts.length === 0) return null;
-    
-    const knownRootPaths = [
-      'auth', 'setup', 'admin', 'leads', 'calling', 'followup',
-      'logistics', 'hr', 'manager', 'marketing', 'hrm', 'training',
-      'my-hr', 'settings', 'orders', 'storefront', 'inventory', 'accounting'
-    ];
-    
-    // If first part is not a known root path, it's likely a store slug
-    if (!knownRootPaths.includes(pathParts[0])) {
-      return pathParts[0];
-    }
-    
-    return null;
-  }, [pathname]);
   
   const isOwner = profile?.role === 'OWNER';
   // Users can switch stores if they have access to multiple stores OR if they're OWNER
@@ -150,33 +104,25 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
       if (storesWithAccess.length > 0) {
         setAvailableStores(storesWithAccess);
 
-        // Set current store based on URL path first
-        if (storeSubdomain) {
-          const pathStore = storesWithAccess.find(s => s.slug === storeSubdomain);
-          if (pathStore) {
-            setCurrentStoreState(pathStore);
-          }
-        } else {
-          // Set current store if not set from path
-          let selectedStore: Store | undefined;
-          
-          // Try saved preference
-          const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
-          selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
-          
-          // Try default store
-          if (!selectedStore && profile?.default_store_id) {
-            selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
-          }
-          
-          // Use first available (for staff this is their assigned store)
-          if (!selectedStore) {
-            selectedStore = storesWithAccess[0];
-          }
+        // Set current store from saved preference or default
+        let selectedStore: Store | undefined;
+        
+        // Try saved preference
+        const savedStoreId = localStorage.getItem(`currentStore_${user.id}`);
+        selectedStore = storesWithAccess.find(s => s.id === savedStoreId);
+        
+        // Try default store
+        if (!selectedStore && profile?.default_store_id) {
+          selectedStore = storesWithAccess.find(s => s.id === profile.default_store_id);
+        }
+        
+        // Use first available (for staff this is their assigned store)
+        if (!selectedStore) {
+          selectedStore = storesWithAccess[0];
+        }
 
-          if (selectedStore) {
-            setCurrentStoreState(selectedStore);
-          }
+        if (selectedStore) {
+          setCurrentStoreState(selectedStore);
         }
       } else {
         setAvailableStores([]);
@@ -187,21 +133,12 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, isOwner, profile?.default_store_id, storeSubdomain]);
+  }, [user?.id, isOwner, profile?.default_store_id]);
 
   useEffect(() => {
     fetchStores();
   }, [fetchStores]);
 
-  // Update current store when URL path changes
-  useEffect(() => {
-    if (storeSubdomain && availableStores.length > 0) {
-      const pathStore = availableStores.find(s => s.slug === storeSubdomain);
-      if (pathStore && currentStore?.slug !== storeSubdomain) {
-        setCurrentStoreState(pathStore);
-      }
-    }
-  }, [storeSubdomain, availableStores, currentStore?.slug]);
 
   const setCurrentStore = async (storeId: string) => {
     const store = availableStores.find(s => s.id === storeId);
@@ -226,7 +163,6 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         setCurrentStore,
         canSwitchStores,
         refreshStores,
-        storeSubdomain,
       }}
     >
       {children}
