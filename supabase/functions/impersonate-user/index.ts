@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use provided origin or default to erp.techlaya.com
-    const baseRedirectUrl = redirectOrigin || 'https://erp.techlaya.com';
+    // Always redirect to root - the app will handle role-based routing after session is established
+    const baseRedirectUrl = 'https://erp.techlaya.com/';
     
     console.log('Redirect URL:', baseRedirectUrl);
     console.log('Target user ID:', targetUserId);
