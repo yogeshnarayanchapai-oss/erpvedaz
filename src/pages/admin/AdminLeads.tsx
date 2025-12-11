@@ -479,12 +479,26 @@ export default function AdminLeads() {
     }
   };
 
+  // Count duplicates
+  const duplicateCount = leads.filter(l => l.is_duplicate).length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Leads</h1>
-          <p className="text-muted-foreground">View and filter all leads in the system</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Leads</h1>
+            <p className="text-muted-foreground">View and filter all leads in the system</p>
+          </div>
+          {duplicateCount > 0 && (
+            <Button 
+              variant={selectedStatus === 'duplicate' ? 'default' : 'outline'} 
+              onClick={() => setSelectedStatus(selectedStatus === 'duplicate' ? 'all' : 'duplicate')}
+              className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 hover:text-orange-700"
+            >
+              Double Leads ({duplicateCount})
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
