@@ -294,27 +294,28 @@ export default function AdminLeads() {
   const productSummary = useMemo(() => {
     return products.map(product => {
       const productLeads = allStoreLeads.filter(l => l.product_id === product.id);
-      // Leads in date range: leads where date is within selected range
+      
+      // Leads = total leads created in date range (by lead.date)
       const leadsInRange = productLeads.filter(l => l.date && l.date >= dateFrom && l.date <= dateTo).length;
-      // Transferred in date range: leads assigned within selected date range (assigned_at)
+      
+      // Transferred = total leads assigned in date range (by assigned_at)
       const transferredInRange = productLeads.filter(l => {
         if (!l.assigned_at) return false;
         const assignedDate = l.assigned_at.split('T')[0];
         return assignedDate >= dateFrom && assignedDate <= dateTo;
       }).length;
-      // Remaining In Pool: all time, not date filtered
-      const remainingInPool = productLeads.filter(l => 
-        l.pool_status === 'IN_POOL' && !l.assigned_to_user_id
-      ).length;
+      
+      // Remaining = Leads - Transferred
+      const remaining = leadsInRange - transferredInRange;
 
       return {
         id: product.id,
         name: product.name,
         leadsInRange,
         transferredInRange,
-        remainingInPool,
+        remaining: Math.max(0, remaining), // Ensure non-negative
       };
-    }).filter(p => p.transferredInRange > 0); // Only show products with transferred leads in date range
+    }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0); // Show if any activity in date range
   }, [products, allStoreLeads, dateFrom, dateTo]);
 
   // Today's Transfer Progress calculation - uses all store leads for accurate counts
@@ -531,7 +532,7 @@ export default function AdminLeads() {
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-warning/5">
-                              {product.remainingInPool.toLocaleString()}
+                              {product.remaining.toLocaleString()}
                             </Badge>
                           </TableCell>
                         </TableRow>
