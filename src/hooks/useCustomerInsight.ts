@@ -20,6 +20,7 @@ export interface CustomerInsight {
   is_different_store?: boolean;
   // Product info
   last_product_name?: string | null;
+  last_product_price?: number | null;
 }
 
 /**
@@ -48,13 +49,13 @@ export function getLastOrderAgoLabel(lastOrderDate: string | null): string {
   const diffMs = now.getTime() - lastOrder.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   
-  if (diffDays === 0) return 'Ordered today';
-  if (diffDays === 1) return 'Ordered yesterday';
-  if (diffDays <= 30) return `Last order: ${diffDays} days ago`;
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays <= 30) return `${diffDays} days ago`;
   
   const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths === 1) return 'Last order: 1 month ago';
-  return `Last order: ${diffMonths} months ago`;
+  if (diffMonths === 1) return '1 month ago';
+  return `${diffMonths} months ago`;
 }
 
 export function useCustomerInsight(phone: string, currentStoreId?: string | null, enabled = true) {
@@ -89,6 +90,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         store_name?: string;
         handled_by_name?: string;
         last_product_name?: string;
+        last_product_price?: number;
       } | null;
 
       if (!data || !data.exists) {
@@ -118,6 +120,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         handled_by_name: data.handled_by_name,
         is_different_store: isDifferentStore,
         last_product_name: data.last_product_name,
+        last_product_price: data.last_product_price,
       };
     },
     enabled: enabled && !!phone && phone.replace(/\D/g, '').length >= 10,

@@ -1,4 +1,4 @@
-import { Star, User, Package, Clock, AlertTriangle, Store, ShoppingBag } from 'lucide-react';
+import { User, Clock, AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,24 +8,6 @@ interface CustomerInsightCardProps {
   insight: CustomerInsight | undefined;
   isLoading: boolean;
   phone: string;
-}
-
-function RatingStars({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-3.5 w-3.5 ${
-            star <= rating
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'fill-muted text-muted'
-          }`}
-        />
-      ))}
-      <span className="ml-1 text-xs text-muted-foreground">({rating}/5)</span>
-    </div>
-  );
 }
 
 export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsightCardProps) {
@@ -41,7 +23,7 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
       <Card className="p-3 bg-muted/50 border-dashed">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded-full" />
-          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-48" />
         </div>
       </Card>
     );
@@ -73,93 +55,64 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
           ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
           : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
     }`}>
-      <div className="space-y-2">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <User className={`h-4 w-4 ${
-              isHighRisk ? 'text-red-600' : insight.is_different_store ? 'text-orange-600' : 'text-blue-600'
-            }`} />
-            <span className={`text-sm font-medium ${
-              isHighRisk 
-                ? 'text-red-700 dark:text-red-400' 
-                : insight.is_different_store
-                  ? 'text-orange-700 dark:text-orange-400'
-                  : 'text-blue-700 dark:text-blue-400'
-            }`}>
-              Existing Customer
-            </span>
-            {isHighRisk && (
-              <Badge variant="destructive" className="text-xs">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                High RTO Risk
-              </Badge>
-            )}
-          </div>
-          {insight.rating && <RatingStars rating={insight.rating} />}
-        </div>
+      <div className="space-y-1.5">
+        {/* Risk badge if applicable */}
+        {isHighRisk && (
+          <Badge variant="destructive" className="text-xs mb-1">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            High RTO Risk
+          </Badge>
+        )}
 
-        {/* Store, Product & Staff Info - Show for existing customers */}
-        {(insight.store_name || insight.handled_by_name || insight.last_product_name) && (
-          <div className="flex flex-col gap-1 text-xs bg-background/50 rounded px-2 py-1.5">
-            {insight.last_product_name && (
-              <div className="flex items-center gap-1">
-                <ShoppingBag className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  Product: <span className="font-medium text-foreground">{insight.last_product_name}</span>
-                </span>
-              </div>
-            )}
-            <div className="flex items-center gap-1">
-              <Store className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                Store: <span className="font-medium text-foreground">{insight.store_name || 'Unknown'}</span>
-                {insight.handled_by_name && (
-                  <>
-                    {' '}• Handled by: <span className="font-medium text-foreground">{insight.handled_by_name}</span>
-                  </>
+        {/* Line 1: Customer Name, Product (Price) */}
+        <div className="text-sm">
+          <span className="text-muted-foreground">Customer Name: </span>
+          <span className="font-medium text-foreground">{insight.name || 'Unknown'}</span>
+          {insight.last_product_name && (
+            <>
+              <span className="text-muted-foreground">, Product: </span>
+              <span className="font-medium text-foreground">
+                {insight.last_product_name}
+                {insight.last_product_price && (
+                  <span className="text-muted-foreground"> (Rs {insight.last_product_price.toLocaleString()})</span>
                 )}
               </span>
-            </div>
-          </div>
-        )}
-
-        {/* Customer Name */}
-        {insight.name && (
-          <p className="text-sm text-foreground font-medium">{insight.name}</p>
-        )}
-
-        {/* Stats */}
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Package className="h-3 w-3" />
-            <span>Orders: {insight.total_orders || 0}</span>
-            {(insight.delivered_count || 0) > 0 && (
-              <span className="text-green-600">({insight.delivered_count} delivered)</span>
-            )}
-          </div>
-          
-          {(insight.rto_count || 0) > 0 && (
-            <div className="flex items-center gap-1 text-red-600">
-              <AlertTriangle className="h-3 w-3" />
-              <span>RTO: {insight.rto_count}</span>
-            </div>
-          )}
-          
-          {(insight.total_amount || 0) > 0 && (
-            <div className="flex items-center gap-1">
-              <span>Total: Rs. {(insight.total_amount || 0).toLocaleString()}</span>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Last Order */}
-        {insight.last_order_ago_label && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{insight.last_order_ago_label}</span>
-          </div>
-        )}
+        {/* Line 2: Store, Handled by, Last Order */}
+        <div className="text-sm flex flex-wrap items-center gap-x-1">
+          <span className="text-muted-foreground">Store:</span>
+          <span className="font-medium text-foreground">{insight.store_name || 'Unknown'}</span>
+          {insight.handled_by_name && (
+            <>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">Handled by:</span>
+              <span className="font-medium text-foreground">{insight.handled_by_name}</span>
+            </>
+          )}
+          {insight.last_order_ago_label && (
+            <>
+              <span className="text-muted-foreground ml-1">
+                <Clock className="h-3 w-3 inline mr-0.5" />
+                Last Order:
+              </span>
+              <span className="font-medium text-foreground">{insight.last_order_ago_label}</span>
+            </>
+          )}
+        </div>
+
+        {/* Line 3: Orders stats (compact) */}
+        <div className="text-xs text-muted-foreground">
+          Orders: {insight.total_orders || 0}
+          {(insight.delivered_count || 0) > 0 && (
+            <span className="text-green-600 ml-1">({insight.delivered_count} delivered)</span>
+          )}
+          {(insight.rto_count || 0) > 0 && (
+            <span className="text-red-600 ml-1">• RTO: {insight.rto_count}</span>
+          )}
+        </div>
       </div>
     </Card>
   );
