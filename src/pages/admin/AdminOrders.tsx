@@ -146,12 +146,16 @@ export default function AdminOrders() {
   // Mark section as seen when data loads (for badge clearing)
   useAutoMarkSeen('all_orders', isFetched && !isLoading);
 
+  // Duplicate filter state
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
+      const matchesDuplicate = !showDuplicatesOnly || (order as any).is_duplicate === true;
       // Check for reference ID search
       const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(order.leads?.reference_id, search);
       
@@ -161,9 +165,12 @@ export default function AdminOrders() {
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
-      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesSearch;
+      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, search]);
+  }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
+
+  // Count duplicates
+  const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate).length;
 
   // Order Summary - grouped by product for CONFIRMED orders
   const orderSummary = useMemo(() => {
@@ -399,9 +406,20 @@ export default function AdminOrders() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Orders</h1>
-          <p className="text-muted-foreground">View and manage all orders</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Orders</h1>
+            <p className="text-muted-foreground">View and manage all orders</p>
+          </div>
+          {duplicateOrderCount > 0 && (
+            <Button 
+              variant={showDuplicatesOnly ? 'default' : 'outline'} 
+              onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+              className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 hover:text-orange-700"
+            >
+              Double Orders ({duplicateOrderCount})
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
