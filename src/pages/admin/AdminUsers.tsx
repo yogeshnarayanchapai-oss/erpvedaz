@@ -125,13 +125,19 @@ export default function AdminUsers() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session?.access_token) {
+        toast.error("Your session has expired. Please log in again.");
+        setIsImpersonating(null);
+        return;
+      }
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/impersonate-user`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
+            'Authorization': `Bearer ${session.access_token}`
           },
           body: JSON.stringify({ targetUserId: user.id, redirectOrigin: 'https://erp.techlaya.com' })
         }
