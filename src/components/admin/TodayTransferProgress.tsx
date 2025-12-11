@@ -10,6 +10,7 @@ interface TodayTransferProgressProps {
   insideValley?: number;
   outsideValley?: number;
   totalRemainingInPool?: number;
+  dateLabel?: string;
 }
 
 export function TodayTransferProgress({
@@ -20,6 +21,7 @@ export function TodayTransferProgress({
   insideValley = 0,
   outsideValley = 0,
   totalRemainingInPool = 0,
+  dateLabel = "Today",
 }: TodayTransferProgressProps) {
   const progressPercent = totalTodayLeads > 0 
     ? Math.round((transferredToday / totalTodayLeads) * 100) 
@@ -29,6 +31,9 @@ export function TodayTransferProgress({
     ? Math.round((confirmedOrders / totalTodayLeads) * 100)
     : 0;
 
+  const isToday = dateLabel === 'Today';
+  const labelText = isToday ? "today's" : "selected";
+
   return (
     <div className="flex flex-wrap gap-4 items-stretch">
       {/* Transfer Progress Card */}
@@ -36,25 +41,25 @@ export function TodayTransferProgress({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <TrendingUp className="w-4 h-4 text-primary" />
-            Today's Transfer Progress
+            {isToday ? "Today's Transfer Progress" : "Transfer Progress"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{transferredToday.toLocaleString()}</span> of{' '}
-            <span className="font-medium text-foreground">{totalTodayLeads.toLocaleString()}</span> today's leads transferred to calling staff
+            <span className="font-medium text-foreground">{totalTodayLeads.toLocaleString()}</span> {labelText} leads transferred to calling staff
           </p>
           
           <div className="space-y-2">
             <Progress value={progressPercent} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Remaining (today): <span className="font-medium text-foreground">{remainingTodayLeads.toLocaleString()}</span></span>
+              <span>Remaining: <span className="font-medium text-foreground">{remainingTodayLeads.toLocaleString()}</span></span>
               <span>Transferred: <span className="font-medium text-primary">{transferredToday.toLocaleString()}</span></span>
             </div>
           </div>
 
           {totalTodayLeads === 0 && (
-            <p className="text-xs text-muted-foreground italic">No leads in pool today</p>
+            <p className="text-xs text-muted-foreground italic">No leads in selected date range</p>
           )}
         </CardContent>
       </Card>

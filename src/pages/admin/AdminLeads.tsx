@@ -322,37 +322,48 @@ export default function AdminLeads() {
     }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0);
   }, [products, allStoreLeads, dateFrom, dateTo]);
 
-  // Today's Transfer Progress calculation - uses all store leads for accurate counts
-  const todayProgressStats = useMemo(() => {
-    const todayStr = format(today, 'yyyy-MM-dd');
-    // Today Leads: leads where date = today (from all store leads)
-    const todayLeads = allStoreLeads.filter(l => l.date === todayStr);
-    const totalTodayLeads = todayLeads.length;
-    // Today Transfer = leads assigned today (assigned_at date matches today)
-    const transferredToday = allStoreLeads.filter(l => {
+  // Transfer Progress calculation - uses date filter and store filter
+  const transferProgressStats = useMemo(() => {
+    // Leads in date range: leads where lead.date is within selected date range
+    const leadsInRange = allStoreLeads.filter(l => {
+      if (!l.date) return false;
+      const leadDate = l.date.split('T')[0];
+      return leadDate >= dateFrom && leadDate <= dateTo;
+    });
+    const totalLeadsInRange = leadsInRange.length;
+    
+    // Transferred in date range: leads assigned within selected date range
+    const transferredInRange = allStoreLeads.filter(l => {
       if (!l.assigned_at) return false;
       const assignedDate = l.assigned_at.split('T')[0];
-      return assignedDate === todayStr;
+      return assignedDate >= dateFrom && assignedDate <= dateTo;
     }).length;
-    // Remaining = all leads with pending status (null status or NEW/ASSIGNED)
-    const remainingTodayLeads = leads.filter(l => 
-      l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
-    ).length;
     
-    // Today's order stats
-    const todayOrders = orders.filter(o => o.order_date === todayStr);
-    const confirmedOrders = todayOrders.filter(o => 
+    // Remaining = total leads in range minus transferred in range
+    const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
+    
+    // Order stats for date range
+    const ordersInRange = orders.filter(o => {
+      if (!o.order_date) return false;
+      const orderDate = o.order_date.split('T')[0];
+      return orderDate >= dateFrom && orderDate <= dateTo;
+    });
+    const confirmedOrders = ordersInRange.filter(o => 
       ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status || '')
     ).length;
-    const insideValley = todayOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
-    const outsideValley = todayOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+    const insideValley = ordersInRange.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
+    const outsideValley = ordersInRange.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
     
     return { 
-      totalTodayLeads, transferredToday, remainingTodayLeads, 
-      confirmedOrders, insideValley, outsideValley,
+      totalLeadsInRange, 
+      transferredInRange, 
+      remainingInRange, 
+      confirmedOrders, 
+      insideValley, 
+      outsideValley,
       totalRemainingInPool: totalPoolCount
     };
-  }, [allStoreLeads, leads, orders, today, totalPoolCount]);
+  }, [allStoreLeads, orders, dateFrom, dateTo, totalPoolCount]);
 
   // Check if "Send back to Leads" button should be shown
   const showReturnButton = selectedStatus === 'CALL_NOT_RECEIVED' && canReturnLeads;
@@ -484,16 +495,17 @@ export default function AdminLeads() {
         </div>
       </div>
 
-      {/* Today's Transfer Progress Widget with Stats */}
+      {/* Transfer Progress Widget with Stats - filtered by date range */}
       {canManageLeads && (
         <TodayTransferProgress
-          totalTodayLeads={todayProgressStats.totalTodayLeads}
-          transferredToday={todayProgressStats.transferredToday}
-          remainingTodayLeads={todayProgressStats.remainingTodayLeads}
-          confirmedOrders={todayProgressStats.confirmedOrders}
-          insideValley={todayProgressStats.insideValley}
-          outsideValley={todayProgressStats.outsideValley}
-          totalRemainingInPool={todayProgressStats.totalRemainingInPool}
+          totalTodayLeads={transferProgressStats.totalLeadsInRange}
+          transferredToday={transferProgressStats.transferredInRange}
+          remainingTodayLeads={transferProgressStats.remainingInRange}
+          confirmedOrders={transferProgressStats.confirmedOrders}
+          insideValley={transferProgressStats.insideValley}
+          outsideValley={transferProgressStats.outsideValley}
+          totalRemainingInPool={transferProgressStats.totalRemainingInPool}
+          dateLabel={dateFrom === dateTo ? 'Today' : `${dateFrom} to ${dateTo}`}
         />
       )}
 
