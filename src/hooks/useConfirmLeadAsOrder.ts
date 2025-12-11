@@ -24,6 +24,76 @@ interface ConfirmLeadAsOrderInput {
   isCod?: boolean;
 }
 
+// Helper function to create or update customer
+async function upsertCustomer(
+  phone: string,
+  storeId: string | null,
+  customerData: {
+    name?: string | null;
+    fullAddress?: string | null;
+    altPhone?: string | null;
+    orderAmount: number;
+  }
+) {
+  if (!phone || !storeId) return;
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.length < 10) return;
+
+  try {
+    // Check if customer exists in this store
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id, total_orders, total_order_value')
+      .eq('phone_number', cleanPhone)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      // Update existing customer
+      await supabase
+        .from('customers')
+        .update({
+          total_orders: (existingCustomer.total_orders || 0) + 1,
+          total_order_value: (existingCustomer.total_order_value || 0) + customerData.orderAmount,
+          last_order_date: new Date().toISOString(),
+          // Update name/address if they were empty
+          ...(customerData.name && !existingCustomer.id ? { customer_name: customerData.name } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingCustomer.id);
+      
+      console.log('[CUSTOMER] Updated existing customer:', existingCustomer.id);
+    } else {
+      // Create new customer
+      const { data: newCustomer, error } = await supabase
+        .from('customers')
+        .insert({
+          phone_number: cleanPhone,
+          customer_name: customerData.name || null,
+          full_address: customerData.fullAddress || null,
+          alt_phone: customerData.altPhone || null,
+          store_id: storeId,
+          total_orders: 1,
+          total_order_value: customerData.orderAmount,
+          first_order_date: new Date().toISOString(),
+          last_order_date: new Date().toISOString(),
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('[CUSTOMER] Failed to create customer:', error);
+      } else {
+        console.log('[CUSTOMER] Created new customer:', newCustomer?.id);
+      }
+    }
+  } catch (err) {
+    console.error('[CUSTOMER] Error in upsertCustomer:', err);
+  }
+}
+
 export function useConfirmLeadAsOrder() {
   const queryClient = useQueryClient();
   const { currentStore } = useCurrentStore();
@@ -40,7 +110,7 @@ export function useConfirmLeadAsOrder() {
       // Check if lead already has an order
       const { data: existingLead } = await supabase
         .from('leads')
-        .select('order_id, client_name, contact_number')
+        .select('order_id, client_name, contact_number, alt_phone, full_address')
         .eq('id', input.leadId)
         .single();
 
@@ -118,6 +188,17 @@ export function useConfirmLeadAsOrder() {
         console.error('Failed to update lead:', leadError);
       }
 
+      // Auto-create/update customer (store-wise)
+      const storeId = order.store_id || currentStore?.id;
+      if (existingLead?.contact_number && storeId) {
+        await upsertCustomer(existingLead.contact_number, storeId, {
+          name: existingLead.client_name,
+          fullAddress: input.fullAddress || existingLead.full_address,
+          altPhone: existingLead.alt_phone,
+          orderAmount: input.totalAmount,
+        });
+      }
+
       // Log to order_history
       await supabase.from('order_history').insert({
         order_id: order.id,
@@ -154,6 +235,7 @@ export function useConfirmLeadAsOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success('Lead confirmed as order successfully');
     },
     onError: (error) => {

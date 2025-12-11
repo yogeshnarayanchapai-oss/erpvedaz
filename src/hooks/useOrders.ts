@@ -8,6 +8,74 @@ type OrderStatus = 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURN
 type PaymentStatus = 'PENDING' | 'PAID' | 'COD';
 type DeliveryLocation = 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
 
+// Helper function to create or update customer when order is created
+async function upsertCustomerFromOrder(
+  phone: string,
+  storeId: string | null,
+  customerData: {
+    name?: string | null;
+    fullAddress?: string | null;
+    altPhone?: string | null;
+    orderAmount: number;
+  }
+) {
+  if (!phone || !storeId) return;
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.length < 10) return;
+
+  try {
+    // Check if customer exists in this store
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id, total_orders, total_order_value')
+      .eq('phone_number', cleanPhone)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      // Update existing customer
+      await supabase
+        .from('customers')
+        .update({
+          total_orders: (existingCustomer.total_orders || 0) + 1,
+          total_order_value: (existingCustomer.total_order_value || 0) + customerData.orderAmount,
+          last_order_date: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingCustomer.id);
+      
+      console.log('[CUSTOMER] Updated existing customer:', existingCustomer.id);
+    } else {
+      // Create new customer
+      const { data: newCustomer, error } = await supabase
+        .from('customers')
+        .insert({
+          phone_number: cleanPhone,
+          customer_name: customerData.name || null,
+          full_address: customerData.fullAddress || null,
+          alt_phone: customerData.altPhone || null,
+          store_id: storeId,
+          total_orders: 1,
+          total_order_value: customerData.orderAmount,
+          first_order_date: new Date().toISOString(),
+          last_order_date: new Date().toISOString(),
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('[CUSTOMER] Failed to create customer:', error);
+      } else {
+        console.log('[CUSTOMER] Created new customer:', newCustomer?.id);
+      }
+    }
+  } catch (err) {
+    console.error('[CUSTOMER] Error in upsertCustomerFromOrder:', err);
+  }
+}
+
 export type InsideDeliveryStatus = 'PENDING' | 'DELIVERED' | 'REACHED_CNR' | 'CUSTOMER_CANCELLED';
 
 export interface Order {
@@ -208,7 +276,7 @@ export function useCreateOrder() {
 
       // Fetch additional details for notification and role
       const [leadResult, productResult, actorResult, roleResult] = await Promise.all([
-        supabase.from('leads').select('client_name, contact_number').eq('id', input.leadId).single(),
+        supabase.from('leads').select('client_name, contact_number, alt_phone, full_address').eq('id', input.leadId).single(),
         supabase.from('products').select('name').eq('id', input.productId).single(),
         supabase.from('profiles').select('name, role').eq('id', user.id).single(),
         supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
@@ -283,6 +351,16 @@ export function useCreateOrder() {
         .update({ status: 'CONFIRMED', order_id: data.id })
         .eq('id', input.leadId);
 
+      // Auto-create/update customer (store-wise)
+      if (leadResult.data?.contact_number && storeId) {
+        await upsertCustomerFromOrder(leadResult.data.contact_number, storeId, {
+          name: leadResult.data.client_name,
+          fullAddress: input.fullAddress || leadResult.data.full_address,
+          altPhone: leadResult.data.alt_phone,
+          orderAmount: input.amount,
+        });
+      }
+
       // Send notification if delivery location is set
       if (input.deliveryLocation) {
         try {
@@ -315,6 +393,7 @@ export function useCreateOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success('Order created successfully');
     },
     onError: (error) => {
