@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { notifyLogisticsStatusUpdate } from '@/lib/notificationHelpers';
+import { notifyLogisticsStatusUpdate, notifyOrderRedirected } from '@/lib/notificationHelpers';
 
 interface LogisticsOrdersFilters {
   dateFrom?: string;
@@ -89,6 +89,20 @@ export function useLogisticsRedirectOrder() {
       userId: string;
       userName: string;
     }) => {
+      // Get order details for notification before updating
+      const { data: order } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          sales_person_id,
+          store_id,
+          amount,
+          leads:leads!orders_lead_id_fkey (client_name),
+          products (name)
+        `)
+        .eq('id', orderId)
+        .single();
+
       const now = new Date().toISOString();
       const redirectNote = `Redirected by ${userName} on ${new Date().toLocaleDateString()}`;
       const fullRemark = remark ? `${remark}\n${redirectNote}` : redirectNote;
@@ -116,6 +130,24 @@ export function useLogisticsRedirectOrder() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Notify the calling staff who owns the order
+      if (order && order.sales_person_id && order.sales_person_id !== userId) {
+        try {
+          await notifyOrderRedirected({
+            orderId,
+            productName: (order.products as any)?.name || 'Product',
+            customerName: (order.leads as any)?.client_name || 'Customer',
+            amount: order.amount || 0,
+            callingStaffId: order.sales_person_id,
+            actorId: userId,
+            actorName: userName,
+            storeId: order.store_id || undefined,
+          });
+        } catch (notifyError) {
+          console.error('Failed to send redirect notification:', notifyError);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
