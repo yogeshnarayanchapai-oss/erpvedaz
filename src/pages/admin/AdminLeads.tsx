@@ -205,10 +205,11 @@ export default function AdminLeads() {
 
   const filteredLeads = leads.filter((lead) => {
     const matchesProduct = selectedProduct === 'all' || lead.product_id === selectedProduct;
-    // Handle special "pending_transfer" filter
+    // Handle special filters: "pending_transfer" and "duplicate"
     const matchesStatus = 
       selectedStatus === 'all' ? true :
       selectedStatus === 'pending_transfer' ? lead.is_transferred === false :
+      selectedStatus === 'duplicate' ? lead.is_duplicate === true :
       lead.status === selectedStatus;
     // Handle assigned to filter
     const matchesAssignedTo = 
@@ -652,6 +653,7 @@ export default function AdminLeads() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="pending_transfer">Pending Transfer</SelectItem>
+                <SelectItem value="duplicate">Duplicate</SelectItem>
                 <SelectItem value="NEW">New</SelectItem>
                 <SelectItem value="ASSIGNED">Assigned</SelectItem>
                 <SelectItem value="IN_PROGRESS">In Progress</SelectItem>

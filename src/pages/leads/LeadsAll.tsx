@@ -28,7 +28,7 @@ import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch
 import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
-const STATUS_OPTIONS = ['ALL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
+const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
 type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED';
 
@@ -98,7 +98,9 @@ export default function LeadsAll() {
       const leadDate = new Date(lead.date);
       const inDateRange = leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to);
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
-      const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
+      const matchesStatus = statusFilter === 'ALL' ? true :
+        statusFilter === 'DUPLICATE' ? lead.is_duplicate === true :
+        lead.status === statusFilter;
       
       // Assigned to filter
       let matchesAssignedTo = assignedToFilter === 'ALL';
