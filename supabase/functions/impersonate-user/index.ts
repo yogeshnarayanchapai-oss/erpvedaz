@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { targetUserId } = await req.json();
+    const { targetUserId, redirectOrigin } = await req.json();
     
     if (!targetUserId) {
       return new Response(
@@ -63,6 +63,9 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Use provided origin or default to root
+    const baseRedirectUrl = redirectOrigin || '/';
 
     console.log('Target user ID:', targetUserId);
 
@@ -101,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     // Return the verification URL that can be used directly
-    const verifyUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent('/')}`;
+    const verifyUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(baseRedirectUrl)}`;
 
     console.log('Magic link generated successfully');
 
