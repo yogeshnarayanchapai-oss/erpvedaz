@@ -133,7 +133,7 @@ export default function AdminUsers() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session?.access_token}`
           },
-          body: JSON.stringify({ targetUserId: user.id, redirectOrigin: window.location.origin })
+          body: JSON.stringify({ targetUserId: user.id, redirectOrigin: 'https://erp.techlaya.com' })
         }
       );
 
