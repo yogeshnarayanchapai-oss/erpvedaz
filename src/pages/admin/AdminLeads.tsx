@@ -290,13 +290,17 @@ export default function AdminLeads() {
       .sort((a, b) => b.transferCount - a.transferCount);
   }, [callingStaff, allStoreLeads, dateRangeAssignedLeads, products]);
 
-  // Product Leads Summary calculation - filtered by selected date range
+  // Product Leads Summary calculation - filtered by selected date range using lead.date field
   const productSummary = useMemo(() => {
     return products.map(product => {
       const productLeads = allStoreLeads.filter(l => l.product_id === product.id);
       
-      // Leads = total leads created in date range (by lead.date)
-      const leadsInRange = productLeads.filter(l => l.date && l.date >= dateFrom && l.date <= dateTo).length;
+      // Leads = total leads where lead.date is within date range
+      const leadsInRange = productLeads.filter(l => {
+        if (!l.date) return false;
+        const leadDate = l.date.split('T')[0]; // Extract date part if timestamp
+        return leadDate >= dateFrom && leadDate <= dateTo;
+      }).length;
       
       // Transferred = total leads assigned in date range (by assigned_at)
       const transferredInRange = productLeads.filter(l => {
@@ -313,9 +317,9 @@ export default function AdminLeads() {
         name: product.name,
         leadsInRange,
         transferredInRange,
-        remaining: Math.max(0, remaining), // Ensure non-negative
+        remaining: Math.max(0, remaining),
       };
-    }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0); // Show if any activity in date range
+    }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0);
   }, [products, allStoreLeads, dateFrom, dateTo]);
 
   // Today's Transfer Progress calculation - uses all store leads for accurate counts
