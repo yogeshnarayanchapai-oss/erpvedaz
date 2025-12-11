@@ -82,19 +82,19 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
     queryFn: async (): Promise<LeadStatsResult> => {
       let query = supabase
         .from('leads')
-        .select('id, status, assigned_to_user_id, order_id, created_at, store_id');
+        .select('id, status, assigned_to_user_id, order_id, date, store_id');
 
       // Filter by store_id
       if (storeId) {
         query = query.eq('store_id', storeId);
       }
 
-      // Apply date filters using Nepal timezone
+      // Apply date filters using the 'date' field (lead date, not created_at)
       if (dateFrom) {
-        query = query.gte('created_at', getNepalDayStart(dateFrom));
+        query = query.gte('date', dateFrom);
       }
       if (dateTo) {
-        query = query.lte('created_at', getNepalDayEnd(dateTo));
+        query = query.lte('date', dateTo);
       }
 
       const { data, error } = await query;
