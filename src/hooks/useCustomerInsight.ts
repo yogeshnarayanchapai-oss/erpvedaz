@@ -67,111 +67,57 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
 
       const cleanPhone = phone.replace(/\D/g, '');
 
-      // Search ALL stores for this customer
-      const { data: customer, error } = await supabase
-        .from('customers')
-        .select(`
-          id, customer_name, total_orders, total_order_value, rto_orders, delivered_orders, last_order_date,
-          store_id,
-          stores:store_id(name)
-        `)
-        .eq('phone_number', cleanPhone)
-        .order('total_orders', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Use RPC function to bypass RLS and get complete customer data
+      const { data: rawData, error } = await supabase
+        .rpc('get_customer_insight', { p_phone: cleanPhone });
 
       if (error) {
         console.error('Customer insight error:', error);
         return { exists: false };
       }
 
-      if (!customer) {
+      const data = rawData as {
+        exists: boolean;
+        id?: string;
+        name?: string;
+        total_orders?: number;
+        total_amount?: number;
+        rto_count?: number;
+        delivered_count?: number;
+        last_order_at?: string;
+        store_id?: string;
+        store_name?: string;
+        handled_by_name?: string;
+        last_product_name?: string;
+      } | null;
+
+      if (!data || !data.exists) {
         return { exists: false };
       }
 
-      // Get the staff who last handled this customer and the product from orders
-      let handledByName: string | null = null;
-      let handledByUserId: string | null = null;
-      let lastProductName: string | null = null;
-      
-      try {
-        const { data: lastOrder } = await supabase
-          .from('orders')
-          .select(`
-            id,
-            product_id,
-            sales_person_id,
-            profiles:sales_person_id(full_name)
-          `)
-          .eq('customer_id', customer.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (lastOrder) {
-          handledByName = (lastOrder.profiles as any)?.full_name || null;
-          handledByUserId = lastOrder.sales_person_id || null;
-          
-          // Fetch product name directly
-          if (lastOrder.product_id) {
-            const { data: product } = await supabase
-              .from('products')
-              .select('name')
-              .eq('id', lastOrder.product_id)
-              .maybeSingle();
-            
-            lastProductName = product?.name || null;
-          }
-          
-          // If no product_id on order, check order_items
-          if (!lastProductName && lastOrder.id) {
-            const { data: orderItem } = await supabase
-              .from('order_items')
-              .select('product_id')
-              .eq('order_id', lastOrder.id)
-              .limit(1)
-              .maybeSingle();
-            
-            if (orderItem?.product_id) {
-              const { data: product } = await supabase
-                .from('products')
-                .select('name')
-                .eq('id', orderItem.product_id)
-                .maybeSingle();
-              
-              lastProductName = product?.name || null;
-            }
-          }
-        }
-      } catch (e) {
-        // Ignore error, staff info is optional
-      }
-
-      const totalOrders = customer.total_orders || 0;
-      const rtoCount = customer.rto_orders || 0;
+      const totalOrders = data.total_orders || 0;
+      const rtoCount = data.rto_count || 0;
       const rating = calculateCustomerRating(totalOrders, rtoCount);
-      const lastOrderAgoLabel = getLastOrderAgoLabel(customer.last_order_date);
-      
-      const storeName = (customer.stores as any)?.name || null;
-      const isDifferentStore = currentStoreId ? customer.store_id !== currentStoreId : false;
+      const lastOrderAgoLabel = getLastOrderAgoLabel(data.last_order_at);
+      const isDifferentStore = currentStoreId ? data.store_id !== currentStoreId : false;
 
       return {
         exists: true,
-        id: customer.id,
-        name: customer.customer_name,
+        id: data.id,
+        name: data.name,
         total_orders: totalOrders,
-        total_amount: customer.total_order_value || 0,
-        last_order_at: customer.last_order_date,
+        total_amount: data.total_amount || 0,
+        last_order_at: data.last_order_at,
         rto_count: rtoCount,
-        delivered_count: customer.delivered_orders || 0,
+        delivered_count: data.delivered_count || 0,
         rating,
         last_order_ago_label: lastOrderAgoLabel,
-        store_id: customer.store_id,
-        store_name: storeName,
-        handled_by_user_id: handledByUserId,
-        handled_by_name: handledByName,
+        store_id: data.store_id,
+        store_name: data.store_name,
+        handled_by_user_id: null,
+        handled_by_name: data.handled_by_name,
         is_different_store: isDifferentStore,
-        last_product_name: lastProductName,
+        last_product_name: data.last_product_name,
       };
     },
     enabled: enabled && !!phone && phone.replace(/\D/g, '').length >= 10,
