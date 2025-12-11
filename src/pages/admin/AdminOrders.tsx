@@ -155,7 +155,9 @@ export default function AdminOrders() {
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
-      const matchesDuplicate = !showDuplicatesOnly || (order as any).is_duplicate === true;
+      // Check for duplicate - either order is_duplicate or linked lead is_duplicate
+      const orderIsDuplicate = (order as any).is_duplicate === true || (order.leads as any)?.is_duplicate === true;
+      const matchesDuplicate = !showDuplicatesOnly || orderIsDuplicate;
       // Check for reference ID search
       const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(order.leads?.reference_id, search);
       
@@ -169,8 +171,8 @@ export default function AdminOrders() {
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
 
-  // Count duplicates
-  const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate).length;
+  // Count duplicates - check both order and linked lead is_duplicate
+  const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
 
   // Order Summary - grouped by product for CONFIRMED orders
   const orderSummary = useMemo(() => {
