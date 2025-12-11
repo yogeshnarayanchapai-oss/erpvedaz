@@ -1,8 +1,10 @@
-import { User, Clock } from 'lucide-react';
+import { User, Clock, Package, Store, Star, ShoppingBag } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { CustomerInsight } from '@/hooks/useCustomerInsight';
 import { formatStatusLabel } from '@/lib/statusColors';
+import { formatNPR } from '@/lib/currency';
 
 interface CustomerInsightCardProps {
   insight: CustomerInsight | undefined;
@@ -10,10 +12,9 @@ interface CustomerInsightCardProps {
   phone: string;
 }
 
-// Red statuses
-const RED_STATUSES = ['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL', 'CNR'];
+// Red statuses - negative/pending types
+const RED_STATUSES = ['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL', 'CNR', 'FOLLOW_UP'];
 
-// Check if status is red
 function isRedStatus(status: string | null | undefined): boolean {
   if (!status) return false;
   return RED_STATUSES.includes(status.toUpperCase());
@@ -54,57 +55,100 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
 
   // Determine card color based on order status
   const isRed = isRedStatus(insight.last_order_status);
-  const cardClass = isRed 
-    ? 'p-3 bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700'
-    : 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
-  const textClass = isRed 
-    ? 'text-red-800 dark:text-red-300'
-    : 'text-yellow-800 dark:text-yellow-300';
-  const iconClass = isRed ? 'text-red-600' : 'text-yellow-600';
+  const cardBgClass = isRed 
+    ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-700'
+    : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700';
+  const headerTextClass = isRed 
+    ? 'text-red-600 dark:text-red-400'
+    : 'text-amber-600 dark:text-amber-500';
+  const statusBadgeClass = isRed
+    ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
 
   return (
-    <Card className={cardClass}>
-      <div className="flex items-start gap-2">
-        <User className={`h-4 w-4 mt-0.5 ${iconClass}`} />
-        <div className="flex-1 space-y-0.5">
-          {/* Line 1: Customer Name */}
-          <div className={`text-sm ${textClass}`}>
-            <span className="font-medium">Customer Name: </span>
-            <span className="font-semibold">{insight.name || 'Unknown'}</span>
+    <Card className={`p-3 border-dashed ${cardBgClass}`}>
+      <div className="space-y-2">
+        {/* Header: Existing Customer + Rating */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <User className={`h-4 w-4 ${headerTextClass}`} />
+            <span className={`text-sm font-semibold ${headerTextClass}`}>
+              Existing Customer
+            </span>
           </div>
+          {insight.rating && (
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-4 w-4 ${
+                    star <= insight.rating!
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'fill-muted text-muted'
+                  }`}
+                />
+              ))}
+              <span className="text-xs text-muted-foreground ml-1">
+                ({insight.rating}/5)
+              </span>
+            </div>
+          )}
+        </div>
 
-          {/* Line 2: Order Status */}
-          <div className={`text-sm ${textClass}`}>
-            <span className="font-medium">Order Status: </span>
-            <span className="font-semibold">
+        {/* Product Line */}
+        {insight.last_product_name && (
+          <div className="flex items-center gap-1.5 text-sm">
+            <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Product:</span>
+            <span className="font-medium">{insight.last_product_name}</span>
+          </div>
+        )}
+
+        {/* Store & Handled by Line */}
+        <div className="flex items-center gap-1.5 text-sm">
+          <Store className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-muted-foreground">Store:</span>
+          <span className="font-medium">{insight.store_name || 'Unknown'}</span>
+          {insight.handled_by_name && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">Handled by:</span>
+              <span className="font-medium">{insight.handled_by_name}</span>
+            </>
+          )}
+        </div>
+
+        {/* Customer Name */}
+        <div className="text-sm">
+          <span className="text-muted-foreground">Customer Name: </span>
+          <span className="font-semibold">{insight.name || 'Unknown'}</span>
+        </div>
+
+        {/* Last Order Status + Total */}
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Last Order Status:</span>
+            <Badge variant="secondary" className={`text-xs px-1.5 py-0 ${statusBadgeClass}`}>
               {insight.last_order_status 
                 ? formatStatusLabel(insight.last_order_status) 
                 : 'N/A'}
+            </Badge>
+          </div>
+          {insight.total_amount && (
+            <span className="text-muted-foreground">
+              Total: {formatNPR(insight.total_amount)}
             </span>
-          </div>
-
-          {/* Line 3: Store, Handled by, Last Order */}
-          <div className={`text-xs flex flex-wrap items-center gap-x-1.5 ${textClass} opacity-90`}>
-            {insight.store_name && (
-              <span>Store: <span className="font-medium">{insight.store_name}</span></span>
-            )}
-            {insight.handled_by_name && (
-              <>
-                <span>•</span>
-                <span>Handled by: <span className="font-medium">{insight.handled_by_name}</span></span>
-              </>
-            )}
-            {insight.last_order_ago_label && (
-              <>
-                <span>•</span>
-                <span className="inline-flex items-center gap-0.5">
-                  <Clock className="h-3 w-3" />
-                  {insight.last_order_ago_label}
-                </span>
-              </>
-            )}
-          </div>
+          )}
         </div>
+
+        {/* Last Order Date */}
+        {insight.last_order_ago_label && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Last order: {insight.last_order_ago_label}</span>
+          </div>
+        )}
       </div>
     </Card>
   );
