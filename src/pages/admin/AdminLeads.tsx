@@ -134,18 +134,24 @@ export default function AdminLeads() {
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
   const [todayAssignedLeads, setTodayAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
+  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; pool_status: string | null; assigned_at: string | null }[]>([]);
   
+  // Fetch all store leads for product summary (not filtered by date range)
   useEffect(() => {
-    const fetchPoolCount = async () => {
-      const { count } = await supabase
+    const fetchAllStoreLeads = async () => {
+      if (!storeId) return;
+      const { data } = await supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('pool_status', 'IN_POOL')
-        .is('assigned_to_user_id', null);
-      setTotalPoolCount(count || 0);
+        .select('id, date, product_id, assigned_to_user_id, pool_status, assigned_at')
+        .eq('store_id', storeId);
+      
+      setAllStoreLeads(data || []);
+      // Count pool leads
+      const poolLeads = (data || []).filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
+      setTotalPoolCount(poolLeads.length);
     };
-    fetchPoolCount();
-  }, [leads]); // Refresh when leads change
+    fetchAllStoreLeads();
+  }, [storeId, leads]); // Refresh when leads change
 
   // Fetch leads assigned today from leads table (aggregates ALL assignments regardless of creator)
   useEffect(() => {
@@ -291,15 +297,20 @@ export default function AdminLeads() {
       .sort((a, b) => b.todayTransfer - a.todayTransfer);
   }, [callingStaff, leads, todayAssignedLeads, products]);
 
-  // Product Leads Summary calculation
+  // Product Leads Summary calculation - uses all store leads, not date-filtered
   const productSummary = useMemo(() => {
+    const todayStr = format(today, 'yyyy-MM-dd');
     return products.map(product => {
-      const productLeads = leads.filter(l => l.product_id === product.id);
-      const todayStr = format(today, 'yyyy-MM-dd');
+      const productLeads = allStoreLeads.filter(l => l.product_id === product.id);
+      // Leads Today: leads where date = today
       const leadsToday = productLeads.filter(l => l.date === todayStr).length;
-      const transferredToday = productLeads.filter(l => 
-        l.date === todayStr && l.assigned_to_user_id !== null
-      ).length;
+      // Transferred Today: leads assigned today (assigned_at date = today)
+      const transferredToday = productLeads.filter(l => {
+        if (!l.assigned_at) return false;
+        const assignedDate = l.assigned_at.split('T')[0];
+        return assignedDate === todayStr;
+      }).length;
+      // Remaining In Pool: all time, not date filtered
       const remainingInPool = productLeads.filter(l => 
         l.pool_status === 'IN_POOL' && !l.assigned_to_user_id
       ).length;
@@ -311,20 +322,22 @@ export default function AdminLeads() {
         transferredToday,
         remainingInPool,
       };
-    }).filter(p => p.leadsToday > 0 || p.remainingInPool > 0);
-  }, [products, leads, today]);
+    }).filter(p => p.leadsToday > 0 || p.remainingInPool > 0 || p.transferredToday > 0);
+  }, [products, allStoreLeads, today]);
 
-  // Today's Transfer Progress calculation
+  // Today's Transfer Progress calculation - uses all store leads for accurate counts
   const todayProgressStats = useMemo(() => {
     const todayStr = format(today, 'yyyy-MM-dd');
-    const todayLeads = leads.filter(l => l.date === todayStr);
+    // Today Leads: leads where date = today (from all store leads)
+    const todayLeads = allStoreLeads.filter(l => l.date === todayStr);
     const totalTodayLeads = todayLeads.length;
     // Today Transfer = leads assigned today (assigned_at date matches today)
-    const transferredToday = leads.filter(l => {
-      const assignedAt = l.assigned_at ? l.assigned_at.split('T')[0] : null;
-      return assignedAt === todayStr;
+    const transferredToday = allStoreLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      const assignedDate = l.assigned_at.split('T')[0];
+      return assignedDate === todayStr;
     }).length;
-    // Remaining = all leads with status ASSIGNED or PENDING (null, NEW)
+    // Remaining = all leads with pending status (null status or NEW/ASSIGNED)
     const remainingTodayLeads = leads.filter(l => 
       l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
     ).length;
@@ -342,7 +355,7 @@ export default function AdminLeads() {
       confirmedOrders, insideValley, outsideValley,
       totalRemainingInPool: totalPoolCount
     };
-  }, [leads, orders, today, totalPoolCount]);
+  }, [allStoreLeads, leads, orders, today, totalPoolCount]);
 
   // Check if "Send back to Leads" button should be shown
   const showReturnButton = selectedStatus === 'CALL_NOT_RECEIVED' && canReturnLeads;
