@@ -333,6 +333,7 @@ export function AdminTransferLeadsModal({
           current_team: 'CALLING',
           pool_status: 'ASSIGNED',
           assigned_at: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0], // Set today's date when reassigning
         })
         .in('id', leadIds);
 

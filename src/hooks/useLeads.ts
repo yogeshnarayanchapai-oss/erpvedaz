@@ -383,6 +383,7 @@ export function useTransferLeads() {
           assigned_at: new Date().toISOString(),
           is_transferred: true,
           remark: '', // Clear remark when transferring to new staff
+          date: new Date().toISOString().split('T')[0], // Set today's date when reassigning
         })
         .in('id', leadIds);
 
