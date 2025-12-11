@@ -99,9 +99,9 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
           .from('orders')
           .select(`
             id,
+            product_id,
             sales_person_id,
-            profiles:sales_person_id(full_name),
-            products:product_id(name)
+            profiles:sales_person_id(full_name)
           `)
           .eq('customer_id', customer.id)
           .order('created_at', { ascending: false })
@@ -111,19 +111,35 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         if (lastOrder) {
           handledByName = (lastOrder.profiles as any)?.full_name || null;
           handledByUserId = lastOrder.sales_person_id || null;
-          lastProductName = (lastOrder.products as any)?.name || null;
+          
+          // Fetch product name directly
+          if (lastOrder.product_id) {
+            const { data: product } = await supabase
+              .from('products')
+              .select('name')
+              .eq('id', lastOrder.product_id)
+              .maybeSingle();
+            
+            lastProductName = product?.name || null;
+          }
           
           // If no product_id on order, check order_items
           if (!lastProductName && lastOrder.id) {
-            const { data: orderItems } = await supabase
+            const { data: orderItem } = await supabase
               .from('order_items')
-              .select('products:product_id(name)')
+              .select('product_id')
               .eq('order_id', lastOrder.id)
               .limit(1)
               .maybeSingle();
             
-            if (orderItems) {
-              lastProductName = (orderItems.products as any)?.name || null;
+            if (orderItem?.product_id) {
+              const { data: product } = await supabase
+                .from('products')
+                .select('name')
+                .eq('id', orderItem.product_id)
+                .maybeSingle();
+              
+              lastProductName = product?.name || null;
             }
           }
         }
