@@ -12,6 +12,12 @@ export interface CustomerInsight {
   delivered_count?: number;
   rating?: number;
   last_order_ago_label?: string;
+  // New fields for cross-store info
+  store_id?: string;
+  store_name?: string | null;
+  handled_by_user_id?: string | null;
+  handled_by_name?: string | null;
+  is_different_store?: boolean;
 }
 
 /**
@@ -49,9 +55,9 @@ export function getLastOrderAgoLabel(lastOrderDate: string | null): string {
   return `Last order: ${diffMonths} months ago`;
 }
 
-export function useCustomerInsight(phone: string, storeId?: string | null, enabled = true) {
+export function useCustomerInsight(phone: string, currentStoreId?: string | null, enabled = true) {
   return useQuery({
-    queryKey: ['customer-insight', phone, storeId],
+    queryKey: ['customer-insight', phone],
     queryFn: async (): Promise<CustomerInsight> => {
       if (!phone || phone.length < 10) {
         return { exists: false };
@@ -59,17 +65,18 @@ export function useCustomerInsight(phone: string, storeId?: string | null, enabl
 
       const cleanPhone = phone.replace(/\D/g, '');
 
-      let query = supabase
+      // Search ALL stores for this customer
+      const { data: customer, error } = await supabase
         .from('customers')
-        .select('id, customer_name, total_orders, total_order_value, rto_orders, delivered_orders, last_order_date')
-        .eq('phone_number', cleanPhone);
-      
-      // Filter by store if storeId provided
-      if (storeId) {
-        query = query.eq('store_id', storeId);
-      }
-
-      const { data: customer, error } = await query.maybeSingle();
+        .select(`
+          id, customer_name, total_orders, total_order_value, rto_orders, delivered_orders, last_order_date,
+          store_id,
+          stores:store_id(name)
+        `)
+        .eq('phone_number', cleanPhone)
+        .order('total_orders', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         console.error('Customer insight error:', error);
@@ -80,10 +87,37 @@ export function useCustomerInsight(phone: string, storeId?: string | null, enabl
         return { exists: false };
       }
 
+      // Get the staff who last handled this customer from orders
+      let handledByName: string | null = null;
+      let handledByUserId: string | null = null;
+      
+      try {
+        const { data: lastOrder } = await supabase
+          .from('orders')
+          .select(`
+            sales_person_id,
+            profiles:sales_person_id(full_name)
+          `)
+          .eq('customer_id', customer.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (lastOrder) {
+          handledByName = (lastOrder.profiles as any)?.full_name || null;
+          handledByUserId = lastOrder.sales_person_id || null;
+        }
+      } catch (e) {
+        // Ignore error, staff info is optional
+      }
+
       const totalOrders = customer.total_orders || 0;
       const rtoCount = customer.rto_orders || 0;
       const rating = calculateCustomerRating(totalOrders, rtoCount);
       const lastOrderAgoLabel = getLastOrderAgoLabel(customer.last_order_date);
+      
+      const storeName = (customer.stores as any)?.name || null;
+      const isDifferentStore = currentStoreId ? customer.store_id !== currentStoreId : false;
 
       return {
         exists: true,
@@ -96,6 +130,11 @@ export function useCustomerInsight(phone: string, storeId?: string | null, enabl
         delivered_count: customer.delivered_orders || 0,
         rating,
         last_order_ago_label: lastOrderAgoLabel,
+        store_id: customer.store_id,
+        store_name: storeName,
+        handled_by_user_id: handledByUserId,
+        handled_by_name: handledByName,
+        is_different_store: isDifferentStore,
       };
     },
     enabled: enabled && !!phone && phone.replace(/\D/g, '').length >= 10,

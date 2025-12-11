@@ -1,4 +1,4 @@
-import { Star, User, Package, Clock, AlertTriangle } from 'lucide-react';
+import { Star, User, Package, Clock, AlertTriangle, Store } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,14 +69,24 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
     <Card className={`p-3 border-dashed ${
       isHighRisk 
         ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' 
-        : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+        : insight.is_different_store
+          ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+          : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
     }`}>
       <div className="space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <User className={`h-4 w-4 ${isHighRisk ? 'text-red-600' : 'text-blue-600'}`} />
-            <span className={`text-sm font-medium ${isHighRisk ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
+            <User className={`h-4 w-4 ${
+              isHighRisk ? 'text-red-600' : insight.is_different_store ? 'text-orange-600' : 'text-blue-600'
+            }`} />
+            <span className={`text-sm font-medium ${
+              isHighRisk 
+                ? 'text-red-700 dark:text-red-400' 
+                : insight.is_different_store
+                  ? 'text-orange-700 dark:text-orange-400'
+                  : 'text-blue-700 dark:text-blue-400'
+            }`}>
               Existing Customer
             </span>
             {isHighRisk && (
@@ -88,6 +98,23 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
           </div>
           {insight.rating && <RatingStars rating={insight.rating} />}
         </div>
+
+        {/* Store & Staff Info - Show for existing customers */}
+        {(insight.store_name || insight.handled_by_name) && (
+          <div className="flex items-center gap-1 text-xs bg-background/50 rounded px-2 py-1">
+            <Store className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Already customer of{' '}
+              <span className="font-medium text-foreground">{insight.store_name || 'Unknown Store'}</span>
+              {insight.handled_by_name && (
+                <>
+                  {' '}handled by{' '}
+                  <span className="font-medium text-foreground">{insight.handled_by_name}</span>
+                </>
+              )}
+            </span>
+          </div>
+        )}
 
         {/* Customer Name */}
         {insight.name && (
