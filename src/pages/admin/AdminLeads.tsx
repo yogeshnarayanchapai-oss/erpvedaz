@@ -134,7 +134,7 @@ export default function AdminLeads() {
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
   const [todayAssignedLeads, setTodayAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
-  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; pool_status: string | null; assigned_at: string | null }[]>([]);
+  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null }[]>([]);
   
   // Fetch all store leads for product summary (not filtered by date range)
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function AdminLeads() {
       if (!storeId) return;
       const { data } = await supabase
         .from('leads')
-        .select('id, date, product_id, assigned_to_user_id, pool_status, assigned_at')
+        .select('id, date, product_id, assigned_to_user_id, pool_status, assigned_at, status')
         .eq('store_id', storeId);
       
       setAllStoreLeads(data || []);
@@ -255,28 +255,22 @@ export default function AdminLeads() {
       // Today Transfer = count leads assigned to this staff today (from ALL creators)
       const todayTransfer = todayAssignedLeads.filter(l => l.assigned_to_user_id === staff.id).length;
       
-      // Remaining = leads currently assigned to this staff with pending status
-      const staffLeads = leads.filter(l => 
-        l.assigned_to_user_id === staff.id && 
-        l.current_team === 'CALLING'
-      );
-      const remaining = staffLeads.filter(l => 
+      // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (from all store leads)
+      const staffLeads = allStoreLeads.filter(l => l.assigned_to_user_id === staff.id);
+      const newLeads = staffLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products: get leads that were assigned today to this staff
-      const todayAssignedLeadIds = todayAssignedLeads
-        .filter(l => l.assigned_to_user_id === staff.id)
-        .map(l => l.lead_id);
-      const todayLeadsWithProducts = leads.filter(l => 
-        todayAssignedLeadIds.includes(l.id) && l.product_id
-      );
+      // Products: get product counts from todayAssignedLeads directly (uses product_id already fetched)
+      const todayStaffAssignments = todayAssignedLeads.filter(l => l.assigned_to_user_id === staff.id);
       
       const productCounts: Record<string, number> = {};
-      todayLeadsWithProducts.forEach(lead => {
-        const productName = products.find(p => p.id === lead.product_id)?.name;
-        if (productName) {
-          productCounts[productName] = (productCounts[productName] || 0) + 1;
+      todayStaffAssignments.forEach(assignment => {
+        if (assignment.product_id) {
+          const productName = products.find(p => p.id === assignment.product_id)?.name;
+          if (productName) {
+            productCounts[productName] = (productCounts[productName] || 0) + 1;
+          }
         }
       });
       
@@ -289,13 +283,13 @@ export default function AdminLeads() {
         id: staff.id,
         name: staff.name,
         todayTransfer,
-        remaining,
+        newLeads,
         products: displayProducts || '-',
         fullProducts: fullProductList || '-',
       };
-    }).filter(s => s.todayTransfer > 0 || s.remaining > 0)
+    }).filter(s => s.todayTransfer > 0 || s.newLeads > 0)
       .sort((a, b) => b.todayTransfer - a.todayTransfer);
-  }, [callingStaff, leads, todayAssignedLeads, products]);
+  }, [callingStaff, allStoreLeads, todayAssignedLeads, products]);
 
   // Product Leads Summary calculation - uses all store leads, not date-filtered
   const productSummary = useMemo(() => {
@@ -572,7 +566,7 @@ export default function AdminLeads() {
                     <TableRow>
                       <TableHead className="table-header">Staff Name</TableHead>
                       <TableHead className="table-header text-center">Leads Today</TableHead>
-                      <TableHead className="table-header text-center">Remaining</TableHead>
+                      <TableHead className="table-header text-center">New</TableHead>
                       <TableHead className="table-header">Products</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -588,7 +582,7 @@ export default function AdminLeads() {
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-secondary/5">
-                              {staff.remaining.toLocaleString()}
+                              {staff.newLeads.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell 
