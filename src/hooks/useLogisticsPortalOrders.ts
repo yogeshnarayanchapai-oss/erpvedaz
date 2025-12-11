@@ -107,7 +107,7 @@ export function useLogisticsRedirectOrder() {
         updateData.delivery_location = deliveryLocation;
       }
       if (courier) {
-        updateData.courier = courier;
+        updateData.courier_provider = courier;
       }
 
       const { error } = await supabase
