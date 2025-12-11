@@ -258,6 +258,7 @@ export default function LeadsAll() {
           current_team: 'CALLING',
           assigned_at: new Date().toISOString(),
           remark: '', // Clear remark when reassigning to new staff
+          date: new Date().toISOString().split('T')[0], // Set today's date when reassigning
         })
         .in('id', selectedLeads);
 
