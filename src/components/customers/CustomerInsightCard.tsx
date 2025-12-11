@@ -1,4 +1,4 @@
-import { Star, User, Package, Clock, AlertTriangle, Store } from 'lucide-react';
+import { Star, User, Package, Clock, AlertTriangle, Store, ShoppingBag } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -99,20 +99,28 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
           {insight.rating && <RatingStars rating={insight.rating} />}
         </div>
 
-        {/* Store & Staff Info - Show for existing customers */}
-        {(insight.store_name || insight.handled_by_name) && (
-          <div className="flex items-center gap-1 text-xs bg-background/50 rounded px-2 py-1">
-            <Store className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              Already customer of{' '}
-              <span className="font-medium text-foreground">{insight.store_name || 'Unknown Store'}</span>
-              {insight.handled_by_name && (
-                <>
-                  {' '}handled by{' '}
-                  <span className="font-medium text-foreground">{insight.handled_by_name}</span>
-                </>
-              )}
-            </span>
+        {/* Store, Product & Staff Info - Show for existing customers */}
+        {(insight.store_name || insight.handled_by_name || insight.last_product_name) && (
+          <div className="flex flex-col gap-1 text-xs bg-background/50 rounded px-2 py-1.5">
+            {insight.last_product_name && (
+              <div className="flex items-center gap-1">
+                <ShoppingBag className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  Product: <span className="font-medium text-foreground">{insight.last_product_name}</span>
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Store className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Store: <span className="font-medium text-foreground">{insight.store_name || 'Unknown'}</span>
+                {insight.handled_by_name && (
+                  <>
+                    {' '}• Handled by: <span className="font-medium text-foreground">{insight.handled_by_name}</span>
+                  </>
+                )}
+              </span>
+            </div>
           </div>
         )}
 

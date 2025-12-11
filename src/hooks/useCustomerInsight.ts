@@ -12,12 +12,14 @@ export interface CustomerInsight {
   delivered_count?: number;
   rating?: number;
   last_order_ago_label?: string;
-  // New fields for cross-store info
+  // Cross-store info
   store_id?: string;
   store_name?: string | null;
   handled_by_user_id?: string | null;
   handled_by_name?: string | null;
   is_different_store?: boolean;
+  // Product info
+  last_product_name?: string | null;
 }
 
 /**
@@ -87,16 +89,18 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         return { exists: false };
       }
 
-      // Get the staff who last handled this customer from orders
+      // Get the staff who last handled this customer and the product from orders
       let handledByName: string | null = null;
       let handledByUserId: string | null = null;
+      let lastProductName: string | null = null;
       
       try {
         const { data: lastOrder } = await supabase
           .from('orders')
           .select(`
             sales_person_id,
-            profiles:sales_person_id(full_name)
+            profiles:sales_person_id(full_name),
+            products:product_id(name)
           `)
           .eq('customer_id', customer.id)
           .order('created_at', { ascending: false })
@@ -106,6 +110,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         if (lastOrder) {
           handledByName = (lastOrder.profiles as any)?.full_name || null;
           handledByUserId = lastOrder.sales_person_id || null;
+          lastProductName = (lastOrder.products as any)?.name || null;
         }
       } catch (e) {
         // Ignore error, staff info is optional
@@ -135,6 +140,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         handled_by_user_id: handledByUserId,
         handled_by_name: handledByName,
         is_different_store: isDifferentStore,
+        last_product_name: lastProductName,
       };
     },
     enabled: enabled && !!phone && phone.replace(/\D/g, '').length >= 10,
