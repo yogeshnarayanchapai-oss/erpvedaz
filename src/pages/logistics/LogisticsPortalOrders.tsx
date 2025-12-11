@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useStaff } from '@/hooks/useStaff';
 
 // Nepal timezone helpers - returns date string in YYYY-MM-DD format for Nepal time
 function getNepalDateString(): string {
@@ -51,7 +52,11 @@ export default function LogisticsPortalOrders() {
   // Filters
   const [deliveryFilter, setDeliveryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [staffFilter, setStaffFilter] = useState('all');
   const [search, setSearch] = useState('');
+
+  // Staff list
+  const { data: staff = [] } = useStaff();
   
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -89,8 +94,11 @@ export default function LogisticsPortalOrders() {
   const filteredOrders = useMemo(() => {
     // If reference ID search is active, search globally
     if (search && isReferenceIdSearch(search)) {
-      return globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      let result = globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+      if (staffFilter !== 'all') {
+        result = result.filter(o => o.called_by_user_id === staffFilter);
+      }
+      return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     let filtered = orders;
@@ -109,6 +117,9 @@ export default function LogisticsPortalOrders() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(o => o.order_status === statusFilter);
     }
+    if (staffFilter !== 'all') {
+      filtered = filtered.filter(o => o.called_by_user_id === staffFilter);
+    }
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(o => 
@@ -120,7 +131,7 @@ export default function LogisticsPortalOrders() {
     
     // Sort by newest first
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, search]);
+  }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
 
   // Stats (only used on dashboard)
   const stats = useMemo(() => {
@@ -176,6 +187,7 @@ export default function LogisticsPortalOrders() {
   const clearFilters = () => {
     setDeliveryFilter('all');
     setStatusFilter('all');
+    setStaffFilter('all');
     setSearch('');
   };
 
@@ -405,7 +417,18 @@ export default function LogisticsPortalOrders() {
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              {(deliveryFilter !== 'all' || statusFilter !== 'all' || search) && (
+              <Select value={staffFilter} onValueChange={setStaffFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(deliveryFilter !== 'all' || statusFilter !== 'all' || staffFilter !== 'all' || search) && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   Clear
                 </Button>
