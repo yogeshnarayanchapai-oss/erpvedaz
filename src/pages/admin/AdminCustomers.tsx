@@ -157,6 +157,13 @@ export default function AdminCustomers() {
   const handleDeleteCustomer = async (customerId: string) => {
     setDeletingId(customerId);
     try {
+      // First unlink orders from this customer
+      await supabase
+        .from('orders')
+        .update({ customer_id: null })
+        .eq('customer_id', customerId);
+
+      // Then delete the customer
       const { error } = await supabase
         .from('customers')
         .delete()
@@ -166,6 +173,7 @@ export default function AdminCustomers() {
       
       toast.success('Customer deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       setSelectedCustomers(prev => prev.filter(id => id !== customerId));
     } catch (error: any) {
       toast.error(`Failed to delete customer: ${error.message}`);
