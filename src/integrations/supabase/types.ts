@@ -6436,6 +6436,7 @@ export type Database = {
     Functions: {
       create_verification_otp: { Args: { p_user_id: string }; Returns: string }
       generate_otp: { Args: never; Returns: string }
+      get_customer_insight: { Args: { p_phone: string }; Returns: Json }
       get_user_accessible_stores: {
         Args: { p_user_id: string }
         Returns: {
