@@ -64,9 +64,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use provided origin or default to root
-    const baseRedirectUrl = redirectOrigin || '/';
-
+    // Use provided origin or default to erp.techlaya.com
+    const baseRedirectUrl = redirectOrigin || 'https://erp.techlaya.com';
+    
+    console.log('Redirect URL:', baseRedirectUrl);
     console.log('Target user ID:', targetUserId);
 
     // Cannot impersonate yourself
