@@ -56,7 +56,7 @@ export default function LogisticsPortalOrders() {
   const [search, setSearch] = useState('');
 
   // Staff list
-  const { data: staff = [] } = useStaff();
+  const { data: staff = [] } = useStaff('CALLING');
   
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<any>(null);

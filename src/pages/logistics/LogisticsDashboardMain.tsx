@@ -19,7 +19,7 @@ export default function LogisticsDashboardMain() {
   });
   const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
 
-  const { data: staff = [] } = useStaff();
+  const { data: staff = [] } = useStaff('CALLING');
   const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
   const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
 
