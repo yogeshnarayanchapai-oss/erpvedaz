@@ -133,7 +133,7 @@ export default function AdminLeads() {
 
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
-  const [todayAssignedLeads, setTodayAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
+  const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
   const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null }[]>([]);
   
   // Fetch all store leads for product summary (not filtered by date range)
@@ -153,38 +153,37 @@ export default function AdminLeads() {
     fetchAllStoreLeads();
   }, [storeId, leads]); // Refresh when leads change
 
-  // Fetch leads assigned today from leads table (aggregates ALL assignments regardless of creator)
+  // Fetch leads assigned in selected date range from leads table (aggregates ALL assignments regardless of creator)
   useEffect(() => {
-    const fetchTodayAssignedLeads = async () => {
+    const fetchDateRangeAssignedLeads = async () => {
       if (!storeId) return;
-      const todayStr = format(today, 'yyyy-MM-dd');
       const { data } = await supabase
         .from('leads')
         .select('id, assigned_to_user_id, product_id')
         .eq('store_id', storeId)
         .not('assigned_to_user_id', 'is', null)
-        .gte('assigned_at', `${todayStr}T00:00:00`)
-        .lte('assigned_at', `${todayStr}T23:59:59`);
-      setTodayAssignedLeads(data?.map(d => ({ 
+        .gte('assigned_at', `${dateFrom}T00:00:00`)
+        .lte('assigned_at', `${dateTo}T23:59:59`);
+      setDateRangeAssignedLeads(data?.map(d => ({ 
         assigned_to_user_id: d.assigned_to_user_id!, 
         lead_id: d.id,
         product_id: d.product_id 
       })) || []);
     };
-    fetchTodayAssignedLeads();
+    fetchDateRangeAssignedLeads();
 
     // Subscribe to real-time changes
     const channel = supabase
       .channel('admin-leads-assigned-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-        fetchTodayAssignedLeads();
+        fetchDateRangeAssignedLeads();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [today, storeId]);
+  }, [dateFrom, dateTo, storeId]);
 
   // Mark section as seen when data loads (for badge clearing)
   useAutoMarkSeen('all_leads', isFetched && !isLoading);
@@ -252,8 +251,8 @@ export default function AdminLeads() {
   // Staff Transfer Summary calculation - aggregated from ALL assignments (via assigned_at)
   const staffTransferSummary = useMemo(() => {
     return callingStaff.map(staff => {
-      // Today Transfer = count leads assigned to this staff today (from ALL creators)
-      const todayTransfer = todayAssignedLeads.filter(l => l.assigned_to_user_id === staff.id).length;
+      // Transfer = count leads assigned to this staff in date range (from ALL creators)
+      const transferCount = dateRangeAssignedLeads.filter(l => l.assigned_to_user_id === staff.id).length;
       
       // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (from all store leads)
       const staffLeads = allStoreLeads.filter(l => l.assigned_to_user_id === staff.id);
@@ -261,11 +260,11 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products: get product counts from todayAssignedLeads directly (uses product_id already fetched)
-      const todayStaffAssignments = todayAssignedLeads.filter(l => l.assigned_to_user_id === staff.id);
+      // Products: get product counts from dateRangeAssignedLeads directly (uses product_id already fetched)
+      const staffAssignments = dateRangeAssignedLeads.filter(l => l.assigned_to_user_id === staff.id);
       
       const productCounts: Record<string, number> = {};
-      todayStaffAssignments.forEach(assignment => {
+      staffAssignments.forEach(assignment => {
         if (assignment.product_id) {
           const productName = products.find(p => p.id === assignment.product_id)?.name;
           if (productName) {
@@ -282,27 +281,26 @@ export default function AdminLeads() {
       return {
         id: staff.id,
         name: staff.name,
-        todayTransfer,
+        transferCount,
         newLeads,
         products: displayProducts || '-',
         fullProducts: fullProductList || '-',
       };
-    }).filter(s => s.todayTransfer > 0 || s.newLeads > 0)
-      .sort((a, b) => b.todayTransfer - a.todayTransfer);
-  }, [callingStaff, allStoreLeads, todayAssignedLeads, products]);
+    }).filter(s => s.transferCount > 0) // Only show staff with transferred leads in date range
+      .sort((a, b) => b.transferCount - a.transferCount);
+  }, [callingStaff, allStoreLeads, dateRangeAssignedLeads, products]);
 
-  // Product Leads Summary calculation - uses all store leads, not date-filtered
+  // Product Leads Summary calculation - filtered by selected date range
   const productSummary = useMemo(() => {
-    const todayStr = format(today, 'yyyy-MM-dd');
     return products.map(product => {
       const productLeads = allStoreLeads.filter(l => l.product_id === product.id);
-      // Leads Today: leads where date = today
-      const leadsToday = productLeads.filter(l => l.date === todayStr).length;
-      // Transferred Today: leads assigned today (assigned_at date = today)
-      const transferredToday = productLeads.filter(l => {
+      // Leads in date range: leads where date is within selected range
+      const leadsInRange = productLeads.filter(l => l.date && l.date >= dateFrom && l.date <= dateTo).length;
+      // Transferred in date range: leads assigned within selected date range (assigned_at)
+      const transferredInRange = productLeads.filter(l => {
         if (!l.assigned_at) return false;
         const assignedDate = l.assigned_at.split('T')[0];
-        return assignedDate === todayStr;
+        return assignedDate >= dateFrom && assignedDate <= dateTo;
       }).length;
       // Remaining In Pool: all time, not date filtered
       const remainingInPool = productLeads.filter(l => 
@@ -312,12 +310,12 @@ export default function AdminLeads() {
       return {
         id: product.id,
         name: product.name,
-        leadsToday,
-        transferredToday,
+        leadsInRange,
+        transferredInRange,
         remainingInPool,
       };
-    }).filter(p => p.leadsToday > 0 || p.remainingInPool > 0 || p.transferredToday > 0);
-  }, [products, allStoreLeads, today]);
+    }).filter(p => p.transferredInRange > 0); // Only show products with transferred leads in date range
+  }, [products, allStoreLeads, dateFrom, dateTo]);
 
   // Today's Transfer Progress calculation - uses all store leads for accurate counts
   const todayProgressStats = useMemo(() => {
@@ -511,7 +509,7 @@ export default function AdminLeads() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="table-header">Product</TableHead>
-                      <TableHead className="table-header text-center">Leads Today</TableHead>
+                      <TableHead className="table-header text-center">Leads</TableHead>
                       <TableHead className="table-header text-center">Transferred</TableHead>
                       <TableHead className="table-header text-center">Remaining</TableHead>
                     </TableRow>
@@ -523,12 +521,12 @@ export default function AdminLeads() {
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-info/5">
-                              {product.leadsToday.toLocaleString()}
+                              {product.leadsInRange.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-success/5">
-                              {product.transferredToday.toLocaleString()}
+                              {product.transferredInRange.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -541,7 +539,7 @@ export default function AdminLeads() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No leads in pool today
+                          No leads transferred in selected date range
                         </TableCell>
                       </TableRow>
                     )}
@@ -565,7 +563,7 @@ export default function AdminLeads() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="table-header">Staff Name</TableHead>
-                      <TableHead className="table-header text-center">Leads Today</TableHead>
+                      <TableHead className="table-header text-center">Transferred</TableHead>
                       <TableHead className="table-header text-center">New</TableHead>
                       <TableHead className="table-header">Products</TableHead>
                     </TableRow>
@@ -577,7 +575,7 @@ export default function AdminLeads() {
                           <TableCell className="font-medium">{staff.name}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-primary/5">
-                              {staff.todayTransfer.toLocaleString()}
+                              {staff.transferCount.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -596,7 +594,7 @@ export default function AdminLeads() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No transfers yet today
+                          No transfers in selected date range
                         </TableCell>
                       </TableRow>
                     )}
