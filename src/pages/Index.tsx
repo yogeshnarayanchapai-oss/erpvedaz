@@ -10,10 +10,36 @@ const Index = () => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [fetchingStore, setFetchingStore] = useState(false);
+  const [waitingForAuth, setWaitingForAuth] = useState(true);
+
+  // Check if URL has auth tokens (from magic link redirect)
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hasAuthTokens = hashParams.has('access_token') || hashParams.has('refresh_token');
+    
+    if (hasAuthTokens) {
+      // Wait for Supabase to process the tokens
+      const timeout = setTimeout(() => {
+        setWaitingForAuth(false);
+      }, 3000); // Give 3 seconds max for auth to complete
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setWaitingForAuth(false);
+    }
+  }, []);
+
+  // Once user is loaded, stop waiting
+  useEffect(() => {
+    if (user) {
+      setWaitingForAuth(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     async function redirectToStore() {
-      if (loading) return;
+      // Wait for initial auth check or magic link processing
+      if (loading || waitingForAuth) return;
       
       if (!user) {
         navigate('/auth');
@@ -104,14 +130,14 @@ const Index = () => {
     }
 
     redirectToStore();
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, waitingForAuth]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      {fetchingStore && (
-        <p className="ml-2 text-muted-foreground">Loading your store...</p>
-      )}
+      <p className="ml-2 text-muted-foreground">
+        {waitingForAuth ? 'Authenticating...' : fetchingStore ? 'Loading your store...' : 'Loading...'}
+      </p>
     </div>
   );
 };
