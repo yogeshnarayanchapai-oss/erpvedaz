@@ -21,6 +21,8 @@ export interface CustomerInsight {
   // Product info
   last_product_name?: string | null;
   last_product_price?: number | null;
+  // Last order status
+  last_order_status?: string | null;
 }
 
 /**
@@ -91,6 +93,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         handled_by_name?: string;
         last_product_name?: string;
         last_product_price?: number;
+        last_order_status?: string;
       } | null;
 
       if (!data || !data.exists) {
@@ -121,6 +124,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         is_different_store: isDifferentStore,
         last_product_name: data.last_product_name,
         last_product_price: data.last_product_price,
+        last_order_status: data.last_order_status,
       };
     },
     enabled: enabled && !!phone && phone.replace(/\D/g, '').length >= 10,
