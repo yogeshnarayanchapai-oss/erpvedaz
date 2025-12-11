@@ -289,7 +289,7 @@ export async function notifyOrderRedirected({
       actorName,
       targetUserId: callingStaffId,
       portal: 'CALLING',
-      linkPath: '/calling/orders',
+      linkPath: '/calling/my-orders?status=REDIRECT',
       meta: { orderId, productName, customerName, amount },
       storeId,
     },
