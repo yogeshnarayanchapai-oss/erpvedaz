@@ -134,8 +134,8 @@ export default function AdminLeads() {
 
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
-  const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ assigned_to_user_id: string; lead_id: string; product_id: string | null }[]>([]);
-  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null }[]>([]);
+  const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ id: string; assigned_to_user_id: string; first_assigned_to_user_id: string | null; created_by_user_id: string | null; product_id: string | null }[]>([]);
+  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null }[]>([]);
   
   // Fetch all store leads for product summary (not filtered by date range)
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function AdminLeads() {
       if (!storeId) return;
       const { data } = await supabase
         .from('leads')
-        .select('id, date, product_id, assigned_to_user_id, pool_status, assigned_at, status')
+        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status')
         .eq('store_id', storeId);
       
       setAllStoreLeads(data || []);
@@ -160,14 +160,16 @@ export default function AdminLeads() {
       if (!storeId) return;
       const { data } = await supabase
         .from('leads')
-        .select('id, assigned_to_user_id, product_id')
+        .select('id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, product_id')
         .eq('store_id', storeId)
         .not('assigned_to_user_id', 'is', null)
         .gte('assigned_at', `${dateFrom}T00:00:00`)
         .lte('assigned_at', `${dateTo}T23:59:59`);
       setDateRangeAssignedLeads(data?.map(d => ({ 
+        id: d.id,
         assigned_to_user_id: d.assigned_to_user_id!, 
-        lead_id: d.id,
+        first_assigned_to_user_id: d.first_assigned_to_user_id,
+        created_by_user_id: d.created_by_user_id,
         product_id: d.product_id 
       })) || []);
     };
@@ -250,25 +252,38 @@ export default function AdminLeads() {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
-  // Staff Transfer Summary calculation - aggregated from ALL assignments (via assigned_at)
+  // Staff Transfer Summary calculation - uses first_assigned_to_user_id + reassigned-in, excludes self-created
   const staffTransferSummary = useMemo(() => {
     return callingStaff.map(staff => {
-      // Transfer = count leads assigned to this staff in date range (from ALL creators)
-      const transferCount = dateRangeAssignedLeads.filter(l => l.assigned_to_user_id === staff.id).length;
+      // Transfer = leads where:
+      // 1. first_assigned_to_user_id = staff (originally assigned to this staff, excluding self-created)
+      // 2. OR assigned_to_user_id = staff AND first_assigned_to_user_id != staff (reassigned-in)
+      // All filtered by date range and excluding self-created leads
+      const staffLeadsInRange = dateRangeAssignedLeads.filter(l => {
+        // Exclude self-created leads
+        if (l.created_by_user_id === staff.id) return false;
+        
+        // Count if first assigned to this staff OR reassigned to this staff
+        return l.first_assigned_to_user_id === staff.id || l.assigned_to_user_id === staff.id;
+      });
       
-      // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (from all store leads)
-      const staffLeads = allStoreLeads.filter(l => l.assigned_to_user_id === staff.id);
-      const newLeads = staffLeads.filter(l => 
+      // Deduplicate - each lead counted once even if both conditions match
+      const uniqueLeadIds = new Set(staffLeadsInRange.map(l => l.id));
+      const transferCount = uniqueLeadIds.size;
+      
+      // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (excluding self-created)
+      const staffCurrentLeads = allStoreLeads.filter(l => 
+        l.assigned_to_user_id === staff.id && l.created_by_user_id !== staff.id
+      );
+      const newLeads = staffCurrentLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products: get product counts from dateRangeAssignedLeads directly (uses product_id already fetched)
-      const staffAssignments = dateRangeAssignedLeads.filter(l => l.assigned_to_user_id === staff.id);
-      
+      // Products: get product counts from staff leads in date range
       const productCounts: Record<string, number> = {};
-      staffAssignments.forEach(assignment => {
-        if (assignment.product_id) {
-          const productName = products.find(p => p.id === assignment.product_id)?.name;
+      staffLeadsInRange.forEach(lead => {
+        if (lead.product_id) {
+          const productName = products.find(p => p.id === lead.product_id)?.name;
           if (productName) {
             productCounts[productName] = (productCounts[productName] || 0) + 1;
           }
