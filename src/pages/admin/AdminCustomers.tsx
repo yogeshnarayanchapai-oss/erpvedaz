@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Download } from 'lucide-react';
+import { Users, Search, Download, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,13 +20,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { useCustomers } from '@/hooks/useCustomers';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function AdminCustomers() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { effectiveRole } = useEffectiveRole();
   const [search, setSearch] = useState('');
   const [rtoSegment, setRtoSegment] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [customerType, setCustomerType] = useState<'all' | 'new' | 'returning'>('all');
@@ -34,6 +50,9 @@ export default function AdminCustomers() {
   const [city, setCity] = useState('');
   const [status, setStatus] = useState('all');
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const isAdmin = effectiveRole === 'OWNER'; // OWNER displays as "Admin"
 
   const { data: customers, isLoading } = useCustomers({
     search,
@@ -133,6 +152,26 @@ export default function AdminCustomers() {
     setValueSegment('all');
     setCity('');
     setStatus('all');
+  };
+
+  const handleDeleteCustomer = async (customerId: string) => {
+    setDeletingId(customerId);
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerId);
+
+      if (error) throw error;
+      
+      toast.success('Customer deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setSelectedCustomers(prev => prev.filter(id => id !== customerId));
+    } catch (error: any) {
+      toast.error(`Failed to delete customer: ${error.message}`);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -317,9 +356,41 @@ export default function AdminCustomers() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/admin/customers/${customer.id}`)}>
-                        View
-                      </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/admin/customers/${customer.id}`)}>
+                          View
+                        </Button>
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                disabled={deletingId === customer.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Customer?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete {customer.customer_name || 'this customer'} ({customer.phone_number}). This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteCustomer(customer.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
