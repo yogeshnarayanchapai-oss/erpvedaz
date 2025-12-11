@@ -98,6 +98,7 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
         const { data: lastOrder } = await supabase
           .from('orders')
           .select(`
+            id,
             sales_person_id,
             profiles:sales_person_id(full_name),
             products:product_id(name)
@@ -111,6 +112,20 @@ export function useCustomerInsight(phone: string, currentStoreId?: string | null
           handledByName = (lastOrder.profiles as any)?.full_name || null;
           handledByUserId = lastOrder.sales_person_id || null;
           lastProductName = (lastOrder.products as any)?.name || null;
+          
+          // If no product_id on order, check order_items
+          if (!lastProductName && lastOrder.id) {
+            const { data: orderItems } = await supabase
+              .from('order_items')
+              .select('products:product_id(name)')
+              .eq('order_id', lastOrder.id)
+              .limit(1)
+              .maybeSingle();
+            
+            if (orderItems) {
+              lastProductName = (orderItems.products as any)?.name || null;
+            }
+          }
         }
       } catch (e) {
         // Ignore error, staff info is optional
