@@ -10,49 +10,13 @@ interface CustomerInsightCardProps {
   phone: string;
 }
 
-// Determine card color based on order status
-function getCardColorClass(status: string | null | undefined): string {
-  if (!status) {
-    return 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
-  }
-  
-  const upperStatus = status.toUpperCase();
-  
-  // Red statuses: Cancelled, CNR, RTO, etc.
-  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
-    return 'p-3 bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700';
-  }
-  
-  // Yellow for confirmed and other statuses
-  return 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
-}
+// Red statuses
+const RED_STATUSES = ['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL', 'CNR'];
 
-function getTextColorClass(status: string | null | undefined): string {
-  if (!status) {
-    return 'text-yellow-800 dark:text-yellow-300';
-  }
-  
-  const upperStatus = status.toUpperCase();
-  
-  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
-    return 'text-red-800 dark:text-red-300';
-  }
-  
-  return 'text-yellow-800 dark:text-yellow-300';
-}
-
-function getIconColorClass(status: string | null | undefined): string {
-  if (!status) {
-    return 'text-yellow-600';
-  }
-  
-  const upperStatus = status.toUpperCase();
-  
-  if (['CANCELLED', 'CALL_NOT_RECEIVED', 'RTO', 'RETURNED', 'CUSTOMER_CANCEL'].includes(upperStatus)) {
-    return 'text-red-600';
-  }
-  
-  return 'text-yellow-600';
+// Check if status is red
+function isRedStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return RED_STATUSES.includes(status.toUpperCase());
 }
 
 export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsightCardProps) {
@@ -88,10 +52,15 @@ export function CustomerInsightCard({ insight, isLoading, phone }: CustomerInsig
     );
   }
 
-  // Existing customer - color based on last order status
-  const cardClass = getCardColorClass(insight.last_order_status);
-  const textClass = getTextColorClass(insight.last_order_status);
-  const iconClass = getIconColorClass(insight.last_order_status);
+  // Determine card color based on order status
+  const isRed = isRedStatus(insight.last_order_status);
+  const cardClass = isRed 
+    ? 'p-3 bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700'
+    : 'p-3 bg-yellow-100 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700';
+  const textClass = isRed 
+    ? 'text-red-800 dark:text-red-300'
+    : 'text-yellow-800 dark:text-yellow-300';
+  const iconClass = isRed ? 'text-red-600' : 'text-yellow-600';
 
   return (
     <Card className={cardClass}>
