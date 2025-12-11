@@ -274,12 +274,29 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
           assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
         }
         
-        // Apply date filter on date or assigned_at
+        // Apply date filter on date or assigned_at - same as Staff Leaderboard
         assignedLeadsQuery = assignedLeadsQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
         
         const { data: allLeadsInRange, error: assignedError } = await assignedLeadsQuery;
         
-        if (assignedError) throw assignedError;
+        if (assignedError) {
+          console.error('[useStaffLeadStats] Query error:', assignedError);
+          throw assignedError;
+        }
+        
+        // Log the raw query results for debugging
+        const leadsWithFirstAssigned = (allLeadsInRange || []).filter(l => l.first_assigned_to_user_id === userId);
+        const leadsReassignedOut = leadsWithFirstAssigned.filter(l => l.assigned_to_user_id !== userId);
+        console.log('[useStaffLeadStats] Query debug:', {
+          userId,
+          storeId,
+          dateFrom,
+          dateTo,
+          totalLeadsReturned: allLeadsInRange?.length || 0,
+          leadsWithFirstAssignedToUser: leadsWithFirstAssigned.length,
+          leadsReassignedOut: leadsReassignedOut.length,
+          reassignedOutIds: leadsReassignedOut.map(l => l.id).slice(0, 5)
+        });
         
         // Count unique leads where this user was involved (same logic as Staff Leaderboard)
         const assignedLeadIds = new Set<string>();
