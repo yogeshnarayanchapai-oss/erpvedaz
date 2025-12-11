@@ -38,19 +38,19 @@ Deno.serve(async (req) => {
 
     console.log('Requesting user:', requestingUser.id);
 
-    // Check if requesting user is ADMIN using user_roles table
+    // Check if requesting user is OWNER or ADMIN using user_roles table
     const { data: adminRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
-      .eq('role', 'ADMIN')
+      .in('role', ['OWNER', 'ADMIN'])
       .maybeSingle();
 
-    console.log('Admin role check:', adminRole, roleError?.message);
+    console.log('Admin/Owner role check:', adminRole, roleError?.message);
 
     if (!adminRole) {
       return new Response(
-        JSON.stringify({ error: 'Only admins can impersonate users' }),
+        JSON.stringify({ error: 'Only admins and managers can impersonate users' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
