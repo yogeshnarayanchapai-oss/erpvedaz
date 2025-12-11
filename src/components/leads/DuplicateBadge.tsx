@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, User, AlertTriangle, Package, Star } from 'lucide-react';
+import { Store, User, AlertTriangle, Package, Star, ShoppingBag } from 'lucide-react';
 import { useCustomerInsight } from '@/hooks/useCustomerInsight';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
@@ -41,8 +41,15 @@ export function DuplicateBadge({ phone, isDuplicate }: DuplicateBadgeProps) {
               <span className="font-medium text-sm">Duplicate Customer Found</span>
             </div>
             
-            {/* Store & Staff Info */}
+            {/* Product, Store & Staff Info */}
             <div className="bg-muted/50 rounded p-2 space-y-1.5 text-xs">
+              {insight.last_product_name && (
+                <div className="flex items-center gap-1.5">
+                  <ShoppingBag className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Product:</span>
+                  <span className="font-medium">{insight.last_product_name}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1.5">
                 <Store className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">Store:</span>

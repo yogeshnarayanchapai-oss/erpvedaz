@@ -28,10 +28,12 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
   { value: 'REMAINING', label: 'Remaining to Call' },
+  { value: 'DUPLICATE', label: 'Duplicate' },
   { value: 'NEW', label: 'Pending' },
   { value: 'ASSIGNED', label: 'Assigned' },
   { value: 'CONFIRMED', label: 'Confirmed' },
@@ -188,7 +190,7 @@ export default function CallingLeads() {
       
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       
-      // Handle REMAINING filter - leads that still need to be called
+      // Handle special filters: REMAINING and DUPLICATE
       let matchesStatus = false;
       if (statusFilter === 'ALL') {
         matchesStatus = true;
@@ -196,6 +198,8 @@ export default function CallingLeads() {
         // Remaining = leads that are NEW or ASSIGNED and current_team is still CALLING
         matchesStatus = (lead.status === 'NEW' || lead.status === 'ASSIGNED') && 
                        lead.current_team === 'CALLING';
+      } else if (statusFilter === 'DUPLICATE') {
+        matchesStatus = lead.is_duplicate === true;
       } else {
         matchesStatus = lead.status === statusFilter;
       }
@@ -1005,11 +1009,13 @@ Order By: ${profile?.name || 'N/A'}`;
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {lead.client_name}
-                        {isNewLead(lead) && (
+                        {lead.is_duplicate ? (
+                          <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
+                        ) : isNewLead(lead) ? (
                           <Badge variant="default" className="text-xs bg-amber-500 text-white animate-pulse">
                             New
                           </Badge>
-                        )}
+                        ) : null}
                         {isOverdue && (
                           <Badge variant="destructive" className="text-xs">
                             Overdue
