@@ -101,7 +101,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
       const [{ data: transactions }, { data: payments }, { data: pendingTxns }] = await Promise.all([
         supabase
           .from('party_transactions')
-          .select('party_id, direction, amount')
+          .select('party_id, direction, amount, is_settled')
           .in('party_id', partyIds),
         supabase
           .from('party_payments')
@@ -122,11 +122,14 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
         const partyPayments = payments?.filter(p => p.party_id === party.id) || [];
         const partyPendingTxns = pendingTxns?.filter(t => t.party_id === party.id) || [];
 
-        const total_receivable = partyTransactions
+        // Only count unsettled transactions for balance
+        const unsettledTransactions = partyTransactions.filter(t => !t.is_settled);
+
+        const total_receivable = unsettledTransactions
           .filter(t => t.direction === 'RECEIVABLE')
           .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-        const total_payable = partyTransactions
+        const total_payable = unsettledTransactions
           .filter(t => t.direction === 'PAYABLE')
           .reduce((sum, t) => sum + (t.amount || 0), 0);
 
