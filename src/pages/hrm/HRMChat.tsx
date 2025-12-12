@@ -190,7 +190,8 @@ export default function HRMChat() {
     if (room.type !== 'DIRECT' || !room.participants) return room.name;
     const otherUserId = room.participants.find(id => id !== profile?.id);
     const otherUser = employeeUsers.find(u => u.id === otherUserId);
-    return otherUser?.name || room.name;
+    // Show only the other person's name
+    return otherUser?.name || 'Unknown';
   };
 
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'OWNER';
