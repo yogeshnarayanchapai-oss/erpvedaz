@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { TeamChatDialog } from './TeamChatDialog';
+import { useUnreadMessageCount } from '@/hooks/useTeamChat';
 
 export function TeamChatButton() {
   const [open, setOpen] = useState(false);
+  const { data: unreadCount = 0 } = useUnreadMessageCount();
 
   return (
     <>
@@ -15,6 +17,12 @@ export function TeamChatButton() {
           aria-label="Open Team Chat"
         >
           <MessageCircle className="w-6 h-6" />
+          {/* Unread badge */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
       )}
       <TeamChatDialog open={open} onOpenChange={setOpen} />

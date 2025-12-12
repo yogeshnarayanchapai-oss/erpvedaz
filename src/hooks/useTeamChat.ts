@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ChatRoom {
   id: string;
@@ -257,6 +258,13 @@ export function useSendChatMessage() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
 
+      // Get sender's profile name
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.user.id)
+        .single();
+
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -274,18 +282,76 @@ export function useSendChatMessage() {
 
       if (error) throw error;
 
-      // Create notifications for mentions
-      if (mentions && mentions.length > 0) {
-        const notifications = mentions.map(userId => ({
-          user_id: userId,
-          type: 'MENTION',
-          title: 'You were mentioned in a chat',
-          message: message.substring(0, 100),
-          store_id: storeId,
-          metadata: { room_id: roomId, message_id: data.id },
-        }));
+      // Get room info to notify members
+      const { data: room } = await supabase
+        .from('chat_rooms')
+        .select('name, type, participants')
+        .eq('id', roomId)
+        .single();
 
-        await supabase.from('notifications').insert(notifications);
+      if (room) {
+        let notifyUserIds: string[] = [];
+
+        if (room.type === 'DIRECT' && room.participants) {
+          // For DMs, notify the other participant
+          notifyUserIds = room.participants.filter((id: string) => id !== user.user!.id);
+        } else {
+          // For group chats, get all users in the store (excluding sender)
+          const { data: storeUsers } = await supabase
+            .from('user_store_access')
+            .select('user_id')
+            .eq('store_id', storeId)
+            .eq('is_active', true);
+
+          if (storeUsers) {
+            notifyUserIds = storeUsers
+              .map(u => u.user_id)
+              .filter(id => id !== user.user!.id);
+          }
+        }
+
+        // Check if users have muted this room
+        const { data: roomData } = await supabase
+          .from('chat_rooms')
+          .select('is_muted_by')
+          .eq('id', roomId)
+          .single();
+
+        const mutedBy = roomData?.is_muted_by || [];
+        notifyUserIds = notifyUserIds.filter(id => !mutedBy.includes(id));
+
+        // Create notifications for all room members (except mentioned users who get special notification)
+        const mentionedSet = new Set(mentions || []);
+        const nonMentionedUsers = notifyUserIds.filter(id => !mentionedSet.has(id));
+
+        if (nonMentionedUsers.length > 0) {
+          const notifications = nonMentionedUsers.map(userId => ({
+            user_id: userId,
+            type: 'CHAT_MESSAGE',
+            title: room.type === 'DIRECT' 
+              ? `New message from ${senderProfile?.name || 'User'}`
+              : `New message in ${room.name}`,
+            message: message.substring(0, 100),
+            store_id: storeId,
+            metadata: { room_id: roomId, message_id: data.id },
+          }));
+
+          await supabase.from('notifications').insert(notifications);
+        }
+
+        // Create notifications for mentions
+        if (mentions && mentions.length > 0) {
+          const mentionNotifications = mentions.map(userId => ({
+            user_id: userId,
+            type: 'MENTION',
+            title: 'You were mentioned in a chat',
+            message: message.substring(0, 100),
+            store_id: storeId,
+            metadata: { room_id: roomId, message_id: data.id },
+          }));
+
+          await supabase.from('notifications').insert(mentionNotifications);
+        }
       }
 
       return data;
@@ -550,6 +616,198 @@ export function useEnsureDefaultGroups() {
           });
         }
       }
+    },
+  });
+}
+
+// Hook to get unread message count across all rooms
+export function useUnreadMessageCount() {
+  const storeId = useCurrentStoreId();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates for new messages
+  useEffect(() => {
+    if (!storeId || !user?.id) return;
+
+    const channel = supabase
+      .channel(`unread-messages-${storeId}-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-count', storeId, user.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-count', storeId, user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, user?.id, queryClient]);
+
+  return useQuery({
+    queryKey: ['unread-count', storeId, user?.id],
+    queryFn: async () => {
+      if (!storeId || !user?.id) return 0;
+
+      // Get all rooms for this store
+      const { data: rooms } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('store_id', storeId);
+
+      if (!rooms || rooms.length === 0) return 0;
+
+      const roomIds = rooms.map(r => r.id);
+
+      // Count messages not read by this user (where sender is not current user)
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select('id, read_by, sender_id')
+        .in('room_id', roomIds)
+        .neq('sender_id', user.id);
+
+      if (error) {
+        console.error('Error fetching unread count:', error);
+        return 0;
+      }
+
+      // Count messages where current user is not in read_by array
+      const unreadCount = (messages || []).filter(msg => {
+        const readBy = msg.read_by || [];
+        return !readBy.includes(user.id);
+      }).length;
+
+      return unreadCount;
+    },
+    enabled: !!storeId && !!user?.id,
+    refetchInterval: 30000, // Refresh every 30 seconds as backup
+  });
+}
+
+// Hook to get unread count per room
+export function useUnreadCountPerRoom() {
+  const storeId = useCurrentStoreId();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!storeId || !user?.id) return;
+
+    const channel = supabase
+      .channel(`unread-per-room-${storeId}-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-per-room', storeId, user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, user?.id, queryClient]);
+
+  return useQuery({
+    queryKey: ['unread-per-room', storeId, user?.id],
+    queryFn: async () => {
+      if (!storeId || !user?.id) return {};
+
+      // Get all rooms
+      const { data: rooms } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('store_id', storeId);
+
+      if (!rooms || rooms.length === 0) return {};
+
+      const roomIds = rooms.map(r => r.id);
+
+      // Get all messages not sent by current user
+      const { data: messages } = await supabase
+        .from('chat_messages')
+        .select('id, room_id, read_by, sender_id')
+        .in('room_id', roomIds)
+        .neq('sender_id', user.id);
+
+      // Count unread per room
+      const unreadPerRoom: Record<string, number> = {};
+      (messages || []).forEach(msg => {
+        const readBy = msg.read_by || [];
+        if (!readBy.includes(user.id)) {
+          unreadPerRoom[msg.room_id] = (unreadPerRoom[msg.room_id] || 0) + 1;
+        }
+      });
+
+      return unreadPerRoom;
+    },
+    enabled: !!storeId && !!user?.id,
+  });
+}
+
+// Hook to mark all messages in a room as read
+export function useMarkRoomAsRead() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (roomId: string) => {
+      if (!user?.id) return;
+
+      // Get all unread messages in this room
+      const { data: messages } = await supabase
+        .from('chat_messages')
+        .select('id, read_by')
+        .eq('room_id', roomId)
+        .neq('sender_id', user.id);
+
+      if (!messages || messages.length === 0) return;
+
+      // Update each message to add current user to read_by
+      for (const msg of messages) {
+        const currentReadBy = msg.read_by || [];
+        if (!currentReadBy.includes(user.id)) {
+          await supabase
+            .from('chat_messages')
+            .update({
+              read_by: [...currentReadBy, user.id],
+              read_at: new Date().toISOString(),
+            })
+            .eq('id', msg.id);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-per-room'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
     },
   });
 }

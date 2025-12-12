@@ -24,6 +24,8 @@ import {
   useStoreUsers,
   useCreateDMRoom,
   useEnsureDefaultGroups,
+  useUnreadCountPerRoom,
+  useMarkRoomAsRead,
   ChatRoom,
   uploadChatFile,
 } from '@/hooks/useTeamChat';
@@ -94,10 +96,12 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const { data: searchResults = [] } = useSearchMessages(selectedRoom?.id || null, searchQuery);
   const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoom?.id || null);
   const { data: storeUsers = [] } = useStoreUsers();
+  const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
   const sendMessage = useSendChatMessage();
   const createRoom = useCreateChatRoom();
   const deleteRoom = useDeleteChatRoom();
   const markAsRead = useMarkMessagesAsRead();
+  const markRoomAsRead = useMarkRoomAsRead();
   const pinMessage = usePinMessage();
   const toggleMute = useToggleMuteRoom();
   const createDM = useCreateDMRoom();
@@ -123,17 +127,13 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as read when viewing
+  // Mark messages as read when viewing a room
   useEffect(() => {
-    if (selectedRoom && messages.length > 0 && profile?.id) {
-      const unreadIds = messages
-        .filter(m => m.sender_id !== profile.id && !m.read_by?.includes(profile.id))
-        .map(m => m.id);
-      if (unreadIds.length > 0) {
-        markAsRead.mutate({ roomId: selectedRoom.id, messageIds: unreadIds });
-      }
+    if (selectedRoom && profile?.id) {
+      // Mark all messages in this room as read
+      markRoomAsRead.mutate(selectedRoom.id);
     }
-  }, [selectedRoom, messages, profile?.id]);
+  }, [selectedRoom?.id, profile?.id]);
 
   const handleSend = async () => {
     if (!message.trim() || !selectedRoom) return;
@@ -366,20 +366,28 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               <div className="p-3">
                 <p className="text-xs text-muted-foreground font-semibold tracking-wider mb-2">GROUPS</p>
                 <div className="space-y-0.5">
-                  {groupRooms.map(room => (
-                    <div
-                      key={room.id}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
-                        selectedRoom?.id === room.id 
-                          ? "bg-primary/10 text-primary font-medium" 
-                          : "hover:bg-muted text-foreground"
-                      )}
-                      onClick={() => { setSelectedRoom(room); setActiveTab('groups'); }}
-                    >
-                      <span className="text-sm">{room.name}</span>
-                    </div>
-                  ))}
+                  {groupRooms.map(room => {
+                    const unreadCount = unreadPerRoom[room.id] || 0;
+                    return (
+                      <div
+                        key={room.id}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                          selectedRoom?.id === room.id 
+                            ? "bg-primary/10 text-primary font-medium" 
+                            : "hover:bg-muted text-foreground"
+                        )}
+                        onClick={() => { setSelectedRoom(room); setActiveTab('groups'); }}
+                      >
+                        <span className="text-sm truncate">{room.name}</span>
+                        {unreadCount > 0 && selectedRoom?.id !== room.id && (
+                          <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* DMs Section */}
@@ -387,21 +395,31 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                   <>
                     <p className="text-xs text-muted-foreground font-semibold tracking-wider mt-6 mb-2">DIRECT MESSAGES</p>
                     <div className="space-y-0.5">
-                      {dmRooms.map(room => (
-                        <div
-                          key={room.id}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
-                            selectedRoom?.id === room.id 
-                              ? "bg-primary/10 text-primary font-medium" 
-                              : "hover:bg-muted text-foreground"
-                          )}
-                          onClick={() => { setSelectedRoom(room); setActiveTab('dms'); }}
-                        >
-                          <User className="w-4 h-4" />
-                          <span className="text-sm truncate">{room.name}</span>
-                        </div>
-                      ))}
+                      {dmRooms.map(room => {
+                        const unreadCount = unreadPerRoom[room.id] || 0;
+                        return (
+                          <div
+                            key={room.id}
+                            className={cn(
+                              "flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                              selectedRoom?.id === room.id 
+                                ? "bg-primary/10 text-primary font-medium" 
+                                : "hover:bg-muted text-foreground"
+                            )}
+                            onClick={() => { setSelectedRoom(room); setActiveTab('dms'); }}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <User className="w-4 h-4 shrink-0" />
+                              <span className="text-sm truncate">{room.name}</span>
+                            </div>
+                            {unreadCount > 0 && selectedRoom?.id !== room.id && (
+                              <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </>
                 )}
