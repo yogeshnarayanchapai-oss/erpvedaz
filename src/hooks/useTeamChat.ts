@@ -548,34 +548,39 @@ export function useCreateDMRoom() {
   const storeId = useCurrentStoreId();
   
   return useMutation({
-    mutationFn: async ({ targetUserId, targetUsername }: { targetUserId: string; targetUsername: string }) => {
+    mutationFn: async ({ targetUserId, targetName }: { targetUserId: string; targetName: string }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
 
-      // Check if DM room already exists
+      // Check if DM room already exists between these two users
       const { data: existingRooms } = await supabase
         .from('chat_rooms')
         .select('*')
         .eq('type', 'DIRECT')
-        .eq('store_id', storeId)
-        .contains('participants', [user.user.id, targetUserId]);
+        .eq('store_id', storeId);
 
-      if (existingRooms && existingRooms.length > 0) {
-        return existingRooms[0];
+      // Find existing room where both users are participants
+      const existingRoom = existingRooms?.find(room => {
+        const participants = room.participants || [];
+        return participants.includes(user.user!.id) && participants.includes(targetUserId);
+      });
+
+      if (existingRoom) {
+        return existingRoom;
       }
 
-      // Get current user profile
+      // Get current user profile name
       const { data: myProfile } = await supabase
         .from('profiles')
-        .select('username')
+        .select('name')
         .eq('id', user.user.id)
         .single();
 
-      // Create new DM room
+      // Create new DM room with staff names
       const { data: result, error } = await supabase
         .from('chat_rooms')
         .insert({
-          name: `${myProfile?.username || 'user'} & ${targetUsername}`,
+          name: `${myProfile?.name || 'User'} & ${targetName}`,
           type: 'DIRECT',
           store_id: storeId,
           created_by: user.user.id,
