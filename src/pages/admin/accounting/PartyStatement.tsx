@@ -432,7 +432,7 @@ export default function PartyStatement() {
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 items-center">
-                        {/* Pay/Receive for pending transactions (manual) */}
+                        {/* Pay/Receive for pending transactions (manual) - Debit = Pay, Credit = Receive */}
                         {entry.type === 'PENDING' && entry.is_pending && canEdit && (
                           <Button
                             size="sm"
@@ -440,19 +440,19 @@ export default function PartyStatement() {
                             onClick={() => { setSelectedPendingEntry(entry); setClearDialogOpen(true); }}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            {entry.debit > 0 ? 'Receive' : 'Pay'}
+                            {entry.credit > 0 ? 'Receive' : 'Pay'}
                           </Button>
                         )}
                         {/* Show status badge for settled manual transactions */}
                         {entry.type === 'PENDING' && !entry.is_pending && entry.is_settled && (
                           <Badge variant="outline" className="text-green-600 border-green-600">
-                            {entry.debit > 0 ? 'Received' : 'Paid'}
+                            {entry.credit > 0 ? 'Received' : 'Paid'}
                           </Badge>
                         )}
                         {/* Show status badge for settled inventory transactions */}
                         {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && entry.is_settled && (
                           <Badge variant="outline" className="text-green-600 border-green-600">
-                            {entry.credit > 0 ? 'Paid' : 'Received'}
+                            {entry.debit > 0 ? 'Paid' : 'Received'}
                           </Badge>
                         )}
                         {/* Pay/Receive button for unsettled inventory transactions */}
@@ -463,7 +463,7 @@ export default function PartyStatement() {
                             onClick={() => { setSelectedInventoryEntry(entry); setInventoryPayDialogOpen(true); }}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            {entry.credit > 0 ? 'Pay' : 'Receive'}
+                            {entry.debit > 0 ? 'Pay' : 'Receive'}
                           </Button>
                         )}
                         {/* Delete button for all entries except opening balance */}
@@ -508,7 +508,7 @@ export default function PartyStatement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {selectedPendingEntry?.debit && selectedPendingEntry.debit > 0 ? 'Receive Payment' : 'Make Payment'}
+                {selectedPendingEntry?.credit && selectedPendingEntry.credit > 0 ? 'Receive Payment' : 'Make Payment'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -546,7 +546,7 @@ export default function PartyStatement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {selectedInventoryEntry?.credit && selectedInventoryEntry.credit > 0 ? 'Make Payment' : 'Receive Payment'}
+                {selectedInventoryEntry?.debit && selectedInventoryEntry.debit > 0 ? 'Make Payment' : 'Receive Payment'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
