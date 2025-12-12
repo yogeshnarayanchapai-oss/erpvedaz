@@ -293,7 +293,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 w-[420px] h-[500px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
+    <div className="fixed bottom-24 right-6 z-50 w-[340px] h-[480px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
@@ -313,7 +313,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
       <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-56 border-r bg-muted/20 flex flex-col">
+          <div className="w-32 border-r bg-muted/20 flex flex-col shrink-0">
             {/* Actions */}
             <div className="px-4 py-3 border-b flex gap-3">
               {isAdmin && (
