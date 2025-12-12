@@ -370,12 +370,15 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const isRoomMuted = selectedRoom?.is_muted_by?.includes(profile?.id || '');
 
   // Get display name for DM room - use profileMap for non-employee users (like store owner)
+  // Show only first name to avoid truncation in narrow sidebar
   const getDMDisplayName = (room: ChatRoom) => {
     if (room.type !== 'DIRECT' || !room.participants) return room.name;
     const otherUserId = room.participants.find(id => id !== profile?.id);
     if (!otherUserId) return room.name;
     // First try profileMap (contains all DM participants), then storeUsers (employees only)
-    return profileMap.get(otherUserId) || storeUsers.find(u => u.id === otherUserId)?.name || room.name;
+    const fullName = profileMap.get(otherUserId) || storeUsers.find(u => u.id === otherUserId)?.name || room.name;
+    // Return only first word of name to fit in narrow sidebar
+    return fullName.split(' ')[0];
   };
 
   const filteredUsers = storeUsers.filter(u => 
@@ -482,7 +485,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                         )}
                         onClick={() => { setSelectedRoom(room); setActiveTab('groups'); }}
                       >
-                        <span className="text-sm truncate">{room.name}</span>
+                        <span className="text-xs truncate">{room.name}</span>
                         {unreadCount > 0 && selectedRoom?.id !== room.id && (
                           <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
                             {unreadCount > 99 ? '99+' : unreadCount}
@@ -512,9 +515,9 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                             )}
                             onClick={() => { setSelectedRoom(room); setActiveTab('dms'); }}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <User className="w-4 h-4 shrink-0" />
-                              <span className="text-sm truncate">{displayName}</span>
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <User className="w-3.5 h-3.5 shrink-0" />
+                              <span className="text-xs truncate">{displayName}</span>
                             </div>
                             {unreadCount > 0 && selectedRoom?.id !== room.id && (
                               <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
