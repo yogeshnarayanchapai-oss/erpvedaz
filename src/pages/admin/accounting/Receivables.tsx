@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
 import { useActiveAccounts } from '@/hooks/useAccounts';
-import { usePendingReceivables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
+import { usePendingReceivables, usePendingPartyReceivables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,10 @@ export default function Receivables() {
   const navigate = useNavigate();
   const { data: allParties = [], isLoading } = usePartiesWithBalances();
   const { data: accounts = [] } = useActiveAccounts();
+  // Pending receivables WITHOUT party (for Pending Income tab)
   const { data: pendingReceivables = [], isLoading: loadingPending } = usePendingReceivables();
+  // Pending receivables WITH party (for Party Receivables tab)
+  const { data: pendingPartyReceivables = [], isLoading: loadingPartyPending } = usePendingPartyReceivables();
   const createPayment = useCreatePartyPayment();
   const markCleared = useMarkTransactionsCleared();
   const { canEdit } = useAccountingEditAccess();
@@ -54,10 +57,15 @@ export default function Receivables() {
     (p.phone && p.phone.includes(searchTerm))
   );
 
-  const totalReceivable = partiesWithReceivables.reduce((sum, p) => sum + p.total_receivable, 0);
+  // Calculate totals - Party Receivables include both party balances AND pending party receivables
+  const totalPartyReceivable = partiesWithReceivables.reduce((sum, p) => sum + p.total_receivable, 0);
+  const totalPartyPending = pendingPartyReceivables.reduce((sum, t) => sum + t.amount, 0);
+  const totalReceivable = totalPartyReceivable + totalPartyPending;
   const totalReceived = partiesWithReceivables.reduce((sum, p) => sum + p.total_received, 0);
-  const totalOutstanding = partiesWithReceivables.reduce((sum, p) => sum + p.net_receivable, 0);
+  const totalOutstanding = partiesWithReceivables.reduce((sum, p) => sum + p.net_receivable, 0) + totalPartyPending;
+  // Pending Income only shows party-less entries
   const totalPendingIncome = pendingReceivables.reduce((sum, t) => sum + t.amount, 0);
+  const partyCount = partiesWithReceivables.length + (pendingPartyReceivables.length > 0 ? new Set(pendingPartyReceivables.map(t => t.party_id)).size : 0);
 
   const openPaymentDialog = (party: any) => {
     setSelectedParty(party);
@@ -163,7 +171,7 @@ export default function Receivables() {
               <TrendingUp className="w-4 h-4 text-orange-500" />
               <span className="text-2xl font-bold">{formatNPR(totalReceivable)}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">From {partiesWithReceivables.length} parties</p>
+            <p className="text-xs text-muted-foreground mt-1">From {partyCount} parties</p>
           </CardContent>
         </Card>
 
@@ -255,7 +263,7 @@ export default function Receivables() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {!isLoading && filteredParties.length === 0 && (
+                  {!isLoading && filteredParties.length === 0 && pendingPartyReceivables.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No parties with outstanding receivables found.
@@ -301,12 +309,68 @@ export default function Receivables() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pending Party Receivables Table */}
+          {pendingPartyReceivables.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Pending Party Receivables
+                  <Badge variant="secondary">{pendingPartyReceivables.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Party</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingPartyPending && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {pendingPartyReceivables.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
+                        <TableCell className="font-medium">{t.parties?.name || '-'}</TableCell>
+                        <TableCell>{t.description || t.note || '-'}</TableCell>
+                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
+                        <TableCell>
+                          {canEdit && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openClearDialog(t)}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Mark Received
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Income Transactions</CardTitle>
+              <CardTitle>Pending Income Transactions (No Party)</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -315,7 +379,6 @@ export default function Receivables() {
                     <TableHead>Date</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Party</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Actions</TableHead>
@@ -324,15 +387,15 @@ export default function Receivables() {
                 <TableBody>
                   {loadingPending && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   )}
                   {!loadingPending && pendingReceivables.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No pending income transactions.
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No pending income transactions without party.
                       </TableCell>
                     </TableRow>
                   )}
@@ -341,7 +404,6 @@ export default function Receivables() {
                       <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
                       <TableCell>{t.description || t.note || '-'}</TableCell>
-                      <TableCell>{t.parties?.name || '-'}</TableCell>
                       <TableCell>{t.from_account?.name || t.to_account?.name || '-'}</TableCell>
                       <TableCell className="text-right font-medium">{formatNPR(t.amount)}</TableCell>
                       <TableCell>
