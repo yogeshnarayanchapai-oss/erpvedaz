@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveAccounts } from '@/hooks/useAccounts';
@@ -25,6 +26,7 @@ export default function NewTransfer() {
     to_account_id: '',
     reference_no: '',
     note: '',
+    is_cleared: true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +53,7 @@ export default function NewTransfer() {
       reference_no: formData.reference_no || null,
       note: formData.note || null,
       description: formData.note || `Transfer from ${fromAccount?.name || 'Unknown'} to ${toAccount?.name || 'Unknown'}`,
-      is_cleared: true, // Transfers are immediately cleared
+      is_cleared: formData.is_cleared,
       created_by: null,
       order_id: null,
     });
@@ -176,6 +178,20 @@ export default function NewTransfer() {
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="is_cleared" className="font-medium">Mark as Cleared</Label>
+                <p className="text-sm text-muted-foreground">
+                  Cleared transfers immediately update account balances
+                </p>
+              </div>
+              <Switch
+                id="is_cleared"
+                checked={formData.is_cleared}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_cleared: checked })}
               />
             </div>
 
