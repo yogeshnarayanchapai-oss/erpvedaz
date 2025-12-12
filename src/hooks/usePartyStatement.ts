@@ -195,8 +195,34 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         });
       });
 
-      // Sort by date
-      entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Sort by transaction_code descending (newest/highest code first)
+      entries.sort((a, b) => {
+        // Opening balance always at bottom
+        if (a.id === 'opening-balance') return 1;
+        if (b.id === 'opening-balance') return -1;
+        
+        // Extract numeric part from transaction codes for proper sorting
+        const getCodeNum = (code?: string) => {
+          if (!code) return 0;
+          const match = code.match(/\d+/);
+          return match ? parseInt(match[0], 10) : 0;
+        };
+        
+        const aNum = getCodeNum(a.transaction_code);
+        const bNum = getCodeNum(b.transaction_code);
+        
+        // If both have codes, sort by code descending
+        if (aNum > 0 && bNum > 0) {
+          return bNum - aNum;
+        }
+        
+        // If only one has code, the one with code comes first
+        if (aNum > 0) return -1;
+        if (bNum > 0) return 1;
+        
+        // Fall back to date descending for entries without codes
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
 
       // Calculate running balance (exclude settled transactions from running balance)
       let runningBalance = 0;
