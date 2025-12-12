@@ -74,10 +74,10 @@ export default function PartyStatement() {
   }, [parties, partyTypeFilter, searchTerm]);
 
   const summaryStats = useMemo(() => {
-    // Receivable = need to receive (unsettled receivables), Payable = need to pay (unsettled payables)
-    // Balance = Credit - Debit across all parties
-    const totalReceivable = parties.reduce((sum, p) => sum + Math.max(0, p.current_balance), 0);
-    const totalPayable = parties.reduce((sum, p) => sum + Math.abs(Math.min(0, p.current_balance)), 0);
+    // Receivable = unsettled receivables (net_receivable), Payable = unsettled payables (net_payable)
+    // Balance = Receivable - Payable (from unsettled transactions)
+    const totalReceivable = parties.reduce((sum, p) => sum + Math.max(0, p.net_receivable + p.pending_receivable_amount), 0);
+    const totalPayable = parties.reduce((sum, p) => sum + Math.max(0, p.net_payable + p.pending_payable_amount), 0);
     const totalBalance = totalReceivable - totalPayable;
     return { totalReceivable, totalPayable, totalBalance, partyCount: parties.length };
   }, [parties]);
@@ -646,17 +646,22 @@ export default function PartyStatement() {
             <TableBody>
               {partiesLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
               {!partiesLoading && filteredParties.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No parties found</TableCell></TableRow>}
-              {filteredParties.map((party) => (
-                <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
-                  <TableCell className="font-medium">{party.name}</TableCell>
-                  <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
-                  <TableCell>{party.phone || '-'}</TableCell>
-                  <TableCell className="text-right text-green-600">{party.current_balance > 0 ? `₹${party.current_balance.toLocaleString()}` : '-'}</TableCell>
-                  <TableCell className="text-right text-red-600">{party.current_balance < 0 ? `₹${Math.abs(party.current_balance).toLocaleString()}` : '-'}</TableCell>
-                  <TableCell className={`text-right font-medium ${party.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(party.current_balance).toLocaleString()}</TableCell>
-                  <TableCell><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
-                </TableRow>
-              ))}
+              {filteredParties.map((party) => {
+                const partyReceivable = Math.max(0, party.net_receivable + party.pending_receivable_amount);
+                const partyPayable = Math.max(0, party.net_payable + party.pending_payable_amount);
+                const partyBalance = partyReceivable - partyPayable;
+                return (
+                  <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
+                    <TableCell className="font-medium">{party.name}</TableCell>
+                    <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
+                    <TableCell>{party.phone || '-'}</TableCell>
+                    <TableCell className="text-right text-green-600">{partyReceivable > 0 ? `₹${partyReceivable.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right text-red-600">{partyPayable > 0 ? `₹${partyPayable.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(partyBalance).toLocaleString()}</TableCell>
+                    <TableCell><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
