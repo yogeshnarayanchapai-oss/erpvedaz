@@ -171,7 +171,7 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
       // Fetch orders for confirmed/dispatched status, filtered by store
       let ordersQuery = supabase
         .from('orders')
-        .select('product_id, amount, order_status, store_id')
+        .select('id, product_id, amount, order_status, store_id')
         .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
@@ -183,6 +183,22 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
       const { data: orders, error: ordersError } = await ordersQuery;
 
       if (ordersError) throw ordersError;
+
+      // Fetch order_items to get quantities
+      const orderIds = (orders || [])
+        .filter(o => ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || ''))
+        .map(o => o.id);
+
+      let orderItemsData: { product_id: string | null; quantity: number | null }[] = [];
+      if (orderIds.length > 0) {
+        const { data: items, error: itemsError } = await supabase
+          .from('order_items')
+          .select('product_id, quantity')
+          .in('order_id', orderIds);
+
+        if (itemsError) throw itemsError;
+        orderItemsData = items || [];
+      }
 
       // Fetch ads spend targets for the date range
       const { data: adsData, error: adsError } = await supabase
@@ -201,6 +217,14 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         }
       });
 
+      // Calculate qty sold per product from order_items
+      const qtySoldByProduct: Record<string, number> = {};
+      orderItemsData.forEach(item => {
+        if (item.product_id) {
+          qtySoldByProduct[item.product_id] = (qtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+        }
+      });
+
       return products.map(product => {
         // Filter orders for CONFIRMED or DISPATCHED status
         const productOrders = (orders || []).filter(
@@ -211,11 +235,13 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         
         // Use ads spend target instead of product.target_per_day
         const adsTarget = targetByProduct[product.id] || 0;
+        const qtySold = qtySoldByProduct[product.id] || 0;
         
         return {
           name: product.name,
           target: adsTarget,
           sales: count,
+          qtySold,
           revenue: sales,
           costPrice: product.cost_price || 0,
           sellPrice: product.sell_price || 0,
