@@ -13,7 +13,7 @@ import { useStockMovements, useCreateStockMovement, useDeleteStockMovement } fro
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
-import { useOutsideValleyOrderStats } from '@/hooks/useOutsideValleyOrderStats';
+import { useProductDaybookStats } from '@/hooks/useProductDaybookStats';
 import { format, subDays } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
@@ -91,23 +91,23 @@ export default function StockMovements() {
   const { data: products } = useProducts();
   const { data: suppliers } = useParties('SUPPLIER');
   const { data: customers } = useParties('CUSTOMER');
-  const { data: outsideValleyStats, isLoading: statsLoading } = useOutsideValleyOrderStats(
+  const { data: daybookStats, isLoading: statsLoading } = useProductDaybookStats(
     form.product_id || undefined, 
     form.movement_date || undefined
   );
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
 
-  // Auto-fill qty and unit_price from Outside Valley stats when product/date changes
+  // Auto-fill qty and unit_price from Product Daybook stats when product/date changes
   useEffect(() => {
-    if (outsideValleyStats && outsideValleyStats.quantity > 0 && dialogOpen) {
+    if (daybookStats && daybookStats.totalQty > 0 && dialogOpen) {
       setForm(f => ({
         ...f,
-        qty: outsideValleyStats.quantity,
-        unit_price: outsideValleyStats.averagePrice,
+        qty: daybookStats.totalQty,
+        unit_price: daybookStats.avgPrice,
       }));
     }
-  }, [outsideValleyStats, dialogOpen]);
+  }, [daybookStats, dialogOpen]);
 
   const resetForm = () => {
     setForm({
@@ -301,34 +301,38 @@ export default function StockMovements() {
                     </Select>
                   </div>
                 )}
-                {/* Outside Valley Reference Stats */}
+                {/* Product Daybook Reference Stats */}
                 {form.product_id && form.movement_date && (
                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-md">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-4 w-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                        Outside Valley Reference ({form.movement_date})
+                        Product Daybook Reference ({form.movement_date})
                       </span>
                     </div>
                     {statsLoading ? (
                       <p className="text-sm text-muted-foreground">Loading...</p>
-                    ) : outsideValleyStats && outsideValleyStats.quantity > 0 ? (
-                      <div className="grid grid-cols-3 gap-2 text-sm">
+                    ) : daybookStats && daybookStats.totalQty > 0 ? (
+                      <div className="grid grid-cols-4 gap-2 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Confirmed Qty:</span>
-                          <span className="ml-1 font-medium">{outsideValleyStats.quantity}</span>
+                          <span className="text-muted-foreground">Orders:</span>
+                          <span className="ml-1 font-medium">{daybookStats.orderCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Qty Sold:</span>
+                          <span className="ml-1 font-medium text-green-600">{daybookStats.totalQty}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Total Sales:</span>
-                          <span className="ml-1 font-medium">Rs {outsideValleyStats.totalSales.toLocaleString()}</span>
+                          <span className="ml-1 font-medium">Rs {daybookStats.totalSales.toLocaleString()}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Avg Price:</span>
-                          <span className="ml-1 font-medium">Rs {outsideValleyStats.averagePrice.toLocaleString()}</span>
+                          <span className="ml-1 font-medium">Rs {daybookStats.avgPrice.toLocaleString()}</span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No Outside Valley confirmed orders for this product on selected date.</p>
+                      <p className="text-sm text-muted-foreground">No orders for this product on selected date.</p>
                     )}
                   </div>
                 )}

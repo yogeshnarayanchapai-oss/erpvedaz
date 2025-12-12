@@ -48,14 +48,16 @@ export default function MarketingDashboard() {
   const productDaybook = useMemo(() => {
     return products.map(product => {
       const productOrders = orders.filter(o => o.product_id === product.id);
-      const count = productOrders.length;
+      const orderCount = productOrders.length;
+      const qtySold = productOrders.reduce((sum, o) => sum + (o.quantity || 1), 0);
       const revenue = productOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
       const productAds = todayAds.filter(a => a.product_id === product.id);
       const adSpend = productAds.reduce((sum, a) => sum + a.amount_spent, 0);
       return {
         name: product.name,
         target: product.target_per_day || 0,
-        sold: count,
+        orders: orderCount,
+        qtySold,
         revenue,
         adSpend,
         roi: adSpend > 0 ? ((revenue - adSpend) / adSpend * 100).toFixed(1) : '∞',
@@ -194,7 +196,8 @@ export default function MarketingDashboard() {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Target</TableHead>
-                <TableHead className="text-right">Sold</TableHead>
+                <TableHead className="text-right">Orders</TableHead>
+                <TableHead className="text-right">Qty Sold</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
                 <TableHead className="text-right">Ad Spend</TableHead>
                 <TableHead className="text-right">ROI</TableHead>
@@ -205,7 +208,8 @@ export default function MarketingDashboard() {
                 <TableRow key={idx}>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell className="text-right">{product.target}</TableCell>
-                  <TableCell className="text-right">{product.sold}</TableCell>
+                  <TableCell className="text-right">{product.orders}</TableCell>
+                  <TableCell className="text-right text-green-600 font-medium">{product.qtySold}</TableCell>
                   <TableCell className="text-right">₹{product.revenue.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{product.adSpend.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-emerald-600">{product.roi}%</TableCell>
