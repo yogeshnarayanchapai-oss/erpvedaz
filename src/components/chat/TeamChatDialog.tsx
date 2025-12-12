@@ -293,7 +293,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 w-[390px] h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
+    <div className="fixed bottom-6 right-6 z-50 w-[390px] h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
@@ -534,7 +534,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 </ScrollArea>
 
                 {/* Input Area */}
-                <div className="p-4 border-t relative">
+                <div className="px-2 py-3 border-t relative">
                   {/* Mention suggestions */}
                   {showMentions && mentionFilteredUsers.length > 0 && (
                     <div className="absolute bottom-full left-4 right-4 mb-2 bg-popover border rounded-xl shadow-xl p-2 space-y-1">
@@ -556,7 +556,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <input
                       type="file"
                       ref={fileInputRef}
