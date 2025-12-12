@@ -37,12 +37,12 @@ function useEmployeeUsers() {
     queryFn: async () => {
       if (!storeId) return [];
       
-      // Get employees for this store
+      // Get employees for this store (status is 'Active' with capital A)
       const { data: employees, error: empError } = await supabase
         .from('employees')
         .select('user_id, full_name')
         .eq('store_id', storeId)
-        .eq('status', 'active');
+        .ilike('status', 'active');
       
       if (empError) throw empError;
       
