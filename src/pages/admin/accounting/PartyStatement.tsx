@@ -425,8 +425,8 @@ export default function PartyStatement() {
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 items-center">
-                        {/* Pay/Receive for pending transactions */}
-                        {entry.is_pending && canEdit && (
+                        {/* Pay/Receive for pending transactions (manual) */}
+                        {entry.type === 'PENDING' && entry.is_pending && canEdit && (
                           <Button
                             size="sm"
                             variant="default"
@@ -435,6 +435,12 @@ export default function PartyStatement() {
                             <CheckCircle className="w-4 h-4 mr-1" />
                             {entry.debit > 0 ? 'Receive' : 'Pay'}
                           </Button>
+                        )}
+                        {/* Show status badge for settled manual transactions */}
+                        {entry.type === 'PENDING' && !entry.is_pending && entry.is_settled && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            {entry.debit > 0 ? 'Received' : 'Paid'}
+                          </Badge>
                         )}
                         {/* Show status badge for settled inventory transactions */}
                         {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && entry.is_settled && (

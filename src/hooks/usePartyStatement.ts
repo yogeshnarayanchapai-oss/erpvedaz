@@ -72,26 +72,41 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       const { data: payments, error: payError } = await payQuery;
       if (payError) throw payError;
 
-      // Fetch pending transactions from transactions table
-      let pendingQuery = supabase
+      // Fetch all transactions from transactions table (both pending and cleared with party_id)
+      let partyTransactionsQuery = supabase
         .from('transactions')
         .select(`
           *,
-          categories:category_id(name),
-          accounts:account_id(name)
+          categories:category_id(name)
         `)
-        .eq('party_id', partyId)
-        .eq('is_cleared', false);
+        .eq('party_id', partyId);
 
       if (filters?.startDate) {
-        pendingQuery = pendingQuery.gte('date', filters.startDate);
+        partyTransactionsQuery = partyTransactionsQuery.gte('date', filters.startDate);
       }
       if (filters?.endDate) {
-        pendingQuery = pendingQuery.lte('date', filters.endDate);
+        partyTransactionsQuery = partyTransactionsQuery.lte('date', filters.endDate);
       }
 
-      const { data: pendingTransactions, error: pendingError } = await pendingQuery;
-      if (pendingError) throw pendingError;
+      const { data: partyManualTransactions, error: partyTransError } = await partyTransactionsQuery;
+      if (partyTransError) throw partyTransError;
+
+      // Fetch account names for cleared transactions
+      const accountIds = (partyManualTransactions || [])
+        .filter(t => t.is_cleared && t.account_id)
+        .map(t => t.account_id);
+      
+      let accountsMap: Record<string, string> = {};
+      if (accountIds.length > 0) {
+        const { data: accountsData } = await supabase
+          .from('accounts')
+          .select('id, name')
+          .in('id', accountIds);
+        
+        accountsData?.forEach(a => {
+          accountsMap[a.id] = a.name;
+        });
+      }
 
       // Combine and sort entries
       const entries: PartyStatementEntry[] = [];
@@ -151,15 +166,19 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         });
       });
 
-      // Add pending transactions from transactions table
-      pendingTransactions?.forEach(t => {
+      // Add manual transactions from transactions table (both pending and cleared)
+      partyManualTransactions?.forEach(t => {
         const categoryName = t.categories?.name || '';
+        const accountName = t.account_id ? accountsMap[t.account_id] || '' : '';
         const isIncome = t.type === 'income';
+        const isPending = !t.is_cleared;
         
         entries.push({
           date: t.date,
           type: 'PENDING' as const,
-          particulars: `[Pending] ${t.description}${categoryName ? ` - ${categoryName}` : ''}`,
+          particulars: isPending 
+            ? `[Pending] ${t.description}${categoryName ? ` - ${categoryName}` : ''}`
+            : `${t.description}${categoryName ? ` - ${categoryName}` : ''}${accountName ? ` (${accountName})` : ''}`,
           qty: null,
           rate: null,
           debit: isIncome ? t.amount : 0,
@@ -168,7 +187,8 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           remarks: t.note,
           id: t.id,
           transaction_code: t.transaction_code,
-          is_pending: true,
+          is_pending: isPending,
+          is_settled: !isPending, // Cleared = settled
         });
       });
 
