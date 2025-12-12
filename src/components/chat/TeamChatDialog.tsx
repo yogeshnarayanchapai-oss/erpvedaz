@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
@@ -79,6 +80,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [showNewRoomDialog, setShowNewRoomDialog] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'groups' | 'dms'>('groups');
@@ -199,9 +201,26 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
   const handleCreateRoom = async () => {
     if (!newRoomName.trim()) return;
-    await createRoom.mutateAsync({ name: newRoomName, type: 'DEPARTMENT' });
+    // Include selected members plus current user as participants
+    const participants = selectedMembers.length > 0 
+      ? [...selectedMembers, profile?.id].filter(Boolean) as string[]
+      : null;
+    await createRoom.mutateAsync({ 
+      name: newRoomName, 
+      type: 'DEPARTMENT',
+      participants 
+    });
     setNewRoomName('');
+    setSelectedMembers([]);
     setShowNewRoomDialog(false);
+  };
+
+  const toggleMemberSelection = (userId: string) => {
+    setSelectedMembers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
   const handleCreateDM = async (targetUser: { id: string; name: string }) => {
@@ -654,8 +673,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
         {/* New Room Dialog */}
         {showNewRoomDialog && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-            <div className="bg-background border rounded-lg p-4 w-80 shadow-lg">
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+            <div className="bg-background border rounded-lg p-4 w-80 shadow-lg max-h-[80%] flex flex-col">
               <h3 className="font-semibold mb-4">Create New Group</h3>
               <Input
                 value={newRoomName}
@@ -663,8 +682,48 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 placeholder="Group name"
                 className="mb-4"
               />
+              
+              {/* Staff Selection */}
+              <p className="text-sm text-muted-foreground mb-2">Add members:</p>
+              <ScrollArea className="flex-1 max-h-48 border rounded-lg mb-4">
+                <div className="p-2 space-y-1">
+                  {storeUsers.filter(u => u.id !== profile?.id).map(user => (
+                    <div
+                      key={user.id}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                        selectedMembers.includes(user.id) 
+                          ? "bg-primary/10 border border-primary/30" 
+                          : "hover:bg-muted"
+                      )}
+                      onClick={() => toggleMemberSelection(user.id)}
+                    >
+                      <Checkbox 
+                        checked={selectedMembers.includes(user.id)}
+                        className="pointer-events-none"
+                      />
+                      <Avatar className="w-7 h-7">
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {user.name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              
+              {selectedMembers.length > 0 && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  {selectedMembers.length} member{selectedMembers.length > 1 ? 's' : ''} selected
+                </p>
+              )}
+              
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setShowNewRoomDialog(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowNewRoomDialog(false); setSelectedMembers([]); }}>Cancel</Button>
                 <Button onClick={handleCreateRoom} disabled={!newRoomName.trim()}>Create</Button>
               </div>
             </div>
