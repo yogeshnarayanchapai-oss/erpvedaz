@@ -776,7 +776,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               
               {/* Staff Selection */}
               <p className="text-sm text-muted-foreground mb-2">Select staff to add:</p>
-              <ScrollArea className="flex-1 max-h-48 border rounded-lg mb-4">
+              <div className="h-48 border rounded-lg mb-4 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   {storeUsers
                     .filter(u => u.id !== profile?.id && !selectedRoom.participants?.includes(u.id))
@@ -807,7 +807,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       </div>
                     ))}
                 </div>
-              </ScrollArea>
+              </div>
               
               {staffToAdd.length > 0 && (
                 <p className="text-xs text-muted-foreground mb-3">
