@@ -24,11 +24,17 @@ export default function Payables() {
   const navigate = useNavigate();
   const { data: allParties = [], isLoading } = usePartiesWithBalances();
   const { data: accounts = [] } = useActiveAccounts();
+  const { data: pendingPayables = [], isLoading: loadingPending } = usePendingPayables();
   const createPayment = useCreatePartyPayment();
+  const markCleared = useMarkTransactionsCleared();
   const { canEdit } = useAccountingEditAccess();
+  
   const [selectedParty, setSelectedParty] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [clearAccountId, setClearAccountId] = useState('');
   const [paymentData, setPaymentData] = useState<{
     date: string;
     amount: string;
@@ -57,6 +63,25 @@ export default function Payables() {
   const totalPayable = partiesWithPayables.reduce((sum, p) => sum + p.total_payable, 0);
   const totalPaid = partiesWithPayables.reduce((sum, p) => sum + p.total_paid, 0);
   const totalOutstanding = partiesWithPayables.reduce((sum, p) => sum + p.net_payable, 0);
+  const totalPendingExpense = pendingPayables.reduce((sum, t) => sum + t.amount, 0);
+
+  const openClearDialog = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setClearAccountId(transaction.account_id || '');
+    setClearDialogOpen(true);
+  };
+
+  const handleClearTransaction = async () => {
+    if (!selectedTransaction || !clearAccountId) return;
+    
+    await markCleared.mutateAsync({ 
+      ids: [selectedTransaction.id], 
+      accountId: clearAccountId 
+    });
+    
+    setClearDialogOpen(false);
+    setSelectedTransaction(null);
+  };
 
   const handlePayment = async () => {
     if (!selectedParty) return;
@@ -127,7 +152,7 @@ export default function Payables() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Payable</CardTitle>
@@ -164,201 +189,332 @@ export default function Payables() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Expenses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{pendingPayables.length}</Badge>
+              <span className="text-2xl font-bold text-amber-600">{formatNPR(totalPendingExpense)}</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <Tabs defaultValue="parties" className="w-full">
+        <TabsList>
+          <TabsTrigger value="parties">Party Payables</TabsTrigger>
+          <TabsTrigger value="pending">
+            Pending Expenses
+            {pendingPayables.length > 0 && (
+              <Badge variant="secondary" className="ml-2">{pendingPayables.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Parties with Payables</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Party Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Total Payable</TableHead>
-                <TableHead className="text-right">Total Paid</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              )}
-              {!isLoading && filteredParties.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No payables found
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredParties.map((party) => (
-                <TableRow key={party.id}>
-                  <TableCell className="font-medium">{party.name}</TableCell>
-                  <TableCell>{party.phone || '—'}</TableCell>
-                  <TableCell>
-                    <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                      {party.party_type}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatNPR(party.total_payable)}
-                  </TableCell>
-                  <TableCell className="text-right text-green-600">
-                    {formatNPR(party.total_paid)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-red-600">
-                    {formatNPR(party.net_payable)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
-                        title="View Statement"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                      {canEdit && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedParty(party.id);
-                                setPaymentData(prev => ({
-                                  ...prev,
-                                  amount: party.net_payable.toString(),
-                                }));
-                              }}
-                            >
-                              Pay Supplier
-                            </Button>
-                          </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Pay {party.name}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="p-3 bg-muted rounded-lg">
-                            <Label className="text-sm text-muted-foreground">Outstanding Amount</Label>
-                            <p className="text-xl font-bold text-red-600">{formatNPR(party.net_payable)}</p>
-                          </div>
+        <TabsContent value="parties" className="space-y-4">
+          {/* Search */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="date">Date *</Label>
-                            <Input
-                              id="date"
-                              type="date"
-                              value={paymentData.date}
-                              onChange={(e) => setPaymentData({ ...paymentData, date: e.target.value })}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="amount">Amount *</Label>
-                            <Input
-                              id="amount"
-                              type="number"
-                              step="0.01"
-                              value={paymentData.amount}
-                              onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="method">Payment Method *</Label>
-                            <Select
-                              value={paymentData.method}
-                              onValueChange={(value: any) => setPaymentData({ ...paymentData, method: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="CASH">Cash</SelectItem>
-                                <SelectItem value="BANK">Bank Transfer</SelectItem>
-                                <SelectItem value="OTHER">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {paymentData.method === 'BANK' && (
-                            <div className="space-y-2">
-                              <Label htmlFor="bank">Bank Account</Label>
-                              <Select
-                                value={paymentData.bank_account_id}
-                                onValueChange={(value) => setPaymentData({ ...paymentData, bank_account_id: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select bank account" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {accounts.filter(a => a.type === 'bank').map((account) => (
-                                    <SelectItem key={account.id} value={account.id}>
-                                      {account.name} {account.account_number && `- ${account.account_number}`}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-
-                          <div className="space-y-2">
-                            <Label htmlFor="reference">Reference (Cheque No., UTR, etc.)</Label>
-                            <Input
-                              id="reference"
-                              value={paymentData.reference}
-                              onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="note">Notes</Label>
-                            <Textarea
-                              id="note"
-                              value={paymentData.note}
-                              onChange={(e) => setPaymentData({ ...paymentData, note: e.target.value })}
-                              rows={3}
-                            />
-                          </div>
-
-                          <Button onClick={handlePayment} disabled={createPayment.isPending} className="w-full">
-                            {createPayment.isPending ? 'Processing...' : 'Record Payment'}
+          <Card>
+            <CardHeader>
+              <CardTitle>Parties with Payables</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Party Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Total Payable</TableHead>
+                    <TableHead className="text-right">Total Paid</TableHead>
+                    <TableHead className="text-right">Outstanding</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && filteredParties.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No payables found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredParties.map((party) => (
+                    <TableRow key={party.id}>
+                      <TableCell className="font-medium">{party.name}</TableCell>
+                      <TableCell>{party.phone || '—'}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                          {party.party_type}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNPR(party.total_payable)}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        {formatNPR(party.total_paid)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-red-600">
+                        {formatNPR(party.net_payable)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
+                            title="View Statement"
+                          >
+                            <FileText className="w-4 h-4" />
                           </Button>
+                          {canEdit && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedParty(party.id);
+                                    setPaymentData(prev => ({
+                                      ...prev,
+                                      amount: party.net_payable.toString(),
+                                    }));
+                                  }}
+                                >
+                                  Pay Supplier
+                                </Button>
+                              </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Pay {party.name}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div className="p-3 bg-muted rounded-lg">
+                                <Label className="text-sm text-muted-foreground">Outstanding Amount</Label>
+                                <p className="text-xl font-bold text-red-600">{formatNPR(party.net_payable)}</p>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="date">Date *</Label>
+                                <Input
+                                  id="date"
+                                  type="date"
+                                  value={paymentData.date}
+                                  onChange={(e) => setPaymentData({ ...paymentData, date: e.target.value })}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="amount">Amount *</Label>
+                                <Input
+                                  id="amount"
+                                  type="number"
+                                  step="0.01"
+                                  value={paymentData.amount}
+                                  onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="method">Payment Method *</Label>
+                                <Select
+                                  value={paymentData.method}
+                                  onValueChange={(value: any) => setPaymentData({ ...paymentData, method: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="CASH">Cash</SelectItem>
+                                    <SelectItem value="BANK">Bank Transfer</SelectItem>
+                                    <SelectItem value="OTHER">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {paymentData.method === 'BANK' && (
+                                <div className="space-y-2">
+                                  <Label htmlFor="bank">Bank Account</Label>
+                                  <Select
+                                    value={paymentData.bank_account_id}
+                                    onValueChange={(value) => setPaymentData({ ...paymentData, bank_account_id: value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select bank account" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.filter(a => a.type === 'bank').map((account) => (
+                                        <SelectItem key={account.id} value={account.id}>
+                                          {account.name} {account.account_number && `- ${account.account_number}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                <Label htmlFor="reference">Reference (Cheque No., UTR, etc.)</Label>
+                                <Input
+                                  id="reference"
+                                  value={paymentData.reference}
+                                  onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="note">Notes</Label>
+                                <Textarea
+                                  id="note"
+                                  value={paymentData.note}
+                                  onChange={(e) => setPaymentData({ ...paymentData, note: e.target.value })}
+                                  rows={3}
+                                />
+                              </div>
+
+                              <Button onClick={handlePayment} disabled={createPayment.isPending} className="w-full">
+                                {createPayment.isPending ? 'Processing...' : 'Record Payment'}
+                              </Button>
+                            </div>
+                            </DialogContent>
+                          </Dialog>
+                          )}
                         </div>
-                        </DialogContent>
-                      </Dialog>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Expense Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Party</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingPending && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!loadingPending && pendingPayables.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No pending expense transactions.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {pendingPayables.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
+                      <TableCell>{t.description || t.note || '-'}</TableCell>
+                      <TableCell>{t.parties?.name || '-'}</TableCell>
+                      <TableCell>{t.from_account?.name || t.to_account?.name || '-'}</TableCell>
+                      <TableCell className="text-right font-medium">{formatNPR(t.amount)}</TableCell>
+                      <TableCell>
+                        {canEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openClearDialog(t)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Mark Paid
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Mark as Paid Dialog */}
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Paid</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select the account from which this payment was made:
+            </p>
+            
+            <div className="p-3 bg-muted rounded-lg">
+              <Label className="text-sm text-muted-foreground">Amount</Label>
+              <p className="text-xl font-bold">{formatNPR(selectedTransaction?.amount || 0)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clearAccount">Payment Account *</Label>
+              <Select value={clearAccountId} onValueChange={setClearAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} - {formatNPR(account.current_balance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button onClick={handleClearTransaction} disabled={!clearAccountId || markCleared.isPending} className="flex-1">
+                {markCleared.isPending ? 'Processing...' : 'Confirm Payment'}
+              </Button>
+              <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Payable Dialog */}
       <CreateReceivablePayableDialog

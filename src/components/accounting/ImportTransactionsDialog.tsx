@@ -101,11 +101,80 @@ export function ImportTransactionsDialog({ type, trigger }: ImportTransactionsDi
     toast.success('Template downloaded successfully');
   };
 
+  // Helper function to parse various date formats including Excel serial dates
+  const parseDate = (dateValue: any): string | null => {
+    if (!dateValue) return null;
+    
+    // If it's a number, treat as Excel serial date
+    if (typeof dateValue === 'number') {
+      // Excel serial date: days since 1899-12-30
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch.getTime() + dateValue * 24 * 60 * 60 * 1000);
+      if (!isNaN(date.getTime())) {
+        return format(date, 'yyyy-MM-dd');
+      }
+      return null;
+    }
+    
+    const dateStr = String(dateValue).trim();
+    
+    // Try various date formats
+    const formats = [
+      // YYYY-MM-DD
+      /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+      // DD/MM/YYYY
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+      // MM/DD/YYYY
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+      // DD-MM-YYYY
+      /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+    ];
+    
+    // Try YYYY-MM-DD first
+    let match = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) {
+      const [, year, month, day] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return format(date, 'yyyy-MM-dd');
+      }
+    }
+    
+    // Try DD/MM/YYYY
+    match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return format(date, 'yyyy-MM-dd');
+      }
+    }
+    
+    // Try DD-MM-YYYY
+    match = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return format(date, 'yyyy-MM-dd');
+      }
+    }
+    
+    // Fallback: try native Date parsing
+    const fallbackDate = new Date(dateStr);
+    if (!isNaN(fallbackDate.getTime())) {
+      return format(fallbackDate, 'yyyy-MM-dd');
+    }
+    
+    return null;
+  };
+
   const validateRow = (row: any, index: number): ValidationResult => {
     const errors: string[] = [];
     
     // Extract values
-    const dateStr = row['Date (YYYY-MM-DD)'] || row['date'] || row['Date'];
+    const rawDate = row['Date (YYYY-MM-DD)'] || row['date'] || row['Date'];
+    const parsedDate = parseDate(rawDate);
     const amount = parseFloat(row['Amount'] || row['amount'] || 0);
     const accountName = (row['Account Name'] || row['account'] || row['Account'] || '').toString().trim();
     const categoryName = (row['Category Name'] || row['category'] || row['Category'] || '').toString().trim();
@@ -114,13 +183,10 @@ export function ImportTransactionsDialog({ type, trigger }: ImportTransactionsDi
     const note = (row['Note (Optional)'] || row['note'] || row['Note'] || '').toString().trim();
 
     // Validate date
-    if (!dateStr) {
+    if (!rawDate) {
       errors.push('Date is required');
-    } else {
-      const parsedDate = new Date(dateStr);
-      if (isNaN(parsedDate.getTime())) {
-        errors.push('Invalid date format. Use YYYY-MM-DD');
-      }
+    } else if (!parsedDate) {
+      errors.push(`Invalid date format "${rawDate}". Use YYYY-MM-DD, DD/MM/YYYY, or DD-MM-YYYY`);
     }
 
     // Validate amount
@@ -152,7 +218,7 @@ export function ImportTransactionsDialog({ type, trigger }: ImportTransactionsDi
       valid: errors.length === 0,
       errors,
       row: {
-        date: dateStr,
+        date: parsedDate || rawDate,
         amount,
         account: accountName,
         category: categoryName,
