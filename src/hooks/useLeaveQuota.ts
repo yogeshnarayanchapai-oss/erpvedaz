@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { startOfMonth, format } from 'date-fns';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface LeaveQuota {
   id: string;
@@ -10,6 +11,7 @@ export interface LeaveQuota {
   max_days: number;
   created_by: string | null;
   created_at: string;
+  store_id?: string | null;
   employees?: { full_name: string };
 }
 
@@ -18,41 +20,49 @@ export interface LeaveSettings {
   default_monthly_limit: number | null;
   apply_default_if_no_quota: boolean;
   updated_at: string;
+  store_id?: string | null;
 }
 
 export function useLeaveQuotas(month?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['leave-quotas', month],
+    queryKey: ['leave-quotas', storeId, month],
     queryFn: async () => {
       let query = supabase
         .from('leave_quota' as any)
         .select('*, employees(full_name)')
         .order('month_start', { ascending: false });
 
-      if (month) {
-        query = query.eq('month_start', month);
-      }
+      if (storeId) query = query.eq('store_id', storeId);
+      if (month) query = query.eq('month_start', month);
 
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as LeaveQuota[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useLeaveSettings() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['leave-settings'],
+    queryKey: ['leave-settings', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leave_settings' as any)
-        .select('*')
-        .limit(1)
-        .maybeSingle();
+        .select('*');
+
+      if (storeId) query = query.eq('store_id', storeId);
+      
+      const { data, error } = await query.limit(1).maybeSingle();
 
       if (error) throw error;
       return data as unknown as LeaveSettings | null;
     },
+    enabled: !!storeId,
   });
 }
 
@@ -105,6 +115,7 @@ export function useMyLeaveQuota() {
 
 export function useCreateLeaveQuota() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<LeaveQuota>) => {
@@ -115,6 +126,7 @@ export function useCreateLeaveQuota() {
         .insert({
           ...data,
           created_by: user.user?.id,
+          store_id: storeId,
         } as any)
         .select()
         .single();
@@ -177,10 +189,13 @@ export function useDeleteLeaveQuota() {
 
 export function useUpdateLeaveSettings() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<LeaveSettings>) => {
-      const { data: existing } = await supabase.from('leave_settings' as any).select('id').limit(1).maybeSingle();
+      let query = supabase.from('leave_settings' as any).select('id');
+      if (storeId) query = query.eq('store_id', storeId);
+      const { data: existing } = await query.limit(1).maybeSingle();
       
       if (existing) {
         const { data: result, error } = await supabase
@@ -195,7 +210,7 @@ export function useUpdateLeaveSettings() {
       } else {
         const { data: result, error } = await supabase
           .from('leave_settings' as any)
-          .insert(data as any)
+          .insert({ ...data, store_id: storeId } as any)
           .select()
           .single();
 

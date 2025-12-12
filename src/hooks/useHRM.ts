@@ -113,6 +113,7 @@ export interface Notice {
   end_date: string | null;
   is_active: boolean;
   created_at: string;
+  store_id?: string | null;
 }
 
 export interface CompanyInfo {
@@ -681,21 +682,31 @@ export function useUpdateLeaveRequest() {
 
 // Notices
 export function useNotices() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['notices'],
+    queryKey: ['notices', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('notices').select('*').order('start_date', { ascending: false });
+      let query = supabase.from('notices').select('*').order('start_date', { ascending: false }) as any;
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Notice[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useCreateNotice() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
-    mutationFn: async (input: Omit<Notice, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase.from('notices').insert(input).select().single();
+    mutationFn: async (input: Omit<Notice, 'id' | 'created_at' | 'store_id'>) => {
+      const insertData = { ...input, store_id: storeId } as any;
+      const { data, error } = await supabase.from('notices').insert(insertData).select().single();
       if (error) throw error;
       return data;
     },
@@ -703,7 +714,7 @@ export function useCreateNotice() {
       queryClient.invalidateQueries({ queryKey: ['notices'] });
       toast.success('Notice created');
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 }
 

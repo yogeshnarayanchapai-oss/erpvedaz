@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export type CourseLevel = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
 export type QuestionType = 'MCQ' | 'TRUE_FALSE';
@@ -97,22 +98,24 @@ export interface LessonCompletion {
 
 // Courses hooks
 export function useTrainingCourses(activeOnly = false) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['training-courses', activeOnly],
+    queryKey: ['training-courses', storeId, activeOnly],
     queryFn: async () => {
       let query = supabase
         .from('training_courses')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as any;
       
-      if (activeOnly) {
-        query = query.eq('is_active', true);
-      }
+      if (storeId) query = query.eq('store_id', storeId);
+      if (activeOnly) query = query.eq('is_active', true);
       
       const { data, error } = await query;
       if (error) throw error;
       return data as TrainingCourse[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -135,12 +138,13 @@ export function useTrainingCourse(slug: string) {
 export function useCreateCourse() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (course: Omit<TrainingCourse, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('training_courses')
-        .insert(course)
+        .insert({ ...course, store_id: storeId } as any)
         .select()
         .single();
       if (error) throw error;
