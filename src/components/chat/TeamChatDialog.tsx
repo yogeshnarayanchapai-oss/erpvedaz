@@ -205,14 +205,20 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   };
 
   const handleCreateDM = async (targetUser: { id: string; name: string }) => {
-    const room = await createDM.mutateAsync({ 
-      targetUserId: targetUser.id, 
-      targetName: targetUser.name 
-    });
-    setSelectedRoom(room as ChatRoom);
-    setShowUserSearch(false);
-    setUserSearchQuery('');
-    setActiveTab('dms');
+    console.log('handleCreateDM called with:', targetUser);
+    try {
+      const room = await createDM.mutateAsync({ 
+        targetUserId: targetUser.id, 
+        targetName: targetUser.name 
+      });
+      console.log('DM room created/found:', room);
+      setSelectedRoom(room as ChatRoom);
+      setShowUserSearch(false);
+      setUserSearchQuery('');
+      setActiveTab('dms');
+    } catch (error) {
+      console.error('Error creating DM:', error);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
