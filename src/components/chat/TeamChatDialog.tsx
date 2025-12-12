@@ -293,54 +293,60 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl h-[600px] p-0 overflow-hidden rounded-2xl shadow-2xl border-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            <span className="font-semibold">Team Chat</span>
+        <div className="flex items-center justify-between px-5 py-4 bg-primary text-primary-foreground rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-6 h-6" />
+            <span className="font-semibold text-lg">Team Chat</span>
             {selectedRoom && (
-              <span className="text-primary-foreground/70">– {selectedRoom.name}</span>
+              <span className="text-primary-foreground/70 text-lg">– {selectedRoom.name}</span>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-primary-foreground hover:bg-primary-foreground/10 rounded-full">
             <X className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="flex h-[calc(80vh-56px)]">
+        <div className="flex h-[calc(600px-64px)]">
           {/* Sidebar */}
-          <div className="w-64 border-r flex flex-col">
+          <div className="w-56 border-r bg-muted/20 flex flex-col">
             {/* Actions */}
-            <div className="p-2 border-b flex gap-2">
+            <div className="px-4 py-3 border-b flex gap-3">
               {isAdmin && (
-                <Button size="sm" variant="ghost" onClick={() => setShowNewRoomDialog(true)}>
-                  <Plus className="w-4 h-4" />
-                </Button>
+                <button 
+                  onClick={() => setShowNewRoomDialog(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                >
+                  <Plus className="w-5 h-5 text-muted-foreground" />
+                </button>
               )}
-              <Button size="sm" variant="ghost" onClick={() => setShowUserSearch(!showUserSearch)}>
-                <Users className="w-4 h-4" />
-              </Button>
+              <button 
+                onClick={() => setShowUserSearch(!showUserSearch)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+              >
+                <Users className="w-5 h-5 text-muted-foreground" />
+              </button>
             </div>
 
             {/* User search for DMs */}
             {showUserSearch && (
-              <div className="p-2 border-b space-y-2">
+              <div className="p-3 border-b space-y-2 bg-background">
                 <Input
                   placeholder="Search users..."
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
-                  className="h-8"
+                  className="h-9 rounded-lg"
                 />
                 <div className="max-h-32 overflow-y-auto space-y-1">
                   {filteredUsers.slice(0, 5).map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                       onClick={() => handleCreateDM(user)}
                     >
-                      <Avatar className="w-6 h-6">
-                        <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
+                      <Avatar className="w-7 h-7">
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">{user.name[0]}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{user.name}</p>
@@ -352,62 +358,48 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               </div>
             )}
 
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'groups' | 'dms')} className="px-2 pt-2">
-              <TabsList className="w-full">
-                <TabsTrigger value="groups" className="flex-1 text-xs">
-                  <Hash className="w-3 h-3 mr-1" />Groups
-                </TabsTrigger>
-                <TabsTrigger value="dms" className="flex-1 text-xs">
-                  <User className="w-3 h-3 mr-1" />DMs
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Rooms List */}
+            {/* Groups Section */}
             <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {activeTab === 'groups' && (
+              <div className="p-3">
+                <p className="text-xs text-muted-foreground font-semibold tracking-wider mb-2">GROUPS</p>
+                <div className="space-y-0.5">
+                  {groupRooms.map(room => (
+                    <div
+                      key={room.id}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                        selectedRoom?.id === room.id 
+                          ? "bg-primary/10 text-primary font-medium" 
+                          : "hover:bg-muted text-foreground"
+                      )}
+                      onClick={() => { setSelectedRoom(room); setActiveTab('groups'); }}
+                    >
+                      <span className="text-sm">{room.name}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* DMs Section */}
+                {dmRooms.length > 0 && (
                   <>
-                    <p className="text-xs text-muted-foreground px-2 py-1 font-medium">GROUPS</p>
-                    {groupRooms.map(room => (
-                      <div
-                        key={room.id}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted",
-                          selectedRoom?.id === room.id && "bg-primary/10 text-primary"
-                        )}
-                        onClick={() => setSelectedRoom(room)}
-                      >
-                        <Hash className="w-4 h-4" />
-                        <span className="text-sm truncate flex-1">{room.name}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                
-                {activeTab === 'dms' && (
-                  <>
-                    <p className="text-xs text-muted-foreground px-2 py-1 font-medium">DIRECT MESSAGES</p>
-                    {dmRooms.length === 0 ? (
-                      <p className="text-xs text-muted-foreground px-2 py-4 text-center">
-                        No DMs yet. Click <Users className="w-3 h-3 inline" /> to start one.
-                      </p>
-                    ) : (
-                      dmRooms.map(room => (
+                    <p className="text-xs text-muted-foreground font-semibold tracking-wider mt-6 mb-2">DIRECT MESSAGES</p>
+                    <div className="space-y-0.5">
+                      {dmRooms.map(room => (
                         <div
                           key={room.id}
                           className={cn(
-                            "flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted",
-                            selectedRoom?.id === room.id && "bg-primary/10 text-primary"
+                            "flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                            selectedRoom?.id === room.id 
+                              ? "bg-primary/10 text-primary font-medium" 
+                              : "hover:bg-muted text-foreground"
                           )}
-                          onClick={() => setSelectedRoom(room)}
+                          onClick={() => { setSelectedRoom(room); setActiveTab('dms'); }}
                         >
                           <User className="w-4 h-4" />
-                          <span className="text-sm truncate flex-1">{room.name}</span>
+                          <span className="text-sm truncate">{room.name}</span>
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
@@ -415,36 +407,20 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           </div>
 
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-background">
             {selectedRoom ? (
               <>
-                {/* Chat Header */}
-                <div className="px-4 py-2 border-b flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {selectedRoom.type === 'DIRECT' ? <User className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
-                    <span className="font-medium">{selectedRoom.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setShowSearch(!showSearch)}>
-                      <Search className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => toggleMute.mutate({ roomId: selectedRoom.id, mute: !isRoomMuted })}>
-                      {isRoomMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Search Bar */}
+                {/* Search Bar (toggleable) */}
                 {showSearch && (
-                  <div className="px-4 py-2 border-b">
+                  <div className="px-4 py-2 border-b bg-muted/30">
                     <Input
                       placeholder="Search messages..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8"
+                      className="h-9 rounded-lg"
                     />
                     {searchResults.length > 0 && (
-                      <div className="mt-2 text-xs text-muted-foreground">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         Found {searchResults.length} messages
                       </div>
                     )}
@@ -453,8 +429,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
                 {/* Pinned Messages */}
                 {pinnedMessages.length > 0 && (
-                  <div className="px-4 py-2 border-b bg-muted/30">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="px-4 py-2 border-b bg-amber-50 dark:bg-amber-950/20">
+                    <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                       <Pin className="w-3 h-3" />
                       <span>{pinnedMessages.length} pinned message(s)</span>
                     </div>
@@ -462,27 +438,25 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 )}
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea className="flex-1 px-4 py-3">
                   <div className="space-y-4">
                     {(showSearch && searchQuery ? searchResults : messages).map(msg => {
                       const isOwn = msg.sender_id === profile?.id;
                       const isRead = msg.read_by && msg.read_by.length > 0;
                       
                       return (
-                        <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+                        <div key={msg.id} className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
+                          {/* Sender name - only for others' messages */}
+                          {!isOwn && (
+                            <span className="text-sm text-muted-foreground mb-1 ml-1">{msg.sender_name}</span>
+                          )}
+                          
                           <div className={cn(
-                            "max-w-[70%] rounded-lg p-3 relative group",
-                            isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
+                            "max-w-[75%] rounded-2xl px-4 py-2.5 relative group",
+                            isOwn 
+                              ? "bg-primary text-primary-foreground rounded-br-md" 
+                              : "bg-muted rounded-bl-md"
                           )}>
-                            {!isOwn && (
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-medium">{msg.sender_name}</span>
-                                {msg.sender_username && (
-                                  <span className="text-xs opacity-60">@{msg.sender_username}</span>
-                                )}
-                              </div>
-                            )}
-                            
                             {/* Message content with links and mentions highlighted */}
                             <p className="text-sm whitespace-pre-wrap break-words">
                               {renderMessageWithLinks(msg.message_text)}
@@ -499,7 +473,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                                     <img 
                                       src={msg.file_url} 
                                       alt={msg.file_name || 'attachment'} 
-                                      className="max-w-full max-h-48 rounded object-cover hover:opacity-90 transition-opacity" 
+                                      className="max-w-full max-h-48 rounded-xl object-cover hover:opacity-90 transition-opacity border border-border/20" 
                                     />
                                   </div>
                                 ) : (
@@ -507,7 +481,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                                     href={msg.file_url} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="flex items-center gap-2 p-2 rounded bg-background/50 hover:bg-background/80 transition-colors"
+                                    className="flex items-center gap-2 p-2.5 rounded-xl bg-background/50 hover:bg-background/80 transition-colors border border-border/20"
                                   >
                                     <FileText className="w-5 h-5 text-muted-foreground" />
                                     <div className="flex-1 min-w-0">
@@ -518,39 +492,36 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                                 )}
                               </div>
                             )}
-                            
-                            {/* Timestamp and read status */}
-                            <div className={cn(
-                              "flex items-center gap-1 mt-1",
-                              isOwn ? "justify-end" : "justify-start"
-                            )}>
-                              <span className={cn(
-                                "text-xs",
-                                isOwn ? "text-primary-foreground/60" : "text-muted-foreground"
-                              )}>
-                                {formatMessageDate(msg.created_at)}
-                              </span>
-                              {isOwn && (
-                                isRead ? (
-                                  <CheckCheck className="w-3 h-3 text-blue-400" />
-                                ) : (
-                                  <Check className="w-3 h-3 opacity-60" />
-                                )
-                              )}
-                              {msg.is_pinned && <Pin className="w-3 h-3 text-yellow-500" />}
-                            </div>
 
                             {/* Pin button on hover */}
                             {isAdmin && (
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 h-6 w-6"
+                                className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-7 w-7 rounded-full"
                                 onClick={() => pinMessage.mutate({ messageId: msg.id, roomId: selectedRoom.id, pin: !msg.is_pinned })}
                               >
-                                <Pin className={cn("w-3 h-3", msg.is_pinned && "text-yellow-500")} />
+                                <Pin className={cn("w-3.5 h-3.5", msg.is_pinned && "text-amber-500")} />
                               </Button>
                             )}
+                          </div>
+                          
+                          {/* Timestamp and read status - outside bubble */}
+                          <div className={cn(
+                            "flex items-center gap-1 mt-1",
+                            isOwn ? "mr-1" : "ml-1"
+                          )}>
+                            <span className="text-[11px] text-muted-foreground">
+                              {formatMessageDate(msg.created_at)}
+                            </span>
+                            {isOwn && (
+                              isRead ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-primary" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5 text-muted-foreground" />
+                              )
+                            )}
+                            {msg.is_pinned && <Pin className="w-3 h-3 text-amber-500" />}
                           </div>
                         </div>
                       );
@@ -563,15 +534,15 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 <div className="p-4 border-t relative">
                   {/* Mention suggestions */}
                   {showMentions && mentionFilteredUsers.length > 0 && (
-                    <div className="absolute bottom-full left-4 right-4 mb-2 bg-popover border rounded-lg shadow-lg p-2 space-y-1">
+                    <div className="absolute bottom-full left-4 right-4 mb-2 bg-popover border rounded-xl shadow-xl p-2 space-y-1">
                       {mentionFilteredUsers.map(user => (
                         <div
                           key={user.id}
-                          className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                           onClick={() => insertMention(user.username || user.name)}
                         >
-                          <Avatar className="w-6 h-6">
-                            <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
+                          <Avatar className="w-7 h-7">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">{user.name[0]}</AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium">{user.name}</p>
@@ -582,7 +553,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-3">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -590,32 +561,38 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       accept="image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx"
                       onChange={handleFileUpload}
                     />
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
+                    <button 
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
+                      className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                     >
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                    </Button>
+                      {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+                    </button>
                     <Input
                       ref={inputRef}
                       value={message}
                       onChange={handleMessageChange}
                       onKeyDown={handleKeyDown}
-                      placeholder="Type a message... (@mention)"
-                      className="flex-1"
+                      placeholder="Type a message... (@"
+                      className="flex-1 h-11 rounded-full border-muted-foreground/20 px-4"
                       disabled={uploading}
                     />
-                    <Button onClick={handleSend} disabled={!message.trim() || sendMessage.isPending || uploading}>
-                      <Send className="w-4 h-4" />
-                    </Button>
+                    <button 
+                      onClick={handleSend} 
+                      disabled={!message.trim() || sendMessage.isPending || uploading}
+                      className="w-11 h-11 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                Select a room to start chatting
+                <div className="text-center">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                  <p>Select a chat to start messaging</p>
+                </div>
               </div>
             )}
           </div>
