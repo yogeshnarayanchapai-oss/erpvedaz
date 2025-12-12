@@ -244,7 +244,7 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       // Fetch leads CURRENTLY assigned to this user (for active workload)
       let currentQuery = supabase
         .from('leads')
-        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_at, store_id, first_assigned_to_user_id')
+        .select('id, status, order_id, date, current_team, created_by_user_id, assigned_at, store_id, first_assigned_to_user_id, created_at')
         .eq('assigned_to_user_id', userId);
 
       // Filter by store_id
@@ -252,30 +252,31 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         currentQuery = currentQuery.eq('store_id', storeId);
       }
 
-      // Filter by date - include leads where date OR assigned_at is within range
+      // Filter by current lead.date (bucket date) for current assignee
       if (dateFrom && dateTo) {
-        currentQuery = currentQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+        currentQuery = currentQuery.gte('date', dateFrom).lte('date', dateTo);
       } else if (dateFrom) {
-        currentQuery = currentQuery.or(`date.gte.${dateFrom},assigned_at.gte.${dateFrom}T00:00:00`);
+        currentQuery = currentQuery.gte('date', dateFrom);
       }
 
-      // For date-filtered "Assigned" count - use same logic as Staff Leaderboard
-      // Count unique leads assigned to this user within date range
+      // For date-filtered "Assigned" count - use BUCKET DATE logic (same as Staff Leaderboard)
+      // COUNTING LOGIC:
+      // - Original assignee (first_assigned_to_user_id): count by created_at (original bucket date)
+      // - Current assignee if reassigned: count by lead.date (current bucket date, updated on reassign)
       let assignedCount = 0;
       
       if (dateFrom && dateTo) {
-        // Date filter is applied - count from leads table with date filtering
-        // Same logic as Staff Leaderboard: count leads where user was original assignee, reassigned to, or self-created
+        // Fetch leads where either created_at or date is in range
         let assignedLeadsQuery = supabase
           .from('leads')
-          .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, date, assigned_at');
+          .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, date, created_at');
         
         if (storeId) {
           assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
         }
         
-        // Apply date filter on date or assigned_at - same as Staff Leaderboard
-        assignedLeadsQuery = assignedLeadsQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+        // Apply date filter - either created_at or date in range
+        assignedLeadsQuery = assignedLeadsQuery.or(`and(created_at.gte.${dateFrom}T00:00:00,created_at.lte.${dateTo}T23:59:59),and(date.gte.${dateFrom},date.lte.${dateTo})`);
         
         const { data: allLeadsInRange, error: assignedError } = await assignedLeadsQuery;
         
@@ -284,55 +285,36 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
           throw assignedError;
         }
         
-        // Log the raw query results for debugging
-        const leadsWithFirstAssigned = (allLeadsInRange || []).filter(l => l.first_assigned_to_user_id === userId);
-        const leadsReassignedOut = leadsWithFirstAssigned.filter(l => l.assigned_to_user_id !== userId);
-        console.log('[useStaffLeadStats] Query debug:', {
-          userId,
-          storeId,
-          dateFrom,
-          dateTo,
-          totalLeadsReturned: allLeadsInRange?.length || 0,
-          leadsWithFirstAssignedToUser: leadsWithFirstAssigned.length,
-          leadsReassignedOut: leadsReassignedOut.length,
-          reassignedOutIds: leadsReassignedOut.map(l => l.id).slice(0, 5)
-        });
-        
-        // Count unique leads where this user was involved (same logic as Staff Leaderboard)
+        // Count unique leads with BUCKET DATE logic
         const assignedLeadIds = new Set<string>();
-        let firstAssignedCount = 0;
-        let reassignedInCount = 0;
-        let selfCreatedCount = 0;
         
         (allLeadsInRange || []).forEach(lead => {
-          // Original assignment (historical - includes reassigned OUT)
-          if (lead.first_assigned_to_user_id === userId) {
-            assignedLeadIds.add(lead.id);
-            firstAssignedCount++;
+          const createdAtDate = lead.created_at ? lead.created_at.split('T')[0] : null;
+          const currentBucketDate = lead.date ? lead.date.split('T')[0] : null;
+          
+          // For ORIGINAL assignee: count by created_at (original bucket date)
+          if (lead.first_assigned_to_user_id === userId && createdAtDate) {
+            if (createdAtDate >= dateFrom && createdAtDate <= dateTo) {
+              assignedLeadIds.add(lead.id);
+            }
           }
-          // Reassigned to this user (different from original)
-          if (lead.assigned_to_user_id === userId && lead.assigned_to_user_id !== lead.first_assigned_to_user_id) {
-            assignedLeadIds.add(lead.id);
-            reassignedInCount++;
+          
+          // For REASSIGNED assignee: count by current lead.date (updated bucket date)
+          if (lead.assigned_to_user_id === userId && 
+              lead.assigned_to_user_id !== lead.first_assigned_to_user_id && 
+              currentBucketDate) {
+            if (currentBucketDate >= dateFrom && currentBucketDate <= dateTo) {
+              assignedLeadIds.add(lead.id);
+            }
           }
-          // Self-created (when not already counted)
+          
+          // For CREATOR (self-created): count by created_at
           if (lead.created_by_user_id === userId && 
               lead.first_assigned_to_user_id !== userId && 
-              lead.assigned_to_user_id !== userId) {
+              lead.assigned_to_user_id !== userId &&
+              createdAtDate && createdAtDate >= dateFrom && createdAtDate <= dateTo) {
             assignedLeadIds.add(lead.id);
-            selfCreatedCount++;
           }
-        });
-        
-        console.log('[useStaffLeadStats] Lead counts:', {
-          userId,
-          dateFrom,
-          dateTo,
-          totalLeadsInRange: allLeadsInRange?.length,
-          firstAssignedCount,
-          reassignedInCount,
-          selfCreatedCount,
-          uniqueTotal: assignedLeadIds.size
         });
         
         assignedCount = assignedLeadIds.size;

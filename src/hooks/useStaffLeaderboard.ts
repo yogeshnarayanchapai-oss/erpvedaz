@@ -51,10 +51,13 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Fetch ALL leads with assignment info to properly count:
-      // 1. Original assignments (first_assigned_to_user_id) - counted by created_at/date
-      // 2. Current assignments (assigned_to_user_id) - for reassigned leads, counted by assigned_at
-      // This prevents double-counting when a lead is reassigned on a different date
+      // Fetch ALL leads with assignment info
+      // COUNTING LOGIC (Bucket Date = lead.date):
+      // - For original assignee (first_assigned_to_user_id): use created_at for date filtering (original bucket date, never changes)
+      // - For current assignee (assigned_to_user_id if different): use lead.date (updated on reassignment)
+      // This ensures:
+      // - Original assignee counts on ORIGINAL date (e.g., 12/12 stays with Calling 1)
+      // - Reassigned staff counts on REASSIGNMENT date (e.g., 12/13 for Calling 2)
       let leadsQuery = supabase
         .from('leads')
         .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, status, store_id, date, assigned_at, created_at');
@@ -64,10 +67,10 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         leadsQuery = leadsQuery.eq('store_id', storeId);
       }
 
-      // Filter by date range - include leads where:
-      // - date is within range (for original assignments - counted on original date)
-      // - OR assigned_at is within range (for reassignments - counted on reassignment date)
-      leadsQuery = leadsQuery.or(`and(date.gte.${dateFrom},date.lte.${dateTo}),and(assigned_at.gte.${dateFrom}T00:00:00,assigned_at.lte.${dateTo}T23:59:59)`);
+      // Fetch leads where either:
+      // - created_at is in date range (for original assignees - historical bucket date)
+      // - date is in date range (for current assignees - current bucket date)
+      leadsQuery = leadsQuery.or(`and(created_at.gte.${dateFrom}T00:00:00,created_at.lte.${dateTo}T23:59:59),and(date.gte.${dateFrom},date.lte.${dateTo})`);
 
       const { data: allLeads, error: leadsError } = await leadsQuery;
 
@@ -122,20 +125,22 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         staffStats.set(order.sales_person_id, existing);
       });
 
-      // Count leads per user with date-aware logic to prevent double-counting:
-      // 1. Staff A (original assignee): counts based on first_assigned_to_user_id, filtered by created_at in date range
-      // 2. Staff B (reassigned): counts based on assigned_to_user_id when different from first, filtered by assigned_at in date range
-      // 3. Self-created leads: count for the creator based on created_at
+      // Count leads per user with bucket-date-aware logic:
+      // Rule: Count ALWAYS by bucket date (lead.date), NOT by action/assignment date
+      // - Original assignee: counted by created_at (original bucket date before any reassignment)
+      // - Current assignee (if reassigned): counted by current lead.date (updated on reassignment)
       const leadsPerUser = new Map<string, Set<string>>();
       
       allLeads?.forEach(lead => {
-        const createdAt = lead.date ? lead.date.split('T')[0] : null;
-        const assignedAt = lead.assigned_at ? lead.assigned_at.split('T')[0] : null;
+        // Extract dates - use date portion only for comparison
+        const createdAtDate = lead.created_at ? lead.created_at.split('T')[0] : null;
+        const currentBucketDate = lead.date ? lead.date.split('T')[0] : null;
         
-        // Count for original assignee (first_assigned_to_user_id) - use created_at/date for date filtering
-        // This ensures original assignee counts on the ORIGINAL assignment date, not reassignment date
-        if (lead.first_assigned_to_user_id && createdAt) {
-          if (createdAt >= dateFrom && createdAt <= dateTo) {
+        // For ORIGINAL assignee (first_assigned_to_user_id): 
+        // Count by created_at (original bucket date when lead was first assigned)
+        // This date NEVER changes even when lead is reassigned
+        if (lead.first_assigned_to_user_id && createdAtDate) {
+          if (createdAtDate >= dateFrom && createdAtDate <= dateTo) {
             if (!leadsPerUser.has(lead.first_assigned_to_user_id)) {
               leadsPerUser.set(lead.first_assigned_to_user_id, new Set());
             }
@@ -143,10 +148,13 @@ export function useStaffLeaderboard(dateRange: DateRange) {
           }
         }
         
-        // Count for current assignee if different from original (reassigned leads) - use assigned_at for date filtering
-        // This ensures reassigned staff counts on the REASSIGNMENT date only
-        if (lead.assigned_to_user_id && lead.assigned_to_user_id !== lead.first_assigned_to_user_id && assignedAt) {
-          if (assignedAt >= dateFrom && assignedAt <= dateTo) {
+        // For CURRENT assignee if REASSIGNED (assigned_to_user_id != first_assigned_to_user_id):
+        // Count by CURRENT lead.date (bucket date, updated on reassignment)
+        // This ensures new assignee sees the lead on the reassignment date
+        if (lead.assigned_to_user_id && 
+            lead.assigned_to_user_id !== lead.first_assigned_to_user_id && 
+            currentBucketDate) {
+          if (currentBucketDate >= dateFrom && currentBucketDate <= dateTo) {
             if (!leadsPerUser.has(lead.assigned_to_user_id)) {
               leadsPerUser.set(lead.assigned_to_user_id, new Set());
             }
@@ -154,11 +162,12 @@ export function useStaffLeaderboard(dateRange: DateRange) {
           }
         }
         
-        // Count for creator (self-created leads) if not already counted via assignment - use created_at
+        // For CREATOR (self-created leads) if not already counted via assignment:
+        // Count by created_at (original bucket date)
         if (lead.created_by_user_id && 
             lead.created_by_user_id !== lead.first_assigned_to_user_id && 
             lead.created_by_user_id !== lead.assigned_to_user_id &&
-            createdAt && createdAt >= dateFrom && createdAt <= dateTo) {
+            createdAtDate && createdAtDate >= dateFrom && createdAtDate <= dateTo) {
           if (!leadsPerUser.has(lead.created_by_user_id)) {
             leadsPerUser.set(lead.created_by_user_id, new Set());
           }
