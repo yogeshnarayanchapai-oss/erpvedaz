@@ -672,11 +672,11 @@ export function useUnreadMessageCount() {
     queryFn: async () => {
       if (!storeId || !user?.id) return 0;
 
-      // Get all rooms for this store
+      // Get all rooms for this store (including DM rooms where user is participant)
       const { data: rooms } = await supabase
         .from('chat_rooms')
         .select('id')
-        .eq('store_id', storeId);
+        .or(`store_id.eq.${storeId},participants.cs.{${user.id}}`);
 
       if (!rooms || rooms.length === 0) return 0;
 
@@ -743,11 +743,11 @@ export function useUnreadCountPerRoom() {
     queryFn: async () => {
       if (!storeId || !user?.id) return {};
 
-      // Get all rooms
+      // Get all rooms (including DM rooms where user is participant)
       const { data: rooms } = await supabase
         .from('chat_rooms')
         .select('id')
-        .eq('store_id', storeId);
+        .or(`store_id.eq.${storeId},participants.cs.{${user.id}}`);
 
       if (!rooms || rooms.length === 0) return {};
 
