@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface ChatRoom {
   id: string;
@@ -9,6 +10,7 @@ export interface ChatRoom {
   type: 'GLOBAL' | 'DEPARTMENT' | 'DIRECT';
   created_by: string | null;
   created_at: string;
+  store_id: string | null;
 }
 
 export interface ChatMessage {
@@ -21,17 +23,23 @@ export interface ChatMessage {
 }
 
 export function useChatRooms() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['chat-rooms'],
+    queryKey: ['chat-rooms', storeId],
     queryFn: async () => {
+      if (!storeId) return [];
+
       const { data, error } = await supabase
-        .from('chat_rooms' as any)
+        .from('chat_rooms')
         .select('*')
+        .eq('store_id', storeId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return (data || []) as unknown as ChatRoom[];
+      return (data || []) as ChatRoom[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -70,7 +78,7 @@ export function useChatMessages(roomId: string | null) {
 
       // Get messages
       const { data: messages, error } = await supabase
-        .from('chat_messages' as any)
+        .from('chat_messages')
         .select('*')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true })
@@ -98,6 +106,7 @@ export function useChatMessages(roomId: string | null) {
 
 export function useSendMessage() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async ({ roomId, message }: { roomId: string; message: string }) => {
@@ -105,12 +114,13 @@ export function useSendMessage() {
       if (!user.user) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
-        .from('chat_messages' as any)
+        .from('chat_messages')
         .insert({
           room_id: roomId,
           sender_id: user.user.id,
           message_text: message,
-        } as any)
+          store_id: storeId,
+        })
         .select()
         .single();
 
@@ -128,17 +138,20 @@ export function useSendMessage() {
 
 export function useCreateChatRoom() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<ChatRoom>) => {
       const { data: user } = await supabase.auth.getUser();
       
       const { data: result, error } = await supabase
-        .from('chat_rooms' as any)
+        .from('chat_rooms')
         .insert({
-          ...data,
+          name: data.name || 'New Room',
+          type: data.type || 'DEPARTMENT',
           created_by: user.user?.id,
-        } as any)
+          store_id: storeId,
+        })
         .select()
         .single();
 
@@ -160,7 +173,7 @@ export function useDeleteChatRoom() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('chat_rooms' as any).delete().eq('id', id);
+      const { error } = await supabase.from('chat_rooms').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
