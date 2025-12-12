@@ -293,7 +293,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 w-[520px] h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
+    <div className="fixed bottom-24 right-6 z-50 w-[420px] h-[500px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
