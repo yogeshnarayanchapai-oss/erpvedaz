@@ -29,6 +29,7 @@ import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 // Get only employees for Team Chat
 function useEmployeeUsers() {
@@ -112,7 +113,7 @@ export default function HRMChat() {
   const [staffToAdd, setStaffToAdd] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: rooms = [] } = useStoreChatRooms();
+  const { data: rooms = [], refetch: refetchRooms } = useStoreChatRooms();
   const { data: messages = [] } = useStoreChatMessages(selectedRoom?.id || null);
   const { data: employeeUsers = [] } = useEmployeeUsers();
   const { data: dmProfileMap = new Map() } = useDMParticipantProfiles(rooms);
@@ -211,14 +212,54 @@ export default function HRMChat() {
   };
 
   const handleAddStaffToRoom = async () => {
-    if (!selectedRoom || staffToAdd.length === 0) return;
-    await addParticipants.mutateAsync({
-      roomId: selectedRoom.id,
-      participantIds: staffToAdd,
-    });
+    if (!selectedRoom) return;
+    
+    // Get current participants (excluding self)
+    const currentParticipants = selectedRoom.participants?.filter(p => p !== profile?.id) || [];
+    
+    // Find participants to add (in staffToAdd but not in current)
+    const toAdd = staffToAdd.filter(id => !currentParticipants.includes(id));
+    
+    // Find participants to remove (in current but not in staffToAdd)
+    const toRemove = currentParticipants.filter(id => !staffToAdd.includes(id));
+    
+    // Update participants array
+    if (toAdd.length > 0 || toRemove.length > 0) {
+      const newParticipants = [
+        ...(selectedRoom.participants?.filter(p => !toRemove.includes(p)) || []),
+        ...toAdd
+      ];
+      
+      await supabase
+        .from('chat_rooms')
+        .update({ participants: newParticipants })
+        .eq('id', selectedRoom.id);
+      
+      refetchRooms();
+      
+      // Update selected room with new participants
+      setSelectedRoom(prev => prev ? { ...prev, participants: newParticipants } : null);
+      
+      if (toAdd.length > 0 && toRemove.length > 0) {
+        toast.success(`Added ${toAdd.length} and removed ${toRemove.length} members`);
+      } else if (toAdd.length > 0) {
+        toast.success(`Added ${toAdd.length} member(s)`);
+      } else {
+        toast.success(`Removed ${toRemove.length} member(s)`);
+      }
+    }
+    
     setStaffToAdd([]);
     setShowAddStaffDialog(false);
   };
+
+  // Initialize staffToAdd with existing participants when opening dialog
+  useEffect(() => {
+    if (showAddStaffDialog && selectedRoom) {
+      const existingMembers = selectedRoom.participants?.filter(p => p !== profile?.id) || [];
+      setStaffToAdd(existingMembers);
+    }
+  }, [showAddStaffDialog, selectedRoom?.id]);
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!selectedRoom) return;
@@ -525,38 +566,56 @@ export default function HRMChat() {
       <Dialog open={showAddStaffDialog} onOpenChange={setShowAddStaffDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Staff to {selectedRoom?.name}</DialogTitle>
+            <DialogTitle>Manage Members - {selectedRoom?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Select staff to add:</p>
+            <p className="text-sm text-muted-foreground">Select members for this group:</p>
             <div className="h-48 border rounded-lg overflow-y-auto">
               <div className="p-2 space-y-1">
                 {employeeUsers
-                  .filter(u => u.id !== profile?.id && !selectedRoom?.participants?.includes(u.id))
-                  .map(user => (
-                    <div
-                      key={user.id}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                      onClick={() => toggleStaffToAdd(user.id)}
-                    >
-                      <Checkbox checked={staffToAdd.includes(user.id)} />
-                      <Avatar className="w-7 h-7">
-                        <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{user.name}</span>
-                    </div>
-                  ))}
+                  .filter(u => u.id !== profile?.id)
+                  .map(user => {
+                    const isExistingMember = selectedRoom?.participants?.includes(user.id);
+                    const isSelected = staffToAdd.includes(user.id);
+                    return (
+                      <div
+                        key={user.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                          isSelected
+                            ? isExistingMember 
+                              ? "bg-primary/10 border border-primary/30"
+                              : "bg-green-500/10 border border-green-500/30"
+                            : isExistingMember
+                              ? "bg-destructive/10 border border-destructive/30"
+                              : "hover:bg-muted"
+                        }`}
+                        onClick={() => toggleStaffToAdd(user.id)}
+                      >
+                        <Checkbox checked={isSelected} />
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm flex-1">{user.name}</span>
+                        {isExistingMember && !isSelected && (
+                          <span className="text-xs text-destructive">Remove</span>
+                        )}
+                        {!isExistingMember && isSelected && (
+                          <span className="text-xs text-green-600">Add</span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
             {staffToAdd.length > 0 && (
-              <p className="text-xs text-muted-foreground">{staffToAdd.length} staff selected</p>
+              <p className="text-xs text-muted-foreground">{staffToAdd.length} member(s) selected</p>
             )}
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => { setShowAddStaffDialog(false); setStaffToAdd([]); }}>
                 Cancel
               </Button>
-              <Button onClick={handleAddStaffToRoom} disabled={staffToAdd.length === 0 || addParticipants.isPending}>
-                Add Staff
+              <Button onClick={handleAddStaffToRoom}>
+                Save
               </Button>
             </div>
           </div>
