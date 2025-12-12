@@ -36,7 +36,8 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         .select(`
           *,
           products:product_id(name),
-          warehouses:warehouse_id(name)
+          warehouses:warehouse_id(name),
+          transaction_code
         `)
         .eq('party_id', partyId);
 
@@ -143,6 +144,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           balance: 0,
           remarks: t.remarks,
           id: t.id,
+          transaction_code: t.transaction_code,
           is_settled: t.is_settled === true,
         });
       });
