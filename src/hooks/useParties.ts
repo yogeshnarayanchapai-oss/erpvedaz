@@ -18,6 +18,18 @@ export interface Party {
   updated_at: string;
 }
 
+export interface PendingTransaction {
+  id: string;
+  date: string;
+  type: string;
+  amount: number;
+  description: string | null;
+  note: string | null;
+  transaction_code: string | null;
+  account_id: string | null;
+  account_name: string | null;
+}
+
 export interface PartyWithBalances extends Party {
   total_receivable: number;
   total_payable: number;
@@ -26,6 +38,10 @@ export interface PartyWithBalances extends Party {
   net_receivable: number;
   net_payable: number;
   current_balance: number;
+  pending_receivable_transactions: PendingTransaction[];
+  pending_payable_transactions: PendingTransaction[];
+  pending_receivable_amount: number;
+  pending_payable_amount: number;
 }
 
 export function useParties(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
@@ -82,7 +98,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
       // Fetch transactions and payments for all parties
       const partyIds = parties.map(p => p.id);
 
-      const [{ data: transactions }, { data: payments }] = await Promise.all([
+      const [{ data: transactions }, { data: payments }, { data: pendingTxns }] = await Promise.all([
         supabase
           .from('party_transactions')
           .select('party_id, direction, amount')
@@ -91,6 +107,12 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
           .from('party_payments')
           .select('party_id, payment_type, amount')
           .in('party_id', partyIds),
+        // Fetch pending transactions from transactions table where party_id is set
+        supabase
+          .from('transactions')
+          .select('id, date, type, amount, description, note, transaction_code, party_id, account_id, accounts:account_id(name)')
+          .in('party_id', partyIds)
+          .eq('is_cleared', false),
       ]);
 
       // Calculate balances for each party
@@ -98,6 +120,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
         const typedParty = party as Party;
         const partyTransactions = transactions?.filter(t => t.party_id === party.id) || [];
         const partyPayments = payments?.filter(p => p.party_id === party.id) || [];
+        const partyPendingTxns = pendingTxns?.filter(t => t.party_id === party.id) || [];
 
         const total_receivable = partyTransactions
           .filter(t => t.direction === 'RECEIVABLE')
@@ -118,6 +141,38 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
         const net_receivable = total_receivable - total_received;
         const net_payable = total_payable - total_paid;
 
+        // Pending transactions from manual entries
+        const pending_receivable_transactions: PendingTransaction[] = partyPendingTxns
+          .filter(t => t.type === 'income')
+          .map(t => ({
+            id: t.id,
+            date: t.date,
+            type: t.type,
+            amount: t.amount,
+            description: t.description,
+            note: t.note,
+            transaction_code: t.transaction_code,
+            account_id: t.account_id,
+            account_name: (t.accounts as any)?.name || null,
+          }));
+
+        const pending_payable_transactions: PendingTransaction[] = partyPendingTxns
+          .filter(t => t.type === 'expense')
+          .map(t => ({
+            id: t.id,
+            date: t.date,
+            type: t.type,
+            amount: t.amount,
+            description: t.description,
+            note: t.note,
+            transaction_code: t.transaction_code,
+            account_id: t.account_id,
+            account_name: (t.accounts as any)?.name || null,
+          }));
+
+        const pending_receivable_amount = pending_receivable_transactions.reduce((sum, t) => sum + t.amount, 0);
+        const pending_payable_amount = pending_payable_transactions.reduce((sum, t) => sum + t.amount, 0);
+
         // Current balance calculation
         let current_balance = 0;
         if (typedParty.opening_balance_type === 'RECEIVABLE') {
@@ -137,6 +192,10 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | '
           net_receivable,
           net_payable,
           current_balance,
+          pending_receivable_transactions,
+          pending_payable_transactions,
+          pending_receivable_amount,
+          pending_payable_amount,
         };
       });
 

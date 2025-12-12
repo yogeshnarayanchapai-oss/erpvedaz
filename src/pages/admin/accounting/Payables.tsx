@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
-import { usePendingPayables, usePendingPartyPayables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
+import { usePendingPayables, useMarkTransactionsCleared } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle, Plus } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
@@ -26,8 +26,6 @@ export default function Payables() {
   const { data: accounts = [] } = useActiveAccounts();
   // Pending payables WITHOUT party (for Pending Expenses tab)
   const { data: pendingPayables = [], isLoading: loadingPending } = usePendingPayables();
-  // Pending payables WITH party (for Party Payables tab)
-  const { data: pendingPartyPayables = [], isLoading: loadingPartyPending } = usePendingPartyPayables();
   const createPayment = useCreatePartyPayment();
   const markCleared = useMarkTransactionsCleared();
   const { canEdit } = useAccountingEditAccess();
@@ -36,7 +34,7 @@ export default function Payables() {
   const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<{ id: string; account_id: string | null; transaction_code: string | null; amount: number } | null>(null);
   const [clearAccountId, setClearAccountId] = useState('');
   const [paymentData, setPaymentData] = useState<{
     date: string;
@@ -54,8 +52,8 @@ export default function Payables() {
     note: '',
   });
 
-  // Filter parties with positive net_payable (we owe them money)
-  const partiesWithPayables = allParties.filter(p => p.net_payable > 0);
+  // Filter parties with positive net_payable OR pending payable transactions
+  const partiesWithPayables = allParties.filter(p => p.net_payable > 0 || p.pending_payable_amount > 0);
 
   // Apply search filter
   const filteredParties = partiesWithPayables.filter(p =>
@@ -65,15 +63,20 @@ export default function Payables() {
 
   // Calculate totals - Party Payables include both party balances AND pending party payables
   const totalPartyPayable = partiesWithPayables.reduce((sum, p) => sum + p.total_payable, 0);
-  const totalPartyPending = pendingPartyPayables.reduce((sum, t) => sum + t.amount, 0);
+  const totalPartyPending = partiesWithPayables.reduce((sum, p) => sum + p.pending_payable_amount, 0);
   const totalPayable = totalPartyPayable + totalPartyPending;
   const totalPaid = partiesWithPayables.reduce((sum, p) => sum + p.total_paid, 0);
-  const totalOutstanding = partiesWithPayables.reduce((sum, p) => sum + p.net_payable, 0) + totalPartyPending;
+  const totalOutstanding = partiesWithPayables.reduce((sum, p) => sum + p.net_payable + p.pending_payable_amount, 0);
   // Pending Expenses only shows party-less entries
   const totalPendingExpense = pendingPayables.reduce((sum, t) => sum + t.amount, 0);
-  const partyCount = partiesWithPayables.length + (pendingPartyPayables.length > 0 ? new Set(pendingPartyPayables.map(t => t.party_id)).size : 0);
+  const partyCount = partiesWithPayables.length;
+  
+  // Flatten pending payable transactions from all parties for display
+  const allPendingPartyPayables = filteredParties.flatMap(p => 
+    p.pending_payable_transactions.map(t => ({ ...t, partyName: p.name }))
+  );
 
-  const openClearDialog = (transaction: Transaction) => {
+  const openClearDialog = (transaction: { id: string; account_id: string | null; transaction_code: string | null; amount: number }) => {
     setSelectedTransaction(transaction);
     setClearAccountId(transaction.account_id || '');
     setClearDialogOpen(true);
@@ -278,13 +281,13 @@ export default function Payables() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatNPR(party.total_payable)}
+                        {formatNPR(party.total_payable + party.pending_payable_amount)}
                       </TableCell>
                       <TableCell className="text-right text-green-600">
                         {formatNPR(party.total_paid)}
                       </TableCell>
                       <TableCell className="text-right font-medium text-red-600">
-                        {formatNPR(party.net_payable)}
+                        {formatNPR(party.net_payable + party.pending_payable_amount)}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -418,12 +421,12 @@ export default function Payables() {
           </Card>
 
           {/* Pending Party Payables Table */}
-          {pendingPartyPayables.length > 0 && (
+          {allPendingPartyPayables.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   Pending Party Payables
-                  <Badge variant="secondary">{pendingPartyPayables.length}</Badge>
+                  <Badge variant="secondary">{allPendingPartyPayables.length}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -439,11 +442,11 @@ export default function Payables() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pendingPartyPayables.map((t) => (
+                    {allPendingPartyPayables.map((t) => (
                       <TableRow key={t.id}>
                         <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
                         <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
-                        <TableCell className="font-medium">{t.parties?.name || '-'}</TableCell>
+                        <TableCell className="font-medium">{t.partyName}</TableCell>
                         <TableCell>{t.description || t.note || '-'}</TableCell>
                         <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
                         <TableCell>
