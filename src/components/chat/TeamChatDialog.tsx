@@ -273,9 +273,19 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   };
 
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'OWNER';
+  const isManager = profile?.role === 'MANAGER';
+  const canCreateGroups = isAdmin || isManager;
   const groupRooms = rooms.filter(r => r.type !== 'DIRECT');
   const dmRooms = rooms.filter(r => r.type === 'DIRECT');
   const isRoomMuted = selectedRoom?.is_muted_by?.includes(profile?.id || '');
+
+  // Get display name for DM room (show other person's actual name, not username)
+  const getDMDisplayName = (room: ChatRoom) => {
+    if (room.type !== 'DIRECT' || !room.participants) return room.name;
+    const otherUserId = room.participants.find(id => id !== profile?.id);
+    const otherUser = storeUsers.find(u => u.id === otherUserId);
+    return otherUser?.name || room.name;
+  };
 
   const filteredUsers = storeUsers.filter(u => 
     u.id !== profile?.id &&
@@ -300,7 +310,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           <MessageSquare className="w-5 h-5" />
           <span className="font-semibold">Team Chat</span>
           {selectedRoom && (
-            <span className="text-primary-foreground/70">– {selectedRoom.name}</span>
+            <span className="text-primary-foreground/70">– {selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name}</span>
           )}
         </div>
         <button 
@@ -316,10 +326,11 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           <div className="w-32 border-r bg-muted/20 flex flex-col shrink-0">
             {/* Actions */}
             <div className="px-4 py-3 border-b flex gap-3">
-              {isAdmin && (
+              {canCreateGroups && (
                 <button 
                   onClick={() => setShowNewRoomDialog(true)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                  title="Create Group"
                 >
                   <Plus className="w-5 h-5 text-muted-foreground" />
                 </button>
@@ -327,8 +338,9 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               <button 
                 onClick={() => setShowUserSearch(!showUserSearch)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                title="Search Users"
               >
-                <Users className="w-5 h-5 text-muted-foreground" />
+                <Search className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
@@ -397,6 +409,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     <div className="space-y-0.5">
                       {dmRooms.map(room => {
                         const unreadCount = unreadPerRoom[room.id] || 0;
+                        const displayName = getDMDisplayName(room);
                         return (
                           <div
                             key={room.id}
@@ -410,7 +423,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <User className="w-4 h-4 shrink-0" />
-                              <span className="text-sm truncate">{room.name}</span>
+                              <span className="text-sm truncate">{displayName}</span>
                             </div>
                             {unreadCount > 0 && selectedRoom?.id !== room.id && (
                               <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
