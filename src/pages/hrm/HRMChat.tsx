@@ -8,18 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Send, MessageSquare, Trash2, Users, Search, UserPlus } from 'lucide-react';
+import { Plus, Send, MessageSquare, Trash2, Users, Search, UserPlus, MoreVertical } from 'lucide-react';
 import { 
   useStoreChatRooms, 
   useStoreChatMessages, 
   useSendChatMessage, 
   useCreateChatRoom,
   useDeleteChatRoom,
+  useDeleteChatMessage,
   useCreateDMRoom,
   useEnsureDefaultGroups,
   useAddRoomParticipants,
   ChatRoom 
 } from '@/hooks/useTeamChat';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
@@ -88,6 +90,7 @@ export default function HRMChat() {
   const sendMessage = useSendChatMessage();
   const createChatRoom = useCreateChatRoom();
   const deleteChatRoom = useDeleteChatRoom();
+  const deleteMessage = useDeleteChatMessage();
   const createDM = useCreateDMRoom();
   const ensureDefaultGroups = useEnsureDefaultGroups();
   const addParticipants = useAddRoomParticipants();
@@ -179,6 +182,13 @@ export default function HRMChat() {
     setShowAddStaffDialog(false);
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!selectedRoom) return;
+    if (confirm('Delete this message?')) {
+      await deleteMessage.mutateAsync({ messageId, roomId: selectedRoom.id });
+    }
+  };
+
   const formatMessageDate = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return format(date, 'HH:mm');
@@ -197,6 +207,7 @@ export default function HRMChat() {
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'OWNER';
   const isManager = profile?.role === 'MANAGER';
   const canCreateGroups = isAdmin || isManager;
+  const canDeleteMessages = isAdmin; // Only Admin/Owner can delete any message
 
   const groupRooms = rooms.filter(r => r.type !== 'DIRECT');
   const dmRoomsRaw = rooms.filter(r => r.type === 'DIRECT');
@@ -385,9 +396,10 @@ export default function HRMChat() {
                   <div className="space-y-4">
                     {messages.map(msg => {
                       const isOwn = msg.sender_id === profile?.id;
+                      const canDelete = canDeleteMessages || isOwn; // Admin/Owner can delete any, users can unsend own
                       return (
-                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[70%] ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
+                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
+                          <div className={`max-w-[70%] ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3 relative`}>
                             <div className="flex items-center gap-2 mb-1">
                               <span className={`text-xs font-medium ${isOwn ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                                 {msg.sender_name}
@@ -395,6 +407,28 @@ export default function HRMChat() {
                               <span className={`text-xs ${isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                                 {formatMessageDate(msg.created_at)}
                               </span>
+                              {canDelete && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className={`h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${isOwn ? 'text-primary-foreground/60 hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                      <MoreVertical className="w-3 h-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align={isOwn ? 'end' : 'start'}>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      {isOwn ? 'Unsend' : 'Delete'}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
                             <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
                           </div>
