@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,9 +10,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
   Paperclip, Pin, Volume2, VolumeX, Check, CheckCheck,
-  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink, UserPlus
+  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink, UserPlus, Maximize2
 } from 'lucide-react';
-import { 
+import {
   useStoreChatRooms, 
   useStoreChatMessages, 
   useSendChatMessage, 
@@ -75,6 +76,7 @@ function renderMessageWithLinks(text: string) {
 }
 
 export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const storeId = useCurrentStoreId();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
@@ -404,15 +406,27 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           <MessageSquare className="w-5 h-5" />
           <span className="font-semibold">Team Chat</span>
           {selectedRoom && (
-            <span className="text-primary-foreground/70">– {selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name}</span>
+            <span className="text-primary-foreground/70 text-sm">– {selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name}</span>
           )}
         </div>
-        <button 
-          onClick={() => onOpenChange(false)} 
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => { 
+              onOpenChange(false); 
+              navigate('/hrm/chat'); 
+            }}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+            title="Open Full Chat Page"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => onOpenChange(false)} 
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
