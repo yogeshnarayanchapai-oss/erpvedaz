@@ -164,14 +164,63 @@ export default function PartyStatement() {
       } else if (entry.type === 'PAYMENT') {
         const { error } = await supabase.from('party_payments').delete().eq('id', entry.id);
         if (error) throw error;
+      } else if (entry.type === 'PENDING') {
+        const { error } = await supabase.from('transactions').delete().eq('id', entry.id);
+        if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Entry deleted');
     } catch (error: any) {
       toast.error(`Failed to delete: ${error.message}`);
+    }
+  };
+
+  // Handle pay/receive for inventory transactions (party_transactions)
+  const [inventoryPayDialogOpen, setInventoryPayDialogOpen] = useState(false);
+  const [selectedInventoryEntry, setSelectedInventoryEntry] = useState<typeof statement[0] | null>(null);
+  const [isInventoryPaying, setIsInventoryPaying] = useState(false);
+
+  const handleInventoryPayment = async () => {
+    if (!selectedInventoryEntry || !selectedAccountId) {
+      toast.error('Please select an account');
+      return;
+    }
+    setIsInventoryPaying(true);
+    try {
+      // Create a payment record in party_payments
+      const amount = selectedInventoryEntry.debit > 0 ? selectedInventoryEntry.debit : selectedInventoryEntry.credit;
+      const paymentType = selectedInventoryEntry.credit > 0 ? 'PAID' : 'RECEIVED';
+      
+      const { error } = await supabase
+        .from('party_payments')
+        .insert({
+          party_id: selectedPartyId,
+          date: new Date().toISOString().split('T')[0],
+          amount: amount,
+          payment_type: paymentType,
+          method: 'BANK',
+          bank_account_id: selectedAccountId,
+          note: `Payment for: ${selectedInventoryEntry.particulars}`,
+        });
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast.success('Payment recorded');
+      setInventoryPayDialogOpen(false);
+      setSelectedInventoryEntry(null);
+      setSelectedAccountId('');
+    } catch (error: any) {
+      toast.error(`Failed to record payment: ${error.message}`);
+    } finally {
+      setIsInventoryPaying(false);
     }
   };
 
@@ -367,6 +416,7 @@ export default function PartyStatement() {
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {/* Pay/Receive for pending transactions */}
                         {entry.is_pending && canEdit && (
                           <Button
                             size="sm"
@@ -377,7 +427,19 @@ export default function PartyStatement() {
                             {entry.debit > 0 ? 'Receive' : 'Pay'}
                           </Button>
                         )}
-                        {isOwner && entry.id !== 'opening-balance' && !entry.is_pending && (
+                        {/* Pay/Receive for inventory transactions (TRANSACTION type - not pending, not payment, not opening) */}
+                        {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && canEdit && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => { setSelectedInventoryEntry(entry); setInventoryPayDialogOpen(true); }}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            {entry.credit > 0 ? 'Pay' : 'Receive'}
+                          </Button>
+                        )}
+                        {/* Delete button for all entries except opening balance */}
+                        {isOwner && entry.id !== 'opening-balance' && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -446,6 +508,44 @@ export default function PartyStatement() {
               <Button variant="outline" onClick={() => setClearDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleClearPending} disabled={isClearing || !selectedAccountId}>
                 {isClearing ? 'Processing...' : 'Confirm'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Pay/Receive for Inventory Transactions Dialog */}
+        <Dialog open={inventoryPayDialogOpen} onOpenChange={setInventoryPayDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedInventoryEntry?.credit && selectedInventoryEntry.credit > 0 ? 'Make Payment' : 'Receive Payment'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Transaction</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedInventoryEntry?.particulars} - ₹{(selectedInventoryEntry?.debit || selectedInventoryEntry?.credit || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Select Account</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} (₹{acc.current_balance?.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInventoryPayDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleInventoryPayment} disabled={isInventoryPaying || !selectedAccountId}>
+                {isInventoryPaying ? 'Processing...' : 'Confirm'}
               </Button>
             </DialogFooter>
           </DialogContent>
