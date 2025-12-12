@@ -827,22 +827,33 @@ export function useUnreadMessageCount() {
     queryFn: async () => {
       if (!storeId || !user?.id) return 0;
 
-      // Get all rooms for this store (including DM rooms where user is participant)
-      // Exclude rooms with null store_id unless user is explicitly a participant
-      const { data: rooms } = await supabase
+      // Get group/department rooms for this store
+      const { data: groupRooms } = await supabase
         .from('chat_rooms')
         .select('id')
-        .or(`store_id.eq.${storeId},and(participants.cs.{${user.id}},store_id.eq.${storeId})`);
+        .eq('store_id', storeId)
+        .neq('type', 'DIRECT');
 
-      if (!rooms || rooms.length === 0) return 0;
+      // Get DM rooms where user is a participant
+      const { data: dmRooms } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('type', 'DIRECT')
+        .contains('participants', [user.id]);
 
-      const roomIds = rooms.map(r => r.id);
+      const allRoomIds = [
+        ...(groupRooms || []).map(r => r.id),
+        ...(dmRooms || []).map(r => r.id)
+      ];
+
+      if (allRoomIds.length === 0) return 0;
 
       // Count messages not read by this user (where sender is not current user)
       const { data: messages, error } = await supabase
         .from('chat_messages')
         .select('id, read_by, sender_id')
-        .in('room_id', roomIds)
+        .in('room_id', allRoomIds)
         .neq('sender_id', user.id);
 
       if (error) {
