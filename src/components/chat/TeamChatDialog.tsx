@@ -533,8 +533,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                   </div>
                 </ScrollArea>
 
-                {/* Input Area */}
-                <div className="px-2 py-3 border-t relative">
+                {/* Input Area - Footer Style */}
+                <div className="border-t bg-muted/30 relative">
                   {/* Mention suggestions */}
                   {showMentions && mentionFilteredUsers.length > 0 && (
                     <div className="absolute bottom-full left-4 right-4 mb-2 bg-popover border rounded-xl shadow-xl p-2 space-y-1">
@@ -556,7 +556,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 px-3 py-3">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -567,23 +567,23 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                      className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                     >
-                      {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+                      {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
                     </button>
                     <Input
                       ref={inputRef}
                       value={message}
                       onChange={handleMessageChange}
                       onKeyDown={handleKeyDown}
-                      placeholder="Type a message... (@"
-                      className="flex-1 h-11 rounded-full border-muted-foreground/20 px-4"
+                      placeholder="Type a message.."
+                      className="flex-1 h-10 rounded-full bg-background border-muted-foreground/20 px-4 text-sm"
                       disabled={uploading}
                     />
                     <button 
                       onClick={handleSend} 
                       disabled={!message.trim() || sendMessage.isPending || uploading}
-                      className="w-11 h-11 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-primary/80 text-primary-foreground hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="w-5 h-5" />
                     </button>
