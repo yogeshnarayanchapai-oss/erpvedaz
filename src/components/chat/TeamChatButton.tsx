@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 import { TeamChatDialog } from './TeamChatDialog';
 
@@ -8,15 +7,14 @@ export function TeamChatButton() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
+      {/* Floating Action Button - fixed bottom-right */}
+      <button
         onClick={() => setOpen(true)}
-        className="gap-2"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center justify-center"
+        aria-label="Open Team Chat"
       >
-        <MessageCircle className="w-4 h-4" />
-        Team Chat
-      </Button>
+        <MessageCircle className="w-6 h-6" />
+      </button>
       <TeamChatDialog open={open} onOpenChange={setOpen} />
     </>
   );

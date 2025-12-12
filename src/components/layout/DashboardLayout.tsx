@@ -9,6 +9,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/co
 import { DateModeToggle } from '@/components/DateModeToggle';
 import { UnifiedNotificationBell } from '@/components/notifications/UnifiedNotificationBell';
 import { StoreSwitcher } from './StoreSwitcher';
+import { TeamChatButton } from '@/components/chat/TeamChatButton';
 import { Loader2, Calendar, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -136,6 +137,9 @@ function DashboardLayoutInner() {
             <Outlet />
           </main>
         </SidebarInset>
+        
+        {/* Floating Team Chat Button */}
+        <TeamChatButton />
       </div>
     </SidebarProvider>
   );
