@@ -35,6 +35,9 @@ export default function NewTransfer() {
       return;
     }
 
+    const fromAccount = accounts.find(a => a.id === formData.from_account_id);
+    const toAccount = accounts.find(a => a.id === formData.to_account_id);
+    
     await createTransaction.mutateAsync({
       date: formData.date,
       type: 'transfer',
@@ -47,8 +50,8 @@ export default function NewTransfer() {
       party_id: null,
       reference_no: formData.reference_no || null,
       note: formData.note || null,
-      description: formData.note || 'Transfer',
-      is_cleared: false,
+      description: formData.note || `Transfer from ${fromAccount?.name || 'Unknown'} to ${toAccount?.name || 'Unknown'}`,
+      is_cleared: true, // Transfers are immediately cleared
       created_by: null,
       order_id: null,
     });
