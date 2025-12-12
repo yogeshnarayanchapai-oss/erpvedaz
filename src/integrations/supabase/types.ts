@@ -1598,6 +1598,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_muted_by: string[] | null
+          last_message_at: string | null
           name: string
           participants: string[] | null
           role_based_group: string | null
@@ -1609,6 +1610,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_muted_by?: string[] | null
+          last_message_at?: string | null
           name: string
           participants?: string[] | null
           role_based_group?: string | null
@@ -1620,6 +1622,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_muted_by?: string[] | null
+          last_message_at?: string | null
           name?: string
           participants?: string[] | null
           role_based_group?: string | null
