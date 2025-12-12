@@ -2746,6 +2746,7 @@ export type Database = {
           from_user_id: string | null
           id: string
           lead_id: string | null
+          store_id: string | null
           to_team: Database["public"]["Enums"]["team_type"] | null
           to_user_id: string | null
           transferred_at: string | null
@@ -2756,6 +2757,7 @@ export type Database = {
           from_user_id?: string | null
           id?: string
           lead_id?: string | null
+          store_id?: string | null
           to_team?: Database["public"]["Enums"]["team_type"] | null
           to_user_id?: string | null
           transferred_at?: string | null
@@ -2766,6 +2768,7 @@ export type Database = {
           from_user_id?: string | null
           id?: string
           lead_id?: string | null
+          store_id?: string | null
           to_team?: Database["public"]["Enums"]["team_type"] | null
           to_user_id?: string | null
           transferred_at?: string | null
@@ -2784,6 +2787,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_transfers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {

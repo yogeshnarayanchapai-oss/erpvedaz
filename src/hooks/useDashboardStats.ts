@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { useLeadAssignmentCounts } from './useLeadAssignmentCounts';
 
 // Nepal timezone offset: UTC+5:45
 const NEPAL_TIMEZONE = 'Asia/Kathmandu';
@@ -201,6 +202,14 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
   const { currentStore } = useCurrentStore();
   const storeId = currentStore?.id;
   
+  // Use unified lead assignment counts hook for date-filtered assigned count
+  const { data: leadCounts } = useLeadAssignmentCounts({
+    staffId: userId,
+    dateFrom: dateFrom || '',
+    dateTo: dateTo || '',
+    excludeSelfCreated: false, // Include all for Calling Dashboard
+  });
+  
   useEffect(() => {
     if (!userId) return;
     
@@ -218,6 +227,20 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
           oldData?.created_by_user_id === userId
         ) {
           queryClient.invalidateQueries({ queryKey: ['staff-lead-stats', userId] });
+          queryClient.invalidateQueries({ queryKey: ['lead-assignment-counts'] });
+        }
+      })
+      .subscribe();
+    
+    // Subscribe to lead_transfers for assignment count updates
+    const transfersChannel = supabase
+      .channel(`staff-transfers-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_transfers' }, (payload) => {
+        const newData = payload.new as any;
+        const oldData = payload.old as any;
+        if (newData?.to_user_id === userId || oldData?.to_user_id === userId) {
+          queryClient.invalidateQueries({ queryKey: ['staff-lead-stats', userId] });
+          queryClient.invalidateQueries({ queryKey: ['lead-assignment-counts'] });
         }
       })
       .subscribe();
@@ -232,12 +255,13 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
 
     return () => {
       supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(transfersChannel);
       supabase.removeChannel(profilesChannel);
     };
   }, [queryClient, userId]);
 
   return useQuery({
-    queryKey: ['staff-lead-stats', userId, dateFrom, dateTo, storeId],
+    queryKey: ['staff-lead-stats', userId, dateFrom, dateTo, storeId, leadCounts?.countsByStaff],
     queryFn: async () => {
       if (!userId) return null;
 
@@ -252,72 +276,19 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
         currentQuery = currentQuery.eq('store_id', storeId);
       }
 
-      // Filter by current lead.date (bucket date) for current assignee
+      // Filter by current lead.date for current assignee
       if (dateFrom && dateTo) {
         currentQuery = currentQuery.gte('date', dateFrom).lte('date', dateTo);
       } else if (dateFrom) {
         currentQuery = currentQuery.gte('date', dateFrom);
       }
 
-      // For date-filtered "Assigned" count - use BUCKET DATE logic (same as Staff Leaderboard)
-      // COUNTING LOGIC:
-      // - Original assignee (first_assigned_to_user_id): count by created_at (original bucket date)
-      // - Current assignee if reassigned: count by lead.date (current bucket date, updated on reassign)
+      // Get assigned count from unified hook (uses lead_transfers.transferred_at)
       let assignedCount = 0;
       
-      if (dateFrom && dateTo) {
-        // Fetch leads where either created_at or date is in range
-        let assignedLeadsQuery = supabase
-          .from('leads')
-          .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, date, created_at');
-        
-        if (storeId) {
-          assignedLeadsQuery = assignedLeadsQuery.eq('store_id', storeId);
-        }
-        
-        // Apply date filter - either created_at or date in range
-        assignedLeadsQuery = assignedLeadsQuery.or(`and(created_at.gte.${dateFrom}T00:00:00,created_at.lte.${dateTo}T23:59:59),and(date.gte.${dateFrom},date.lte.${dateTo})`);
-        
-        const { data: allLeadsInRange, error: assignedError } = await assignedLeadsQuery;
-        
-        if (assignedError) {
-          console.error('[useStaffLeadStats] Query error:', assignedError);
-          throw assignedError;
-        }
-        
-        // Count unique leads with BUCKET DATE logic
-        const assignedLeadIds = new Set<string>();
-        
-        (allLeadsInRange || []).forEach(lead => {
-          const createdAtDate = lead.created_at ? lead.created_at.split('T')[0] : null;
-          const currentBucketDate = lead.date ? lead.date.split('T')[0] : null;
-          
-          // For ORIGINAL assignee: count by created_at (original bucket date)
-          if (lead.first_assigned_to_user_id === userId && createdAtDate) {
-            if (createdAtDate >= dateFrom && createdAtDate <= dateTo) {
-              assignedLeadIds.add(lead.id);
-            }
-          }
-          
-          // For REASSIGNED assignee: count by current lead.date (updated bucket date)
-          if (lead.assigned_to_user_id === userId && 
-              lead.assigned_to_user_id !== lead.first_assigned_to_user_id && 
-              currentBucketDate) {
-            if (currentBucketDate >= dateFrom && currentBucketDate <= dateTo) {
-              assignedLeadIds.add(lead.id);
-            }
-          }
-          
-          // For CREATOR (self-created): count by created_at
-          if (lead.created_by_user_id === userId && 
-              lead.first_assigned_to_user_id !== userId && 
-              lead.assigned_to_user_id !== userId &&
-              createdAtDate && createdAtDate >= dateFrom && createdAtDate <= dateTo) {
-            assignedLeadIds.add(lead.id);
-          }
-        });
-        
-        assignedCount = assignedLeadIds.size;
+      if (dateFrom && dateTo && leadCounts) {
+        // Use the unified hook's count
+        assignedCount = leadCounts.countsByStaff[userId] || 0;
       } else {
         // No date filter - use all-time counter from profiles (never decreases)
         const { data: profileData } = await supabase
@@ -341,7 +312,7 @@ export function useStaffLeadStats(userId?: string, dateFrom?: string, dateTo?: s
       return {
         total: currentLeads.length,
         callingTotal: callingLeads.length,
-        // Assigned = date-filtered count when filter applied, otherwise all-time counter
+        // Assigned = count from lead_transfers when date filter applied, otherwise all-time counter
         assigned: assignedCount,
         // Current = only leads currently assigned to this user
         currentAssigned: currentLeads.length,
