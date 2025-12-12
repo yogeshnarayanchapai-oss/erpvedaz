@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
 import { usePendingPayables, useMarkTransactionsCleared } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
-import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle, Plus } from 'lucide-react';
+import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useNavigate } from 'react-router-dom';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
@@ -36,6 +37,7 @@ export default function Payables() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<{ id: string; account_id: string | null; transaction_code: string | null; amount: number } | null>(null);
   const [clearAccountId, setClearAccountId] = useState('');
+  const [expandedParties, setExpandedParties] = useState<Set<string>>(new Set());
   const [paymentData, setPaymentData] = useState<{
     date: string;
     amount: string;
@@ -71,10 +73,17 @@ export default function Payables() {
   const totalPendingExpense = pendingPayables.reduce((sum, t) => sum + t.amount, 0);
   const partyCount = partiesWithPayables.length;
   
-  // Flatten pending payable transactions from all parties for display
-  const allPendingPartyPayables = filteredParties.flatMap(p => 
-    p.pending_payable_transactions.map(t => ({ ...t, partyName: p.name }))
-  );
+  const togglePartyExpanded = (partyId: string) => {
+    setExpandedParties(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(partyId)) {
+        newSet.delete(partyId);
+      } else {
+        newSet.add(partyId);
+      }
+      return newSet;
+    });
+  };
 
   const openClearDialog = (transaction: { id: string; account_id: string | null; transaction_code: string | null; amount: number }) => {
     setSelectedTransaction(transaction);
@@ -271,203 +280,222 @@ export default function Payables() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {filteredParties.map((party) => (
-                    <TableRow key={party.id}>
-                      <TableCell className="font-medium">{party.name}</TableCell>
-                      <TableCell>{party.phone || '—'}</TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                          {party.party_type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNPR(party.total_payable + party.pending_payable_amount)}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {formatNPR(party.total_paid)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-red-600">
-                        {formatNPR(party.net_payable + party.pending_payable_amount)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
-                            title="View Statement"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                          {canEdit && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedParty(party.id);
-                                    setPaymentData(prev => ({
-                                      ...prev,
-                                      amount: party.net_payable.toString(),
-                                    }));
-                                  }}
-                                >
-                                  Pay Supplier
-                                </Button>
-                              </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Pay {party.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div className="p-3 bg-muted rounded-lg">
-                                <Label className="text-sm text-muted-foreground">Outstanding Amount</Label>
-                                <p className="text-xl font-bold text-red-600">{formatNPR(party.net_payable)}</p>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="date">Date *</Label>
-                                <Input
-                                  id="date"
-                                  type="date"
-                                  value={paymentData.date}
-                                  onChange={(e) => setPaymentData({ ...paymentData, date: e.target.value })}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="amount">Amount *</Label>
-                                <Input
-                                  id="amount"
-                                  type="number"
-                                  step="0.01"
-                                  value={paymentData.amount}
-                                  onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="method">Payment Method *</Label>
-                                <Select
-                                  value={paymentData.method}
-                                  onValueChange={(value: any) => setPaymentData({ ...paymentData, method: value })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="CASH">Cash</SelectItem>
-                                    <SelectItem value="BANK">Bank Transfer</SelectItem>
-                                    <SelectItem value="OTHER">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {paymentData.method === 'BANK' && (
-                                <div className="space-y-2">
-                                  <Label htmlFor="bank">Bank Account</Label>
-                                  <Select
-                                    value={paymentData.bank_account_id}
-                                    onValueChange={(value) => setPaymentData({ ...paymentData, bank_account_id: value })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select bank account" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {accounts.filter(a => a.type === 'bank').map((account) => (
-                                        <SelectItem key={account.id} value={account.id}>
-                                          {account.name} {account.account_number && `- ${account.account_number}`}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                  {filteredParties.map((party) => {
+                    const hasPendingTransactions = party.pending_payable_transactions.length > 0;
+                    const isExpanded = expandedParties.has(party.id);
+                    
+                    return (
+                      <>
+                        <TableRow 
+                          key={party.id} 
+                          className={hasPendingTransactions ? 'cursor-pointer hover:bg-muted/50' : ''}
+                          onClick={() => hasPendingTransactions && togglePartyExpanded(party.id)}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {hasPendingTransactions && (
+                                isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
                               )}
-
-                              <div className="space-y-2">
-                                <Label htmlFor="reference">Reference (Cheque No., UTR, etc.)</Label>
-                                <Input
-                                  id="reference"
-                                  value={paymentData.reference}
-                                  onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="note">Notes</Label>
-                                <Textarea
-                                  id="note"
-                                  value={paymentData.note}
-                                  onChange={(e) => setPaymentData({ ...paymentData, note: e.target.value })}
-                                  rows={3}
-                                />
-                              </div>
-
-                              <Button onClick={handlePayment} disabled={createPayment.isPending} className="w-full">
-                                {createPayment.isPending ? 'Processing...' : 'Record Payment'}
-                              </Button>
+                              {party.name}
+                              {hasPendingTransactions && (
+                                <Badge variant="secondary" className="ml-1">{party.pending_payable_transactions.length}</Badge>
+                              )}
                             </div>
-                            </DialogContent>
-                          </Dialog>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          </TableCell>
+                          <TableCell>{party.phone || '—'}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                              {party.party_type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNPR(party.total_payable + party.pending_payable_amount)}
+                          </TableCell>
+                          <TableCell className="text-right text-green-600">
+                            {formatNPR(party.total_paid)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-red-600">
+                            {formatNPR(party.net_payable + party.pending_payable_amount)}
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
+                                title="View Statement"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                              {canEdit && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedParty(party.id);
+                                        setPaymentData(prev => ({
+                                          ...prev,
+                                          amount: party.net_payable.toString(),
+                                        }));
+                                      }}
+                                    >
+                                      Pay Supplier
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Pay {party.name}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="p-3 bg-muted rounded-lg">
+                                        <Label className="text-sm text-muted-foreground">Outstanding Amount</Label>
+                                        <p className="text-xl font-bold text-red-600">{formatNPR(party.net_payable)}</p>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="date">Date *</Label>
+                                        <Input
+                                          id="date"
+                                          type="date"
+                                          value={paymentData.date}
+                                          onChange={(e) => setPaymentData({ ...paymentData, date: e.target.value })}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="amount">Amount *</Label>
+                                        <Input
+                                          id="amount"
+                                          type="number"
+                                          step="0.01"
+                                          value={paymentData.amount}
+                                          onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="method">Payment Method *</Label>
+                                        <Select
+                                          value={paymentData.method}
+                                          onValueChange={(value: any) => setPaymentData({ ...paymentData, method: value })}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="CASH">Cash</SelectItem>
+                                            <SelectItem value="BANK">Bank Transfer</SelectItem>
+                                            <SelectItem value="OTHER">Other</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {paymentData.method === 'BANK' && (
+                                        <div className="space-y-2">
+                                          <Label htmlFor="bank">Bank Account</Label>
+                                          <Select
+                                            value={paymentData.bank_account_id}
+                                            onValueChange={(value) => setPaymentData({ ...paymentData, bank_account_id: value })}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select bank account" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {accounts.filter(a => a.type === 'bank').map((account) => (
+                                                <SelectItem key={account.id} value={account.id}>
+                                                  {account.name} {account.account_number && `- ${account.account_number}`}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="reference">Reference (Cheque No., UTR, etc.)</Label>
+                                        <Input
+                                          id="reference"
+                                          value={paymentData.reference}
+                                          onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="note">Notes</Label>
+                                        <Textarea
+                                          id="note"
+                                          value={paymentData.note}
+                                          onChange={(e) => setPaymentData({ ...paymentData, note: e.target.value })}
+                                          rows={3}
+                                        />
+                                      </div>
+
+                                      <Button onClick={handlePayment} disabled={createPayment.isPending} className="w-full">
+                                        {createPayment.isPending ? 'Processing...' : 'Record Payment'}
+                                      </Button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        {/* Expanded pending transactions */}
+                        {isExpanded && hasPendingTransactions && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="bg-muted/30 p-0">
+                              <div className="p-4">
+                                <h4 className="text-sm font-medium mb-3">Pending Transactions</h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Code</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="text-right">Amount</TableHead>
+                                      <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {party.pending_payable_transactions.map((t) => (
+                                      <TableRow key={t.id}>
+                                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
+                                        <TableCell>{t.description || t.note || '-'}</TableCell>
+                                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
+                                        <TableCell>
+                                          {canEdit && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openClearDialog(t);
+                                              }}
+                                            >
+                                              <CheckCircle className="w-4 h-4 mr-1" />
+                                              Mark Paid
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
-
-          {/* Pending Party Payables Table */}
-          {allPendingPartyPayables.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Pending Party Payables
-                  <Badge variant="secondary">{allPendingPartyPayables.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Party</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allPendingPartyPayables.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
-                        <TableCell className="font-medium">{t.partyName}</TableCell>
-                        <TableCell>{t.description || t.note || '-'}</TableCell>
-                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
-                        <TableCell>
-                          {canEdit && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openClearDialog(t)}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Mark Paid
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">

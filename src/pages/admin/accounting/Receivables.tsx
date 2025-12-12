@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, FileText, TrendingUp, Download, Search, CheckCircle, Plus } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DollarSign, FileText, TrendingUp, Download, Search, CheckCircle, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { formatNPR } from '@/lib/currency';
@@ -36,6 +37,7 @@ export default function Receivables() {
   const [selectedParty, setSelectedParty] = useState<any>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<{ id: string; account_id: string | null; transaction_code: string | null; amount: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedParties, setExpandedParties] = useState<Set<string>>(new Set());
   const [paymentData, setPaymentData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     amount: '',
@@ -65,10 +67,20 @@ export default function Receivables() {
   const totalPendingIncome = pendingReceivables.reduce((sum, t) => sum + t.amount, 0);
   const partyCount = partiesWithReceivables.length;
   
-  // Flatten pending receivable transactions from all parties for display
-  const allPendingPartyReceivables = filteredParties.flatMap(p => 
-    p.pending_receivable_transactions.map(t => ({ ...t, partyName: p.name }))
-  );
+  // Total pending transaction count for parties
+  const totalPendingTransactionCount = partiesWithReceivables.reduce((sum, p) => sum + p.pending_receivable_transactions.length, 0);
+
+  const togglePartyExpanded = (partyId: string) => {
+    setExpandedParties(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(partyId)) {
+        newSet.delete(partyId);
+      } else {
+        newSet.add(partyId);
+      }
+      return newSet;
+    });
+  };
 
   const openPaymentDialog = (party: any) => {
     setSelectedParty(party);
@@ -273,94 +285,113 @@ export default function Receivables() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {filteredParties.map((party) => (
-                    <TableRow key={party.id}>
-                      <TableCell className="font-medium">{party.name}</TableCell>
-                      <TableCell>{party.phone || '-'}</TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                          {party.party_type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">{formatNPR(party.total_receivable + party.pending_receivable_amount)}</TableCell>
-                      <TableCell className="text-right text-green-600">{formatNPR(party.total_received)}</TableCell>
-                      <TableCell className="text-right font-medium text-red-600">{formatNPR(party.net_receivable + party.pending_receivable_amount)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
-                            title="View Statement"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                          {canEdit && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => openPaymentDialog(party)}
-                            >
-                              Receive Payment
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredParties.map((party) => {
+                    const hasPendingTransactions = party.pending_receivable_transactions.length > 0;
+                    const isExpanded = expandedParties.has(party.id);
+                    
+                    return (
+                      <>
+                        <TableRow 
+                          key={party.id} 
+                          className={hasPendingTransactions ? 'cursor-pointer hover:bg-muted/50' : ''}
+                          onClick={() => hasPendingTransactions && togglePartyExpanded(party.id)}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {hasPendingTransactions && (
+                                isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                              )}
+                              {party.name}
+                              {hasPendingTransactions && (
+                                <Badge variant="secondary" className="ml-1">{party.pending_receivable_transactions.length}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{party.phone || '-'}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              {party.party_type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">{formatNPR(party.total_receivable + party.pending_receivable_amount)}</TableCell>
+                          <TableCell className="text-right text-green-600">{formatNPR(party.total_received)}</TableCell>
+                          <TableCell className="text-right font-medium text-red-600">{formatNPR(party.net_receivable + party.pending_receivable_amount)}</TableCell>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/admin/accounting/party-statement?party=${party.id}`)}
+                                title="View Statement"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                              {canEdit && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => openPaymentDialog(party)}
+                                >
+                                  Receive Payment
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        {/* Expanded pending transactions */}
+                        {isExpanded && hasPendingTransactions && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="bg-muted/30 p-0">
+                              <div className="p-4">
+                                <h4 className="text-sm font-medium mb-3">Pending Transactions</h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Code</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="text-right">Amount</TableHead>
+                                      <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {party.pending_receivable_transactions.map((t) => (
+                                      <TableRow key={t.id}>
+                                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
+                                        <TableCell>{t.description || t.note || '-'}</TableCell>
+                                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
+                                        <TableCell>
+                                          {canEdit && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openClearDialog(t);
+                                              }}
+                                            >
+                                              <CheckCircle className="w-4 h-4 mr-1" />
+                                              Mark Received
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
-
-          {/* Pending Party Receivables Table */}
-          {allPendingPartyReceivables.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Pending Party Receivables
-                  <Badge variant="secondary">{allPendingPartyReceivables.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Party</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allPendingPartyReceivables.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
-                        <TableCell className="font-medium">{t.partyName}</TableCell>
-                        <TableCell>{t.description || t.note || '-'}</TableCell>
-                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
-                        <TableCell>
-                          {canEdit && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openClearDialog(t)}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Mark Received
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
