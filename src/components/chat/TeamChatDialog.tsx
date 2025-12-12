@@ -204,11 +204,10 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
     setShowNewRoomDialog(false);
   };
 
-  const handleCreateDM = async (user: { id: string; username: string | null }) => {
-    if (!user.username) return;
+  const handleCreateDM = async (targetUser: { id: string; name: string }) => {
     const room = await createDM.mutateAsync({ 
-      targetUserId: user.id, 
-      targetUsername: user.username 
+      targetUserId: targetUser.id, 
+      targetName: targetUser.name 
     });
     setSelectedRoom(room as ChatRoom);
     setShowUserSearch(false);
@@ -276,7 +275,22 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const isManager = profile?.role === 'MANAGER';
   const canCreateGroups = isAdmin || isManager;
   const groupRooms = rooms.filter(r => r.type !== 'DIRECT');
-  const dmRooms = rooms.filter(r => r.type === 'DIRECT');
+  
+  // Deduplicate DM rooms - show only one room per staff member (most recent)
+  const dmRoomsRaw = rooms.filter(r => r.type === 'DIRECT');
+  const dmRoomsDeduped = dmRoomsRaw.reduce((acc, room) => {
+    const otherUserId = room.participants?.find(id => id !== profile?.id);
+    if (!otherUserId) return acc;
+    
+    // Keep the most recent room for each user
+    const existing = acc.get(otherUserId);
+    if (!existing || new Date(room.created_at) > new Date(existing.created_at)) {
+      acc.set(otherUserId, room);
+    }
+    return acc;
+  }, new Map<string, ChatRoom>());
+  const dmRooms = Array.from(dmRoomsDeduped.values());
+  
   const isRoomMuted = selectedRoom?.is_muted_by?.includes(profile?.id || '');
 
   // Get display name for DM room (show other person's actual name, not username)
