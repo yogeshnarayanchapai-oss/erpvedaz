@@ -964,6 +964,7 @@ export function useMarkRoomAsRead() {
       }
     },
     onSuccess: () => {
+      // Invalidate all unread count queries to ensure badge updates
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       queryClient.invalidateQueries({ queryKey: ['unread-per-room'] });
       queryClient.invalidateQueries({ queryKey: ['chat-messages'] });

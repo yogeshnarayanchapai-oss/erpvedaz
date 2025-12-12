@@ -13,7 +13,7 @@ export function TeamChatButton() {
     setOpen(isOpen);
     // Refetch unread count when closing chat to update badge
     if (!isOpen) {
-      queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
     }
   };
 
