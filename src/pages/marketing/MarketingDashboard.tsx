@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { useAds } from '@/hooks/useAds';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,8 +25,33 @@ export default function MarketingDashboard() {
   const navigate = useNavigate();
   const today = new Date();
   const [dollarRate, setDollarRate] = useState(133.5);
+  const storeId = useCurrentStoreId();
   
   const { data: products = [] } = useProducts();
+  
+  // Fetch product inventory for stock quantities
+  const { data: productInventory = [] } = useQuery({
+    queryKey: ['product-inventory-summary', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+      const { data, error } = await supabase
+        .from('product_inventory')
+        .select('product_id, current_stock')
+        .order('product_id');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+  });
+  
+  // Create a map of product_id -> total stock
+  const stockMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    productInventory.forEach(inv => {
+      map[inv.product_id] = (map[inv.product_id] || 0) + (inv.current_stock || 0);
+    });
+    return map;
+  }, [productInventory]);
   const { data: todayAds = [] } = useAds({ 
     dateFrom: format(today, 'yyyy-MM-dd'), 
     dateTo: format(today, 'yyyy-MM-dd') 
@@ -55,6 +83,7 @@ export default function MarketingDashboard() {
       const adSpend = productAds.reduce((sum, a) => sum + a.amount_spent, 0);
       return {
         name: product.name,
+        stockQty: stockMap[product.id] || 0,
         target: product.target_per_day || 0,
         orders: orderCount,
         qtySold,
@@ -63,7 +92,7 @@ export default function MarketingDashboard() {
         roi: adSpend > 0 ? ((revenue - adSpend) / adSpend * 100).toFixed(1) : '∞',
       };
     });
-  }, [products, orders, todayAds]);
+  }, [products, orders, todayAds, stockMap]);
 
   // Last 7 days trend
   const adsTrend = useMemo(() => {
@@ -195,6 +224,7 @@ export default function MarketingDashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
+                <TableHead className="text-right">Stock Qty</TableHead>
                 <TableHead className="text-right">Target</TableHead>
                 <TableHead className="text-right">Orders</TableHead>
                 <TableHead className="text-right">Qty Sold</TableHead>
@@ -207,6 +237,7 @@ export default function MarketingDashboard() {
               {productDaybook.map((product, idx) => (
                 <TableRow key={idx}>
                   <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell className="text-right text-blue-600 font-medium">{product.stockQty}</TableCell>
                   <TableCell className="text-right">{product.target}</TableCell>
                   <TableCell className="text-right">{product.orders}</TableCell>
                   <TableCell className="text-right text-green-600 font-medium">{product.qtySold}</TableCell>
