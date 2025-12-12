@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DateRange } from '@/hooks/useSalesByDateRange';
 import { format } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { useLeadAssignmentCounts } from './useLeadAssignmentCounts';
 
 export interface StaffLeaderboardEntry {
   id: string;
@@ -21,8 +22,15 @@ export function useStaffLeaderboard(dateRange: DateRange) {
   const { currentStore } = useCurrentStore();
   const storeId = currentStore?.id;
 
+  // Use unified lead assignment counts hook (excludeSelfCreated: false for leaderboard)
+  const { data: leadCounts } = useLeadAssignmentCounts({
+    dateFrom,
+    dateTo,
+    excludeSelfCreated: false, // Include all leads for Staff Leaderboard
+  });
+
   return useQuery({
-    queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId],
+    queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId, leadCounts?.countsByStaff],
     queryFn: async () => {
       // Fetch all orders with sales person info, filtered by store
       let ordersQuery = supabase
@@ -50,31 +58,6 @@ export function useStaffLeaderboard(dateRange: DateRange) {
       const { data: orders, error: ordersError } = await ordersQuery;
 
       if (ordersError) throw ordersError;
-
-      // Fetch ALL leads with assignment info
-      // COUNTING LOGIC (Bucket Date = lead.date):
-      // - For original assignee (first_assigned_to_user_id): use created_at for date filtering (original bucket date, never changes)
-      // - For current assignee (assigned_to_user_id if different): use lead.date (updated on reassignment)
-      // This ensures:
-      // - Original assignee counts on ORIGINAL date (e.g., 12/12 stays with Calling 1)
-      // - Reassigned staff counts on REASSIGNMENT date (e.g., 12/13 for Calling 2)
-      let leadsQuery = supabase
-        .from('leads')
-        .select('id, first_assigned_to_user_id, assigned_to_user_id, created_by_user_id, status, store_id, date, assigned_at, created_at');
-
-      // Filter by store_id
-      if (storeId) {
-        leadsQuery = leadsQuery.eq('store_id', storeId);
-      }
-
-      // Fetch leads where either:
-      // - created_at is in date range (for original assignees - historical bucket date)
-      // - date is in date range (for current assignees - current bucket date)
-      leadsQuery = leadsQuery.or(`and(created_at.gte.${dateFrom}T00:00:00,created_at.lte.${dateTo}T23:59:59),and(date.gte.${dateFrom},date.lte.${dateTo})`);
-
-      const { data: allLeads, error: leadsError } = await leadsQuery;
-
-      if (leadsError) throw leadsError;
 
       // Fetch only CALLING staff profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -125,55 +108,8 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         staffStats.set(order.sales_person_id, existing);
       });
 
-      // Count leads per user with bucket-date-aware logic:
-      // Rule: Count ALWAYS by bucket date (lead.date), NOT by action/assignment date
-      // - Original assignee: counted by created_at (original bucket date before any reassignment)
-      // - Current assignee (if reassigned): counted by current lead.date (updated on reassignment)
-      const leadsPerUser = new Map<string, Set<string>>();
-      
-      allLeads?.forEach(lead => {
-        // Extract dates - use date portion only for comparison
-        const createdAtDate = lead.created_at ? lead.created_at.split('T')[0] : null;
-        const currentBucketDate = lead.date ? lead.date.split('T')[0] : null;
-        
-        // For ORIGINAL assignee (first_assigned_to_user_id): 
-        // Count by created_at (original bucket date when lead was first assigned)
-        // This date NEVER changes even when lead is reassigned
-        if (lead.first_assigned_to_user_id && createdAtDate) {
-          if (createdAtDate >= dateFrom && createdAtDate <= dateTo) {
-            if (!leadsPerUser.has(lead.first_assigned_to_user_id)) {
-              leadsPerUser.set(lead.first_assigned_to_user_id, new Set());
-            }
-            leadsPerUser.get(lead.first_assigned_to_user_id)!.add(lead.id);
-          }
-        }
-        
-        // For CURRENT assignee if REASSIGNED (assigned_to_user_id != first_assigned_to_user_id):
-        // Count by CURRENT lead.date (bucket date, updated on reassignment)
-        // This ensures new assignee sees the lead on the reassignment date
-        if (lead.assigned_to_user_id && 
-            lead.assigned_to_user_id !== lead.first_assigned_to_user_id && 
-            currentBucketDate) {
-          if (currentBucketDate >= dateFrom && currentBucketDate <= dateTo) {
-            if (!leadsPerUser.has(lead.assigned_to_user_id)) {
-              leadsPerUser.set(lead.assigned_to_user_id, new Set());
-            }
-            leadsPerUser.get(lead.assigned_to_user_id)!.add(lead.id);
-          }
-        }
-        
-        // For CREATOR (self-created leads) if not already counted via assignment:
-        // Count by created_at (original bucket date)
-        if (lead.created_by_user_id && 
-            lead.created_by_user_id !== lead.first_assigned_to_user_id && 
-            lead.created_by_user_id !== lead.assigned_to_user_id &&
-            createdAtDate && createdAtDate >= dateFrom && createdAtDate <= dateTo) {
-          if (!leadsPerUser.has(lead.created_by_user_id)) {
-            leadsPerUser.set(lead.created_by_user_id, new Set());
-          }
-          leadsPerUser.get(lead.created_by_user_id)!.add(lead.id);
-        }
-      });
+      // Get lead counts from unified hook
+      const leadsPerUser = leadCounts?.countsByStaff || {};
 
       // Build leaderboard - only include CALLING staff
       const leaderboard: StaffLeaderboardEntry[] = [];
@@ -184,10 +120,9 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         if (!name) return;
 
         const stats = staffStats.get(staffId) || { totalOrders: 0, confirmedOrders: 0, vdNotDeliver: 0, totalSales: 0 };
-        const leadsSet = leadsPerUser.get(staffId);
-        const leadsCount = leadsSet ? leadsSet.size : 0;
+        const leadsCount = leadsPerUser[staffId] || 0;
         
-        // Total Leads = assigned leads + created leads (unique, no duplicates) - Orders are NOT included
+        // Total Leads = count from lead_transfers (unified hook)
         const totalLeads = leadsCount;
         
         // Only include staff with some activity

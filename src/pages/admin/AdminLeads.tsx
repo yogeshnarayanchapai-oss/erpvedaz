@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoMarkSeen } from '@/hooks/useViewState';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useLeadAssignmentCounts } from '@/hooks/useLeadAssignmentCounts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -131,6 +132,13 @@ export default function AdminLeads() {
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
+  
+  // Use unified lead assignment counts hook (excludeSelfCreated: true for Admin Transfer Summary)
+  const { data: leadAssignmentCounts } = useLeadAssignmentCounts({
+    dateFrom,
+    dateTo,
+    excludeSelfCreated: true, // Exclude self-created for Staff Transfer Summary
+  });
 
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
@@ -252,41 +260,14 @@ export default function AdminLeads() {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
-  // Staff Transfer Summary calculation - uses date-aware counting logic
-  // Original assignments counted by created_at/date, reassignments counted by assigned_at
+  // Staff Transfer Summary calculation - uses unified lead_transfers.transferred_at counting
+  // excludeSelfCreated: true (only leads transferred from others, not self-created)
   const staffTransferSummary = useMemo(() => {
+    const countsMap = leadAssignmentCounts?.countsByStaff || {};
+    const transfersMap = leadAssignmentCounts?.transfersByStaff || {};
+    
     return callingStaff.map(staff => {
-      // Transfer = leads where:
-      // 1. first_assigned_to_user_id = staff (originally assigned) - filter by lead.date in range
-      // 2. OR assigned_to_user_id = staff AND first_assigned_to_user_id != staff (reassigned-in) - filter by assigned_at in range
-      // All excluding self-created leads
-      const staffLeadsInRange = new Set<string>();
-      
-      allStoreLeads.forEach(lead => {
-        // Exclude self-created leads
-        if (lead.created_by_user_id === staff.id) return;
-        
-        const leadDate = lead.date?.split('T')[0];
-        const assignedAtDate = lead.assigned_at?.split('T')[0];
-        
-        // Count original assignments by lead.date
-        if (lead.first_assigned_to_user_id === staff.id && leadDate) {
-          if (leadDate >= dateFrom && leadDate <= dateTo) {
-            staffLeadsInRange.add(lead.id);
-          }
-        }
-        
-        // Count reassignments by assigned_at (only if reassigned to this staff, not original)
-        if (lead.assigned_to_user_id === staff.id && 
-            lead.first_assigned_to_user_id !== staff.id && 
-            assignedAtDate) {
-          if (assignedAtDate >= dateFrom && assignedAtDate <= dateTo) {
-            staffLeadsInRange.add(lead.id);
-          }
-        }
-      });
-      
-      const transferCount = staffLeadsInRange.size;
+      const transferCount = countsMap[staff.id] || 0;
       
       // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (excluding self-created)
       const staffCurrentLeads = allStoreLeads.filter(l => 
@@ -296,10 +277,14 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products: get product counts from staff leads in date range
+      // Products: get product counts from staff leads that were transferred in date range
+      // We need to look up lead products from allStoreLeads using the lead IDs from transfers
+      const staffTransfers = transfersMap[staff.id] || [];
+      const transferredLeadIds = new Set(staffTransfers.map(t => t.leadId));
+      
       const productCounts: Record<string, number> = {};
       allStoreLeads.forEach(lead => {
-        if (!staffLeadsInRange.has(lead.id)) return;
+        if (!transferredLeadIds.has(lead.id)) return;
         if (lead.product_id) {
           const productName = products.find(p => p.id === lead.product_id)?.name;
           if (productName) {
@@ -323,7 +308,7 @@ export default function AdminLeads() {
       };
     }).filter(s => s.transferCount > 0) // Only show staff with transferred leads in date range
       .sort((a, b) => b.transferCount - a.transferCount);
-  }, [callingStaff, allStoreLeads, dateFrom, dateTo, products]);
+  }, [callingStaff, allStoreLeads, products, leadAssignmentCounts]);
 
   // Product Leads Summary calculation - filtered by selected date range using lead.date field
   const productSummary = useMemo(() => {
@@ -462,6 +447,15 @@ export default function AdminLeads() {
       return;
     }
     
+    // Check for same-day leads - they cannot be reassigned today
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const sameDayLeads = selectedLeadObjects.filter(l => l.date === today);
+    
+    if (sameDayLeads.length > 0) {
+      toast.error(`Cannot reassign ${sameDayLeads.length} lead(s) with today's date. Leads can only be reassigned the next day.`);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('leads')
@@ -477,12 +471,13 @@ export default function AdminLeads() {
 
       if (error) throw error;
 
-      // Log transfers
+      // Log transfers with store_id for unified counting
       const transfers = selectedLeads.map(leadId => ({
         lead_id: leadId,
         from_user_id: profile?.id,
         to_user_id: reassignStaffId,
         transferred_at: new Date().toISOString(),
+        store_id: storeId,
       }));
       await supabase.from('lead_transfers').insert(transfers);
 
