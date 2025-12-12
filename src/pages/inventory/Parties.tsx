@@ -27,7 +27,7 @@ export default function Parties() {
   const [partyToDelete, setPartyToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    party_type: 'BOTH' as 'SUPPLIER' | 'WHOLESALER' | 'BOTH',
+    party_type: 'BOTH' as 'SUPPLIER' | 'CUSTOMER' | 'BOTH',
     phone: '',
     email: '',
     address: '',
@@ -99,10 +99,15 @@ export default function Parties() {
   const getPartyTypeBadge = (type: string) => {
     const colors = {
       SUPPLIER: 'bg-blue-500/10 text-blue-500',
-      WHOLESALER: 'bg-green-500/10 text-green-500',
+      CUSTOMER: 'bg-green-500/10 text-green-500',
       BOTH: 'bg-purple-500/10 text-purple-500',
     };
-    return <Badge className={colors[type as keyof typeof colors]}>{type}</Badge>;
+    const labels: Record<string, string> = {
+      SUPPLIER: 'Supplier',
+      CUSTOMER: 'Customer',
+      BOTH: 'Both',
+    };
+    return <Badge className={colors[type as keyof typeof colors]}>{labels[type] || type}</Badge>;
   };
 
   return (
@@ -110,7 +115,7 @@ export default function Parties() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Parties</h1>
-          <p className="text-muted-foreground">Manage suppliers and wholesalers</p>
+          <p className="text-muted-foreground">Manage suppliers and customers</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -142,7 +147,7 @@ export default function Parties() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="SUPPLIER">Supplier</SelectItem>
-                      <SelectItem value="WHOLESALER">Wholesaler</SelectItem>
+                      <SelectItem value="CUSTOMER">Customer</SelectItem>
                       <SelectItem value="BOTH">Both</SelectItem>
                     </SelectContent>
                   </Select>
@@ -253,7 +258,7 @@ export default function Parties() {
               {!isLoading && parties.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No parties found. Add your first supplier or wholesaler.
+                    No parties found. Add your first supplier or customer.
                   </TableCell>
                 </TableRow>
               )}

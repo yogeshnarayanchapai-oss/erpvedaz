@@ -19,7 +19,7 @@ export default function AccountingDashboard() {
 
   // Calculate party summaries
   const totalReceivablesFromParties = parties
-    .filter(p => p.party_type === 'WHOLESALER' || p.party_type === 'BOTH')
+    .filter(p => p.party_type === 'CUSTOMER' || p.party_type === 'BOTH')
     .reduce((sum, p) => sum + Math.max(0, p.current_balance), 0);
 
   const totalPayablesToParties = parties

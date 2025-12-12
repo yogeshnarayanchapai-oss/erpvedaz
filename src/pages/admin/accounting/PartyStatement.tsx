@@ -621,7 +621,7 @@ export default function PartyStatement() {
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="SUPPLIER">Supplier</SelectItem>
-                  <SelectItem value="WHOLESALER">Wholesaler</SelectItem>
+                  <SelectItem value="CUSTOMER">Customer</SelectItem>
                   <SelectItem value="BOTH">Both</SelectItem>
                 </SelectContent>
               </Select>

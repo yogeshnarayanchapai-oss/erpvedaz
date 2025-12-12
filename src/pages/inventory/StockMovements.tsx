@@ -89,7 +89,7 @@ export default function StockMovements() {
   const { data: warehouses } = useActiveWarehouses();
   const { data: products } = useProducts();
   const { data: suppliers } = useParties('SUPPLIER');
-  const { data: wholesalers } = useParties('WHOLESALER');
+  const { data: customers } = useParties('CUSTOMER');
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
 
@@ -262,21 +262,21 @@ export default function StockMovements() {
                 {(form.movement_type === 'IN' || form.movement_type === 'OUT') && (
                   <div className="space-y-2">
                     <Label>
-                      {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Wholesaler (Optional)'}
+                      {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Customer (Optional)'}
                     </Label>
                     <Select 
                       value={form.party_id || ''} 
                       onValueChange={(v) => setForm({ 
                         ...form, 
                         party_id: v || undefined,
-                        movement_source: form.movement_type === 'IN' ? 'SUPPLIER' : 'WHOLESALE'
+                        movement_source: form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER'
                       })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={form.movement_type === 'IN' ? 'Select supplier' : 'Select wholesaler'} />
+                        <SelectValue placeholder={form.movement_type === 'IN' ? 'Select supplier' : 'Select customer'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {(form.movement_type === 'IN' ? suppliers : wholesalers)?.map((party) => (
+                        {(form.movement_type === 'IN' ? suppliers : customers)?.map((party) => (
                           <SelectItem key={party.id} value={party.id}>
                             {party.name}
                           </SelectItem>
