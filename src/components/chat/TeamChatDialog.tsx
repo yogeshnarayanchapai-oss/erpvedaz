@@ -36,6 +36,8 @@ import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamChatDialogProps {
   open: boolean;
@@ -102,6 +104,25 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoom?.id || null);
   const { data: storeUsers = [] } = useEmployeeUsers();
   const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
+  
+  // Fetch all participant profiles for DM name resolution
+  const dmParticipantIds = [...new Set(
+    rooms
+      .filter(r => r.type === 'DIRECT' && r.participants)
+      .flatMap(r => r.participants || [])
+  )];
+  
+  const { data: participantProfiles = [] } = useQuery({
+    queryKey: ['dm-profiles', dmParticipantIds.join(',')],
+    queryFn: async () => {
+      if (dmParticipantIds.length === 0) return [];
+      const { data } = await supabase.from('profiles').select('id, name').in('id', dmParticipantIds);
+      return data || [];
+    },
+    enabled: dmParticipantIds.length > 0,
+  });
+  
+  const profileMap = new Map(participantProfiles.map((p: any) => [p.id, p.name]));
   const sendMessage = useSendChatMessage();
   const createRoom = useCreateChatRoom();
   const deleteRoom = useDeleteChatRoom();
@@ -321,7 +342,12 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'OWNER';
   const isManager = profile?.role === 'MANAGER';
   const canCreateGroups = isAdmin || isManager;
-  const groupRooms = rooms.filter(r => r.type !== 'DIRECT');
+  const canSeeReadStatus = isAdmin || isManager;
+  
+  // Sort groups by last message activity
+  const groupRooms = rooms
+    .filter(r => r.type !== 'DIRECT')
+    .sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime());
   
   // Deduplicate DM rooms - show only one room per staff member (most recent)
   const dmRoomsRaw = rooms.filter(r => r.type === 'DIRECT');
@@ -329,23 +355,27 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
     const otherUserId = room.participants?.find(id => id !== profile?.id);
     if (!otherUserId) return acc;
     
-    // Keep the most recent room for each user
+    // Keep the most recent room for each user (by last_message_at)
     const existing = acc.get(otherUserId);
-    if (!existing || new Date(room.created_at) > new Date(existing.created_at)) {
+    const roomTime = room.last_message_at || room.created_at;
+    const existingTime = existing?.last_message_at || existing?.created_at;
+    if (!existing || new Date(roomTime) > new Date(existingTime)) {
       acc.set(otherUserId, room);
     }
     return acc;
   }, new Map<string, ChatRoom>());
-  const dmRooms = Array.from(dmRoomsDeduped.values());
+  const dmRooms = Array.from(dmRoomsDeduped.values())
+    .sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime());
   
   const isRoomMuted = selectedRoom?.is_muted_by?.includes(profile?.id || '');
 
-  // Get display name for DM room (show other person's actual name, not username)
+  // Get display name for DM room - use profileMap for non-employee users (like store owner)
   const getDMDisplayName = (room: ChatRoom) => {
     if (room.type !== 'DIRECT' || !room.participants) return room.name;
     const otherUserId = room.participants.find(id => id !== profile?.id);
-    const otherUser = storeUsers.find(u => u.id === otherUserId);
-    return otherUser?.name || room.name;
+    if (!otherUserId) return room.name;
+    // First try profileMap (contains all DM participants), then storeUsers (employees only)
+    return profileMap.get(otherUserId) || storeUsers.find(u => u.id === otherUserId)?.name || room.name;
   };
 
   const filteredUsers = storeUsers.filter(u => 

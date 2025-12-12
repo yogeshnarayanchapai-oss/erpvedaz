@@ -153,6 +153,36 @@ export function useStoreChatRooms() {
   });
 }
 
+// Get all participant profiles for resolving DM names
+export function useChatParticipantProfiles() {
+  const storeId = useCurrentStoreId();
+  const { data: rooms = [] } = useStoreChatRooms();
+  
+  // Collect all participant IDs from DM rooms
+  const participantIds = [...new Set(
+    rooms
+      .filter(r => r.type === 'DIRECT' && r.participants)
+      .flatMap(r => r.participants || [])
+  )];
+  
+  return useQuery({
+    queryKey: ['chat-participant-profiles', storeId, participantIds.join(',')],
+    queryFn: async () => {
+      if (participantIds.length === 0) return new Map<string, string>();
+      
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', participantIds);
+      
+      if (error) throw error;
+      
+      return new Map((profiles || []).map(p => [p.id, p.name || 'Unknown']));
+    },
+    enabled: participantIds.length > 0,
+  });
+}
+
 export function useStoreChatMessages(roomId: string | null) {
   const queryClient = useQueryClient();
 
