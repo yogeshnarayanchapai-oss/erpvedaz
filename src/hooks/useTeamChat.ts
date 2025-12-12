@@ -45,6 +45,37 @@ export interface StoreUser {
   role: string;
 }
 
+// Upload file to chat storage
+export async function uploadChatFile(file: File, storeId: string): Promise<{ url: string; name: string; type: string } | null> {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('Not authenticated');
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${storeId}/${user.user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('chat-files')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from('chat-files')
+      .getPublicUrl(fileName);
+
+    return {
+      url: urlData.publicUrl,
+      name: file.name,
+      type: file.type,
+    };
+  } catch (error: any) {
+    console.error('File upload error:', error);
+    toast.error('Failed to upload file');
+    return null;
+  }
+}
+
 // Default group definitions
 export const DEFAULT_GROUPS = [
   { name: 'General', role_based_group: null, type: 'DEPARTMENT' as const },
