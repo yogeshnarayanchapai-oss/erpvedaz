@@ -12,18 +12,20 @@ export function useProductDaybookStats(productId: string | undefined, date: stri
         return { orderCount: 0, totalQty: 0, totalSales: 0, avgPrice: 0 };
       }
 
-      // Fetch ALL orders (CONFIRMED, DISPATCHED, DELIVERED) for this product on this date
+      // Fetch OUTSIDE VALLEY orders (CONFIRMED, DISPATCHED, DELIVERED) for this product on this date
       const { data: orderItems, error } = await supabase
         .from('order_items')
         .select(`
           quantity,
           unit_price,
           total_price,
-          orders!inner (id, order_status, order_date, store_id)
+          orders!inner (id, order_status, order_date, store_id, delivery_location)
         `)
         .eq('product_id', productId)
-        .eq('orders.order_date', date)
+        .gte('orders.order_date', `${date}T00:00:00`)
+        .lte('orders.order_date', `${date}T23:59:59`)
         .eq('orders.store_id', storeId)
+        .eq('orders.delivery_location', 'OUTSIDE_VALLEY')
         .in('orders.order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED']);
 
       if (error) {
