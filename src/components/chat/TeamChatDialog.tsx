@@ -101,7 +101,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: rooms = [] } = useStoreChatRooms();
+  const { data: rooms = [], refetch: refetchRooms } = useStoreChatRooms();
   const { data: messages = [] } = useStoreChatMessages(selectedRoom?.id || null);
   const { data: searchResults = [] } = useSearchMessages(selectedRoom?.id || null, searchQuery);
   const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoom?.id || null);
@@ -573,13 +573,32 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                                 {selectedRoom.participants.map(userId => {
                                   const userName = profileMap.get(userId) || storeUsers.find(u => u.id === userId)?.name || 'Unknown';
                                   return (
-                                    <div key={userId} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted">
+                                    <div key={userId} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted group">
                                       <Avatar className="w-6 h-6">
                                         <AvatarFallback className="text-xs bg-primary/10 text-primary">
                                           {userName[0]?.toUpperCase()}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <span className="text-sm truncate">{userName}</span>
+                                      <span className="text-sm truncate flex-1">{userName}</span>
+                                      {canCreateGroups && userId !== profile?.id && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const newParticipants = selectedRoom.participants?.filter(p => p !== userId) || [];
+                                            await supabase
+                                              .from('chat_rooms')
+                                              .update({ participants: newParticipants })
+                                              .eq('id', selectedRoom.id);
+                                            refetchRooms();
+                                            toast.success('Member removed from group');
+                                          }}
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      )}
                                     </div>
                                   );
                                 })}
