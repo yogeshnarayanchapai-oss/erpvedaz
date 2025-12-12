@@ -19,6 +19,8 @@ import {
   useCreateDMRoom,
   useEnsureDefaultGroups,
   useAddRoomParticipants,
+  useUnreadCountPerRoom,
+  useMarkRoomAsRead,
   ChatRoom 
 } from '@/hooks/useTeamChat';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -70,6 +72,32 @@ function useEmployeeUsers() {
   });
 }
 
+// Get profile names for all DM participants (including non-employees like store owner)
+function useDMParticipantProfiles(rooms: ChatRoom[]) {
+  const participantIds = [...new Set(
+    rooms
+      .filter(r => r.type === 'DIRECT' && r.participants)
+      .flatMap(r => r.participants || [])
+  )];
+  
+  return useQuery({
+    queryKey: ['dm-participant-profiles', participantIds.join(',')],
+    queryFn: async () => {
+      if (participantIds.length === 0) return new Map<string, string>();
+      
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', participantIds);
+      
+      if (error) throw error;
+      
+      return new Map((profiles || []).map(p => [p.id, p.name || 'Unknown']));
+    },
+    enabled: participantIds.length > 0,
+  });
+}
+
 export default function HRMChat() {
   const { profile } = useAuth();
   const storeId = useCurrentStoreId();
@@ -87,6 +115,9 @@ export default function HRMChat() {
   const { data: rooms = [] } = useStoreChatRooms();
   const { data: messages = [] } = useStoreChatMessages(selectedRoom?.id || null);
   const { data: employeeUsers = [] } = useEmployeeUsers();
+  const { data: dmProfileMap = new Map() } = useDMParticipantProfiles(rooms);
+  const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
+  const markRoomAsRead = useMarkRoomAsRead();
   const sendMessage = useSendChatMessage();
   const createChatRoom = useCreateChatRoom();
   const deleteChatRoom = useDeleteChatRoom();
@@ -109,6 +140,13 @@ export default function HRMChat() {
       if (groupRooms.length) setSelectedRoom(groupRooms[0]);
     }
   }, [rooms, selectedRoom]);
+
+  // Mark room as read when selecting it
+  useEffect(() => {
+    if (selectedRoom) {
+      markRoomAsRead.mutate(selectedRoom.id);
+    }
+  }, [selectedRoom?.id]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -199,30 +237,34 @@ export default function HRMChat() {
   const getDMDisplayName = (room: ChatRoom) => {
     if (room.type !== 'DIRECT' || !room.participants) return room.name;
     const otherUserId = room.participants.find(id => id !== profile?.id);
-    const otherUser = employeeUsers.find(u => u.id === otherUserId);
-    // Show only the other person's name
-    return otherUser?.name || 'Unknown';
+    if (!otherUserId) return room.name;
+    // Try dmProfileMap first (has all participants), then fallback to employeeUsers
+    return dmProfileMap.get(otherUserId) || employeeUsers.find(u => u.id === otherUserId)?.name || 'Unknown';
   };
 
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'OWNER';
   const isManager = profile?.role === 'MANAGER';
   const canCreateGroups = isAdmin || isManager;
   const canDeleteMessages = isAdmin; // Only Admin/Owner can delete any message
+  const canSeeReadStatus = isAdmin || isManager;
 
   const groupRooms = rooms.filter(r => r.type !== 'DIRECT');
   const dmRoomsRaw = rooms.filter(r => r.type === 'DIRECT');
   
-  // Deduplicate DM rooms - show only one room per employee
+  // Deduplicate DM rooms - show only one room per employee, prioritize by last_message_at
   const dmRoomsDeduped = dmRoomsRaw.reduce((acc, room) => {
     const otherUserId = room.participants?.find(id => id !== profile?.id);
     if (!otherUserId) return acc;
     const existing = acc.get(otherUserId);
-    if (!existing || new Date(room.created_at) > new Date(existing.created_at)) {
+    const roomTime = room.last_message_at || room.created_at;
+    const existingTime = existing?.last_message_at || existing?.created_at;
+    if (!existing || new Date(roomTime) > new Date(existingTime)) {
       acc.set(otherUserId, room);
     }
     return acc;
   }, new Map<string, ChatRoom>());
-  const dmRooms = Array.from(dmRoomsDeduped.values());
+  const dmRooms = Array.from(dmRoomsDeduped.values())
+    .sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime());
 
   const filteredUsers = employeeUsers.filter(u => 
     u.id !== profile?.id &&
@@ -335,44 +377,62 @@ export default function HRMChat() {
           </CardHeader>
           <CardContent className="p-2 flex-1 overflow-auto">
             <div className="space-y-1">
-              {groupRooms.map(room => (
-                <div
-                  key={room.id}
-                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-muted ${selectedRoom?.id === room.id ? 'bg-muted' : ''}`}
-                  onClick={() => setSelectedRoom(room)}
-                >
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm truncate">{room.name}</span>
-                  </div>
-                  {isAdmin && room.type !== 'GLOBAL' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room); }}
+              {groupRooms
+                .sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime())
+                .map(room => {
+                  const unreadCount = unreadPerRoom[room.id] || 0;
+                  return (
+                    <div
+                      key={room.id}
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-muted ${selectedRoom?.id === room.id ? 'bg-muted' : ''}`}
+                      onClick={() => setSelectedRoom(room)}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm truncate">{room.name}</span>
+                        {unreadCount > 0 && (
+                          <Badge variant="destructive" className="ml-auto text-xs h-5 min-w-[20px] flex items-center justify-center">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                      {isAdmin && room.type !== 'GLOBAL' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 flex-shrink-0"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room); }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
 
             {dmRooms.length > 0 && (
               <>
                 <div className="text-xs text-muted-foreground font-semibold mt-4 mb-2">Direct Messages</div>
                 <div className="space-y-1">
-                  {dmRooms.map(room => (
-                    <div
-                      key={room.id}
-                      className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${selectedRoom?.id === room.id ? 'bg-muted' : ''}`}
-                      onClick={() => setSelectedRoom(room)}
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span className="text-sm truncate">{getDMDisplayName(room)}</span>
-                    </div>
-                  ))}
+                  {dmRooms.map(room => {
+                    const unreadCount = unreadPerRoom[room.id] || 0;
+                    return (
+                      <div
+                        key={room.id}
+                        className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${selectedRoom?.id === room.id ? 'bg-muted' : ''}`}
+                        onClick={() => setSelectedRoom(room)}
+                      >
+                        <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm truncate flex-1">{getDMDisplayName(room)}</span>
+                        {unreadCount > 0 && (
+                          <Badge variant="destructive" className="text-xs h-5 min-w-[20px] flex items-center justify-center">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
