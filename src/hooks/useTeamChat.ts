@@ -548,8 +548,11 @@ export function useCreateDMRoom() {
   
   return useMutation({
     mutationFn: async ({ targetUserId, targetName }: { targetUserId: string; targetName: string }) => {
+      console.log('Creating DM with:', { targetUserId, targetName, storeId });
+      
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
+      if (!storeId) throw new Error('No store selected');
 
       // Check if DM room already exists between these two users
       const { data: existingRooms } = await supabase
