@@ -473,6 +473,30 @@ export function useDeleteChatRoom() {
   });
 }
 
+// Delete a single message (Admin/Owner can delete any, users can unsend own)
+export function useDeleteChatMessage() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ messageId, roomId }: { messageId: string; roomId: string }) => {
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('id', messageId);
+      
+      if (error) throw error;
+      return roomId;
+    },
+    onSuccess: (roomId) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] });
+      toast.success('Message deleted');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete message');
+    },
+  });
+}
+
 export function useMarkMessagesAsRead() {
   const queryClient = useQueryClient();
   
