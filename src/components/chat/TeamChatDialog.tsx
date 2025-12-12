@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
   Paperclip, Pin, Volume2, VolumeX, Check, CheckCheck,
@@ -552,19 +553,53 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           <div className="flex-1 flex flex-col bg-background">
             {selectedRoom ? (
               <>
-                {/* Room Header with Add Staff button */}
-                {canCreateGroups && selectedRoom.type !== 'DIRECT' && (
+                {/* Room Header with Add Staff button and participant count */}
+                {canSeeReadStatus && selectedRoom.type !== 'DIRECT' && (
                   <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/30">
-                    <span className="text-sm font-medium truncate">{selectedRoom.name}</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-7 gap-1"
-                      onClick={() => setShowAddStaffDialog(true)}
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      Add Staff
-                    </Button>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium truncate">{selectedRoom.name}</span>
+                      {selectedRoom.participants && selectedRoom.participants.length > 0 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Badge variant="secondary" className="text-xs shrink-0 cursor-pointer hover:bg-secondary/80">
+                              <Users className="w-3 h-3 mr-1" />
+                              {selectedRoom.participants.length} members
+                            </Badge>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-2" align="start">
+                            <div className="text-sm font-medium mb-2">Group Members</div>
+                            <ScrollArea className="max-h-48">
+                              <div className="space-y-1">
+                                {selectedRoom.participants.map(userId => {
+                                  const userName = profileMap.get(userId) || storeUsers.find(u => u.id === userId)?.name || 'Unknown';
+                                  return (
+                                    <div key={userId} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted">
+                                      <Avatar className="w-6 h-6">
+                                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                          {userName[0]?.toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-sm truncate">{userName}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </ScrollArea>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
+                    {canCreateGroups && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-7 gap-1 shrink-0"
+                        onClick={() => setShowAddStaffDialog(true)}
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Add
+                      </Button>
+                    )}
                   </div>
                 )}
 
