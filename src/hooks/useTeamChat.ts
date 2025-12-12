@@ -597,6 +597,48 @@ export function useStoreUsers() {
   });
 }
 
+// Get only employees for Team Chat (users linked to employees table)
+export function useEmployeeUsers() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['employee-users-chat', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+      
+      // Get employees for this store
+      const { data: employees, error: empError } = await supabase
+        .from('employees')
+        .select('user_id, full_name')
+        .eq('store_id', storeId)
+        .eq('status', 'active');
+      
+      if (empError) throw empError;
+      
+      const employeeUserIds = (employees || []).filter(e => e.user_id).map(e => e.user_id);
+      
+      if (employeeUserIds.length === 0) return [];
+      
+      // Get profile info for these employees
+      const { data: profiles, error: profError } = await supabase
+        .from('profiles')
+        .select('id, name, username, email, role')
+        .in('id', employeeUserIds);
+      
+      if (profError) throw profError;
+      
+      return (profiles || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        username: p.username,
+        email: p.email,
+        role: p.role,
+      })) as StoreUser[];
+    },
+    enabled: !!storeId,
+  });
+}
+
 export function useCreateDMRoom() {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();

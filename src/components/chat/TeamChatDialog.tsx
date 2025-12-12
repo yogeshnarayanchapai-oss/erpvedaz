@@ -22,7 +22,7 @@ import {
   useToggleMuteRoom,
   useSearchMessages,
   usePinnedMessages,
-  useStoreUsers,
+  useEmployeeUsers,
   useCreateDMRoom,
   useEnsureDefaultGroups,
   useUnreadCountPerRoom,
@@ -100,7 +100,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const { data: messages = [] } = useStoreChatMessages(selectedRoom?.id || null);
   const { data: searchResults = [] } = useSearchMessages(selectedRoom?.id || null, searchQuery);
   const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoom?.id || null);
-  const { data: storeUsers = [] } = useStoreUsers();
+  const { data: storeUsers = [] } = useEmployeeUsers();
   const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
   const sendMessage = useSendChatMessage();
   const createRoom = useCreateChatRoom();
