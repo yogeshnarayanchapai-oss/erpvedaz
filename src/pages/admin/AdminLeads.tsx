@@ -434,6 +434,16 @@ export default function AdminLeads() {
 
   const handleBulkReassign = async () => {
     if (!reassignStaffId || selectedLeads.length === 0) return;
+    
+    // Check if any selected leads have ASSIGNED status - they cannot be reassigned
+    const selectedLeadObjects = filteredLeads.filter(l => selectedLeads.includes(l.id));
+    const assignedStatusLeads = selectedLeadObjects.filter(l => l.status === 'ASSIGNED');
+    
+    if (assignedStatusLeads.length > 0) {
+      toast.error(`Cannot reassign ${assignedStatusLeads.length} lead(s) with ASSIGNED status. Staff must first work on the lead (change status to CONFIRMED, FOLLOW_UP, CNR, or CANCELLED).`);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('leads')
@@ -443,6 +453,7 @@ export default function AdminLeads() {
           current_team: 'CALLING',
           assigned_at: new Date().toISOString(),
           remark: '', // Clear remark when reassigning to new staff
+          date: new Date().toISOString().split('T')[0], // Set today's date when reassigning
         })
         .in('id', selectedLeads);
 
