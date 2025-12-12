@@ -252,24 +252,41 @@ export default function AdminLeads() {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
-  // Staff Transfer Summary calculation - uses first_assigned_to_user_id + reassigned-in, excludes self-created
+  // Staff Transfer Summary calculation - uses date-aware counting logic
+  // Original assignments counted by created_at/date, reassignments counted by assigned_at
   const staffTransferSummary = useMemo(() => {
     return callingStaff.map(staff => {
       // Transfer = leads where:
-      // 1. first_assigned_to_user_id = staff (originally assigned to this staff, excluding self-created)
-      // 2. OR assigned_to_user_id = staff AND first_assigned_to_user_id != staff (reassigned-in)
-      // All filtered by date range and excluding self-created leads
-      const staffLeadsInRange = dateRangeAssignedLeads.filter(l => {
+      // 1. first_assigned_to_user_id = staff (originally assigned) - filter by lead.date in range
+      // 2. OR assigned_to_user_id = staff AND first_assigned_to_user_id != staff (reassigned-in) - filter by assigned_at in range
+      // All excluding self-created leads
+      const staffLeadsInRange = new Set<string>();
+      
+      allStoreLeads.forEach(lead => {
         // Exclude self-created leads
-        if (l.created_by_user_id === staff.id) return false;
+        if (lead.created_by_user_id === staff.id) return;
         
-        // Count if first assigned to this staff OR reassigned to this staff
-        return l.first_assigned_to_user_id === staff.id || l.assigned_to_user_id === staff.id;
+        const leadDate = lead.date?.split('T')[0];
+        const assignedAtDate = lead.assigned_at?.split('T')[0];
+        
+        // Count original assignments by lead.date
+        if (lead.first_assigned_to_user_id === staff.id && leadDate) {
+          if (leadDate >= dateFrom && leadDate <= dateTo) {
+            staffLeadsInRange.add(lead.id);
+          }
+        }
+        
+        // Count reassignments by assigned_at (only if reassigned to this staff, not original)
+        if (lead.assigned_to_user_id === staff.id && 
+            lead.first_assigned_to_user_id !== staff.id && 
+            assignedAtDate) {
+          if (assignedAtDate >= dateFrom && assignedAtDate <= dateTo) {
+            staffLeadsInRange.add(lead.id);
+          }
+        }
       });
       
-      // Deduplicate - each lead counted once even if both conditions match
-      const uniqueLeadIds = new Set(staffLeadsInRange.map(l => l.id));
-      const transferCount = uniqueLeadIds.size;
+      const transferCount = staffLeadsInRange.size;
       
       // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (excluding self-created)
       const staffCurrentLeads = allStoreLeads.filter(l => 
@@ -281,7 +298,8 @@ export default function AdminLeads() {
       
       // Products: get product counts from staff leads in date range
       const productCounts: Record<string, number> = {};
-      staffLeadsInRange.forEach(lead => {
+      allStoreLeads.forEach(lead => {
+        if (!staffLeadsInRange.has(lead.id)) return;
         if (lead.product_id) {
           const productName = products.find(p => p.id === lead.product_id)?.name;
           if (productName) {
@@ -305,7 +323,7 @@ export default function AdminLeads() {
       };
     }).filter(s => s.transferCount > 0) // Only show staff with transferred leads in date range
       .sort((a, b) => b.transferCount - a.transferCount);
-  }, [callingStaff, allStoreLeads, dateRangeAssignedLeads, products]);
+  }, [callingStaff, allStoreLeads, dateFrom, dateTo, products]);
 
   // Product Leads Summary calculation - filtered by selected date range using lead.date field
   const productSummary = useMemo(() => {
