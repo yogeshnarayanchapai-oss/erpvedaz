@@ -1,0 +1,524 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  type: 'GLOBAL' | 'DEPARTMENT' | 'DIRECT';
+  created_by: string | null;
+  created_at: string;
+  store_id: string | null;
+  participants: string[] | null;
+  is_muted_by: string[] | null;
+  role_based_group: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  message_text: string;
+  created_at: string;
+  store_id: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  read_by: string[] | null;
+  file_url: string | null;
+  file_type: string | null;
+  file_name: string | null;
+  mentions: string[] | null;
+  is_pinned: boolean;
+  pinned_by: string | null;
+  pinned_at: string | null;
+  sender_name?: string;
+  sender_username?: string;
+}
+
+export interface StoreUser {
+  id: string;
+  name: string;
+  username: string | null;
+  email: string;
+  role: string;
+}
+
+// Default group definitions
+export const DEFAULT_GROUPS = [
+  { name: 'General', role_based_group: null, type: 'DEPARTMENT' as const },
+  { name: 'Marketing', role_based_group: 'MARKETING', type: 'DEPARTMENT' as const },
+  { name: 'Sales', role_based_group: 'CALLING,FOLLOWUP', type: 'DEPARTMENT' as const },
+  { name: 'Logistics', role_based_group: 'LOGISTICS', type: 'DEPARTMENT' as const },
+  { name: 'HR', role_based_group: 'HR', type: 'DEPARTMENT' as const },
+];
+
+export function useStoreChatRooms() {
+  const storeId = useCurrentStoreId();
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel(`chat-rooms-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_rooms',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chat-rooms', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  return useQuery({
+    queryKey: ['chat-rooms', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+      const { data, error } = await supabase
+        .from('chat_rooms')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as ChatRoom[];
+    },
+    enabled: !!storeId,
+  });
+}
+
+export function useStoreChatMessages(roomId: string | null) {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!roomId) return;
+
+    const channel = supabase
+      .channel(`messages-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', roomId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, queryClient]);
+
+  return useQuery({
+    queryKey: ['chat-messages', roomId],
+    queryFn: async () => {
+      if (!roomId) return [];
+
+      // Get messages
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
+
+      // Get sender profiles
+      const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, username')
+        .in('id', senderIds);
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, { name: p.name, username: p.username }]));
+
+      return ((messages || []) as any[]).map(m => ({
+        ...m,
+        sender_name: profileMap.get(m.sender_id)?.name || 'Unknown',
+        sender_username: profileMap.get(m.sender_id)?.username || null,
+      })) as ChatMessage[];
+    },
+    enabled: !!roomId,
+  });
+}
+
+export function useSearchMessages(roomId: string | null, searchQuery: string) {
+  return useQuery({
+    queryKey: ['chat-messages-search', roomId, searchQuery],
+    queryFn: async () => {
+      if (!roomId || !searchQuery.trim()) return [];
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .ilike('message_text', `%${searchQuery}%`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data as ChatMessage[];
+    },
+    enabled: !!roomId && searchQuery.length > 2,
+  });
+}
+
+export function usePinnedMessages(roomId: string | null) {
+  return useQuery({
+    queryKey: ['chat-pinned-messages', roomId],
+    queryFn: async () => {
+      if (!roomId) return [];
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .eq('is_pinned', true)
+        .order('pinned_at', { ascending: false });
+
+      if (error) throw error;
+      return data as ChatMessage[];
+    },
+    enabled: !!roomId,
+  });
+}
+
+export function useSendChatMessage() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      roomId, 
+      message, 
+      fileUrl, 
+      fileType, 
+      fileName,
+      mentions 
+    }: { 
+      roomId: string; 
+      message: string;
+      fileUrl?: string;
+      fileType?: string;
+      fileName?: string;
+      mentions?: string[];
+    }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          room_id: roomId,
+          sender_id: user.user.id,
+          message_text: message,
+          store_id: storeId,
+          file_url: fileUrl || null,
+          file_type: fileType || null,
+          file_name: fileName || null,
+          mentions: mentions || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create notifications for mentions
+      if (mentions && mentions.length > 0) {
+        const notifications = mentions.map(userId => ({
+          user_id: userId,
+          type: 'MENTION',
+          title: 'You were mentioned in a chat',
+          message: message.substring(0, 100),
+          store_id: storeId,
+          metadata: { room_id: roomId, message_id: data.id },
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+      }
+
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.roomId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to send message');
+    },
+  });
+}
+
+export function useCreateChatRoom() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
+  return useMutation({
+    mutationFn: async (data: Partial<ChatRoom>) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      const insertData = {
+        name: data.name || 'New Room',
+        type: data.type || 'DEPARTMENT',
+        created_by: user.user?.id,
+        store_id: storeId,
+        role_based_group: data.role_based_group || null,
+        participants: data.participants || null,
+      };
+
+      const { data: result, error } = await supabase
+        .from('chat_rooms')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+      toast.success('Chat room created');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to create chat room');
+    },
+  });
+}
+
+export function useDeleteChatRoom() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('chat_rooms').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+      toast.success('Chat room deleted');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete chat room');
+    },
+  });
+}
+
+export function useMarkMessagesAsRead() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ roomId, messageIds }: { roomId: string; messageIds: string[] }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      // Update read_by array for each message
+      for (const messageId of messageIds) {
+        const { data: msg } = await supabase
+          .from('chat_messages')
+          .select('read_by')
+          .eq('id', messageId)
+          .single();
+
+        const currentReadBy = msg?.read_by || [];
+        if (!currentReadBy.includes(user.user.id)) {
+          await supabase
+            .from('chat_messages')
+            .update({
+              read_by: [...currentReadBy, user.user.id],
+              read_at: new Date().toISOString(),
+            })
+            .eq('id', messageId);
+        }
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.roomId] });
+    },
+  });
+}
+
+export function usePinMessage() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ messageId, roomId, pin }: { messageId: string; roomId: string; pin: boolean }) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          is_pinned: pin,
+          pinned_by: pin ? user.user?.id : null,
+          pinned_at: pin ? new Date().toISOString() : null,
+        })
+        .eq('id', messageId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', variables.roomId] });
+      queryClient.invalidateQueries({ queryKey: ['chat-pinned-messages', variables.roomId] });
+      toast.success(variables.pin ? 'Message pinned' : 'Message unpinned');
+    },
+  });
+}
+
+export function useToggleMuteRoom() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ roomId, mute }: { roomId: string; mute: boolean }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: room } = await supabase
+        .from('chat_rooms')
+        .select('is_muted_by')
+        .eq('id', roomId)
+        .single();
+
+      const currentMuted = room?.is_muted_by || [];
+      const newMuted = mute
+        ? [...currentMuted, user.user.id]
+        : currentMuted.filter((id: string) => id !== user.user?.id);
+
+      const { error } = await supabase
+        .from('chat_rooms')
+        .update({ is_muted_by: newMuted })
+        .eq('id', roomId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+    },
+  });
+}
+
+export function useStoreUsers() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['store-users-chat', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+
+      const { data, error } = await supabase
+        .from('user_store_access')
+        .select(`
+          user_id,
+          store_role,
+          profiles:user_id(id, name, username, email, role)
+        `)
+        .eq('store_id', storeId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      return (data || []).map((item: any) => ({
+        id: item.profiles?.id,
+        name: item.profiles?.name,
+        username: item.profiles?.username,
+        email: item.profiles?.email,
+        role: item.store_role || item.profiles?.role,
+      })).filter((u: any) => u.id) as StoreUser[];
+    },
+    enabled: !!storeId,
+  });
+}
+
+export function useCreateDMRoom() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
+  return useMutation({
+    mutationFn: async ({ targetUserId, targetUsername }: { targetUserId: string; targetUsername: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+
+      // Check if DM room already exists
+      const { data: existingRooms } = await supabase
+        .from('chat_rooms')
+        .select('*')
+        .eq('type', 'DIRECT')
+        .eq('store_id', storeId)
+        .contains('participants', [user.user.id, targetUserId]);
+
+      if (existingRooms && existingRooms.length > 0) {
+        return existingRooms[0];
+      }
+
+      // Get current user profile
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.user.id)
+        .single();
+
+      // Create new DM room
+      const { data: result, error } = await supabase
+        .from('chat_rooms')
+        .insert({
+          name: `${myProfile?.username || 'user'} & ${targetUsername}`,
+          type: 'DIRECT',
+          store_id: storeId,
+          created_by: user.user.id,
+          participants: [user.user.id, targetUserId],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to create DM');
+    },
+  });
+}
+
+export function useEnsureDefaultGroups() {
+  const storeId = useCurrentStoreId();
+  const createRoom = useCreateChatRoom();
+  const { data: rooms } = useStoreChatRooms();
+  
+  return useMutation({
+    mutationFn: async () => {
+      if (!storeId || !rooms) return;
+
+      const existingNames = new Set(rooms.map(r => r.name));
+      
+      for (const group of DEFAULT_GROUPS) {
+        if (!existingNames.has(group.name)) {
+          await createRoom.mutateAsync({
+            name: group.name,
+            type: group.type,
+            role_based_group: group.role_based_group,
+          });
+        }
+      }
+    },
+  });
+}

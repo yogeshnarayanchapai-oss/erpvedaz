@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface AttendanceRecord {
   id: string;
@@ -11,18 +12,24 @@ export interface AttendanceRecord {
   status: 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave';
   notes: string | null;
   created_at: string;
+  store_id?: string | null;
   employees?: { full_name: string };
 }
 
 export function useAttendanceRecords(employeeId?: string, dateRange?: { from: string; to: string }) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['attendance', employeeId, dateRange],
+    queryKey: ['attendance', storeId, employeeId, dateRange],
     queryFn: async () => {
       let query = supabase
-        .from('attendance_records' as any)
+        .from('attendance_records')
         .select('*, employees(full_name)')
         .order('date', { ascending: false });
 
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
       if (employeeId) {
         query = query.eq('employee_id', employeeId);
       }
@@ -37,6 +44,7 @@ export function useAttendanceRecords(employeeId?: string, dateRange?: { from: st
       if (error) throw error;
       return (data || []) as unknown as AttendanceRecord[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -164,12 +172,14 @@ export function useCheckOut() {
 
 export function useCreateAttendance() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<AttendanceRecord>) => {
+      const insertData = { ...data, store_id: storeId } as any;
       const { data: result, error } = await supabase
-        .from('attendance_records' as any)
-        .insert(data as any)
+        .from('attendance_records')
+        .insert(insertData)
         .select()
         .single();
 

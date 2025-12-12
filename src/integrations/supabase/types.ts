@@ -1494,24 +1494,57 @@ export type Database = {
       chat_messages: {
         Row: {
           created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           id: string
+          is_pinned: boolean | null
+          is_read: boolean | null
+          mentions: string[] | null
           message_text: string
+          pinned_at: string | null
+          pinned_by: string | null
+          read_at: string | null
+          read_by: string[] | null
           room_id: string
           sender_id: string
+          store_id: string | null
         }
         Insert: {
           created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_read?: boolean | null
+          mentions?: string[] | null
           message_text: string
+          pinned_at?: string | null
+          pinned_by?: string | null
+          read_at?: string | null
+          read_by?: string[] | null
           room_id: string
           sender_id: string
+          store_id?: string | null
         }
         Update: {
           created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_read?: boolean | null
+          mentions?: string[] | null
           message_text?: string
+          pinned_at?: string | null
+          pinned_by?: string | null
+          read_at?: string | null
+          read_by?: string[] | null
           room_id?: string
           sender_id?: string
+          store_id?: string | null
         }
         Relationships: [
           {
@@ -1519,6 +1552,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1557,24 +1597,44 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_muted_by: string[] | null
           name: string
+          participants: string[] | null
+          role_based_group: string | null
+          store_id: string | null
           type: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_muted_by?: string[] | null
           name: string
+          participants?: string[] | null
+          role_based_group?: string | null
+          store_id?: string | null
           type?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_muted_by?: string[] | null
           name?: string
+          participants?: string[] | null
+          role_based_group?: string | null
+          store_id?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_rooms_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cod_settlements: {
         Row: {
@@ -4758,6 +4818,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
           total_leads_ever_assigned: number | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -4774,6 +4835,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           total_leads_ever_assigned?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -4790,6 +4852,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           total_leads_ever_assigned?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: [
           {
