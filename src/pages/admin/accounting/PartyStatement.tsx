@@ -80,10 +80,12 @@ export default function PartyStatement() {
   }, [parties]);
 
   const statementSummary = useMemo(() => {
-    const totalDebit = statement.reduce((sum, entry) => sum + entry.debit, 0);
-    const totalCredit = statement.reduce((sum, entry) => sum + entry.credit, 0);
+    // Only count unsettled transactions for summary cards
+    const unsettledEntries = statement.filter(e => !e.is_settled && e.id !== 'opening-balance');
+    const totalDebit = unsettledEntries.reduce((sum, entry) => sum + entry.debit, 0);
+    const totalCredit = unsettledEntries.reduce((sum, entry) => sum + entry.credit, 0);
     const balance = statement.length > 0 ? statement[statement.length - 1].balance : 0;
-    const pendingCount = statement.filter(e => e.is_pending).length;
+    const pendingCount = statement.filter(e => e.is_pending || (e.type === 'TRANSACTION' && !e.is_settled)).length;
     return { totalDebit, totalCredit, balance, pendingCount };
   }, [statement]);
 
