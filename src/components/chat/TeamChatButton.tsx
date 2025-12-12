@@ -2,10 +2,20 @@ import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { TeamChatDialog } from './TeamChatDialog';
 import { useUnreadMessageCount } from '@/hooks/useTeamChat';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function TeamChatButton() {
   const [open, setOpen] = useState(false);
   const { data: unreadCount = 0 } = useUnreadMessageCount();
+  const queryClient = useQueryClient();
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    // Refetch unread count when closing chat to update badge
+    if (!isOpen) {
+      queryClient.invalidateQueries({ queryKey: ['unread-message-count'] });
+    }
+  };
 
   return (
     <>
@@ -25,7 +35,7 @@ export function TeamChatButton() {
           )}
         </button>
       )}
-      <TeamChatDialog open={open} onOpenChange={setOpen} />
+      <TeamChatDialog open={open} onOpenChange={handleOpenChange} />
     </>
   );
 }
