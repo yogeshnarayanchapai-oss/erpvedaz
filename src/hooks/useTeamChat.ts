@@ -827,33 +827,37 @@ export function useUnreadMessageCount() {
     queryFn: async () => {
       if (!storeId || !user?.id) return 0;
 
-      // Get group/department rooms for this store
-      const { data: groupRooms } = await supabase
+      // Get all rooms for this store
+      const { data: allRooms } = await supabase
         .from('chat_rooms')
-        .select('id')
-        .eq('store_id', storeId)
-        .neq('type', 'DIRECT');
+        .select('id, type, participants')
+        .eq('store_id', storeId);
 
-      // Get DM rooms where user is a participant
-      const { data: dmRooms } = await supabase
-        .from('chat_rooms')
-        .select('id')
-        .eq('store_id', storeId)
-        .eq('type', 'DIRECT')
-        .contains('participants', [user.id]);
+      if (!allRooms || allRooms.length === 0) return 0;
 
-      const allRoomIds = [
-        ...(groupRooms || []).map(r => r.id),
-        ...(dmRooms || []).map(r => r.id)
-      ];
+      // Filter rooms where user has access (same logic as useStoreChatRooms)
+      const accessibleRoomIds = allRooms
+        .filter((room) => {
+          // GLOBAL rooms are visible to everyone in the store
+          if (room.type === 'GLOBAL') return true;
+          
+          // For DM and DEPARTMENT rooms, check if user is in participants array
+          if (room.participants && Array.isArray(room.participants)) {
+            return room.participants.includes(user.id);
+          }
+          
+          // If no participants defined, room is not accessible for unread count
+          return false;
+        })
+        .map(r => r.id);
 
-      if (allRoomIds.length === 0) return 0;
+      if (accessibleRoomIds.length === 0) return 0;
 
       // Count messages not read by this user (where sender is not current user)
       const { data: messages, error } = await supabase
         .from('chat_messages')
         .select('id, read_by, sender_id')
-        .in('room_id', allRoomIds)
+        .in('room_id', accessibleRoomIds)
         .neq('sender_id', user.id);
 
       if (error) {
