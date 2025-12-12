@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
   Paperclip, Pin, Volume2, VolumeX, Check, CheckCheck,
-  AtSign, Hash, User
+  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink
 } from 'lucide-react';
 import { 
   useStoreChatRooms, 
@@ -26,18 +26,52 @@ import {
   useCreateDMRoom,
   useEnsureDefaultGroups,
   ChatRoom,
+  uploadChatFile,
 } from '@/hooks/useTeamChat';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface TeamChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// URL detection regex
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+// Render message text with clickable links
+function renderMessageWithLinks(text: string) {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (URL_REGEX.test(part)) {
+      const domain = new URL(part).hostname;
+      return (
+        <a 
+          key={i} 
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:underline inline-flex items-center gap-1"
+        >
+          {domain} <ExternalLink className="w-3 h-3" />
+        </a>
+      );
+    }
+    // Handle @mentions
+    return part.split(/(@\w+)/g).map((subPart, j) => 
+      subPart.startsWith('@') ? (
+        <span key={`${i}-${j}`} className="text-blue-400 font-medium">{subPart}</span>
+      ) : subPart
+    );
+  });
+}
+
 export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const { profile } = useAuth();
+  const storeId = useCurrentStoreId();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +84,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const [mentionSearch, setMentionSearch] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -183,14 +219,51 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedRoom) return;
+    if (!file || !selectedRoom || !storeId) return;
 
-    // Upload to Supabase storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
     
-    // For now, show toast - actual upload would need storage bucket setup
-    toast.info('File upload feature requires storage bucket setup');
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Unsupported file type. Allowed: JPG, PNG, WEBP, PDF, DOCX, XLSX');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 10MB.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const result = await uploadChatFile(file, storeId);
+      if (result) {
+        // Extract mentions from message
+        const mentionRegex = /@(\w+)/g;
+        const mentionMatches = message.match(mentionRegex) || [];
+        const mentionedUsernames = mentionMatches.map(m => m.substring(1));
+        const mentionedUserIds = storeUsers
+          .filter(u => mentionedUsernames.includes(u.username || ''))
+          .map(u => u.id);
+
+        await sendMessage.mutateAsync({ 
+          roomId: selectedRoom.id, 
+          message: message.trim() || `Shared ${file.type.startsWith('image/') ? 'an image' : 'a file'}`,
+          fileUrl: result.url,
+          fileType: result.type,
+          fileName: result.name,
+          mentions: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+        });
+        setMessage('');
+        toast.success('File uploaded');
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const formatMessageDate = (dateStr: string) => {
@@ -410,23 +483,37 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                               </div>
                             )}
                             
-                            {/* Message content with mentions highlighted */}
-                            <p className="text-sm whitespace-pre-wrap">
-                              {msg.message_text.split(/(@\w+)/g).map((part, i) => 
-                                part.startsWith('@') ? (
-                                  <span key={i} className="text-blue-400 font-medium">{part}</span>
-                                ) : part
-                              )}
+                            {/* Message content with links and mentions highlighted */}
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {renderMessageWithLinks(msg.message_text)}
                             </p>
                             
                             {/* File attachment */}
                             {msg.file_url && (
                               <div className="mt-2">
                                 {msg.file_type?.startsWith('image/') ? (
-                                  <img src={msg.file_url} alt={msg.file_name || 'attachment'} className="max-w-full rounded" />
+                                  <div 
+                                    className="cursor-pointer" 
+                                    onClick={() => setPreviewImage(msg.file_url)}
+                                  >
+                                    <img 
+                                      src={msg.file_url} 
+                                      alt={msg.file_name || 'attachment'} 
+                                      className="max-w-full max-h-48 rounded object-cover hover:opacity-90 transition-opacity" 
+                                    />
+                                  </div>
                                 ) : (
-                                  <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="text-xs underline">
-                                    📎 {msg.file_name}
+                                  <a 
+                                    href={msg.file_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="flex items-center gap-2 p-2 rounded bg-background/50 hover:bg-background/80 transition-colors"
+                                  >
+                                    <FileText className="w-5 h-5 text-muted-foreground" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium truncate">{msg.file_name}</p>
+                                      <p className="text-xs text-muted-foreground">Click to download</p>
+                                    </div>
                                   </a>
                                 )}
                               </div>
@@ -500,11 +587,16 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       type="file"
                       ref={fileInputRef}
                       className="hidden"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx"
                       onChange={handleFileUpload}
                     />
-                    <Button size="icon" variant="ghost" onClick={() => fileInputRef.current?.click()}>
-                      <Paperclip className="w-4 h-4" />
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                     </Button>
                     <Input
                       ref={inputRef}
@@ -513,8 +605,9 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       onKeyDown={handleKeyDown}
                       placeholder="Type a message... (@mention)"
                       className="flex-1"
+                      disabled={uploading}
                     />
-                    <Button onClick={handleSend} disabled={!message.trim() || sendMessage.isPending}>
+                    <Button onClick={handleSend} disabled={!message.trim() || sendMessage.isPending || uploading}>
                       <Send className="w-4 h-4" />
                     </Button>
                   </div>
@@ -546,10 +639,29 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
             </div>
           </div>
         )}
+
+        {/* Image Preview Modal */}
+        {previewImage && (
+          <div 
+            className="absolute inset-0 bg-black/80 flex items-center justify-center z-50 cursor-pointer"
+            onClick={() => setPreviewImage(null)}
+          >
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-[90%] max-h-[90%] object-contain rounded-lg"
+            />
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="absolute top-4 right-4 text-white hover:bg-white/20"
+              onClick={() => setPreviewImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
-
-// Need to add toast import
-import { toast } from 'sonner';
