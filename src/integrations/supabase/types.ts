@@ -4571,12 +4571,15 @@ export type Database = {
           date: string
           direction: string
           id: string
+          is_settled: boolean | null
           party_id: string
           product_id: string | null
           qty: number | null
           rate: number | null
           reference: string | null
           remarks: string | null
+          settled_account_id: string | null
+          settled_at: string | null
           source: string
           store_id: string | null
           warehouse_id: string | null
@@ -4587,12 +4590,15 @@ export type Database = {
           date: string
           direction: string
           id?: string
+          is_settled?: boolean | null
           party_id: string
           product_id?: string | null
           qty?: number | null
           rate?: number | null
           reference?: string | null
           remarks?: string | null
+          settled_account_id?: string | null
+          settled_at?: string | null
           source: string
           store_id?: string | null
           warehouse_id?: string | null
@@ -4603,12 +4609,15 @@ export type Database = {
           date?: string
           direction?: string
           id?: string
+          is_settled?: boolean | null
           party_id?: string
           product_id?: string | null
           qty?: number | null
           rate?: number | null
           reference?: string | null
           remarks?: string | null
+          settled_account_id?: string | null
+          settled_at?: string | null
           source?: string
           store_id?: string | null
           warehouse_id?: string | null
@@ -4626,6 +4635,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_transactions_settled_account_id_fkey"
+            columns: ["settled_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
           {

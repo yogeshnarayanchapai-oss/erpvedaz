@@ -14,6 +14,7 @@ export interface PartyStatementEntry {
   id: string;
   transaction_code?: string;
   is_pending?: boolean;
+  is_settled?: boolean;
 }
 
 export function usePartyStatement(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
@@ -29,7 +30,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         .eq('id', partyId)
         .single();
 
-      // Fetch transactions
+      // Fetch transactions (including settled ones)
       let transQuery = supabase
         .from('party_transactions')
         .select(`
@@ -111,7 +112,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         });
       }
 
-      // Add transactions from party_transactions
+      // Add transactions from party_transactions (including settled)
       transactions?.forEach(t => {
         const productName = t.products?.name || 'Unknown Product';
         const warehouseName = t.warehouses?.name || '';
@@ -127,6 +128,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           balance: 0,
           remarks: t.remarks,
           id: t.id,
+          is_settled: t.is_settled === true,
         });
       });
 
@@ -173,10 +175,13 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       // Sort by date
       entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Calculate running balance
+      // Calculate running balance (exclude settled transactions from running balance)
       let runningBalance = 0;
       entries.forEach(entry => {
-        runningBalance += entry.debit - entry.credit;
+        // Settled transactions don't affect running balance (already settled)
+        if (!entry.is_settled) {
+          runningBalance += entry.debit - entry.credit;
+        }
         entry.balance = runningBalance;
       });
 

@@ -191,27 +191,36 @@ export default function PartyStatement() {
     }
     setIsInventoryPaying(true);
     try {
-      // Create a payment record in party_payments
-      const amount = selectedInventoryEntry.debit > 0 ? selectedInventoryEntry.debit : selectedInventoryEntry.credit;
-      const paymentType = selectedInventoryEntry.credit > 0 ? 'PAID' : 'RECEIVED';
-      
+      // Mark the party_transaction as settled (don't create separate payment to avoid double-counting)
       const { error } = await supabase
-        .from('party_payments')
-        .insert({
-          party_id: selectedPartyId,
-          date: new Date().toISOString().split('T')[0],
-          amount: amount,
-          payment_type: paymentType,
-          method: 'BANK',
-          bank_account_id: selectedAccountId,
-          note: `Payment for: ${selectedInventoryEntry.particulars}`,
-        });
+        .from('party_transactions')
+        .update({
+          is_settled: true,
+          settled_at: new Date().toISOString(),
+          settled_account_id: selectedAccountId,
+        })
+        .eq('id', selectedInventoryEntry.id);
       
       if (error) throw error;
       
+      // Create a transaction record for account balance update
+      const amount = selectedInventoryEntry.debit > 0 ? selectedInventoryEntry.debit : selectedInventoryEntry.credit;
+      const isReceiving = selectedInventoryEntry.debit > 0;
+      
+      await supabase.from('transactions').insert({
+        date: new Date().toISOString().split('T')[0],
+        type: isReceiving ? 'income' : 'expense',
+        account_id: selectedAccountId,
+        party_id: selectedPartyId,
+        amount: amount,
+        description: `Settlement: ${selectedInventoryEntry.particulars}`,
+        is_cleared: true,
+        store_id: selectedParty?.store_id,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
-      queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast.success('Payment recorded');
       setInventoryPayDialogOpen(false);
@@ -415,7 +424,7 @@ export default function PartyStatement() {
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 items-center">
                         {/* Pay/Receive for pending transactions */}
                         {entry.is_pending && canEdit && (
                           <Button
@@ -427,8 +436,14 @@ export default function PartyStatement() {
                             {entry.debit > 0 ? 'Receive' : 'Pay'}
                           </Button>
                         )}
-                        {/* Pay/Receive for inventory transactions (TRANSACTION type - not pending, not payment, not opening) */}
-                        {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && canEdit && (
+                        {/* Show status badge for settled inventory transactions */}
+                        {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && entry.is_settled && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            {entry.credit > 0 ? 'Paid' : 'Received'}
+                          </Badge>
+                        )}
+                        {/* Pay/Receive button for unsettled inventory transactions */}
+                        {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && !entry.is_settled && canEdit && (
                           <Button
                             size="sm"
                             variant="default"
