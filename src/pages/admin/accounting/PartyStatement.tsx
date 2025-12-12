@@ -74,17 +74,22 @@ export default function PartyStatement() {
   }, [parties, partyTypeFilter, searchTerm]);
 
   const summaryStats = useMemo(() => {
+    // Receivable = need to receive (unsettled receivables), Payable = need to pay (unsettled payables)
+    // Balance = Credit - Debit across all parties
     const totalReceivable = parties.reduce((sum, p) => sum + Math.max(0, p.current_balance), 0);
     const totalPayable = parties.reduce((sum, p) => sum + Math.abs(Math.min(0, p.current_balance)), 0);
-    return { totalReceivable, totalPayable, partyCount: parties.length };
+    const totalBalance = totalReceivable - totalPayable;
+    return { totalReceivable, totalPayable, totalBalance, partyCount: parties.length };
   }, [parties]);
 
   const statementSummary = useMemo(() => {
-    // Only count unsettled transactions for summary cards
-    const unsettledEntries = statement.filter(e => !e.is_settled && e.id !== 'opening-balance');
-    const totalDebit = unsettledEntries.reduce((sum, entry) => sum + entry.debit, 0);
-    const totalCredit = unsettledEntries.reduce((sum, entry) => sum + entry.credit, 0);
-    const balance = statement.length > 0 ? statement[statement.length - 1].balance : 0;
+    // Total Debit = sum of ALL debit amounts, Total Credit = sum of ALL credit amounts
+    const allEntries = statement.filter(e => e.id !== 'opening-balance');
+    const totalDebit = allEntries.reduce((sum, entry) => sum + entry.debit, 0);
+    const totalCredit = allEntries.reduce((sum, entry) => sum + entry.credit, 0);
+    // Balance = Credit - Debit
+    const balance = totalCredit - totalDebit;
+    // Pending = count of not settled transactions
     const pendingCount = statement.filter(e => e.is_pending || (e.type === 'TRANSACTION' && !e.is_settled)).length;
     return { totalDebit, totalCredit, balance, pendingCount };
   }, [statement]);
@@ -586,13 +591,20 @@ export default function PartyStatement() {
         </div>
         {canEdit && <AddPartyDialog />}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Parties</CardTitle></CardHeader>
           <CardContent><span className="text-2xl font-bold">{summaryStats.partyCount}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Receivable</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Receivable</CardTitle></CardHeader>
           <CardContent><span className="text-2xl font-bold text-green-600">₹{summaryStats.totalReceivable.toLocaleString()}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Payable</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Payable</CardTitle></CardHeader>
           <CardContent><span className="text-2xl font-bold text-red-600">₹{summaryStats.totalPayable.toLocaleString()}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Balance</CardTitle></CardHeader>
+          <CardContent>
+            <span className={`text-2xl font-bold ${summaryStats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ₹{Math.abs(summaryStats.totalBalance).toLocaleString()}
+            </span>
+            <Badge variant="outline" className="ml-2">{summaryStats.totalBalance >= 0 ? 'Net Receivable' : 'Net Payable'}</Badge>
+          </CardContent></Card>
       </div>
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
