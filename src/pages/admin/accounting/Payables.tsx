@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreatePartyPayment } from '@/hooks/usePartyPayments';
-import { usePendingPayables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
+import { usePendingPayables, usePendingPartyPayables, useMarkTransactionsCleared, Transaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { DollarSign, FileText, Download, Search, TrendingDown, CheckCircle, Plus } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
@@ -24,7 +24,10 @@ export default function Payables() {
   const navigate = useNavigate();
   const { data: allParties = [], isLoading } = usePartiesWithBalances();
   const { data: accounts = [] } = useActiveAccounts();
+  // Pending payables WITHOUT party (for Pending Expenses tab)
   const { data: pendingPayables = [], isLoading: loadingPending } = usePendingPayables();
+  // Pending payables WITH party (for Party Payables tab)
+  const { data: pendingPartyPayables = [], isLoading: loadingPartyPending } = usePendingPartyPayables();
   const createPayment = useCreatePartyPayment();
   const markCleared = useMarkTransactionsCleared();
   const { canEdit } = useAccountingEditAccess();
@@ -60,10 +63,15 @@ export default function Payables() {
     (p.phone && p.phone.includes(searchTerm))
   );
 
-  const totalPayable = partiesWithPayables.reduce((sum, p) => sum + p.total_payable, 0);
+  // Calculate totals - Party Payables include both party balances AND pending party payables
+  const totalPartyPayable = partiesWithPayables.reduce((sum, p) => sum + p.total_payable, 0);
+  const totalPartyPending = pendingPartyPayables.reduce((sum, t) => sum + t.amount, 0);
+  const totalPayable = totalPartyPayable + totalPartyPending;
   const totalPaid = partiesWithPayables.reduce((sum, p) => sum + p.total_paid, 0);
-  const totalOutstanding = partiesWithPayables.reduce((sum, p) => sum + p.net_payable, 0);
+  const totalOutstanding = partiesWithPayables.reduce((sum, p) => sum + p.net_payable, 0) + totalPartyPending;
+  // Pending Expenses only shows party-less entries
   const totalPendingExpense = pendingPayables.reduce((sum, t) => sum + t.amount, 0);
+  const partyCount = partiesWithPayables.length + (pendingPartyPayables.length > 0 ? new Set(pendingPartyPayables.map(t => t.party_id)).size : 0);
 
   const openClearDialog = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -162,7 +170,7 @@ export default function Payables() {
               <TrendingDown className="w-4 h-4 text-orange-500" />
               <span className="text-2xl font-bold">{formatNPR(totalPayable)}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">To {partiesWithPayables.length} suppliers</p>
+            <p className="text-xs text-muted-foreground mt-1">To {partyCount} suppliers</p>
           </CardContent>
         </Card>
 
@@ -408,12 +416,61 @@ export default function Payables() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pending Party Payables Table */}
+          {pendingPartyPayables.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Pending Party Payables
+                  <Badge variant="secondary">{pendingPartyPayables.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Party</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingPartyPayables.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
+                        <TableCell className="font-medium">{t.parties?.name || '-'}</TableCell>
+                        <TableCell>{t.description || t.note || '-'}</TableCell>
+                        <TableCell className="text-right font-medium text-amber-600">{formatNPR(t.amount)}</TableCell>
+                        <TableCell>
+                          {canEdit && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openClearDialog(t)}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Mark Paid
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Expense Transactions</CardTitle>
+              <CardTitle>Pending Expense Transactions (No Party)</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -422,7 +479,6 @@ export default function Payables() {
                     <TableHead>Date</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Party</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Actions</TableHead>
@@ -431,15 +487,15 @@ export default function Payables() {
                 <TableBody>
                   {loadingPending && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   )}
                   {!loadingPending && pendingPayables.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No pending expense transactions.
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No pending expense transactions without party.
                       </TableCell>
                     </TableRow>
                   )}
@@ -448,7 +504,6 @@ export default function Payables() {
                       <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell className="font-mono text-sm">{t.transaction_code}</TableCell>
                       <TableCell>{t.description || t.note || '-'}</TableCell>
-                      <TableCell>{t.parties?.name || '-'}</TableCell>
                       <TableCell>{t.from_account?.name || t.to_account?.name || '-'}</TableCell>
                       <TableCell className="text-right font-medium">{formatNPR(t.amount)}</TableCell>
                       <TableCell>

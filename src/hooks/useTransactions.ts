@@ -224,6 +224,7 @@ export function useMarkTransactionsCleared() {
   });
 }
 
+// Pending receivables WITHOUT party (for Pending Income tab)
 export function usePendingReceivables() {
   const storeId = useCurrentStoreId();
   
@@ -242,6 +243,7 @@ export function usePendingReceivables() {
         .eq('type', 'income')
         .eq('is_cleared', false)
         .eq('store_id', storeId)
+        .is('party_id', null)
         .order('date', { ascending: false });
       
       if (error) throw error;
@@ -251,6 +253,36 @@ export function usePendingReceivables() {
   });
 }
 
+// Pending receivables WITH party (for Party Receivables tab)
+export function usePendingPartyReceivables() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['pending-party-receivables', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          from_account:from_account_id(id, name),
+          to_account:to_account_id(id, name),
+          transaction_categories:category_id(id, name),
+          parties:party_id(id, name)
+        `)
+        .eq('type', 'income')
+        .eq('is_cleared', false)
+        .eq('store_id', storeId)
+        .not('party_id', 'is', null)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data as any as Transaction[];
+    },
+    enabled: !!storeId,
+  });
+}
+
+// Pending payables WITHOUT party (for Pending Expenses tab)
 export function usePendingPayables() {
   const storeId = useCurrentStoreId();
   
@@ -269,6 +301,36 @@ export function usePendingPayables() {
         .eq('type', 'expense')
         .eq('is_cleared', false)
         .eq('store_id', storeId)
+        .is('party_id', null)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data as any as Transaction[];
+    },
+    enabled: !!storeId,
+  });
+}
+
+// Pending payables WITH party (for Party Payables tab)
+export function usePendingPartyPayables() {
+  const storeId = useCurrentStoreId();
+  
+  return useQuery({
+    queryKey: ['pending-party-payables', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          from_account:from_account_id(id, name),
+          to_account:to_account_id(id, name),
+          transaction_categories:category_id(id, name),
+          parties:party_id(id, name)
+        `)
+        .eq('type', 'expense')
+        .eq('is_cleared', false)
+        .eq('store_id', storeId)
+        .not('party_id', 'is', null)
         .order('date', { ascending: false });
       
       if (error) throw error;
