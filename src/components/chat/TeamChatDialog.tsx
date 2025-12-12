@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
   Paperclip, Pin, Volume2, VolumeX, Check, CheckCheck,
-  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink
+  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink, UserPlus
 } from 'lucide-react';
 import { 
   useStoreChatRooms, 
@@ -27,6 +27,7 @@ import {
   useEnsureDefaultGroups,
   useUnreadCountPerRoom,
   useMarkRoomAsRead,
+  useAddRoomParticipants,
   ChatRoom,
   uploadChatFile,
 } from '@/hooks/useTeamChat';
@@ -89,6 +90,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
+  const [staffToAdd, setStaffToAdd] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +111,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const toggleMute = useToggleMuteRoom();
   const createDM = useCreateDMRoom();
   const ensureDefaultGroups = useEnsureDefaultGroups();
+  const addParticipants = useAddRoomParticipants();
 
   // Ensure default groups exist
   useEffect(() => {
@@ -221,6 +225,24 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
+  };
+
+  const toggleStaffToAdd = (userId: string) => {
+    setStaffToAdd(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleAddStaffToRoom = async () => {
+    if (!selectedRoom || staffToAdd.length === 0) return;
+    await addParticipants.mutateAsync({
+      roomId: selectedRoom.id,
+      participantIds: staffToAdd,
+    });
+    setStaffToAdd([]);
+    setShowAddStaffDialog(false);
   };
 
   const handleCreateDM = async (targetUser: { id: string; name: string }) => {
@@ -483,6 +505,22 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           <div className="flex-1 flex flex-col bg-background">
             {selectedRoom ? (
               <>
+                {/* Room Header with Add Staff button */}
+                {canCreateGroups && selectedRoom.type !== 'DIRECT' && (
+                  <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/30">
+                    <span className="text-sm font-medium truncate">{selectedRoom.name}</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 gap-1"
+                      onClick={() => setShowAddStaffDialog(true)}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Add Staff
+                    </Button>
+                  </div>
+                )}
+
                 {/* Search Bar (toggleable) */}
                 {showSearch && (
                   <div className="px-4 py-2 border-b bg-muted/30">
@@ -725,6 +763,61 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => { setShowNewRoomDialog(false); setSelectedMembers([]); }}>Cancel</Button>
                 <Button onClick={handleCreateRoom} disabled={!newRoomName.trim()}>Create</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Staff Dialog */}
+        {showAddStaffDialog && selectedRoom && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+            <div className="bg-background border rounded-lg p-4 w-80 shadow-lg max-h-[80%] flex flex-col">
+              <h3 className="font-semibold mb-4">Add Staff to {selectedRoom.name}</h3>
+              
+              {/* Staff Selection */}
+              <p className="text-sm text-muted-foreground mb-2">Select staff to add:</p>
+              <ScrollArea className="flex-1 max-h-48 border rounded-lg mb-4">
+                <div className="p-2 space-y-1">
+                  {storeUsers
+                    .filter(u => u.id !== profile?.id && !selectedRoom.participants?.includes(u.id))
+                    .map(user => (
+                      <div
+                        key={user.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                          staffToAdd.includes(user.id) 
+                            ? "bg-primary/10 border border-primary/30" 
+                            : "hover:bg-muted"
+                        )}
+                        onClick={() => toggleStaffToAdd(user.id)}
+                      >
+                        <Checkbox 
+                          checked={staffToAdd.includes(user.id)}
+                          className="pointer-events-none"
+                        />
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {user.name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{user.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.role}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </ScrollArea>
+              
+              {staffToAdd.length > 0 && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  {staffToAdd.length} staff selected
+                </p>
+              )}
+              
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setShowAddStaffDialog(false); setStaffToAdd([]); }}>Cancel</Button>
+                <Button onClick={handleAddStaffToRoom} disabled={staffToAdd.length === 0}>Add Staff</Button>
               </div>
             </div>
           </div>

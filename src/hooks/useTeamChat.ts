@@ -420,6 +420,41 @@ export function useCreateChatRoom() {
   });
 }
 
+export function useAddRoomParticipants() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ roomId, participantIds }: { roomId: string; participantIds: string[] }) => {
+      // First get current participants
+      const { data: room, error: fetchError } = await supabase
+        .from('chat_rooms')
+        .select('participants')
+        .eq('id', roomId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Merge new participants with existing ones (deduplicated)
+      const currentParticipants = room?.participants || [];
+      const allParticipants = [...new Set([...currentParticipants, ...participantIds])];
+      
+      const { error } = await supabase
+        .from('chat_rooms')
+        .update({ participants: allParticipants })
+        .eq('id', roomId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+      toast.success('Staff added to room');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to add staff');
+    },
+  });
+}
+
 export function useDeleteChatRoom() {
   const queryClient = useQueryClient();
   
