@@ -119,6 +119,11 @@ export function useStoreChatRooms() {
     queryKey: ['chat-rooms', storeId],
     queryFn: async () => {
       if (!storeId) return [];
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('chat_rooms')
         .select('*')
@@ -126,7 +131,22 @@ export function useStoreChatRooms() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return (data || []) as ChatRoom[];
+      
+      // Filter rooms where user is a participant
+      const filteredRooms = (data || []).filter((room: ChatRoom) => {
+        // GLOBAL rooms are visible to everyone in the store
+        if (room.type === 'GLOBAL') return true;
+        
+        // For DM and DEPARTMENT rooms, check if user is in participants array
+        if (room.participants && Array.isArray(room.participants)) {
+          return room.participants.includes(user.id);
+        }
+        
+        // If no participants defined, room is visible to creator only
+        return room.created_by === user.id;
+      });
+      
+      return filteredRooms as ChatRoom[];
     },
     enabled: !!storeId,
   });
