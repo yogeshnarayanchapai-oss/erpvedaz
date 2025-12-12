@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -291,24 +290,28 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
     u.username?.toLowerCase().includes(mentionSearch.toLowerCase())
   ).slice(0, 5);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[600px] p-0 overflow-hidden rounded-2xl shadow-2xl border-0">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-primary text-primary-foreground rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="w-6 h-6" />
-            <span className="font-semibold text-lg">Team Chat</span>
-            {selectedRoom && (
-              <span className="text-primary-foreground/70 text-lg">– {selectedRoom.name}</span>
-            )}
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-primary-foreground hover:bg-primary-foreground/10 rounded-full">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+  if (!open) return null;
 
-        <div className="flex h-[calc(600px-64px)]">
+  return (
+    <div className="fixed bottom-24 right-6 z-50 w-[520px] h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          <span className="font-semibold">Team Chat</span>
+          {selectedRoom && (
+            <span className="text-primary-foreground/70">– {selectedRoom.name}</span>
+          )}
+        </div>
+        <button 
+          onClick={() => onOpenChange(false)} 
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
           <div className="w-56 border-r bg-muted/20 flex flex-col">
             {/* Actions */}
@@ -638,7 +641,6 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
             </Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
