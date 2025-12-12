@@ -132,6 +132,10 @@ export function useCreateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-activity-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-payables'] });
       toast.success('Transaction created successfully');
     },
     onError: (error: Error) => {
@@ -183,6 +187,10 @@ export function useUpdateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-activity-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-payables'] });
       toast.success('Transaction updated successfully');
     },
     onError: (error: Error) => {
@@ -356,6 +364,10 @@ export function useDeleteTransaction() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-party-payables'] });
       toast.success('Transaction deleted');
     },
     onError: (error: Error) => {
