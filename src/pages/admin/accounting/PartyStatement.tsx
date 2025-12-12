@@ -14,9 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { FileSpreadsheet, ArrowLeft, Eye, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FileSpreadsheet, ArrowLeft, Eye, Trash2, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useAccounts } from '@/hooks/useAccounts';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +43,12 @@ export default function PartyStatement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [selectedPendingEntry, setSelectedPendingEntry] = useState<typeof statement[0] | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [isClearing, setIsClearing] = useState(false);
+
+  const { data: accounts = [] } = useAccounts();
 
   const { data: parties = [], isLoading: partiesLoading } = usePartiesWithBalances();
   const { data: products = [] } = useProducts();
@@ -75,7 +83,8 @@ export default function PartyStatement() {
     const totalDebit = statement.reduce((sum, entry) => sum + entry.debit, 0);
     const totalCredit = statement.reduce((sum, entry) => sum + entry.credit, 0);
     const balance = statement.length > 0 ? statement[statement.length - 1].balance : 0;
-    return { totalDebit, totalCredit, balance };
+    const pendingCount = statement.filter(e => e.is_pending).length;
+    return { totalDebit, totalCredit, balance, pendingCount };
   }, [statement]);
 
   const toggleSelectAll = () => {
@@ -163,6 +172,35 @@ export default function PartyStatement() {
       toast.success('Entry deleted');
     } catch (error: any) {
       toast.error(`Failed to delete: ${error.message}`);
+    }
+  };
+
+  const handleClearPending = async () => {
+    if (!selectedPendingEntry || !selectedAccountId) {
+      toast.error('Please select an account');
+      return;
+    }
+    setIsClearing(true);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ is_cleared: true, account_id: selectedAccountId })
+        .eq('id', selectedPendingEntry.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast.success('Transaction cleared');
+      setClearDialogOpen(false);
+      setSelectedPendingEntry(null);
+      setSelectedAccountId('');
+    } catch (error: any) {
+      toast.error(`Failed to clear: ${error.message}`);
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -258,7 +296,7 @@ export default function PartyStatement() {
             </div>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Debit</CardTitle></CardHeader>
             <CardContent><span className="text-2xl font-bold text-red-600">₹{statementSummary.totalDebit.toLocaleString()}</span></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Credit</CardTitle></CardHeader>
@@ -267,6 +305,11 @@ export default function PartyStatement() {
             <CardContent>
               <span className={`text-2xl font-bold ${statementSummary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(statementSummary.balance).toLocaleString()}</span>
               <Badge variant="outline" className="ml-2">{statementSummary.balance >= 0 ? 'Receivable' : 'Payable'}</Badge>
+            </CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Pending</CardTitle></CardHeader>
+            <CardContent>
+              <span className="text-2xl font-bold text-amber-600">{statementSummary.pendingCount}</span>
+              <span className="ml-2 text-muted-foreground">transactions</span>
             </CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Export</CardTitle></CardHeader>
             <CardContent><Button variant="outline" size="sm" onClick={exportToCSV} className="w-full"><FileSpreadsheet className="w-4 h-4 mr-2" />CSV</Button></CardContent></Card>
@@ -285,17 +328,23 @@ export default function PartyStatement() {
                       />
                     </TableHead>
                   )}
-                  <TableHead>Date</TableHead><TableHead>Particulars</TableHead><TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Rate</TableHead><TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="text-right">Credit</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Remarks</TableHead>
-                  {isOwner && <TableHead className="w-16">Action</TableHead>}
+                  <TableHead>Date</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Particulars</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Rate</TableHead>
+                  <TableHead className="text-right">Debit</TableHead>
+                  <TableHead className="text-right">Credit</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead>Remarks</TableHead>
+                  <TableHead className="w-32">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementLoading && <TableRow><TableCell colSpan={isOwner ? 11 : 8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={isOwner ? 11 : 8} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {statementLoading && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
                 {statement.map((entry) => (
-                  <TableRow key={entry.id}>
+                  <TableRow key={entry.id} className={entry.is_pending ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
                     {isOwner && (
                       <TableCell>
                         <Checkbox
@@ -305,48 +354,102 @@ export default function PartyStatement() {
                       </TableCell>
                     )}
                     <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{entry.particulars}</TableCell>
+                    <TableCell className="font-mono text-xs">{entry.transaction_code || '-'}</TableCell>
+                    <TableCell>
+                      {entry.particulars}
+                      {entry.is_pending && <Badge variant="outline" className="ml-2 text-amber-600">Pending</Badge>}
+                    </TableCell>
                     <TableCell className="text-right">{entry.qty || '-'}</TableCell>
                     <TableCell className="text-right">{entry.rate ? `₹${entry.rate.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className="text-right text-red-600">{entry.debit > 0 ? `₹${entry.debit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
-                    {isOwner && entry.id !== 'opening-balance' && (
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete this ledger entry. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleSingleDelete(entry)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    )}
-                    {isOwner && entry.id === 'opening-balance' && <TableCell>-</TableCell>}
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {entry.is_pending && canEdit && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => { setSelectedPendingEntry(entry); setClearDialogOpen(true); }}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            {entry.debit > 0 ? 'Receive' : 'Pay'}
+                          </Button>
+                        )}
+                        {isOwner && entry.id !== 'opening-balance' && !entry.is_pending && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete this ledger entry. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleSingleDelete(entry)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                        {entry.id === 'opening-balance' && <span className="text-muted-foreground">-</span>}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
+
+        {/* Clear Pending Transaction Dialog */}
+        <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedPendingEntry?.debit && selectedPendingEntry.debit > 0 ? 'Receive Payment' : 'Make Payment'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Transaction</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedPendingEntry?.particulars} - ₹{(selectedPendingEntry?.debit || selectedPendingEntry?.credit || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Select Account</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} (₹{acc.current_balance?.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClearDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleClearPending} disabled={isClearing || !selectedAccountId}>
+                {isClearing ? 'Processing...' : 'Confirm'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
