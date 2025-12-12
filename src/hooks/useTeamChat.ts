@@ -165,13 +165,12 @@ export function useStoreChatMessages(roomId: string | null) {
     queryFn: async () => {
       if (!roomId) return [];
 
-      // Get messages
+      // Get all messages for this room
       const { data: messages, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('room_id', roomId)
-        .order('created_at', { ascending: true })
-        .limit(200);
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
