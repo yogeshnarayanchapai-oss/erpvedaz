@@ -183,8 +183,9 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
             : `${t.description}${categoryName ? ` - ${categoryName}` : ''}${accountName ? ` (${accountName})` : ''}`,
           qty: null,
           rate: null,
-          debit: isIncome ? t.amount : 0,
-          credit: !isIncome ? t.amount : 0,
+          // Income (received) = Credit, Expense (paid) = Debit
+          debit: !isIncome ? t.amount : 0,
+          credit: isIncome ? t.amount : 0,
           balance: 0,
           remarks: t.note,
           id: t.id,
