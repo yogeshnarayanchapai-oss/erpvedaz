@@ -4582,6 +4582,7 @@ export type Database = {
           settled_at: string | null
           source: string
           store_id: string | null
+          transaction_code: string | null
           warehouse_id: string | null
         }
         Insert: {
@@ -4601,6 +4602,7 @@ export type Database = {
           settled_at?: string | null
           source: string
           store_id?: string | null
+          transaction_code?: string | null
           warehouse_id?: string | null
         }
         Update: {
@@ -4620,6 +4622,7 @@ export type Database = {
           settled_at?: string | null
           source?: string
           store_id?: string | null
+          transaction_code?: string | null
           warehouse_id?: string | null
         }
         Relationships: [
