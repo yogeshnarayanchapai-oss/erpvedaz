@@ -260,14 +260,51 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   };
 
   const handleAddStaffToRoom = async () => {
-    if (!selectedRoom || staffToAdd.length === 0) return;
-    await addParticipants.mutateAsync({
-      roomId: selectedRoom.id,
-      participantIds: staffToAdd,
-    });
+    if (!selectedRoom) return;
+    
+    // Get current participants (excluding self)
+    const currentParticipants = selectedRoom.participants?.filter(p => p !== profile?.id) || [];
+    
+    // Find participants to add (in staffToAdd but not in current)
+    const toAdd = staffToAdd.filter(id => !currentParticipants.includes(id));
+    
+    // Find participants to remove (in current but not in staffToAdd)
+    const toRemove = currentParticipants.filter(id => !staffToAdd.includes(id));
+    
+    // Update participants array
+    if (toAdd.length > 0 || toRemove.length > 0) {
+      const newParticipants = [
+        ...(selectedRoom.participants?.filter(p => !toRemove.includes(p)) || []),
+        ...toAdd
+      ];
+      
+      await supabase
+        .from('chat_rooms')
+        .update({ participants: newParticipants })
+        .eq('id', selectedRoom.id);
+      
+      refetchRooms();
+      
+      if (toAdd.length > 0 && toRemove.length > 0) {
+        toast.success(`Added ${toAdd.length} and removed ${toRemove.length} members`);
+      } else if (toAdd.length > 0) {
+        toast.success(`Added ${toAdd.length} member(s)`);
+      } else {
+        toast.success(`Removed ${toRemove.length} member(s)`);
+      }
+    }
+    
     setStaffToAdd([]);
     setShowAddStaffDialog(false);
   };
+
+  // Initialize staffToAdd with existing participants when opening dialog
+  useEffect(() => {
+    if (showAddStaffDialog && selectedRoom) {
+      const existingMembers = selectedRoom.participants?.filter(p => p !== profile?.id) || [];
+      setStaffToAdd(existingMembers);
+    }
+  }, [showAddStaffDialog, selectedRoom?.id]);
 
   const handleCreateDM = async (targetUser: { id: string; name: string }) => {
     console.log('handleCreateDM called with:', targetUser);
@@ -873,52 +910,66 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
         {showAddStaffDialog && selectedRoom && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
             <div className="bg-background border rounded-lg p-4 w-80 shadow-lg max-h-[80%] flex flex-col">
-              <h3 className="font-semibold mb-4">Add Staff to {selectedRoom.name}</h3>
+              <h3 className="font-semibold mb-4">Manage Members - {selectedRoom.name}</h3>
               
               {/* Staff Selection */}
-              <p className="text-sm text-muted-foreground mb-2">Select staff to add:</p>
+              <p className="text-sm text-muted-foreground mb-2">Select members for this group:</p>
               <div className="h-48 border rounded-lg mb-4 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   {storeUsers
-                    .filter(u => u.id !== profile?.id && !selectedRoom.participants?.includes(u.id))
-                    .map(user => (
-                      <div
-                        key={user.id}
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                          staffToAdd.includes(user.id) 
-                            ? "bg-primary/10 border border-primary/30" 
-                            : "hover:bg-muted"
-                        )}
-                        onClick={() => toggleStaffToAdd(user.id)}
-                      >
-                        <Checkbox 
-                          checked={staffToAdd.includes(user.id)}
-                          className="pointer-events-none"
-                        />
-                        <Avatar className="w-7 h-7">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {user.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{user.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{user.role}</p>
+                    .filter(u => u.id !== profile?.id)
+                    .map(user => {
+                      const isExistingMember = selectedRoom.participants?.includes(user.id);
+                      const isSelected = staffToAdd.includes(user.id);
+                      return (
+                        <div
+                          key={user.id}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                            isSelected
+                              ? isExistingMember 
+                                ? "bg-primary/10 border border-primary/30"
+                                : "bg-green-500/10 border border-green-500/30"
+                              : isExistingMember
+                                ? "bg-destructive/10 border border-destructive/30"
+                                : "hover:bg-muted"
+                          )}
+                          onClick={() => toggleStaffToAdd(user.id)}
+                        >
+                          <Checkbox 
+                            checked={isSelected}
+                            className="pointer-events-none"
+                          />
+                          <Avatar className="w-7 h-7">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {user.name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user.role}</p>
+                          </div>
+                          {isExistingMember && !isSelected && (
+                            <span className="text-xs text-destructive">Remove</span>
+                          )}
+                          {!isExistingMember && isSelected && (
+                            <span className="text-xs text-green-600">Add</span>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
               
               {staffToAdd.length > 0 && (
                 <p className="text-xs text-muted-foreground mb-3">
-                  {staffToAdd.length} staff selected
+                  {staffToAdd.length} member{staffToAdd.length > 1 ? 's' : ''} selected
                 </p>
               )}
               
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => { setShowAddStaffDialog(false); setStaffToAdd([]); }}>Cancel</Button>
-                <Button onClick={handleAddStaffToRoom} disabled={staffToAdd.length === 0}>Add Staff</Button>
+                <Button onClick={handleAddStaffToRoom}>Save</Button>
               </div>
             </div>
           </div>
