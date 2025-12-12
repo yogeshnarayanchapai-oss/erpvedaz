@@ -15,6 +15,7 @@ export interface ChatRoom {
   participants: string[] | null;
   is_muted_by: string[] | null;
   role_based_group: string | null;
+  last_message_at: string | null;
 }
 
 export interface ChatMessage {
@@ -128,12 +129,12 @@ export function useStoreChatRooms() {
         .from('chat_rooms')
         .select('*')
         .eq('store_id', storeId)
-        .order('created_at', { ascending: true });
+        .order('last_message_at', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
       
       // Filter rooms where user is a participant
-      const filteredRooms = (data || []).filter((room: ChatRoom) => {
+      const filteredRooms = (data || []).filter((room) => {
         // GLOBAL rooms are visible to everyone in the store
         if (room.type === 'GLOBAL') return true;
         
