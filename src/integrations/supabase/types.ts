@@ -3023,6 +3023,7 @@ export type Database = {
           employee_id: string
           id: string
           leave_type_id: string
+          store_id: string | null
           total_days: number
           used_days: number
           year: number
@@ -3032,6 +3033,7 @@ export type Database = {
           employee_id: string
           id?: string
           leave_type_id: string
+          store_id?: string | null
           total_days?: number
           used_days?: number
           year: number
@@ -3041,6 +3043,7 @@ export type Database = {
           employee_id?: string
           id?: string
           leave_type_id?: string
+          store_id?: string | null
           total_days?: number
           used_days?: number
           year?: number
@@ -3058,6 +3061,13 @@ export type Database = {
             columns: ["leave_type_id"]
             isOneToOne: false
             referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_quota_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -3128,6 +3138,38 @@ export type Database = {
             foreignKeyName: "leave_requests_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_settings: {
+        Row: {
+          apply_default_if_no_quota: boolean | null
+          default_monthly_limit: number | null
+          id: string
+          store_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          apply_default_if_no_quota?: boolean | null
+          default_monthly_limit?: number | null
+          id?: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          apply_default_if_no_quota?: boolean | null
+          default_monthly_limit?: number | null
+          id?: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -3643,6 +3685,7 @@ export type Database = {
           is_active: boolean | null
           message: string | null
           start_date: string
+          store_id: string | null
           target_audience: string | null
           title: string
         }
@@ -3653,6 +3696,7 @@ export type Database = {
           is_active?: boolean | null
           message?: string | null
           start_date?: string
+          store_id?: string | null
           target_audience?: string | null
           title: string
         }
@@ -3663,10 +3707,19 @@ export type Database = {
           is_active?: boolean | null
           message?: string | null
           start_date?: string
+          store_id?: string | null
           target_audience?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notices_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {

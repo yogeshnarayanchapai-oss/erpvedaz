@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface Asset {
   id: string;
@@ -13,6 +14,7 @@ export interface Asset {
   status: 'Available' | 'Assigned' | 'Repair' | 'Lost' | 'Disposed';
   created_at: string;
   updated_at: string;
+  store_id?: string | null;
 }
 
 export interface AssetAssignment {
@@ -25,16 +27,20 @@ export interface AssetAssignment {
   condition_on_return: string | null;
   notes: string | null;
   created_at: string;
+  store_id?: string | null;
   assets?: Asset;
   employees?: { full_name: string };
 }
 
 export function useAssets(status?: string, category?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['assets', status, category],
+    queryKey: ['assets', storeId, status, category],
     queryFn: async () => {
       let query = supabase.from('assets' as any).select('*').order('created_at', { ascending: false });
 
+      if (storeId) query = query.eq('store_id', storeId);
       if (status) query = query.eq('status', status);
       if (category) query = query.eq('category', category);
 
@@ -42,26 +48,29 @@ export function useAssets(status?: string, category?: string) {
       if (error) throw error;
       return (data || []) as unknown as Asset[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useAssetAssignments(employeeId?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['asset-assignments', employeeId],
+    queryKey: ['asset-assignments', storeId, employeeId],
     queryFn: async () => {
       let query = supabase
         .from('asset_assignments' as any)
         .select('*, assets(*), employees(full_name)')
         .order('assigned_on', { ascending: false });
 
-      if (employeeId) {
-        query = query.eq('employee_id', employeeId);
-      }
+      if (storeId) query = query.eq('store_id', storeId);
+      if (employeeId) query = query.eq('employee_id', employeeId);
 
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as AssetAssignment[];
     },
+    enabled: !!storeId,
   });
 }
 
@@ -91,12 +100,13 @@ export function useMyAssets() {
 
 export function useCreateAsset() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<Asset>) => {
       const { data: result, error } = await supabase
         .from('assets' as any)
-        .insert(data as any)
+        .insert({ ...data, store_id: storeId } as any)
         .select()
         .single();
 
@@ -158,6 +168,7 @@ export function useDeleteAsset() {
 
 export function useAssignAsset() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (data: Partial<AssetAssignment>) => {
@@ -166,7 +177,7 @@ export function useAssignAsset() {
 
       const { data: result, error } = await supabase
         .from('asset_assignments' as any)
-        .insert(data as any)
+        .insert({ ...data, store_id: storeId } as any)
         .select()
         .single();
 
