@@ -6,7 +6,7 @@ import { useCurrentStoreId } from './useCurrentStoreId';
 export interface Party {
   id: string;
   name: string;
-  party_type: 'SUPPLIER' | 'WHOLESALER' | 'BOTH';
+  party_type: 'SUPPLIER' | 'CUSTOMER' | 'BOTH';
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -44,7 +44,7 @@ export interface PartyWithBalances extends Party {
   pending_payable_amount: number;
 }
 
-export function useParties(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
+export function useParties(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') {
   const storeId = useCurrentStoreId();
   
   return useQuery({
@@ -71,7 +71,7 @@ export function useParties(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
   });
 }
 
-export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') {
+export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') {
   const storeId = useCurrentStoreId();
   
   return useQuery({

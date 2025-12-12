@@ -19,7 +19,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
 
   const [formData, setFormData] = useState({
     name: '',
-    party_type: 'SUPPLIER' as 'SUPPLIER' | 'WHOLESALER' | 'BOTH',
+    party_type: 'SUPPLIER' as 'SUPPLIER' | 'CUSTOMER' | 'BOTH',
     phone: '',
     email: '',
     address: '',
@@ -86,7 +86,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
             <Label>Party Type *</Label>
             <Select
               value={formData.party_type}
-              onValueChange={(value: 'SUPPLIER' | 'WHOLESALER' | 'BOTH') =>
+              onValueChange={(value: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') =>
                 setFormData({ ...formData, party_type: value })
               }
             >
@@ -95,7 +95,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="SUPPLIER">Supplier</SelectItem>
-                <SelectItem value="WHOLESALER">Wholesaler</SelectItem>
+                <SelectItem value="CUSTOMER">Customer</SelectItem>
                 <SelectItem value="BOTH">Both</SelectItem>
               </SelectContent>
             </Select>
