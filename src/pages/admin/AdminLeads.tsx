@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, Lead } from '@/hooks/useLeads';
-import { useOrders } from '@/hooks/useOrders';
+import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, useUpdateLead, useUpdateLeadStatus, Lead } from '@/hooks/useLeads';
+import { useOrders, useCreateOrder } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAutoMarkSeen } from '@/hooks/useViewState';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useLeadAssignmentCounts } from '@/hooks/useLeadAssignmentCounts';
+import { useCreateCallLog } from '@/hooks/useCallLogs';
+import { useUpdateOrderItems } from '@/hooks/useOrderItems';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +34,7 @@ import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsModal';
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
+import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { toast } from 'sonner';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
@@ -92,6 +95,35 @@ export default function AdminLeads() {
   const returnLeadsToQueue = useReturnLeadsToQueue();
   const resendCNRToPool = useAdminResendCNRToPool();
   const [showPoolDialog, setShowPoolDialog] = useState(false);
+
+  // Hooks for editing leads (products fetched below with other data hooks)
+  const updateLead = useUpdateLead();
+  const updateLeadStatus = useUpdateLeadStatus();
+  const createOrder = useCreateOrder();
+  const createCallLog = useCreateCallLog();
+  const updateOrderItems = useUpdateOrderItems();
+
+  // Edit lead state
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [editForm, setEditForm] = useState<EditLeadFormData>({
+    destination_branch: '',
+    branch_id: '',
+    full_address: '',
+    alt_phone: '',
+    remark: '',
+    status: '',
+    quantity: '1',
+    amount: '',
+    delivery_location: '',
+    is_cod: true,
+    date: '',
+    followup_preset: '',
+    followup_date: '',
+    followup_time: '',
+    followup_reason: '',
+    orderItems: [{ id: crypto.randomUUID(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 }],
+  });
+  const [isSavingLead, setIsSavingLead] = useState(false);
 
   // Check if user has permission (ADMIN, OWNER or MANAGER role)
   const canReturnLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'LEADS';
@@ -415,10 +447,214 @@ export default function AdminLeads() {
     setShowLeadDetail(true);
   };
 
-  const handleEditLead = (lead: Lead) => {
-    // Open the lead detail sheet which has edit capabilities
-    setSelectedLeadForDetail(lead);
-    setShowLeadDetail(true);
+  const handleEditLead = async (lead: Lead) => {
+    const product = products.find(p => p.id === lead.product_id);
+    
+    // If lead has an existing order, fetch its details
+    let orderItems = product 
+      ? [{ id: crypto.randomUUID(), product_id: product.id, product_name: product.name, quantity: 1, unit_price: product.sell_price || 0, discount: 0 }] 
+      : [{ id: crypto.randomUUID(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 }];
+    let deliveryLocation = '';
+    let isCod = true;
+
+    if (lead.order_id) {
+      const [orderResult, itemsResult] = await Promise.all([
+        supabase.from('orders').select('delivery_location, is_cod').eq('id', lead.order_id).single(),
+        supabase.from('order_items').select('*').eq('order_id', lead.order_id),
+      ]);
+
+      if (orderResult.data) {
+        deliveryLocation = orderResult.data.delivery_location || '';
+        isCod = orderResult.data.is_cod ?? true;
+      }
+
+      if (itemsResult.data && itemsResult.data.length > 0) {
+        orderItems = itemsResult.data.map(item => ({
+          id: item.id as `${string}-${string}-${string}-${string}-${string}`,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount: item.discount || 0,
+        }));
+      }
+    }
+
+    setEditForm({
+      destination_branch: lead.destination_branch || '',
+      branch_id: lead.branch_id || '',
+      full_address: lead.full_address || '',
+      alt_phone: lead.alt_phone || '',
+      remark: lead.remark || '',
+      status: lead.status,
+      quantity: '1',
+      amount: product?.sell_price?.toString() || '',
+      delivery_location: deliveryLocation,
+      is_cod: isCod,
+      date: lead.date || '',
+      followup_preset: '',
+      followup_date: lead.next_followup_at ? lead.next_followup_at.split('T')[0] : '',
+      followup_time: lead.next_followup_at ? lead.next_followup_at.split('T')[1]?.substring(0, 5) || '' : '',
+      followup_reason: lead.followup_reason || '',
+      orderItems: orderItems,
+    });
+    setEditingLead(lead);
+  };
+
+  const handleSaveEditedLead = async () => {
+    if (!editingLead) return;
+    setIsSavingLead(true);
+
+    try {
+      // Build follow-up timestamp if status is FOLLOW_UP
+      let followupData: { 
+        next_followup_at?: string; 
+        followup_reason?: string;
+        is_followup_reminded?: boolean;
+        followup_completed?: boolean;
+      } = {};
+      
+      if (editForm.status === 'FOLLOW_UP' && editForm.followup_date && editForm.followup_time) {
+        followupData = {
+          next_followup_at: `${editForm.followup_date}T${editForm.followup_time}:00`,
+          followup_reason: editForm.followup_reason || undefined,
+          is_followup_reminded: false,
+          followup_completed: false,
+        };
+      }
+      
+      // If transitioning away from FOLLOW_UP to another status, mark as completed
+      if (editingLead.status === 'FOLLOW_UP' && editForm.status !== 'FOLLOW_UP') {
+        followupData.followup_completed = true;
+      }
+
+      await updateLead.mutateAsync({
+        leadId: editingLead.id,
+        destination_branch: editForm.destination_branch || undefined,
+        branch_id: editForm.branch_id || undefined,
+        full_address: editForm.full_address || undefined,
+        alt_phone: editForm.alt_phone || undefined,
+        remark: editForm.remark || undefined,
+        date: editForm.date || undefined,
+        ...followupData,
+      });
+
+      // Create followup log if status changed
+      if (editForm.status !== editingLead.status) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('followup_logs').insert({
+              lead_id: editingLead.id,
+              updated_by: user.id,
+              old_status: editingLead.status,
+              new_status: editForm.status,
+              note: editForm.remark || editForm.followup_reason,
+            });
+          }
+        } catch (logError) {
+          console.error('Failed to create followup log:', logError);
+        }
+      }
+
+      // Only create order if lead doesn't already have one
+      if (editForm.status === 'CONFIRMED' && !editingLead.order_id) {
+        if (!editForm.delivery_location) {
+          toast.error('Please select a delivery location (Inside/Outside Valley) before confirming');
+          setIsSavingLead(false);
+          return;
+        }
+
+        const validItems = (editForm.orderItems || []).filter(item => item.product_id);
+        if (validItems.length === 0) {
+          toast.error('Please add at least one product to the order');
+          setIsSavingLead(false);
+          return;
+        }
+        
+        const grandTotal = validItems.reduce((sum, item) => {
+          const subtotal = item.quantity * item.unit_price;
+          return sum + Math.max(0, subtotal - (item.discount || 0));
+        }, 0);
+        const totalQty = validItems.reduce((sum, item) => sum + item.quantity, 0);
+        
+        await createOrder.mutateAsync({
+          leadId: editingLead.id,
+          productId: validItems[0].product_id,
+          quantity: totalQty,
+          amount: grandTotal,
+          destinationBranch: editForm.destination_branch,
+          branchId: editForm.branch_id || undefined,
+          fullAddress: editForm.full_address,
+          deliveryLocation: editForm.delivery_location as 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY',
+          isCod: editForm.is_cod,
+          items: validItems.map(item => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            discount: item.discount || 0,
+          })),
+        });
+        
+        await createCallLog.mutateAsync({
+          leadId: editingLead.id,
+          outcome: 'Confirmed',
+          notes: editForm.remark,
+        });
+      } else if (editForm.status === 'CONFIRMED' && editingLead.order_id) {
+        // Update existing order
+        const validItems = (editForm.orderItems || []).filter(item => item.product_id);
+        const grandTotal = validItems.reduce((sum, item) => {
+          const subtotal = item.quantity * item.unit_price;
+          return sum + Math.max(0, subtotal - (item.discount || 0));
+        }, 0);
+        const totalQty = validItems.reduce((sum, item) => sum + item.quantity, 0);
+
+        await supabase.from('orders').update({
+          destination_branch: editForm.destination_branch || undefined,
+          branch_id: editForm.branch_id || undefined,
+          full_address: editForm.full_address || undefined,
+          delivery_location: editForm.delivery_location || undefined,
+          is_cod: editForm.is_cod,
+          quantity: totalQty || 1,
+          amount: grandTotal || undefined,
+          product_id: validItems[0]?.product_id || undefined,
+        }).eq('id', editingLead.order_id);
+
+        await updateOrderItems.mutateAsync({
+          orderId: editingLead.order_id,
+          items: validItems.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            discount: item.discount || 0,
+          })),
+        });
+      } else if (editForm.status !== editingLead.status) {
+        await updateLeadStatus.mutateAsync({
+          leadId: editingLead.id,
+          status: editForm.status as any,
+          remark: editForm.remark,
+        });
+        
+        await createCallLog.mutateAsync({
+          leadId: editingLead.id,
+          outcome: editForm.status.replace('_', ' '),
+          notes: editForm.remark,
+        });
+      }
+
+      toast.success('Lead updated successfully');
+      setEditingLead(null);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update lead');
+    } finally {
+      setIsSavingLead(false);
+    }
   };
 
   const handleCreateOrderFromLead = (lead: Lead) => {
@@ -971,6 +1207,18 @@ export default function AdminLeads() {
         onCreateOrder={handleCreateOrderFromLead}
         onCall={handleCallLead}
         onWhatsApp={handleWhatsAppLead}
+      />
+
+      {/* Edit Lead Sheet with Customer Insight */}
+      <EditLeadSheet
+        lead={editingLead}
+        formData={editForm}
+        onFormChange={setEditForm}
+        onSave={handleSaveEditedLead}
+        onClose={() => setEditingLead(null)}
+        onCall={(lead, phone) => window.location.href = `tel:${phone}`}
+        onWhatsApp={(lead) => window.open(`https://wa.me/${lead.contact_number.replace(/\D/g, '')}`, '_blank')}
+        isSaving={isSavingLead}
       />
 
       {/* Reassign Dialog */}
