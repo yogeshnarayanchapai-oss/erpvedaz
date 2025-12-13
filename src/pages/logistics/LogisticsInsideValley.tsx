@@ -300,7 +300,7 @@ export default function LogisticsInsideValley() {
                     <TableCell>{order.leads?.contact_number || '-'}</TableCell>
                     <TableCell>
                       {order.products?.name 
-                        ? `${order.products.name}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}` 
+                        ? `${order.products.name}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}` 
                         : '-'}
                     </TableCell>
                     <TableCell className="font-medium">₹{order.amount?.toFixed(0) || '-'}</TableCell>
