@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
-import { FileText, User, Shield, Building2, Save, Loader2 } from 'lucide-react';
+import { FileText, User, Shield, Building2, Save, Loader2, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { MyBankAccountsCard } from '@/components/hrm/MyBankAccountsCard';
 import {
   useMyEmployeeProfile,
   useEmployeeDocuments,
@@ -116,6 +117,10 @@ export default function MyHRDocuments() {
           <TabsTrigger value="documents" className="gap-2">
             <FileText className="h-4 w-4" />
             Documents
+          </TabsTrigger>
+          <TabsTrigger value="bank" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Bank Accounts
           </TabsTrigger>
           <TabsTrigger value="emergency" className="gap-2">
             <Shield className="h-4 w-4" />
@@ -230,6 +235,11 @@ export default function MyHRDocuments() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Bank Accounts Tab */}
+        <TabsContent value="bank">
+          <MyBankAccountsCard />
         </TabsContent>
 
         {/* Emergency Contact Tab */}
