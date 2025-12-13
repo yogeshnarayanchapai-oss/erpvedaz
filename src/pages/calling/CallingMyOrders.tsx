@@ -47,7 +47,7 @@ export default function CallingMyOrders() {
   const urlStatus = searchParams.get('status');
 
   // Date range state - show all orders when coming from dashboard with status filter
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>(urlStatus ? 'all' : 'today');
+  const [activeTab, setActiveTab] = useState<'today' | 'yesterday' | 'all'>(urlStatus ? 'all' : 'today');
   const [dateRange, setDateRange] = useState<DateRange>({
     from: urlStatus ? startOfDay(subDays(today, 30)) : startOfDay(today),
     to: endOfDay(today),
@@ -78,6 +78,12 @@ export default function CallingMyOrders() {
       setDateRange({
         from: startOfDay(new Date()),
         to: endOfDay(new Date()),
+      });
+    } else if (activeTab === 'yesterday') {
+      const yesterday = subDays(new Date(), 1);
+      setDateRange({
+        from: startOfDay(yesterday),
+        to: endOfDay(yesterday),
       });
     } else if (!urlStatus) {
       setDateRange({
@@ -279,6 +285,7 @@ export default function CallingMyOrders() {
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
             <TabsList>
               <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="yesterday">Yesterday</TabsTrigger>
               <TabsTrigger value="all">All Orders</TabsTrigger>
             </TabsList>
           </Tabs>
