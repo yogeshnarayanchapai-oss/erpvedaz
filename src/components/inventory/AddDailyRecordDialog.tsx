@@ -55,8 +55,8 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
   const redirectCost = Math.round(sell * 0.20 * 50);
   // Actual Product Value = productValue (from stock movement OUT)
   const actualProductValue = productValue;
-  // P/L = Actual Product Value − Actual Product Cost − Staff+Office Cost − Ads Spent − Delivery Charge − Redirect Cost
-  const profitLoss = actualProductValue - actualProductCost - staffOfficeCost - adsSpentNpr - deliveryCharge - redirectCost;
+  // P/L = Actual Product Value − Actual Product Cost − Staff+Office Cost − Ads Spent − Delivery Charge − Redirect Cost − RTO Cost
+  const profitLoss = actualProductValue - actualProductCost - staffOfficeCost - adsSpentNpr - deliveryCharge - redirectCost - rtoCost;
 
   const handleSave = async () => {
     const input: DailyRecordInput = {
@@ -165,10 +165,6 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
                   <p className="font-semibold text-green-600">{actualSell}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Product Cost</Label>
-                  <p className="font-semibold text-destructive">{formatCurrency(productCost)}</p>
-                </div>
-                <div>
                   <Label className="text-xs text-muted-foreground">Actual Product Cost</Label>
                   <p className="font-semibold text-destructive">{formatCurrency(actualProductCost)}</p>
                 </div>
@@ -199,7 +195,7 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  = Actual Product Value - Actual Product Cost - Staff+Office - Ads - Delivery - Redirect
+                  = Actual Product Value - Actual Product Cost - Staff+Office - Ads - Delivery - Redirect - RTO Cost
                 </p>
               </div>
             </>
