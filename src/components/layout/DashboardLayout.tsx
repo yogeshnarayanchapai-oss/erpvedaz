@@ -139,17 +139,14 @@ function DashboardLayoutInner() {
     }
   }, [user, loading, navigate]);
 
-  // Update document title based on portal and store
+  // Update document title based on current page and store
   useEffect(() => {
-    if (profile?.role && currentStore?.name) {
-      document.title = `${portalName} - ${currentStore.name}`;
-    } else if (profile?.role) {
-      document.title = `${portalName} Dashboard`;
+    if (currentStore?.name) {
+      document.title = `${pageName} - ${currentStore.name}`;
+    } else {
+      document.title = pageName;
     }
-    return () => {
-      document.title = 'Vedaz Store';
-    };
-  }, [profile?.role, portalName, currentStore?.name]);
+  }, [pageName, currentStore?.name]);
 
   if (loading) {
     return (
