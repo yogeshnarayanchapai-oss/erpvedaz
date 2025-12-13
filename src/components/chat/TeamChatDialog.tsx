@@ -687,8 +687,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 )}
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 px-4 py-3">
-                  <div className="space-y-4">
+                <ScrollArea className="flex-1 px-3 py-3">
+                  <div className="space-y-4 pr-1">
                     {(showSearch && searchQuery ? searchResults : messages).map(msg => {
                       const isOwn = msg.sender_id === profile?.id;
                       const isRead = msg.read_by && msg.read_by.length > 0;
@@ -701,13 +701,13 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                           )}
                           
                           <div className={cn(
-                            "max-w-[75%] rounded-2xl px-4 py-2.5 relative group",
+                            "max-w-[70%] rounded-2xl px-3 py-2 relative group",
                             isOwn 
-                              ? "bg-primary text-primary-foreground rounded-br-md text-left" 
-                              : "bg-muted rounded-bl-md text-left"
+                              ? "bg-primary text-primary-foreground rounded-br-md" 
+                              : "bg-muted rounded-bl-md"
                           )}>
                             {/* Message content with links and mentions highlighted */}
-                            <p className="text-sm whitespace-pre-wrap break-words text-left">
+                            <p className="text-sm whitespace-pre-wrap break-words">
                               {renderMessageWithLinks(msg.message_text)}
                             </p>
                             
