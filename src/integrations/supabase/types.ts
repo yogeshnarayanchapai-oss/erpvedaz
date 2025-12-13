@@ -2191,6 +2191,99 @@ export type Database = {
           },
         ]
       }
+      daily_records: {
+        Row: {
+          actual_product_cost: number
+          actual_product_value: number
+          actual_sell: number
+          ads_spent_npr: number
+          created_at: string
+          created_by: string | null
+          delivery_charge: number
+          id: string
+          product_cost: number
+          product_value: number
+          profit_loss: number
+          record_date: string
+          redirect_cost: number
+          rto: number
+          rto_cost: number
+          rto_percent: number
+          sell: number
+          staff_office_cost: number
+          store_id: string
+          total_orders: number
+          updated_at: string
+          updated_by: string | null
+          warehouse_id: string | null
+        }
+        Insert: {
+          actual_product_cost?: number
+          actual_product_value?: number
+          actual_sell?: number
+          ads_spent_npr?: number
+          created_at?: string
+          created_by?: string | null
+          delivery_charge?: number
+          id?: string
+          product_cost?: number
+          product_value?: number
+          profit_loss?: number
+          record_date: string
+          redirect_cost?: number
+          rto?: number
+          rto_cost?: number
+          rto_percent?: number
+          sell?: number
+          staff_office_cost?: number
+          store_id: string
+          total_orders?: number
+          updated_at?: string
+          updated_by?: string | null
+          warehouse_id?: string | null
+        }
+        Update: {
+          actual_product_cost?: number
+          actual_product_value?: number
+          actual_sell?: number
+          ads_spent_npr?: number
+          created_at?: string
+          created_by?: string | null
+          delivery_charge?: number
+          id?: string
+          product_cost?: number
+          product_value?: number
+          profit_loss?: number
+          record_date?: string
+          redirect_cost?: number
+          rto?: number
+          rto_cost?: number
+          rto_percent?: number
+          sell?: number
+          staff_office_cost?: number
+          store_id?: string
+          total_orders?: number
+          updated_at?: string
+          updated_by?: string | null
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_records_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_records_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string

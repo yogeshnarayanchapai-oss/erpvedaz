@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Save, TrendingUp, TrendingDown, DollarSign, Package, ChevronDown, Sparkles, Percent, Target, ShoppingBag, RotateCcw, Settings } from 'lucide-react';
-import { useSaveDailyPL, useDailySalesByProduct, useDailyPLRecords } from '@/hooks/useDailyPL';
+import { TrendingUp, TrendingDown, DollarSign, Package, ChevronDown, Percent, Target, ShoppingBag, Settings } from 'lucide-react';
+import { useSaveDailyPL, useDailySalesByProduct } from '@/hooks/useDailyPL';
+import { useDailyRecords } from '@/hooks/useDailyRecords';
+import { AddDailyRecordDialog } from '@/components/inventory/AddDailyRecordDialog';
+import { DailyRecordsTable } from '@/components/inventory/DailyRecordsTable';
 import { usePLSummaryByRange, useDailyPLTrend, useAITargetSuggestions } from '@/hooks/useDailyPLRange';
 import { useWholesalePLSummary } from '@/hooks/useWholesalePL';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
@@ -39,7 +42,12 @@ export default function DailyPL() {
   const { data: salesByProduct } = useDailySalesByProduct(dateRange.startDate);
   const { data: trendData } = useDailyPLTrend(30);
   const { data: aiTargets } = useAITargetSuggestions(dateRange.startDate, dateRange.endDate);
-  const { data: dailyRecords } = useDailyPLRecords(30);
+  const { data: dailyRecords, refetch: refetchRecords } = useDailyRecords({ 
+    startDate: dateRange.startDate, 
+    endDate: dateRange.endDate, 
+    warehouseId: selectedWarehouse,
+    limit: 50 
+  });
   const savePL = useSaveDailyPL();
   
   // New data hooks for real metrics
@@ -346,14 +354,20 @@ export default function DailyPL() {
             </Card>
           </div>
 
-          {/* Two Column Layout */}
-          {/* Daily Records Table */}
+          {/* Daily Records Section */}
           <Collapsible open={recordsOpen} onOpenChange={setRecordsOpen}>
             <Card>
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/50">
                   <div className="flex items-center justify-between">
-                    <CardTitle>Daily Records (Last 30 Days)</CardTitle>
+                    <div className="flex items-center gap-3">
+                      <CardTitle>Daily Records</CardTitle>
+                      <AddDailyRecordDialog 
+                        initialDate={dateRange.startDate} 
+                        initialWarehouse={selectedWarehouse}
+                        onSaved={() => refetchRecords()}
+                      />
+                    </div>
                     <ChevronDown
                       className={`h-4 w-4 transition-transform ${recordsOpen ? 'rotate-180' : ''}`}
                     />
@@ -362,56 +376,7 @@ export default function DailyPL() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent>
-                  {!dailyRecords?.length ? (
-                    <p className="text-muted-foreground">No saved records yet. Save today's P/L to start tracking.</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead className="text-right">Units</TableHead>
-                            <TableHead className="text-right">Gross Sales</TableHead>
-                            <TableHead className="text-right">RTO %</TableHead>
-                            <TableHead className="text-right">RTO Orders</TableHead>
-                            <TableHead className="text-right">Actual Sales</TableHead>
-                            <TableHead className="text-right">Total Expense</TableHead>
-                            <TableHead className="text-right">Profit</TableHead>
-                            <TableHead className="text-right">ROI</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {dailyRecords.map((record) => (
-                            <TableRow key={record.id}>
-                              <TableCell className="font-medium">
-                                {format(new Date(record.date), 'MMM dd, yyyy')}
-                              </TableCell>
-                              <TableCell className="text-right">{record.total_units_sold}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(record.gross_sales_value)}</TableCell>
-                              <TableCell className="text-right">{record.rto_rate_percent || 0}%</TableCell>
-                              <TableCell className="text-right">{record.rto_orders || 0}</TableCell>
-                              <TableCell className="text-right text-green-600">
-                                {formatCurrency(record.actual_sales || 0)}
-                              </TableCell>
-                              <TableCell className="text-right text-destructive">
-                                {formatCurrency(record.total_expense)}
-                              </TableCell>
-                              <TableCell
-                                className={`text-right font-semibold ${
-                                  record.actual_profit >= 0 ? 'text-green-600' : 'text-destructive'
-                                }`}
-                              >
-                                {formatCurrency(record.actual_profit)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {(record.roi_ads || 0).toFixed(2)}x
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+                  <DailyRecordsTable records={dailyRecords || []} />
                 </CardContent>
               </CollapsibleContent>
             </Card>
