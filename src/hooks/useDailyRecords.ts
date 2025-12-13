@@ -78,9 +78,11 @@ export function useDailyRecords(params?: UseDailyRecordsParams) {
       if (params?.endDate) {
         query = query.lte('record_date', params.endDate);
       }
+      // Filter by warehouse only if specific warehouse is selected (not 'all')
       if (params?.warehouseId && params.warehouseId !== 'all') {
         query = query.eq('warehouse_id', params.warehouseId);
       }
+      // When 'all' is selected, don't filter by warehouse - show all records
       if (params?.limit) {
         query = query.limit(params.limit);
       }
@@ -169,7 +171,9 @@ export function useSaveDailyRecord() {
       }
     },
     onSuccess: () => {
+      // Invalidate all daily_records queries to refresh data instantly
       queryClient.invalidateQueries({ queryKey: ['daily_records'] });
+      queryClient.refetchQueries({ queryKey: ['daily_records'] });
       toast.success('Daily record saved');
     },
     onError: (error: Error) => {
