@@ -87,10 +87,15 @@ export default function AdminDashboard() {
   })), [products]);
   const { data: productDaybook = [] } = useProductDaybookByDateRange(dateRange, productList);
 
+  // Sort product daybook by orders (sales) descending
+  const sortedProductDaybook = useMemo(() => {
+    return [...productDaybook].sort((a, b) => b.sales - a.sales);
+  }, [productDaybook]);
+
   // Filter product daybook to only show products with targets > 0
   const productDaybookWithTargets = useMemo(() => {
-    return productDaybook.filter(p => p.target > 0);
-  }, [productDaybook]);
+    return sortedProductDaybook.filter(p => p.target > 0);
+  }, [sortedProductDaybook]);
 
   // Default lead stats if not loaded yet
   const stats = leadStats || {
@@ -607,7 +612,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {productDaybook.map((item) => (
+                  {sortedProductDaybook.map((item) => (
                     <TableRow key={item.name}>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="text-right">{item.target}</TableCell>
