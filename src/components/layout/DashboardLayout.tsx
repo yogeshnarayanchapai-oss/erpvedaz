@@ -142,9 +142,11 @@ function DashboardLayoutInner() {
   // Update document title based on portal, page and store
   useEffect(() => {
     const portalFirstWord = portalName.split(' ')[0];
+    // If pageName ends with "Dashboard", just use "Dashboard" to avoid redundancy
+    const displayPageName = pageName.endsWith('Dashboard') ? 'Dashboard' : pageName;
     const title = currentStore?.name 
-      ? `${portalFirstWord} ${pageName} - ${currentStore.name}`
-      : `${portalFirstWord} ${pageName}`;
+      ? `${portalFirstWord} ${displayPageName} - ${currentStore.name}`
+      : `${portalFirstWord} ${displayPageName}`;
     document.title = title;
   }, [pageName, portalName, currentStore?.name]);
 
