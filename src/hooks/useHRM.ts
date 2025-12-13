@@ -111,6 +111,10 @@ export interface Notice {
   title: string;
   message: string | null;
   target_audience: string;
+  target_type: 'all' | 'department' | 'employee';
+  target_department_ids: string[];
+  target_employee_ids: string[];
+  show_as_popup: boolean;
   start_date: string;
   end_date: string | null;
   is_active: boolean;
