@@ -74,15 +74,22 @@ export async function getAdminTeamEmails(storeId: string): Promise<string[]> {
     .from('user_store_access')
     .select(`
       user_id,
-      profiles:user_id (email)
+      store_role,
+      profiles:user_id (email, role)
     `)
     .eq('store_id', storeId)
-    .eq('is_active', true)
-    .in('store_role', ['ADMIN', 'MANAGER', 'HR', 'OWNER']);
+    .eq('is_active', true);
 
   if (!data) return [];
 
+  const adminRoles = ['ADMIN', 'MANAGER', 'HR', 'OWNER'];
+  
   return data
+    .filter((u: any) => {
+      const storeRole = u.store_role;
+      const profileRole = u.profiles?.role;
+      return adminRoles.includes(storeRole) || adminRoles.includes(profileRole);
+    })
     .map((u: any) => u.profiles?.email)
     .filter((email: string | null): email is string => !!email && email.includes('@'));
 }
