@@ -500,8 +500,7 @@ function InsideValleyTable({
                   <TableHead className="table-header">Date</TableHead>
                   <TableHead className="table-header">Client</TableHead>
                   <TableHead className="table-header">Contact</TableHead>
-                  <TableHead className="table-header">Product</TableHead>
-                  <TableHead className="table-header">Qty</TableHead>
+                <TableHead className="table-header">Product</TableHead>
                   <TableHead className="table-header">Amount</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Notes</TableHead>
@@ -518,8 +517,11 @@ function InsideValleyTable({
                   </TableCell>
                   <TableCell className="font-medium">{order.leads?.client_name || '-'}</TableCell>
                   <TableCell>{order.leads?.contact_number || '-'}</TableCell>
-                  <TableCell>{order.products?.name || '-'}</TableCell>
-                  <TableCell>{order.quantity}</TableCell>
+                  <TableCell>
+                    {order.products?.name 
+                      ? `${order.products.name}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}` 
+                      : '-'}
+                  </TableCell>
                   <TableCell>₹{order.amount?.toFixed(0) || '-'}</TableCell>
                   <TableCell>{order.branches?.branch_name || order.destination_branch || '-'}</TableCell>
                   <TableCell>
@@ -650,7 +652,6 @@ function OutsideValleyTable({
                 <TableHead className="table-header">Client</TableHead>
                 <TableHead className="table-header">Contact</TableHead>
                 <TableHead className="table-header">Product</TableHead>
-                <TableHead className="table-header">Qty</TableHead>
                 <TableHead className="table-header">Amount</TableHead>
                 <TableHead className="table-header">Branch</TableHead>
                 <TableHead className="table-header">Shipping Partner</TableHead>
@@ -668,8 +669,11 @@ function OutsideValleyTable({
                   </TableCell>
                   <TableCell className="font-medium">{order.leads?.client_name || '-'}</TableCell>
                   <TableCell>{order.leads?.contact_number || '-'}</TableCell>
-                  <TableCell>{order.products?.name || '-'}</TableCell>
-                  <TableCell>{order.quantity}</TableCell>
+                  <TableCell>
+                    {order.products?.name 
+                      ? `${order.products.name}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}` 
+                      : '-'}
+                  </TableCell>
                   <TableCell>₹{order.amount?.toFixed(0) || '-'}</TableCell>
                   <TableCell>{order.branches?.branch_name || order.destination_branch || '-'}</TableCell>
                   <TableCell>

@@ -657,11 +657,7 @@ export default function LeadsAll() {
                         </div>
                       </TableCell>
                       <TableCell>{lead.contact_number}</TableCell>
-                      <TableCell>
-                        {lead.products?.name 
-                          ? `${lead.products.name}${lead.quantity && lead.quantity > 1 ? ` (${lead.quantity})` : ''}` 
-                          : '-'}
-                      </TableCell>
+                      <TableCell>{lead.products?.name || '-'}</TableCell>
                       <TableCell>{lead.source || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getLeadStatusBadgeClass(lead.status)}>

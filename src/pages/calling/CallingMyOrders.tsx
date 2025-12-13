@@ -181,8 +181,8 @@ export default function CallingMyOrders() {
       // Handle multi-product orders
       const orderItemsList = (order as any).order_items || [];
       const productDisplay = orderItemsList.length > 0 
-        ? orderItemsList.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
-        : `${order.products?.name || '-'} x${order.quantity || 1}`;
+        ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
+        : `${order.products?.name || '-'}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}`;
       const totalQty = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
         : order.quantity || 1;
@@ -230,14 +230,14 @@ export default function CallingMyOrders() {
     let productQuantity = 0;
     
     if (orderItemsList.length > 0) {
-      // Format with quantity: "Hair Oil x2" or "Hair Oil x2, Face Cream x1"
-      productName = orderItemsList.map((item: any) => `${item.product_name} x${item.quantity || 1}`).join(', ');
+      // Format with quantity: "Hair Oil (2)" or "Hair Oil (2), Face Cream"
+      productName = orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ');
       productPrice = orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
       productQuantity = orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     } else {
       // Format with quantity for single product
       const qty = order.quantity || 1;
-      productName = `${order.products?.name || ''} x${qty}`;
+      productName = `${order.products?.name || ''}${qty > 1 ? ` (${qty})` : ''}`;
       productPrice = (order.amount || 0) * qty;
       productQuantity = qty;
     }
@@ -451,8 +451,8 @@ export default function CallingMyOrders() {
                   filteredOrders.map((order) => {
                     const orderItemsList = (order as any).order_items || [];
                     const productDisplay = orderItemsList.length > 0 
-                      ? orderItemsList.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
-                      : `${order.products?.name || '-'} x${order.quantity || 1}`;
+                      ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
+                      : `${order.products?.name || '-'}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}`;
                     const totalAmount = orderItemsList.length > 0
                       ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                       : (order.amount || 0) * (order.quantity || 1);
