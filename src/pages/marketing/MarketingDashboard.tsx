@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAds } from '@/hooks/useAds';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
@@ -28,6 +28,10 @@ export default function MarketingDashboard() {
   const [dollarRate, setDollarRate] = useState(133.5);
   const [showAdSpendModal, setShowAdSpendModal] = useState(false);
   const storeId = useCurrentStoreId();
+
+  useEffect(() => {
+    document.title = 'Marketing Dashboard';
+  }, []);
   
   const { data: products = [] } = useProducts();
   
