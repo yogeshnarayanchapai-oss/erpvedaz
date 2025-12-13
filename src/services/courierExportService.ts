@@ -56,13 +56,15 @@ export function exportOrdersToCourierFormat(orders: Order[], filename = 'courier
     const deliveryInstruction = order.delivery_notes || '';
     
     // Staff name: prefer confirmed_by, fallback to sales_person, then created_by_staff
-    const staffName = order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A';
+    const fullStaffName = order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A';
+    // Use only first name
+    const staffFirstName = fullStaffName.split(' ')[0];
     
     // Lead reference ID
     const leadRefId = order.leads?.reference_id || '';
     
-    // Format: "Staff Name #ReferenceID" or just "Staff Name" if no reference ID
-    const referenceId = leadRefId ? `${staffName} #${leadRefId}` : staffName;
+    // Format: "First Name #ReferenceID" or just "First Name" if no reference ID
+    const referenceId = leadRefId ? `${staffFirstName} #${leadRefId}` : staffFirstName;
 
     // Calculate COD and product description from order_items if available
     const orderItemsList = order.order_items || [];
