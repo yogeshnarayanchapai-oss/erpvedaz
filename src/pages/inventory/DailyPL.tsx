@@ -7,18 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, TrendingUp, TrendingDown, DollarSign, Package, ChevronDown, Sparkles, Percent, Target, ShoppingBag, RotateCcw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Save, TrendingUp, TrendingDown, DollarSign, Package, ChevronDown, Sparkles, Percent, Target, ShoppingBag, RotateCcw, Settings } from 'lucide-react';
 import { useSaveDailyPL, useDailySalesByProduct, useDailyPLRecords } from '@/hooks/useDailyPL';
 import { usePLSummaryByRange, useDailyPLTrend, useAITargetSuggestions } from '@/hooks/useDailyPLRange';
 import { useWholesalePLSummary } from '@/hooks/useWholesalePL';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
+import { useStockMovementMetrics, useOfficeManagementExpense, useAdsSpendMetrics } from '@/hooks/useDailyPLMetrics';
+import { useRTOSettings, useRTOSettingForMonth, useUpsertRTOSetting } from '@/hooks/useRTOSettings';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const DEFAULT_USD_RATE = 150;
 const DEFAULT_DELIVERY_COST_PER_ORDER = 400;
-const DEFAULT_RTO_RATE_PERCENT = 0;
 const DEFAULT_RTO_COST_PER_ORDER = 0;
 
 export default function DailyPL() {
@@ -28,6 +30,8 @@ export default function DailyPL() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: today, endDate: today, label: 'Today' });
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>(warehouseFromUrl || 'all');
+  const [rtoSettingsOpen, setRtoSettingsOpen] = useState(false);
+  const [rtoInputs, setRtoInputs] = useState<Record<string, number>>({});
   
   const { data: warehouses } = useActiveWarehouses();
   const { data: plData, isLoading } = usePLSummaryByRange(dateRange.startDate, dateRange.endDate, selectedWarehouse);
@@ -38,12 +42,20 @@ export default function DailyPL() {
   const { data: dailyRecords } = useDailyPLRecords(30);
   const savePL = useSaveDailyPL();
   
+  // New data hooks for real metrics
+  const yearMonth = format(new Date(dateRange.startDate), 'yyyy-MM');
+  const { data: stockMetrics } = useStockMovementMetrics(dateRange.startDate, dateRange.endDate);
+  const { data: officeExpense } = useOfficeManagementExpense(dateRange.startDate, dateRange.endDate);
+  const { data: adsMetrics } = useAdsSpendMetrics(dateRange.startDate, dateRange.endDate);
+  const { data: rtoSetting } = useRTOSettingForMonth(yearMonth);
+  const { data: allRtoSettings } = useRTOSettings();
+  const upsertRTO = useUpsertRTOSetting();
+  
   const [warehouseOpen, setWarehouseOpen] = useState(false);
   const [recordsOpen, setRecordsOpen] = useState(true);
   const [usdRate, setUsdRate] = useState(DEFAULT_USD_RATE);
   const [editableFields, setEditableFields] = useState({
     delivery_cost_per_order: DEFAULT_DELIVERY_COST_PER_ORDER,
-    rto_rate_percent: DEFAULT_RTO_RATE_PERCENT,
     rto_cost_per_order: DEFAULT_RTO_COST_PER_ORDER,
     ads_spent_usd: 0,
     ads_spent_npr: 0,
@@ -77,21 +89,31 @@ export default function DailyPL() {
     }));
   }, [editableFields.ads_spent_usd, usdRate]);
 
-  const summary = plData?.summary || {
-    total_units_sold: 0,
-    gross_sales_value: 0,
-    product_cost: 0,
-    rto_units: 0,
-    rto_value: 0,
-    actual_sales: 0,
-  };
+  // Initialize RTO inputs from saved settings
+  useEffect(() => {
+    if (allRtoSettings) {
+      const inputs: Record<string, number> = {};
+      allRtoSettings.forEach(s => {
+        inputs[s.year_month] = s.rto_percent;
+      });
+      setRtoInputs(inputs);
+    }
+  }, [allRtoSettings]);
 
-  // NEW CALCULATION LOGIC
-  // U = Units Sold, GS = Gross Sales, R = RTO Rate %, D_per = Delivery Cost/Order, R_per = RTO Cost/Order
-  const U = summary.total_units_sold;
-  const GS = summary.gross_sales_value;
-  const COGS = summary.product_cost;
-  const R = editableFields.rto_rate_percent;
+  // Use actual metrics from hooks
+  const U = stockMetrics?.unitsSold ?? plData?.summary?.total_units_sold ?? 0;
+  const GS = stockMetrics?.grossSales ?? plData?.summary?.gross_sales_value ?? 0;
+  const COGS = plData?.summary?.product_cost ?? 0;
+  
+  // RTO % from settings for the current month
+  const R = rtoSetting?.rto_percent ?? 0;
+  
+  // Total Expense from "office management" category transactions
+  const officeManagementExpense = officeExpense?.totalExpense ?? 0;
+  
+  // Ads spend from ads table
+  const adsFromTable = adsMetrics?.adsSpend ?? 0;
+  
   const D_per = editableFields.delivery_cost_per_order;
   const R_per = editableFields.rto_cost_per_order;
   
@@ -107,14 +129,8 @@ export default function DailyPL() {
   // Total Delivery Cost = U × D_per
   const totalDeliveryCost = U * D_per;
   
-  // Total Expense = COGS + Delivery + RTO Cost + Staff + Ads NPR + Other
-  const totalExpense = 
-    COGS + 
-    totalDeliveryCost + 
-    rtoCost + 
-    editableFields.staff_office_cost + 
-    editableFields.ads_spent_npr + 
-    editableFields.other_expenses;
+  // Total Expense = Office Management Expense (from transactions)
+  const totalExpense = officeManagementExpense;
   
   // Actual Profit = Actual Sales - Total Expense
   const actualProfit = actualSales - totalExpense;
@@ -122,9 +138,8 @@ export default function DailyPL() {
   // Avg Profit/Order = Actual Profit / U (if U > 0)
   const avgProfitPerOrder = U > 0 ? Math.round(actualProfit / U) : 0;
   
-  // ROI = Actual Profit / Ads NPR (if Ads NPR > 0)
-  const adsCost = editableFields.ads_spent_npr;
-  const roiAds = adsCost > 0 ? actualProfit / adsCost : 0;
+  // ROI = Actual Profit / Ads (from ads table)
+  const roiAds = adsFromTable > 0 ? actualProfit / adsFromTable : 0;
   
   // Profit margin
   const profitMargin = actualSales > 0 ? ((actualProfit / actualSales) * 100).toFixed(1) : '0';
@@ -141,12 +156,16 @@ export default function DailyPL() {
       rto_cost_per_order: R_per,
       ads_spent_usd: editableFields.ads_spent_usd,
       usd_rate: usdRate,
-      ads_spent_npr: editableFields.ads_spent_npr,
+      ads_spent_npr: adsFromTable,
       staff_office_cost: editableFields.staff_office_cost,
       other_expenses: editableFields.other_expenses,
       target_profit: editableFields.target_profit,
       target_orders: editableFields.target_orders,
     });
+  };
+
+  const handleSaveRTOSetting = async (month: string, value: number) => {
+    await upsertRTO.mutateAsync({ yearMonth: month, rtoPercent: value });
   };
 
   const formatCurrency = (val: number) => `Rs ${val.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -164,6 +183,17 @@ export default function DailyPL() {
   const selectedWarehouseName = selectedWarehouse === 'all' 
     ? 'All Warehouses' 
     : warehouses?.find(w => w.id === selectedWarehouse)?.name || 'Selected Warehouse';
+
+  // Generate last 12 months for RTO settings
+  const last12Months = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(format(date, 'yyyy-MM'));
+    }
+    return months;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -190,6 +220,47 @@ export default function DailyPL() {
             </SelectContent>
           </Select>
           <DateQuickFilters value={dateRange} onChange={setDateRange} />
+          
+          {/* RTO Settings Button */}
+          <Dialog open={rtoSettingsOpen} onOpenChange={setRtoSettingsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>RTO % Settings by Month</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {last12Months.map((month) => (
+                  <div key={month} className="flex items-center gap-3">
+                    <Label className="w-24 text-sm font-medium">
+                      {format(new Date(month + '-01'), 'MMM yyyy')}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      placeholder="RTO %"
+                      className="flex-1"
+                      value={rtoInputs[month] ?? ''}
+                      onChange={(e) => setRtoInputs(prev => ({ ...prev, [month]: +e.target.value }))}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveRTOSetting(month, rtoInputs[month] || 0)}
+                      disabled={upsertRTO.isPending}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button onClick={handleSave} disabled={savePL.isPending}>
             <Save className="h-4 w-4 mr-2" />
             Save
@@ -211,7 +282,7 @@ export default function DailyPL() {
               <CardContent>
                 <div className="text-2xl font-bold">{U}</div>
                 <p className="text-xs text-muted-foreground">
-                  RTO: {rtoOrders} units ({R}%)
+                  From stock movements
                 </p>
               </CardContent>
             </Card>
@@ -222,6 +293,9 @@ export default function DailyPL() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(GS)}</div>
+                <p className="text-xs text-muted-foreground">
+                  From stock movements
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -245,6 +319,7 @@ export default function DailyPL() {
                 <div className="text-2xl font-bold text-destructive">
                   {formatCurrency(totalExpense)}
                 </div>
+                <p className="text-xs text-muted-foreground">Office management</p>
               </CardContent>
             </Card>
             <Card className={actualProfit >= 0 ? 'border-green-500' : 'border-destructive'}>
@@ -269,7 +344,7 @@ export default function DailyPL() {
                   {roiAds.toFixed(2)}x
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {adsCost > 0 ? `Profit/Ad: ${formatCurrency(actualProfit)} / ${formatCurrency(adsCost)}` : 'No ads spend'}
+                  Ads: {formatCurrency(adsFromTable)}
                 </p>
               </CardContent>
             </Card>
@@ -280,31 +355,27 @@ export default function DailyPL() {
             {/* Auto-Calculated Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Auto-Calculated (from Sales OUT)</CardTitle>
+                <CardTitle>Metrics Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Units Sold</span>
+                  <span className="text-muted-foreground">Units Sold (Stock Movements)</span>
                   <span className="font-medium">{U}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Gross Sales</span>
+                  <span className="text-muted-foreground">Gross Sales (Stock Movements)</span>
                   <span className="font-medium">{formatCurrency(GS)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Product Cost (COGS)</span>
-                  <span className="font-medium">{formatCurrency(COGS)}</span>
+                  <span className="text-muted-foreground">RTO % (Month: {yearMonth})</span>
+                  <span className="font-medium text-orange-600">{R}%</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <RotateCcw className="h-3 w-3" />
-                    RTO Orders
+                    RTO Orders (calculated)
                   </span>
                   <span className="font-medium text-orange-600">{rtoOrders} units</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">RTO Cost</span>
-                  <span className="font-medium text-destructive">{formatCurrency(rtoCost)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-muted-foreground">Actual Sales (Gross - RTO%)</span>
@@ -313,12 +384,18 @@ export default function DailyPL() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Delivery Cost</span>
-                  <span className="font-medium">{formatCurrency(totalDeliveryCost)}</span>
+                  <span className="text-muted-foreground">Total Expense (Office Management)</span>
+                  <span className="font-semibold text-destructive">{formatCurrency(totalExpense)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ads Spend (From Ads Table)</span>
+                  <span className="font-medium text-blue-600">{formatCurrency(adsFromTable)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Total Expense</span>
-                  <span className="font-semibold text-destructive">{formatCurrency(totalExpense)}</span>
+                  <span className="text-muted-foreground">Actual Profit</span>
+                  <span className={`font-semibold ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                    {formatCurrency(actualProfit)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Avg Profit/Order</span>
@@ -347,21 +424,6 @@ export default function DailyPL() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>RTO Rate (%)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.1}
-                      value={editableFields.rto_rate_percent}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, rto_rate_percent: +e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
                     <Label>RTO Cost / Order (NPR)</Label>
                     <Input
                       type="number"
@@ -372,29 +434,19 @@ export default function DailyPL() {
                       }
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>USD Rate</Label>
                     <Input type="number" value={usdRate} onChange={(e) => setUsdRate(+e.target.value)} />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Ads (USD)</Label>
+                    <Label>Ads (USD) - Manual</Label>
                     <Input
                       type="number"
                       value={editableFields.ads_spent_usd}
                       onChange={(e) =>
                         setEditableFields({ ...editableFields, ads_spent_usd: +e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ads (NPR)</Label>
-                    <Input
-                      type="number"
-                      value={editableFields.ads_spent_npr}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, ads_spent_npr: +e.target.value })
                       }
                     />
                   </div>
@@ -677,18 +729,6 @@ export default function DailyPL() {
               )}
             </CardContent>
           </Card>
-
-          {/* Formula Verification Comment */}
-          {/* 
-            Example verification (from screenshot: U=215, GS=213,196, RTO%=10):
-            - RTO Orders = round(215 × 0.10) = 22 units
-            - If RTO Cost/Order = 400, then RTO Cost = 22 × 400 = Rs 8,800
-            - Actual Sales = 213,196 - (213,196 × 0.10) = 213,196 - 21,320 = Rs 191,876
-            - Total Delivery = 215 × 400 = Rs 86,000
-            - Total Expense = COGS + Delivery + RTO + Staff + Ads + Other
-            - Actual Profit = Actual Sales - Total Expense
-            - ROI = Actual Profit / Ads NPR
-          */}
         </>
       )}
     </div>
