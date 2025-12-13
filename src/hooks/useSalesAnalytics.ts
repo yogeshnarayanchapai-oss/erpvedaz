@@ -160,10 +160,10 @@ export function useMonthlyPLData(year: number) {
       // Filter by store
       const filteredMovements = (stockMovements || []).filter((m: any) => m.products?.store_id === storeId);
 
-      // Fetch ads with USD conversion
+      // Fetch ads with USD and dollar_rate for NPR calculation (USD × rate = NPR)
       const { data: ads, error: adsError } = await supabase
         .from('ads')
-        .select('date, amount_spent, amount_usd')
+        .select('date, amount_usd, dollar_rate')
         .eq('store_id', storeId)
         .gte('date', startDate)
         .lte('date', endDate);
@@ -221,7 +221,6 @@ export function useMonthlyPLData(year: number) {
         month: string; 
         productSold: number; 
         adsSpend: number; 
-        adsSpendUSD: number;
         deliveryCost: number;
         officeCost: number; 
         pl: number 
@@ -245,13 +244,16 @@ export function useMonthlyPLData(year: number) {
           return sum + (unitDeliveryCost * (o.quantity || 1));
         }, 0);
 
-        // Ads spend from ads table (same as Daily P/L)
+        // Ads spend from ads table: NPR = USD × dollar_rate (same logic as Daily P/L)
         const monthAds = (ads || []).filter(a => {
           const adMonth = new Date(a.date).getMonth();
           return adMonth === m;
         });
-        const adsSpend = monthAds.reduce((sum, a) => sum + (a.amount_spent || 0), 0);
-        const adsSpendUSD = monthAds.reduce((sum, a) => sum + (a.amount_usd || 0), 0);
+        const adsSpend = monthAds.reduce((sum, a) => {
+          const usd = a.amount_usd || 0;
+          const rate = a.dollar_rate || 0;
+          return sum + (usd * rate);
+        }, 0);
 
         // Office cost from transactions with "office management" category (same as Daily P/L)
         const monthExpenses = officeExpenses.filter(e => {
@@ -260,10 +262,10 @@ export function useMonthlyPLData(year: number) {
         });
         const officeCost = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-        // P/L = Sales - Ads Spend - Delivery Cost - Office Cost
+        // P/L = Sales - Ads Spend - Delivery Cost - Office Cost (same as Daily P/L)
         const pl = productSold - adsSpend - deliveryCost - officeCost;
 
-        plData.push({ month: monthNames[m], productSold, adsSpend, adsSpendUSD, deliveryCost, officeCost, pl });
+        plData.push({ month: monthNames[m], productSold, adsSpend, deliveryCost, officeCost, pl });
       }
 
       return plData;
