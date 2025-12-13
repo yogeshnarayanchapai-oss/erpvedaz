@@ -147,19 +147,63 @@ export function useMonthlyPLData(year: number) {
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
 
-      // Fetch orders with product info for delivery cost, filtered by store
-      let ordersQuery = supabase
-        .from('orders')
-        .select('order_date, amount, order_status, quantity, product_id, store_id')
-        .eq('is_deleted', false)
-        .gte('order_date', `${startDate}T00:00:00`)
-        .lte('order_date', `${endDate}T23:59:59`);
+      // Fetch stock_movements for sales data (same as Daily P/L)
+      const { data: stockMovements, error: stockError } = await supabase
+        .from('stock_movements')
+        .select('movement_date, qty, total_value, movement_type, products:product_id(store_id)')
+        .eq('movement_type', 'OUT')
+        .gte('movement_date', startDate)
+        .lte('movement_date', endDate);
 
-      if (storeId) {
-        ordersQuery = ordersQuery.eq('store_id', storeId);
+      if (stockError) throw stockError;
+
+      // Filter by store
+      const filteredMovements = (stockMovements || []).filter((m: any) => m.products?.store_id === storeId);
+
+      // Fetch ads with USD conversion
+      const { data: ads, error: adsError } = await supabase
+        .from('ads')
+        .select('date, amount_spent, amount_usd')
+        .eq('store_id', storeId)
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (adsError) throw adsError;
+
+      // Fetch "office management" category for expenses (same as Daily P/L)
+      const { data: categories, error: catError } = await supabase
+        .from('transaction_categories')
+        .select('id')
+        .ilike('name', '%office management%');
+
+      if (catError) throw catError;
+      const categoryIds = (categories || []).map(c => c.id);
+
+      // Fetch transactions with office management category
+      let officeExpenses: { date: string; amount: number }[] = [];
+      if (categoryIds.length > 0) {
+        const { data: txData, error: txError } = await supabase
+          .from('transactions')
+          .select('date, amount')
+          .eq('store_id', storeId)
+          .eq('type', 'expense')
+          .in('category_id', categoryIds)
+          .gte('date', startDate)
+          .lte('date', endDate);
+
+        if (txError) throw txError;
+        officeExpenses = txData || [];
       }
 
-      const { data: orders, error: ordersError } = await ordersQuery;
+      // Fetch delivery costs from orders (for delivery cost calculation)
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('order_date, quantity, product_id')
+        .eq('store_id', storeId)
+        .eq('is_deleted', false)
+        .in('order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED'])
+        .gte('order_date', `${startDate}T00:00:00`)
+        .lte('order_date', `${endDate}T23:59:59`);
 
       if (ordersError) throw ordersError;
 
@@ -171,24 +215,6 @@ export function useMonthlyPLData(year: number) {
       if (productsError) throw productsError;
 
       const productDeliveryCosts = new Map((products || []).map(p => [p.id, p.delivery_cost || 0]));
-
-      // Fetch ads with USD conversion
-      const { data: ads, error: adsError } = await supabase
-        .from('ads')
-        .select('date, amount_spent, amount_usd, dollar_rate')
-        .gte('date', startDate)
-        .lte('date', endDate);
-
-      if (adsError) throw adsError;
-
-      // Fetch office expenses
-      const { data: expenses, error: expensesError } = await supabase
-        .from('office_expenses')
-        .select('date, amount')
-        .gte('date', startDate)
-        .lte('date', endDate);
-
-      if (expensesError) throw expensesError;
 
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const plData: { 
@@ -202,18 +228,24 @@ export function useMonthlyPLData(year: number) {
       }[] = [];
 
       for (let m = 0; m < 12; m++) {
-        // Product sold & delivery cost
+        // Sales from stock_movements (same as Daily P/L)
+        const monthMovements = filteredMovements.filter((mv: any) => {
+          const movementMonth = new Date(mv.movement_date).getMonth();
+          return movementMonth === m;
+        });
+        const productSold = monthMovements.reduce((sum: number, mv: any) => sum + (mv.total_value || 0), 0);
+
+        // Delivery cost from orders
         const monthOrders = (orders || []).filter(o => {
           const orderMonth = new Date(o.order_date || '').getMonth();
-          return orderMonth === m && VALID_ORDER_STATUSES.includes(o.order_status || '');
+          return orderMonth === m;
         });
-        const productSold = monthOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
         const deliveryCost = monthOrders.reduce((sum, o) => {
           const unitDeliveryCost = productDeliveryCosts.get(o.product_id) || 0;
           return sum + (unitDeliveryCost * (o.quantity || 1));
         }, 0);
 
-        // Ads spend (NPR + USD converted)
+        // Ads spend from ads table (same as Daily P/L)
         const monthAds = (ads || []).filter(a => {
           const adMonth = new Date(a.date).getMonth();
           return adMonth === m;
@@ -221,14 +253,14 @@ export function useMonthlyPLData(year: number) {
         const adsSpend = monthAds.reduce((sum, a) => sum + (a.amount_spent || 0), 0);
         const adsSpendUSD = monthAds.reduce((sum, a) => sum + (a.amount_usd || 0), 0);
 
-        // Office cost
-        const monthExpenses = (expenses || []).filter(e => {
+        // Office cost from transactions with "office management" category (same as Daily P/L)
+        const monthExpenses = officeExpenses.filter(e => {
           const expMonth = new Date(e.date).getMonth();
           return expMonth === m;
         });
         const officeCost = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-        // P/L = Product Sales - Ads Spend - Delivery Cost - Office Cost
+        // P/L = Sales - Ads Spend - Delivery Cost - Office Cost
         const pl = productSold - adsSpend - deliveryCost - officeCost;
 
         plData.push({ month: monthNames[m], productSold, adsSpend, adsSpendUSD, deliveryCost, officeCost, pl });
