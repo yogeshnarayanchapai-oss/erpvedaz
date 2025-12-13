@@ -23,7 +23,7 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       // 1. Get stock movements for the date (OUT type = sales)
       let movementQuery = supabase
         .from('stock_movements')
-        .select('qty, total_cost, total_value, warehouse_id, products:product_id(store_id)')
+        .select('qty, total_cost, total_value, reference_order_count, warehouse_id, products:product_id(store_id)')
         .eq('movement_type', 'OUT')
         .eq('movement_date', date);
 
@@ -40,6 +40,8 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       const sell = filteredMovements.reduce((sum, m) => sum + (m.qty || 0), 0);
       const productCost = filteredMovements.reduce((sum, m) => sum + (m.total_cost || 0), 0);
       const productValue = filteredMovements.reduce((sum, m) => sum + (m.total_value || 0), 0);
+      // Use reference_order_count from stock movements instead of counting orders
+      const totalOrders = filteredMovements.reduce((sum, m) => sum + (m.reference_order_count || 0), 0);
 
       // 2. Get ads spend for the date from ads table
       const { data: adSpendData, error: adsError } = await supabase
@@ -51,19 +53,6 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       if (adsError) throw adsError;
 
       const adsSpentNpr = adSpendData?.reduce((sum, a) => sum + (a.amount_spent || 0), 0) || 0;
-
-      // 3. Get total orders count (VD + OVD) from order_items for the date
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('store_id', storeId)
-        .gte('order_date', `${date}T00:00:00`)
-        .lte('order_date', `${date}T23:59:59`)
-        .in('order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED']);
-
-      if (orderError) throw orderError;
-
-      const totalOrders = orderData?.length || 0;
 
       // 4. Get RTO% for the month
       const yearMonth = date.substring(0, 7); // YYYY-MM
