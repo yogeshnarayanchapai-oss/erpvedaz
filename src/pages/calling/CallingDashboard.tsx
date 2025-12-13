@@ -199,13 +199,14 @@ export default function CallingDashboard() {
   const handleCopyProductDaybook = () => {
     const staffName = profile?.name || 'Staff';
     const dateDisplay = dateRange.from === dateRange.to 
-      ? format(new Date(dateRange.from), 'dd MMM yyyy')
-      : `${format(new Date(dateRange.from), 'dd MMM yyyy')} - ${format(new Date(dateRange.to), 'dd MMM yyyy')}`;
+      ? format(new Date(dateRange.from), 'd MMM')
+      : `${format(new Date(dateRange.from), 'd MMM')} - ${format(new Date(dateRange.to), 'd MMM')}`;
     
+    // Format: *Name (Date)* with bold numbers for quantities
     const lines = [
-      staffName,
-      dateDisplay,
-      ...productDaybookData.map(p => `${p.productName} (OVD: ${p.ovdQty}) (VD: ${p.vdQty})`)
+      `*${staffName} (${dateDisplay})*`,
+      '',
+      ...productDaybookData.map(p => `${p.productName}: *${p.ovdQty}* ovd / *${p.vdQty}* vd`)
     ];
     
     navigator.clipboard.writeText(lines.join('\n'));
