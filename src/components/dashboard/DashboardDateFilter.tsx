@@ -22,7 +22,7 @@ interface DashboardDateFilterProps {
   onChange: (range: DateRange) => void;
 }
 
-type PresetKey = 'today' | '7days' | '30days' | 'custom';
+type PresetKey = 'today' | 'yesterday' | '7days' | '30days' | 'custom';
 
 export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProps) {
   const [activePreset, setActivePreset] = useState<PresetKey>('today');
@@ -31,10 +31,14 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
   const handlePresetClick = (preset: PresetKey) => {
     setActivePreset(preset);
     const today = new Date();
+    const yesterday = subDays(today, 1);
     
     switch (preset) {
       case 'today':
         onChange({ from: startOfDay(today), to: endOfDay(today) });
+        break;
+      case 'yesterday':
+        onChange({ from: startOfDay(yesterday), to: endOfDay(yesterday) });
         break;
       case '7days':
         onChange({ from: startOfDay(subDays(today, 6)), to: endOfDay(today) });
@@ -56,7 +60,7 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex rounded-lg border border-border bg-muted/30 p-1">
+      <div className="flex flex-wrap rounded-lg border border-border bg-muted/30 p-1">
         <Button
           variant={activePreset === 'today' ? 'default' : 'ghost'}
           size="sm"
@@ -66,12 +70,20 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
           Today
         </Button>
         <Button
+          variant={activePreset === 'yesterday' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => handlePresetClick('yesterday')}
+          className="h-7 px-3 text-xs"
+        >
+          Yesterday
+        </Button>
+        <Button
           variant={activePreset === '7days' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handlePresetClick('7days')}
           className="h-7 px-3 text-xs"
         >
-          Last 7 Days
+          7 Days
         </Button>
         <Button
           variant={activePreset === '30days' ? 'default' : 'ghost'}
@@ -79,7 +91,7 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
           onClick={() => handlePresetClick('30days')}
           className="h-7 px-3 text-xs"
         >
-          Last 30 Days
+          30 Days
         </Button>
         <Button
           variant={activePreset === 'custom' ? 'default' : 'ghost'}
