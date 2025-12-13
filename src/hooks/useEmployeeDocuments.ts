@@ -108,9 +108,9 @@ export function useUploadDocument() {
       file: File;
       userId: string;
     }) => {
-      // Generate unique filename
+      // Generate unique filename - use userId as folder for RLS compatibility
       const fileExt = file.name.split('.').pop();
-      const fileName = `${employeeId}/${docType}-${crypto.randomUUID()}.${fileExt}`;
+      const fileName = `${userId}/${docType}-${crypto.randomUUID()}.${fileExt}`;
 
       // Upload to storage
       const { data: storageData, error: storageError } = await supabase.storage

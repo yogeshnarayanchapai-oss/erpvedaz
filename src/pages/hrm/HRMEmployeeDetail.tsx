@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
 import { useLeaveRequests, useDepartments, usePayrollRecords } from '@/hooks/useHRM';
 import { EmployeeDocumentsTab } from '@/components/hrm/EmployeeDocumentsTab';
+import { EmployeeBankAccountsCard } from '@/components/hrm/EmployeeBankAccountsCard';
 
 interface EmployeeDetail {
   id: string;
@@ -348,10 +349,10 @@ export default function HRMEmployeeDetail() {
               </CardContent>
             </Card>
 
-            {/* Salary & Bank */}
+            {/* Salary Details */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Salary & Bank Details</CardTitle>
+                <CardTitle className="text-lg">Salary Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -365,25 +366,11 @@ export default function HRMEmployeeDetail() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Bank Account</p>
-                    {employee.hr_bank_accounts ? (
-                      <div>
-                        <p className="font-medium">{employee.hr_bank_accounts.bank_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          A/C: {employee.hr_bank_accounts.account_number}
-                          {employee.hr_bank_accounts.branch && ` (${employee.hr_bank_accounts.branch})`}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="font-medium text-muted-foreground">Not linked</p>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
+
+            {/* Employee Bank Accounts */}
+            <EmployeeBankAccountsCard employeeId={employee.id} />
 
             {/* Notes */}
             <Card>

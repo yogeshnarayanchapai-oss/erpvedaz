@@ -2599,6 +2599,7 @@ export type Database = {
           bank_name: string
           branch: string | null
           created_at: string
+          employee_id: string | null
           id: string
           is_default: boolean | null
           store_id: string | null
@@ -2609,6 +2610,7 @@ export type Database = {
           bank_name: string
           branch?: string | null
           created_at?: string
+          employee_id?: string | null
           id?: string
           is_default?: boolean | null
           store_id?: string | null
@@ -2619,11 +2621,19 @@ export type Database = {
           bank_name?: string
           branch?: string | null
           created_at?: string
+          employee_id?: string | null
           id?: string
           is_default?: boolean | null
           store_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hr_bank_accounts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hr_bank_accounts_store_id_fkey"
             columns: ["store_id"]
