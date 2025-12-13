@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, Plus, Save, X, Edit2, Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Plus, Save, X, Edit2, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { useAdSpendReference, useUpsertAdSpendReference, useDeleteAdSpendReference } from '@/hooks/useAdSpendReference';
 import { useProducts } from '@/hooks/useProducts';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -247,7 +247,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                   <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 mr-1">₹</Badge>
                   Amount (NPR)
                 </TableHead>
-                <TableHead className="w-24">Edit</TableHead>
+                <TableHead className="w-28">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -308,9 +308,20 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                             </Button>
                           </div>
                         ) : canEdit ? (
-                          <Button size="icon" variant="ghost" onClick={() => handleStartEdit(item)}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => handleStartEdit(item)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => deleteMutation.mutate(item.id)}
+                              disabled={deleteMutation.isPending}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
