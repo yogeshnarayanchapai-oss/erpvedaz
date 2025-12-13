@@ -140,7 +140,7 @@ export default function AdminAds() {
   const resetForm = () => {
     setFormData({ 
       date: format(today, 'yyyy-MM-dd'), 
-      platform: '', 
+      platform: 'Facebook', 
       amount_usd: '', 
       dollar_rate: defaultUsdRate.toString(),
       target_orders: '' 
