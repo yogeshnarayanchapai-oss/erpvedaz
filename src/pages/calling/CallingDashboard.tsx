@@ -150,22 +150,31 @@ export default function CallingDashboard() {
   const remainingPercent = Math.max(0, 100 - completionRate);
 
   // Product Daybook - count by individual staff
+  // OVD: all confirmed orders, VD: only delivered orders
   const productDaybookData = useMemo(() => {
-    const confirmedOrders = orders.filter(o => o.order_status === 'CONFIRMED');
     const productMap = new Map<string, { productName: string; ovdQty: number; vdQty: number }>();
     
-    confirmedOrders.forEach(order => {
+    orders.forEach(order => {
       const orderItems = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
       const deliveryLocation = order.delivery_location;
+      const isConfirmed = order.order_status === 'CONFIRMED';
+      const isDelivered = order.order_status === 'DELIVERED';
+      
+      // OVD counts confirmed, VD counts only delivered
+      const countForOVD = deliveryLocation === 'OUTSIDE_VALLEY' && isConfirmed;
+      const countForVD = deliveryLocation !== 'OUTSIDE_VALLEY' && isDelivered;
+      
+      if (!countForOVD && !countForVD) return;
       
       if (orderItems.length > 0) {
         orderItems.forEach((item: any) => {
           const productName = item.product_name || 'Unknown';
           const qty = item.quantity || 1;
           const existing = productMap.get(productName) || { productName, ovdQty: 0, vdQty: 0 };
-          if (deliveryLocation === 'OUTSIDE_VALLEY') {
+          if (countForOVD) {
             existing.ovdQty += qty;
-          } else {
+          }
+          if (countForVD) {
             existing.vdQty += qty;
           }
           productMap.set(productName, existing);
@@ -174,9 +183,10 @@ export default function CallingDashboard() {
         const productName = order.products?.name || 'Unknown';
         const qty = order.quantity || 1;
         const existing = productMap.get(productName) || { productName, ovdQty: 0, vdQty: 0 };
-        if (deliveryLocation === 'OUTSIDE_VALLEY') {
+        if (countForOVD) {
           existing.ovdQty += qty;
-        } else {
+        }
+        if (countForVD) {
           existing.vdQty += qty;
         }
         productMap.set(productName, existing);
