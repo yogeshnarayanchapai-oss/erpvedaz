@@ -347,63 +347,6 @@ export default function DailyPL() {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Auto-Calculated Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Metrics Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Units Sold (Stock Movements)</span>
-                  <span className="font-medium">{U}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Gross Sales (Stock Movements)</span>
-                  <span className="font-medium">{formatCurrency(GS)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">RTO % (Month: {yearMonth})</span>
-                  <span className="font-medium text-orange-600">{R}%</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <RotateCcw className="h-3 w-3" />
-                    RTO Orders (calculated)
-                  </span>
-                  <span className="font-medium text-orange-600">{rtoOrders} units</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Actual Sales (Gross - RTO%)</span>
-                  <span className="font-semibold text-green-600">
-                    {formatCurrency(actualSales)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Expense (Office Management)</span>
-                  <span className="font-semibold text-destructive">{formatCurrency(totalExpense)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ads Spend (From Ads Table)</span>
-                  <span className="font-medium text-blue-600">{formatCurrency(adsFromTable)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Actual Profit</span>
-                  <span className={`font-semibold ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    {formatCurrency(actualProfit)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Avg Profit/Order</span>
-                  <span className={`font-medium ${avgProfitPerOrder >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    {formatCurrency(avgProfitPerOrder)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-          </div>
-
           {/* Daily Records Table */}
           <Collapsible open={recordsOpen} onOpenChange={setRecordsOpen}>
             <Card>
