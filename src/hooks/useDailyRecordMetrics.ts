@@ -41,16 +41,16 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       const productCost = filteredMovements.reduce((sum, m) => sum + (m.total_cost || 0), 0);
       const productValue = filteredMovements.reduce((sum, m) => sum + (m.total_value || 0), 0);
 
-      // 2. Get ads spend for the date from ad_spend_reference
+      // 2. Get ads spend for the date from ads table
       const { data: adSpendData, error: adsError } = await supabase
-        .from('ad_spend_reference')
-        .select('amount')
+        .from('ads')
+        .select('amount_spent')
         .eq('store_id', storeId)
-        .eq('spend_date', date);
+        .eq('date', date);
 
       if (adsError) throw adsError;
 
-      const adsSpentNpr = adSpendData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
+      const adsSpentNpr = adSpendData?.reduce((sum, a) => sum + (a.amount_spent || 0), 0) || 0;
 
       // 3. Get total orders count (VD + OVD) from order_items for the date
       const { data: orderData, error: orderError } = await supabase
