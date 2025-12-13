@@ -200,20 +200,35 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         orderItemsData = items || [];
       }
 
-      // Fetch ads spend targets for the date range
+      // Fetch ads spend from ad_spend_reference table
       const { data: adsData, error: adsError } = await supabase
+        .from('ad_spend_reference')
+        .select('product_id, amount')
+        .eq('store_id', storeId)
+        .gte('spend_date', fromDate)
+        .lte('spend_date', toDate);
+
+      if (adsError) throw adsError;
+
+      // Calculate target per product from ads table (for target column)
+      const { data: adsTargetData } = await supabase
         .from('ads')
         .select('product_id, target_orders')
         .gte('date', fromDate)
         .lte('date', toDate);
 
-      if (adsError) throw adsError;
-
-      // Calculate target per product from ads spend
       const targetByProduct: Record<string, number> = {};
-      (adsData || []).forEach(ad => {
+      (adsTargetData || []).forEach(ad => {
         if (ad.product_id) {
           targetByProduct[ad.product_id] = (targetByProduct[ad.product_id] || 0) + (ad.target_orders || 0);
+        }
+      });
+
+      // Calculate ads spend per product from ad_spend_reference
+      const adsSpendByProduct: Record<string, number> = {};
+      (adsData || []).forEach(ad => {
+        if (ad.product_id) {
+          adsSpendByProduct[ad.product_id] = (adsSpendByProduct[ad.product_id] || 0) + (ad.amount || 0);
         }
       });
 
@@ -225,27 +240,52 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         }
       });
 
+      // Fetch RTO% for the month (use first day of date range)
+      const yearMonth = fromDate.substring(0, 7); // YYYY-MM
+      const { data: rtoSetting } = await supabase
+        .from('rto_settings')
+        .select('rto_percent')
+        .eq('store_id', storeId)
+        .eq('year_month', yearMonth)
+        .maybeSingle();
+
+      const rtoPercent = rtoSetting?.rto_percent || 0;
+
       return products.map(product => {
         // Filter orders for CONFIRMED or DISPATCHED status
         const productOrders = (orders || []).filter(
           o => o.product_id === product.id && ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || '')
         );
-        const sales = productOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-        const count = productOrders.length;
+        const revenue = productOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const orderCount = productOrders.length;
         
-        // Use ads spend target instead of product.target_per_day
+        // Use ads spend target for target column
         const adsTarget = targetByProduct[product.id] || 0;
         const qtySold = qtySoldByProduct[product.id] || 0;
+        
+        // Get ads spend from ad_spend_reference
+        const adsSpend = adsSpendByProduct[product.id] || 0;
+        
+        // Calculate P/L same as Daily Records:
+        // P/L = Revenue - Product Cost - Staff+Office - Ads - Delivery - Redirect - RTO Cost
+        const productCost = orderCount * (product.cost_price || 0);
+        const staffOfficeCost = orderCount * 50;
+        const deliveryCost = orderCount * 250;
+        const redirectCost = Math.round(qtySold * 0.2 * 50);
+        const rtoUnits = Math.round(qtySold * (rtoPercent / 100));
+        const rtoCost = rtoUnits * 200;
+        
+        const pl = revenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
         
         return {
           name: product.name,
           target: adsTarget,
-          sales: count,
+          sales: orderCount,
           qtySold,
-          revenue: sales,
+          revenue,
           costPrice: product.cost_price || 0,
           sellPrice: product.sell_price || 0,
-          pl: sales - (count * (product.cost_price || 0)),
+          pl,
         };
       });
     },
