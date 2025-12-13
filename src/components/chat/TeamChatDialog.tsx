@@ -703,11 +703,11 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                           <div className={cn(
                             "max-w-[75%] rounded-2xl px-4 py-2.5 relative group",
                             isOwn 
-                              ? "bg-primary text-primary-foreground rounded-br-md" 
-                              : "bg-muted rounded-bl-md"
+                              ? "bg-primary text-primary-foreground rounded-br-md text-left" 
+                              : "bg-muted rounded-bl-md text-left"
                           )}>
                             {/* Message content with links and mentions highlighted */}
-                            <p className="text-sm whitespace-pre-wrap break-words">
+                            <p className="text-sm whitespace-pre-wrap break-words text-left">
                               {renderMessageWithLinks(msg.message_text)}
                             </p>
                             
