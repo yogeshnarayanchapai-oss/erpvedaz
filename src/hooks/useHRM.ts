@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
+import { sendHRMEmail, getAdminTeamEmails, getEmployeeEmail } from '@/lib/hrmEmailService';
 
 // Types
 export interface Department {
@@ -739,6 +740,26 @@ export function useCreateLeaveRequest() {
           }));
 
           await supabase.from('notifications').insert(notifications);
+
+          // Send email notifications to admin team
+          if (storeId) {
+            const adminEmails = await getAdminTeamEmails(storeId);
+            if (adminEmails.length > 0) {
+              await sendHRMEmail({
+                type: 'LEAVE_REQUEST',
+                to: adminEmails,
+                employeeName,
+                details: {
+                  leaveType: leaveTypeName,
+                  startDate: data.from_date,
+                  endDate: data.to_date,
+                  days: data.total_days,
+                  reason: data.reason,
+                },
+                linkUrl: `${window.location.origin}/hrm/leave`,
+              });
+            }
+          }
         }
       } catch (e) {
         console.error('Failed to send leave request notifications:', e);
@@ -784,6 +805,32 @@ export function useUpdateLeaveRequest() {
             };
 
             await supabase.from('notifications').insert(notification);
+
+            // Send email notification
+            const employeeEmail = await getEmployeeEmail(data.employee_id);
+            if (employeeEmail) {
+              const { data: leaveType } = await supabase
+                .from('leave_types')
+                .select('name')
+                .eq('id', data.leave_type_id)
+                .single();
+
+              const emailType = variables.status === 'Approved' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED';
+              await sendHRMEmail({
+                type: emailType,
+                to: [employeeEmail],
+                employeeName: employee.full_name,
+                details: {
+                  leaveType: leaveType?.name || 'Leave',
+                  startDate: data.from_date,
+                  endDate: data.to_date,
+                  days: data.total_days,
+                  approvedBy: 'Admin',
+                  rejectionReason: variables.status === 'Rejected' ? 'Please contact your manager for details' : undefined,
+                },
+                linkUrl: `${window.location.origin}/myhr/leave`,
+              });
+            }
           }
 
           // Auto-deduct leave quota when leave is approved

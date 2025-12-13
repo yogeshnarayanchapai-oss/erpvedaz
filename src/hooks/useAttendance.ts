@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { sendHRMEmail, getAdminTeamEmails } from '@/lib/hrmEmailService';
 
 export interface AttendanceRecord {
   id: string;
@@ -164,6 +165,22 @@ export function useCheckIn() {
           }));
 
           await supabase.from('notifications').insert(notifications);
+
+          // Send email notification to admin team
+          if (storeId) {
+            const adminEmails = await getAdminTeamEmails(storeId);
+            if (adminEmails.length > 0) {
+              await sendHRMEmail({
+                type: 'ATTENDANCE_CHECKIN',
+                to: adminEmails,
+                employeeName: data.employee_name,
+                details: {
+                  date: new Date().toLocaleDateString(),
+                  time: checkInTime,
+                },
+              });
+            }
+          }
         }
       } catch (e) {
         console.error('Failed to send check-in notifications:', e);

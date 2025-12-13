@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { startOfMonth, format } from 'date-fns';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
+import { sendHRMEmail, getEmployeeEmail } from '@/lib/hrmEmailService';
 
 export interface LeaveQuota {
   id: string;
@@ -155,6 +156,21 @@ export function useCreateLeaveQuota() {
             entityType: 'leave_quota',
             entityId: (data as any).id,
           });
+
+          // Send email notification
+          const employeeEmail = await getEmployeeEmail((data as any).employee_id);
+          if (employeeEmail) {
+            await sendHRMEmail({
+              type: 'LEAVE_QUOTA_UPDATED',
+              to: [employeeEmail],
+              employeeName: employee.full_name || 'Employee',
+              details: {
+                month: (data as any).month_start,
+                maxDays: (data as any).max_days,
+              },
+              linkUrl: `${window.location.origin}/my-hr/leave`,
+            });
+          }
         }
       } catch (e) {
         console.error('Failed to send leave quota notification:', e);
@@ -202,6 +218,21 @@ export function useUpdateLeaveQuota() {
             entityType: 'leave_quota',
             entityId: (data as any).id,
           });
+
+          // Send email notification
+          const employeeEmail = await getEmployeeEmail((data as any).employee_id);
+          if (employeeEmail) {
+            await sendHRMEmail({
+              type: 'LEAVE_QUOTA_UPDATED',
+              to: [employeeEmail],
+              employeeName: employee.full_name || 'Employee',
+              details: {
+                month: (data as any).month_start,
+                maxDays: (data as any).max_days,
+              },
+              linkUrl: `${window.location.origin}/my-hr/leave`,
+            });
+          }
         }
       } catch (e) {
         console.error('Failed to send leave quota update notification:', e);
