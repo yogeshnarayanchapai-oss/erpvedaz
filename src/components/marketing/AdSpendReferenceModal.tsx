@@ -10,7 +10,9 @@ import { Loader2, Plus, Save, X, Edit2, Check, ChevronsUpDown } from 'lucide-rea
 import { useAdSpendReference, useUpsertAdSpendReference, useDeleteAdSpendReference } from '@/hooks/useAdSpendReference';
 import { useProducts } from '@/hooks/useProducts';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useDefaultUsdRate } from '@/hooks/useAds';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface AdSpendReferenceModalProps {
   open: boolean;
@@ -29,6 +31,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
   const { effectiveRole } = useEffectiveRole();
   const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
   const isMarketing = effectiveRole === 'MARKETING';
+  const { data: usdRate = 133.5 } = useDefaultUsdRate();
 
   // Calculate editable date range based on role
   const minEditableDate = useMemo(() => {
@@ -187,9 +190,12 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                 <Input value="Daily" disabled className="bg-muted" />
               </div>
 
-              {/* Ad Spend */}
+              {/* Ad Spend (USD) */}
               <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Ad Spend (₹)</label>
+                <label className="text-sm text-muted-foreground mb-1 block flex items-center gap-1">
+                  <Badge variant="outline" className="h-4 px-1 bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px]">$</Badge>
+                  Spend (USD)
+                </label>
                 <Input
                   type="number"
                   min="0"
@@ -197,6 +203,19 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                   value={newAmount}
                   onChange={(e) => setNewAmount(e.target.value)}
                   placeholder="0.00"
+                />
+              </div>
+
+              {/* Calculated NPR Amount */}
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block flex items-center gap-1">
+                  <Badge variant="outline" className="h-4 px-1 bg-green-500/10 text-green-600 border-green-500/20 text-[10px]">₹</Badge>
+                  Amount (NPR)
+                </label>
+                <Input
+                  value={`₹${((parseFloat(newAmount) || 0) * usdRate).toLocaleString()}`}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
 
@@ -220,20 +239,27 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
               <TableRow>
                 <TableHead>Product Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead className="text-right">Spend (₹)</TableHead>
+                <TableHead className="text-right">
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20 mr-1">$</Badge>
+                  Spend (USD)
+                </TableHead>
+                <TableHead className="text-right">
+                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 mr-1">₹</Badge>
+                  Amount (NPR)
+                </TableHead>
                 <TableHead className="w-24">Edit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : sortedSpendData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No ad spend entries found. Click "Add Row" to add one.
                   </TableCell>
                 </TableRow>
@@ -254,12 +280,17 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                             step="0.01"
                             value={editAmount}
                             onChange={(e) => setEditAmount(e.target.value)}
-                            className="w-28 ml-auto"
+                            className="w-24 ml-auto"
                             autoFocus
                           />
                         ) : (
-                          `₹${item.amount.toLocaleString()}`
+                          <span className="text-blue-600 font-medium">${item.amount.toLocaleString()}</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-green-600 font-semibold">
+                          ₹{(item.amount * usdRate).toLocaleString()}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {isEditing ? (
