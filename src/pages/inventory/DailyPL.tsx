@@ -261,10 +261,6 @@ export default function DailyPL() {
             </DialogContent>
           </Dialog>
           
-          <Button onClick={handleSave} disabled={savePL.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
         </div>
       </div>
 
@@ -406,103 +402,6 @@ export default function DailyPL() {
               </CardContent>
             </Card>
 
-            {/* Editable Expenses & Targets */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Editable Expenses & Targets</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Delivery Cost / Order</Label>
-                    <Input
-                      type="number"
-                      value={editableFields.delivery_cost_per_order}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, delivery_cost_per_order: +e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>RTO Cost / Order (NPR)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={editableFields.rto_cost_per_order}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, rto_cost_per_order: +e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>USD Rate</Label>
-                    <Input type="number" value={usdRate} onChange={(e) => setUsdRate(+e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ads (USD) - Manual</Label>
-                    <Input
-                      type="number"
-                      value={editableFields.ads_spent_usd}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, ads_spent_usd: +e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Staff/Office Cost</Label>
-                    <Input
-                      type="number"
-                      value={editableFields.staff_office_cost}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, staff_office_cost: +e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Other Expenses</Label>
-                    <Input
-                      type="number"
-                      value={editableFields.other_expenses}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, other_expenses: +e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-yellow-500" />
-                      Target Profit (AI)
-                    </Label>
-                    <Input
-                      type="number"
-                      value={editableFields.target_profit}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, target_profit: +e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-yellow-500" />
-                      Target Orders (AI)
-                    </Label>
-                    <Input
-                      type="number"
-                      value={editableFields.target_orders}
-                      onChange={(e) =>
-                        setEditableFields({ ...editableFields, target_orders: +e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Daily Records Table */}
