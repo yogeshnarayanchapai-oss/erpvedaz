@@ -150,6 +150,7 @@ export default function AdminNotifications() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
       setSelectedIds(new Set());
       toast.success('Marked as read');
     },
