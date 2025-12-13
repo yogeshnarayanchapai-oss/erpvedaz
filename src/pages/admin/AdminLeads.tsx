@@ -1083,7 +1083,11 @@ export default function AdminLeads() {
                       </div>
                     </TableCell>
                     <TableCell>{lead.contact_number}</TableCell>
-                    <TableCell>{lead.products?.name || '-'}</TableCell>
+                    <TableCell>
+                      {lead.products?.name 
+                        ? `${lead.products.name}${lead.quantity && lead.quantity > 1 ? ` (${lead.quantity})` : ''}` 
+                        : '-'}
+                    </TableCell>
                     <TableCell>{lead.destination_branch || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">

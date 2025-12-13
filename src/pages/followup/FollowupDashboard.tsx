@@ -350,7 +350,11 @@ export default function FollowupDashboard() {
                         </TableCell>
                         <TableCell className="font-medium">{lead.client_name}</TableCell>
                         <TableCell>{lead.contact_number}</TableCell>
-                        <TableCell>{lead.products?.name || '-'}</TableCell>
+                        <TableCell>
+                          {lead.products?.name 
+                            ? `${lead.products.name}${lead.quantity && lead.quantity > 1 ? ` (${lead.quantity})` : ''}` 
+                            : '-'}
+                        </TableCell>
                         <TableCell>
                           {lead.tag === 'TRF' ? (
                             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
