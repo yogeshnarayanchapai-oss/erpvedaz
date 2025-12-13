@@ -5229,6 +5229,44 @@ export type Database = {
         }
         Relationships: []
       }
+      rto_settings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          rto_percent: number
+          store_id: string | null
+          updated_at: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          rto_percent?: number
+          store_id?: string | null
+          updated_at?: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          rto_percent?: number
+          store_id?: string | null
+          updated_at?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rto_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_records: {
         Row: {
           amount: number
