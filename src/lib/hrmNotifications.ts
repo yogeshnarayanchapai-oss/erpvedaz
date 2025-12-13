@@ -45,17 +45,25 @@ export async function notifyAdminTeam(params: Omit<HRMNotificationParams, 'targe
   if (!storeId) return;
 
   try {
-    // Get users with admin roles in this store
+    // Get users with admin roles in this store - check both store_role and profile.role
     const { data: storeUsers } = await supabase
       .from('user_store_access')
-      .select('user_id, store_role')
+      .select('user_id, store_role, profiles:user_id(role)')
       .eq('store_id', storeId)
-      .eq('is_active', true)
-      .in('store_role', targetRoles as any);
+      .eq('is_active', true);
 
     if (!storeUsers || storeUsers.length === 0) return;
 
-    const notifications = storeUsers.map(u => ({
+    // Filter users who have admin roles (either in store_role or in profiles.role)
+    const adminUsers = storeUsers.filter(u => {
+      const storeRole = u.store_role;
+      const profileRole = (u.profiles as any)?.role;
+      return targetRoles.includes(storeRole as string) || targetRoles.includes(profileRole as string);
+    });
+
+    if (adminUsers.length === 0) return;
+
+    const notifications = adminUsers.map(u => ({
       target_user_id: u.user_id,
       type: rest.type,
       title: rest.title,
