@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
+import { sendHRMEmail, getAdminTeamEmails, getEmployeeEmail } from '@/lib/hrmEmailService';
 
 export type EmployeeDocType = 'PROFILE_PHOTO' | 'CITIZENSHIP_FRONT' | 'CITIZENSHIP_BACK' | 'PAN_CARD' | 'COMPANY_REQUIREMENT_DOC' | 'OTHER';
 export type EmployeeDocStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
@@ -233,6 +234,23 @@ export function useVerifyDocument() {
             entityType: 'document',
             entityId: data.id,
           });
+
+          // Send email notification
+          const employeeEmail = await getEmployeeEmail(variables.employeeId || '');
+          if (employeeEmail) {
+            const emailType = variables.status === 'VERIFIED' ? 'DOCUMENT_APPROVED' : 'DOCUMENT_REJECTED';
+            await sendHRMEmail({
+              type: emailType,
+              to: [employeeEmail],
+              employeeName: employee.full_name || 'Employee',
+              details: {
+                documentName: (data as any).doc_type?.replace(/_/g, ' ') || 'Document',
+                approvedBy: actorName,
+                rejectionReason: variables.remarks,
+              },
+              linkUrl: `${window.location.origin}/my-hr/documents`,
+            });
+          }
         }
       } catch (e) {
         console.error('Failed to send document status notification:', e);
