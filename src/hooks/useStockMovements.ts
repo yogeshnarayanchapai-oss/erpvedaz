@@ -26,6 +26,7 @@ export interface StockMovement {
   total_cost: number | null;
   total_value: number | null;
   remark: string | null;
+  reference_order_count: number | null;
   created_at: string;
   updated_at: string;
   products?: { id: string; name: string; wholesale_price?: number; store_id?: string | null };
