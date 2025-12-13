@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice, useDepartments, useEmployees } from '@/hooks/useHRM';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,12 @@ const initialForm: NoticeForm = {
   is_active: true,
 };
 
+const ADMIN_ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'HR'];
+
 export default function HRMNotices() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role && ADMIN_ROLES.includes(profile.role);
+  
   const { data: notices = [], isLoading } = useNotices();
   const { data: departments = [] } = useDepartments();
   const { data: employees = [] } = useEmployees();
@@ -145,9 +151,10 @@ export default function HRMNotices() {
           <h1 className="text-2xl font-bold">Notice Board</h1>
           <p className="text-muted-foreground">Manage company announcements</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Add Notice</Button>
+        {isAdmin && (
+          <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="w-4 h-4 mr-2" />Add Notice</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? 'Edit Notice' : 'Add Notice'}</DialogTitle></DialogHeader>
@@ -271,8 +278,9 @@ export default function HRMNotices() {
                 {editing ? 'Update' : 'Create'}
               </Button>
             </form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
@@ -282,38 +290,42 @@ export default function HRMNotices() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Popup</TableHead>
+                {isAdmin && <TableHead>Target</TableHead>}
+                {isAdmin && <TableHead>Popup</TableHead>}
                 <TableHead>Start</TableHead>
                 <TableHead>End</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {notices.map((n) => (
                 <TableRow key={n.id}>
                   <TableCell className="font-medium">{n.title}</TableCell>
-                  <TableCell>{getTargetDisplay(n)}</TableCell>
-                  <TableCell>
-                    {(n as any).show_as_popup ? (
-                      <Badge variant="default" className="text-xs">Yes</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">No</Badge>
-                    )}
-                  </TableCell>
+                  {isAdmin && <TableCell>{getTargetDisplay(n)}</TableCell>}
+                  {isAdmin && (
+                    <TableCell>
+                      {(n as any).show_as_popup ? (
+                        <Badge variant="default" className="text-xs">Yes</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">No</Badge>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell><FormattedDate date={n.start_date} /></TableCell>
                   <TableCell><FormattedDate date={n.end_date} /></TableCell>
                   <TableCell><Badge variant={n.is_active ? 'default' : 'secondary'}>{n.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {notices.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 7 : 4} className="text-center py-8 text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No notices'}
                   </TableCell>
                 </TableRow>
