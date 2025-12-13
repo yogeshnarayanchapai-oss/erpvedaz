@@ -14,17 +14,19 @@ import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { 
   DollarSign, TrendingUp, Package, Megaphone, 
-  ArrowRight, BarChart3 
+  ArrowRight, BarChart3, Calendar
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { format, subDays } from 'date-fns';
+import { AdSpendReferenceModal } from '@/components/marketing/AdSpendReferenceModal';
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
   const today = new Date();
   const [dollarRate, setDollarRate] = useState(133.5);
+  const [showAdSpendModal, setShowAdSpendModal] = useState(false);
   const storeId = useCurrentStoreId();
   
   const { data: products = [] } = useProducts();
@@ -157,7 +159,7 @@ export default function MarketingDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate('/marketing/ads')}>
           <Megaphone className="w-5 h-5" />
           <span>Manage Ads</span>
@@ -170,7 +172,14 @@ export default function MarketingDashboard() {
           <TrendingUp className="w-5 h-5" />
           <span>Performance</span>
         </Button>
+        <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setShowAdSpendModal(true)}>
+          <Calendar className="w-5 h-5" />
+          <span>Ad Spend Table</span>
+        </Button>
       </div>
+
+      {/* Ad Spend Reference Modal */}
+      <AdSpendReferenceModal open={showAdSpendModal} onOpenChange={setShowAdSpendModal} />
 
       {/* Ads Trend Chart */}
       <Card>
