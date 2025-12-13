@@ -86,12 +86,17 @@ export function useSidebarBadges() {
         viewState[row.section] = row.last_seen_at;
       });
 
+      // Time window: last 30 days only (match unified notification bell behavior)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       // Unread notifications count - filter by store_id
       let notificationQuery = supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .or(`target_user_id.eq.${profile.id},target_role.eq.${role}`)
-        .is('read_at', null);
+        .is('read_at', null)
+        .gte('created_at', thirtyDaysAgo.toISOString());
       
       if (storeId) {
         notificationQuery = notificationQuery.eq('store_id', storeId);
