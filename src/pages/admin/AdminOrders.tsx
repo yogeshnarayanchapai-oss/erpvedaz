@@ -400,12 +400,12 @@ export default function AdminOrders() {
       const productDisplay = orderItemsList.length > 0 
         ? orderItemsList.map((item: any) => {
             const qty = item.quantity ?? 1;
-            return qty > 0 ? `${item.product_name} (${qty})` : item.product_name;
+            return qty > 0 ? `(${qty}) ${item.product_name}` : item.product_name;
           }).join(', ')
         : (() => {
             const qty = order.quantity ?? 1;
             const baseName = order.products?.name || '-';
-            return qty > 0 ? `${baseName} (${qty})` : baseName;
+            return qty > 0 ? `(${qty}) ${baseName}` : baseName;
           })();
       const totalQty = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
@@ -652,12 +652,12 @@ export default function AdminOrders() {
                   const productDisplay = orderItemsList.length > 0 
                     ? orderItemsList.map((item: any) => {
                         const qty = item.quantity ?? 1;
-                        return qty > 0 ? `${item.product_name} (${qty})` : item.product_name;
+                        return qty > 0 ? `(${qty}) ${item.product_name}` : item.product_name;
                       }).join(', ')
                     : (() => {
                         const qty = order.quantity ?? 1;
                         const baseName = order.products?.name || '-';
-                        return qty > 0 ? `${baseName} (${qty})` : baseName;
+                        return qty > 0 ? `(${qty}) ${baseName}` : baseName;
                       })();
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)

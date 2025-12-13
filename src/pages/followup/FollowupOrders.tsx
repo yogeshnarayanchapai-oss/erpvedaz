@@ -290,8 +290,8 @@ export default function FollowupOrders() {
                 {filteredOrders.map((order) => {
                   const orderItemsList = (order as any).order_items || [];
                   const productDisplay = orderItemsList.length > 0 
-                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
-                    : `${(order.products as any)?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
+                    ? orderItemsList.map((item: any) => `(${item.quantity || 1}) ${item.product_name}`).join(', ')
+                    : `(${order.quantity || 1}) ${(order.products as any)?.name || '-'}`;
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                     : order.amount || 0;

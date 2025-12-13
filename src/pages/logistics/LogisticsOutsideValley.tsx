@@ -583,7 +583,7 @@ export default function LogisticsOutsideValley() {
                     <TableCell className="text-muted-foreground">{order.leads?.alt_phone || '-'}</TableCell>
                     <TableCell>
                       {order.products?.name 
-                        ? `${order.products.name}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}` 
+                        ? `(${order.quantity || 1}) ${order.products.name}` 
                         : '-'}
                     </TableCell>
                     <TableCell className="font-medium">₹{order.amount?.toFixed(0) || '-'}</TableCell>
