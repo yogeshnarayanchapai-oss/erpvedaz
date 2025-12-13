@@ -532,7 +532,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto max-h-72">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -566,20 +566,6 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableBody>
               </Table>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-4 text-sm">
-              <div className="p-2 rounded-md bg-muted">
-                <span className="text-muted-foreground">Last Week: </span>
-                <span className="font-medium">₹{(weeklySales?.lastWeekSales || 0).toLocaleString()}</span>
-              </div>
-              <div className="p-2 rounded-md bg-muted">
-                <span className="text-muted-foreground">This Week: </span>
-                <span className="font-medium">₹{(weeklySales?.thisWeekSales || 0).toLocaleString()}</span>
-              </div>
-              <div className="p-2 rounded-md bg-primary/10 text-primary">
-                <span className="text-xs">Data from: </span>
-                <span className="font-medium text-xs">Daily P/L Records</span>
-              </div>
             </div>
           </CardContent>
         </Card>
