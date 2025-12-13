@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
-import { Upload, Eye, CheckCircle, XCircle, Clock, FileImage, Loader2 } from 'lucide-react';
+import { Upload, Eye, CheckCircle, XCircle, Clock, FileImage, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { EmployeeDocument, EmployeeDocType, useUploadDocument, getSignedDocumentUrl } from '@/hooks/useEmployeeDocuments';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { EmployeeDocument, EmployeeDocType, useUploadDocument, useDeleteDocument, getSignedDocumentUrl } from '@/hooks/useEmployeeDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DocumentUploadCardProps {
@@ -30,6 +31,15 @@ export function DocumentUploadCard({
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const uploadMutation = useUploadDocument();
+  const deleteMutation = useDeleteDocument();
+
+  // Document is locked if it's approved - staff cannot edit/delete
+  const isApproved = existingDoc?.status === 'VERIFIED';
+  const isPending = existingDoc?.status === 'PENDING';
+  const isRejected = existingDoc?.status === 'REJECTED';
+
+  // Staff can only edit/delete pending or rejected documents
+  const canModify = !isApproved;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,13 +72,21 @@ export function DocumentUploadCard({
     }
   };
 
+  const handleDelete = async () => {
+    if (!existingDoc) return;
+    await deleteMutation.mutateAsync({
+      documentId: existingDoc.id,
+      fileUrl: existingDoc.file_url,
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'VERIFIED':
         return (
           <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Verified
+            Approved
           </Badge>
         );
       case 'REJECTED':
@@ -140,7 +158,7 @@ export function DocumentUploadCard({
                   )}
                   View
                 </Button>
-                {allowReplace && (
+                {allowReplace && canModify && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -156,10 +174,43 @@ export function DocumentUploadCard({
                     Replace
                   </Button>
                 )}
+                {canModify && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete this document. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
 
+              {/* Lock message for approved docs */}
+              {isApproved && (
+                <p className="text-xs text-green-600 bg-green-500/10 p-2 rounded flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  This document is approved and cannot be modified.
+                </p>
+              )}
+
               {/* Remarks if rejected */}
-              {existingDoc.status === 'REJECTED' && existingDoc.remarks && (
+              {isRejected && existingDoc.remarks && (
                 <p className="text-xs text-red-500 bg-red-500/10 p-2 rounded">
                   Rejection reason: {existingDoc.remarks}
                 </p>
@@ -193,7 +244,7 @@ export function DocumentUploadCard({
           />
 
           <p className="text-xs text-muted-foreground text-center">
-            Only HR/Admin can remove documents
+            {isApproved ? 'Document locked after approval' : 'Only HR/Admin can approve documents'}
           </p>
         </CardContent>
       </Card>

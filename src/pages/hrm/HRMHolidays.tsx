@@ -16,12 +16,17 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliCalendar, CalendarEvent } from '@/components/NepaliCalendar';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
 import { format } from 'date-fns';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 export default function HRMHolidays() {
   const { data: holidays = [], isLoading } = useOfficeHolidays();
   const createHoliday = useCreateOfficeHoliday();
   const updateHoliday = useUpdateOfficeHoliday();
   const deleteHoliday = useDeleteOfficeHoliday();
+  const { effectiveRole } = useEffectiveRole();
+
+  // Check if user can manage holidays (Admin, Manager, HR, Owner)
+  const canManage = ['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(effectiveRole);
 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -93,40 +98,44 @@ export default function HRMHolidays() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Office Holidays & Events</h1>
-          <p className="text-muted-foreground">Manage holidays and company events</p>
+          <p className="text-muted-foreground">
+            {canManage ? 'Manage holidays and company events' : 'View holidays and company events'}
+          </p>
         </div>
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Holiday</Button></DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? 'Edit Holiday' : 'Add Holiday'}</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <NepaliDatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} placeholder="Select date" />
+        {canManage && (
+          <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Holiday</Button></DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{editing ? 'Edit Holiday' : 'Add Holiday'}</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date *</Label>
+                    <NepaliDatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} placeholder="Select date" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={form.holiday_type} onValueChange={(v) => setForm({ ...form, holiday_type: v as any })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Public">Public Holiday</SelectItem>
+                        <SelectItem value="Company">Company Holiday</SelectItem>
+                        <SelectItem value="Event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={form.holiday_type} onValueChange={(v) => setForm({ ...form, holiday_type: v as any })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Public">Public Holiday</SelectItem>
-                      <SelectItem value="Company">Company Holiday</SelectItem>
-                      <SelectItem value="Event">Event</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-2"><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+                <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.is_office_closed} onCheckedChange={(v) => setForm({ ...form, is_office_closed: v })} />
+                  <Label>Office Closed</Label>
                 </div>
-              </div>
-              <div className="space-y-2"><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
-              <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.is_office_closed} onCheckedChange={(v) => setForm({ ...form, is_office_closed: v })} />
-                <Label>Office Closed</Label>
-              </div>
-              <Button type="submit" className="w-full" disabled={createHoliday.isPending || updateHoliday.isPending}>{editing ? 'Update' : 'Create'}</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" className="w-full" disabled={createHoliday.isPending || updateHoliday.isPending}>{editing ? 'Update' : 'Create'}</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Tabs defaultValue="calendar" className="w-full">
@@ -189,7 +198,7 @@ export default function HRMHolidays() {
                     <TableHead>Title</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Office Closed</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {canManage && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -199,13 +208,15 @@ export default function HRMHolidays() {
                       <TableCell>{h.title}</TableCell>
                       <TableCell><Badge variant="outline" className={typeColors[h.holiday_type]}>{h.holiday_type}</Badge></TableCell>
                       <TableCell>{h.is_office_closed ? 'Yes' : 'No'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(h)}><Pencil className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(h.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                      </TableCell>
+                      {canManage && (
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(h)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(h.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
-                  {holidays.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No holidays'}</TableCell></TableRow>}
+                  {holidays.length === 0 && <TableRow><TableCell colSpan={canManage ? 5 : 4} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No holidays'}</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent>
