@@ -5749,6 +5749,7 @@ export type Database = {
           product_id: string
           qty: number
           reference_id: string | null
+          reference_order_count: number | null
           reference_type: string | null
           remark: string | null
           sale_category: string | null
@@ -5772,6 +5773,7 @@ export type Database = {
           product_id: string
           qty: number
           reference_id?: string | null
+          reference_order_count?: number | null
           reference_type?: string | null
           remark?: string | null
           sale_category?: string | null
@@ -5795,6 +5797,7 @@ export type Database = {
           product_id?: string
           qty?: number
           reference_id?: string | null
+          reference_order_count?: number | null
           reference_type?: string | null
           remark?: string | null
           sale_category?: string | null
