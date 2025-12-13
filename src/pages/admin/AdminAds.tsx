@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Badge } from '@/components/ui/badge';
-import { Megaphone, Plus, Edit2, Trash2, DollarSign, Target, TrendingUp, ShoppingCart, Settings, BarChart3 } from 'lucide-react';
+import { Megaphone, Plus, Edit2, Trash2, DollarSign, Target, TrendingUp, ShoppingCart, Settings, BarChart3, FileSpreadsheet } from 'lucide-react';
 import { FormattedDate } from '@/components/FormattedDate';
+import { AdSpendReferenceModal } from '@/components/marketing/AdSpendReferenceModal';
 
 export default function AdminAds() {
   const today = new Date();
@@ -45,6 +46,7 @@ export default function AdminAds() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isRefSpendOpen, setIsRefSpendOpen] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [newDefaultRate, setNewDefaultRate] = useState('');
   const [formData, setFormData] = useState({
@@ -183,6 +185,12 @@ export default function AdminAds() {
             </SelectContent>
           </Select>
           
+          {/* Reference Spend Button */}
+          <Button variant="outline" onClick={() => setIsRefSpendOpen(true)} className="gap-2">
+            <FileSpreadsheet className="w-4 h-4" />
+            Reference Spend
+          </Button>
+
           {/* Settings Dialog */}
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
             <DialogTrigger asChild>
@@ -474,6 +482,9 @@ export default function AdminAds() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reference Spend Modal */}
+      <AdSpendReferenceModal open={isRefSpendOpen} onOpenChange={setIsRefSpendOpen} />
     </div>
   );
 }
