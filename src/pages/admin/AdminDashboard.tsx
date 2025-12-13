@@ -433,7 +433,7 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto max-h-64">
+            <div className="overflow-x-auto">
               {sortedProductDaybook.filter(item => item.sales > 0).length > 0 ? (
                 <Table>
                   <TableHeader>
