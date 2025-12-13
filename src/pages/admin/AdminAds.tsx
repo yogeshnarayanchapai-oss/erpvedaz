@@ -405,7 +405,7 @@ export default function AdminAds() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="table-header">Date</TableHead>
-                  <TableHead className="table-header">Product</TableHead>
+                  <TableHead className="table-header">Store</TableHead>
                   <TableHead className="table-header">Platform</TableHead>
                   <TableHead className="table-header text-right">
                     <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">$</Badge>
@@ -428,7 +428,7 @@ export default function AdminAds() {
                       <TableCell>
                         <FormattedDate date={ad.date} />
                       </TableCell>
-                      <TableCell className="font-medium">{ad.product?.name || '-'}</TableCell>
+                      <TableCell className="font-medium">{ad.store?.name || '-'}</TableCell>
                       <TableCell>{ad.platform}</TableCell>
                       <TableCell className="text-right">
                         <span className="text-blue-600 font-medium">

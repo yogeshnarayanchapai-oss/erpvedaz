@@ -15,6 +15,7 @@ export interface Ad {
   created_at: string | null;
   store_id: string | null;
   product?: { name: string } | null;
+  store?: { name: string } | null;
 }
 
 interface UseAdsParams {
@@ -106,7 +107,7 @@ export function useAds(params: UseAdsParams = {}) {
     queryFn: async () => {
       let query = supabase
         .from('ads')
-        .select('*, product:products(name)')
+        .select('*, product:products(name), store:stores(name)')
         .order('date', { ascending: false });
 
       if (storeId) {
