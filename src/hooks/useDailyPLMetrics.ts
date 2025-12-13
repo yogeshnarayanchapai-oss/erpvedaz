@@ -10,7 +10,7 @@ export interface DailyPLMetrics {
   rtoPercent: number; // from rto_settings
 }
 
-// Get Units Sold and Gross Sales from stock_movements
+// Get Units Sold, Gross Sales, and Reference Order Count from stock_movements
 export function useStockMovementMetrics(startDate: string, endDate: string) {
   const storeId = useCurrentStoreId();
 
@@ -20,7 +20,7 @@ export function useStockMovementMetrics(startDate: string, endDate: string) {
       // Get OUT movements (sales) for the date range
       const { data, error } = await supabase
         .from('stock_movements')
-        .select('qty, total_value, products:product_id(store_id)')
+        .select('qty, total_value, reference_order_count, products:product_id(store_id)')
         .eq('movement_type', 'OUT')
         .gte('movement_date', startDate)
         .lte('movement_date', endDate);
@@ -32,13 +32,15 @@ export function useStockMovementMetrics(startDate: string, endDate: string) {
 
       let unitsSold = 0;
       let grossSales = 0;
+      let referenceOrderCount = 0;
 
       filtered.forEach((m: any) => {
         unitsSold += m.qty || 0;
         grossSales += m.total_value || 0;
+        referenceOrderCount += m.reference_order_count || 0;
       });
 
-      return { unitsSold, grossSales };
+      return { unitsSold, grossSales, referenceOrderCount };
     },
     enabled: !!storeId && !!startDate && !!endDate,
   });
