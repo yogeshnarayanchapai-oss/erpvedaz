@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useEffect } from 'react';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export interface SidebarBadges {
   orders: number;
@@ -18,6 +19,7 @@ export function useSidebarBadges() {
   const { profile, user } = useAuth();
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
+  const { unreadCount } = useNotifications();
 
   // Set up real-time subscriptions for badge updates
   useEffect(() => {
@@ -86,24 +88,8 @@ export function useSidebarBadges() {
         viewState[row.section] = row.last_seen_at;
       });
 
-      // Time window: last 30 days only (match unified notification bell behavior)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      // Unread notifications count - filter by store_id
-      let notificationQuery = supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .or(`target_user_id.eq.${profile.id},target_role.eq.${role}`)
-        .is('read_at', null)
-        .gte('created_at', thirtyDaysAgo.toISOString());
-      
-      if (storeId) {
-        notificationQuery = notificationQuery.eq('store_id', storeId);
-      }
-      
-      const { count: notificationCount } = await notificationQuery;
-      badges.notifications = notificationCount || 0;
+      // Notifications badge count - use unified notification hook for consistent logic
+      badges.notifications = unreadCount || 0;
 
       if (role === 'ADMIN' || role === 'MANAGER') {
         // Unseen leads (created after last_seen_at) - filter by store_id
