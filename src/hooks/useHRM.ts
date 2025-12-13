@@ -656,9 +656,46 @@ export function useCreateLeaveRequest() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['leave_requests'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
       toast.success('Leave request submitted');
+
+      // Notify ADMIN, MANAGER, HR users about the leave request
+      try {
+        // Fetch employee and leave type info
+        const [employeeRes, leaveTypeRes] = await Promise.all([
+          supabase.from('employees').select('full_name, user_id').eq('id', data.employee_id).single(),
+          supabase.from('leave_types').select('name').eq('id', data.leave_type_id).single()
+        ]);
+        
+        const employeeName = employeeRes.data?.full_name || 'An employee';
+        const leaveTypeName = leaveTypeRes.data?.name || 'Leave';
+        
+        // Get users with ADMIN, MANAGER, or HR roles in this store
+        const { data: storeUsers } = await supabase
+          .from('user_store_access')
+          .select('user_id, store_role')
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .in('store_role', ['ADMIN', 'MANAGER', 'HR', 'OWNER']);
+
+        if (storeUsers && storeUsers.length > 0) {
+          const notifications = storeUsers.map(u => ({
+            target_user_id: u.user_id,
+            title: 'New Leave Request',
+            message: `${employeeName} requested ${leaveTypeName} (${data.total_days} days) from ${data.from_date} to ${data.to_date}`,
+            type: 'LEAVE_REQUEST',
+            store_id: storeId,
+            actor_id: employeeRes.data?.user_id,
+            actor_name: employeeName,
+          }));
+
+          await supabase.from('notifications').insert(notifications);
+        }
+      } catch (e) {
+        console.error('Failed to send leave request notifications:', e);
+      }
     },
     onError: (e) => toast.error(e.message),
   });
