@@ -147,125 +147,45 @@ export function useMonthlyPLData(year: number) {
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
 
-      // Fetch stock_movements for sales data (same as Daily P/L)
-      const { data: stockMovements, error: stockError } = await supabase
-        .from('stock_movements')
-        .select('movement_date, qty, total_value, movement_type, products:product_id(store_id)')
-        .eq('movement_type', 'OUT')
-        .gte('movement_date', startDate)
-        .lte('movement_date', endDate);
-
-      if (stockError) throw stockError;
-
-      // Filter by store
-      const filteredMovements = (stockMovements || []).filter((m: any) => m.products?.store_id === storeId);
-
-      // Fetch ads with USD and dollar_rate for NPR calculation (USD × rate = NPR)
-      const { data: ads, error: adsError } = await supabase
-        .from('ads')
-        .select('date, amount_usd, dollar_rate')
+      // Fetch directly from daily_records table (same data source as Daily P/L page)
+      const { data: dailyRecords, error } = await supabase
+        .from('daily_records')
+        .select('*')
         .eq('store_id', storeId)
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('record_date', startDate)
+        .lte('record_date', endDate);
 
-      if (adsError) throw adsError;
-
-      // Fetch "office management" category for expenses (same as Daily P/L)
-      const { data: categories, error: catError } = await supabase
-        .from('transaction_categories')
-        .select('id')
-        .ilike('name', '%office management%');
-
-      if (catError) throw catError;
-      const categoryIds = (categories || []).map(c => c.id);
-
-      // Fetch transactions with office management category
-      let officeExpenses: { date: string; amount: number }[] = [];
-      if (categoryIds.length > 0) {
-        const { data: txData, error: txError } = await supabase
-          .from('transactions')
-          .select('date, amount')
-          .eq('store_id', storeId)
-          .eq('type', 'expense')
-          .in('category_id', categoryIds)
-          .gte('date', startDate)
-          .lte('date', endDate);
-
-        if (txError) throw txError;
-        officeExpenses = txData || [];
-      }
-
-      // Fetch delivery costs from orders (for delivery cost calculation)
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('order_date, quantity, product_id')
-        .eq('store_id', storeId)
-        .eq('is_deleted', false)
-        .in('order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED'])
-        .gte('order_date', `${startDate}T00:00:00`)
-        .lte('order_date', `${endDate}T23:59:59`);
-
-      if (ordersError) throw ordersError;
-
-      // Fetch products for delivery cost
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('id, delivery_cost');
-
-      if (productsError) throw productsError;
-
-      const productDeliveryCosts = new Map((products || []).map(p => [p.id, p.delivery_cost || 0]));
+      if (error) throw error;
 
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const plData: { 
         month: string; 
         productSold: number; 
         adsSpend: number; 
-        deliveryCost: number;
         officeCost: number; 
         pl: number 
       }[] = [];
 
       for (let m = 0; m < 12; m++) {
-        // Sales from stock_movements (same as Daily P/L)
-        const monthMovements = filteredMovements.filter((mv: any) => {
-          const movementMonth = new Date(mv.movement_date).getMonth();
-          return movementMonth === m;
+        // Filter records for this month
+        const monthRecords = (dailyRecords || []).filter(r => {
+          const recordMonth = new Date(r.record_date).getMonth();
+          return recordMonth === m;
         });
-        const productSold = monthMovements.reduce((sum: number, mv: any) => sum + (mv.total_value || 0), 0);
 
-        // Delivery cost from orders
-        const monthOrders = (orders || []).filter(o => {
-          const orderMonth = new Date(o.order_date || '').getMonth();
-          return orderMonth === m;
+        // Aggregate values directly from daily_records (no recalculation)
+        const productSold = monthRecords.reduce((sum, r) => sum + (r.sell || 0), 0);
+        const adsSpend = monthRecords.reduce((sum, r) => sum + (r.ads_spent_npr || 0), 0);
+        const officeCost = monthRecords.reduce((sum, r) => sum + (r.staff_office_cost || 0), 0);
+        const pl = monthRecords.reduce((sum, r) => sum + (r.profit_loss || 0), 0);
+
+        plData.push({
+          month: monthNames[m],
+          productSold,
+          adsSpend,
+          officeCost,
+          pl,
         });
-        const deliveryCost = monthOrders.reduce((sum, o) => {
-          const unitDeliveryCost = productDeliveryCosts.get(o.product_id) || 0;
-          return sum + (unitDeliveryCost * (o.quantity || 1));
-        }, 0);
-
-        // Ads spend from ads table: NPR = USD × dollar_rate (same logic as Daily P/L)
-        const monthAds = (ads || []).filter(a => {
-          const adMonth = new Date(a.date).getMonth();
-          return adMonth === m;
-        });
-        const adsSpend = monthAds.reduce((sum, a) => {
-          const usd = a.amount_usd || 0;
-          const rate = a.dollar_rate || 0;
-          return sum + (usd * rate);
-        }, 0);
-
-        // Office cost from transactions with "office management" category (same as Daily P/L)
-        const monthExpenses = officeExpenses.filter(e => {
-          const expMonth = new Date(e.date).getMonth();
-          return expMonth === m;
-        });
-        const officeCost = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-
-        // P/L = Sales - Ads Spend - Delivery Cost - Office Cost (same as Daily P/L)
-        const pl = productSold - adsSpend - deliveryCost - officeCost;
-
-        plData.push({ month: monthNames[m], productSold, adsSpend, deliveryCost, officeCost, pl });
       }
 
       return plData;

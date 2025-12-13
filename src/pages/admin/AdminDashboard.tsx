@@ -129,10 +129,9 @@ export default function AdminDashboard() {
     return monthlyPL.reduce((acc, row) => ({
       productSold: acc.productSold + row.productSold,
       adsSpend: acc.adsSpend + row.adsSpend,
-      deliveryCost: acc.deliveryCost + (row.deliveryCost || 0),
       officeCost: acc.officeCost + row.officeCost,
       pl: acc.pl + row.pl,
-    }), { productSold: 0, adsSpend: 0, deliveryCost: 0, officeCost: 0, pl: 0 });
+    }), { productSold: 0, adsSpend: 0, officeCost: 0, pl: 0 });
   }, [monthlyPL]);
 
   const exportPLToPDF = () => {
@@ -144,7 +143,6 @@ export default function AdminDashboard() {
       row.month,
       `₹${row.productSold.toLocaleString()}`,
       `₹${row.adsSpend.toLocaleString()}`,
-      `₹${(row.deliveryCost || 0).toLocaleString()}`,
       `₹${row.officeCost.toLocaleString()}`,
       `₹${row.pl.toLocaleString()}`
     ]);
@@ -153,13 +151,12 @@ export default function AdminDashboard() {
       'Total',
       `₹${plTotals.productSold.toLocaleString()}`,
       `₹${plTotals.adsSpend.toLocaleString()}`,
-      `₹${plTotals.deliveryCost.toLocaleString()}`,
       `₹${plTotals.officeCost.toLocaleString()}`,
       `₹${plTotals.pl.toLocaleString()}`
     ]);
 
     autoTable(doc, {
-      head: [['Month', 'Sales', 'Ads (NPR)', 'Delivery', 'Office', 'P/L']],
+      head: [['Month', 'Sales', 'Ads (NPR)', 'Office', 'P/L']],
       body: tableData,
       startY: 30,
       theme: 'striped',
@@ -174,7 +171,6 @@ export default function AdminDashboard() {
       Month: row.month,
       'Sales (NPR)': row.productSold,
       'Ads Spend (NPR)': row.adsSpend,
-      'Delivery Cost (NPR)': row.deliveryCost || 0,
       'Office Cost (NPR)': row.officeCost,
       'P/L (NPR)': row.pl
     }));
@@ -183,7 +179,6 @@ export default function AdminDashboard() {
       Month: 'Total',
       'Sales (NPR)': plTotals.productSold,
       'Ads Spend (NPR)': plTotals.adsSpend,
-      'Delivery Cost (NPR)': plTotals.deliveryCost,
       'Office Cost (NPR)': plTotals.officeCost,
       'P/L (NPR)': plTotals.pl
     });
@@ -544,7 +539,6 @@ export default function AdminDashboard() {
                     <TableHead className="text-xs">Month</TableHead>
                     <TableHead className="text-xs text-right">Sales</TableHead>
                     <TableHead className="text-xs text-right">Ads (NPR)</TableHead>
-                    <TableHead className="text-xs text-right">Delivery</TableHead>
                     <TableHead className="text-xs text-right">Office</TableHead>
                     <TableHead className="text-xs text-right">P/L</TableHead>
                   </TableRow>
@@ -555,7 +549,6 @@ export default function AdminDashboard() {
                       <TableCell className="text-xs font-medium">{row.month}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.productSold.toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.adsSpend.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right">₹{(row.deliveryCost || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.officeCost.toLocaleString()}</TableCell>
                       <TableCell className={`text-xs text-right font-medium ${row.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                         ₹{row.pl.toLocaleString()}
@@ -566,7 +559,6 @@ export default function AdminDashboard() {
                     <TableCell className="text-xs">Total</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.productSold.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.adsSpend.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right">₹{plTotals.deliveryCost.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.officeCost.toLocaleString()}</TableCell>
                     <TableCell className={`text-xs text-right ${plTotals.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                       ₹{plTotals.pl.toLocaleString()}
@@ -585,8 +577,8 @@ export default function AdminDashboard() {
                 <span className="font-medium">₹{(weeklySales?.thisWeekSales || 0).toLocaleString()}</span>
               </div>
               <div className="p-2 rounded-md bg-primary/10 text-primary">
-                <span className="text-xs">Formula: </span>
-                <span className="font-medium text-xs">Sales - Ads - Delivery - Office = P/L</span>
+                <span className="text-xs">Data from: </span>
+                <span className="font-medium text-xs">Daily P/L Records</span>
               </div>
             </div>
           </CardContent>
