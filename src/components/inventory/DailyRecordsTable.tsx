@@ -22,19 +22,19 @@ interface Props {
 
 const columnHelp: Record<string, string> = {
   date: 'The date this record applies to',
-  sell: 'Total OUT from warehouse via stock movements',
-  ads_spent_npr: 'Total ads spend from Ad Spend Reference table',
+  sell: 'Total OUT qty from stock movements',
+  ads_spent_npr: 'Total ads spend from Ads table',
   rto: 'Sell × RTO% of that month',
   rto_cost: 'RTO × 200 per unit',
-  staff_office_cost: 'Total orders (VD + OVD) × 50',
+  staff_office_cost: 'Reference Order Count (from Stock Movements) × 50',
   actual_sell: 'Sell − RTO units',
-  product_cost: 'Actual cost from stock movement OUT',
+  product_cost: 'Total cost from stock movement OUT',
   actual_product_cost: 'Product Cost − (Product Cost × RTO%)',
-  product_value: 'Total value from product daybook',
-  delivery_charge: 'Total orders (VD + OVD) × 250',
+  product_value: 'Total value from stock movement OUT',
+  delivery_charge: 'Reference Order Count (from Stock Movements) × 250',
   redirect_cost: 'Sell × 20% × 50',
   actual_product_value: 'Total value from stock movement OUT',
-  profit_loss: 'Actual Product Value − Actual Product Cost − Staff+Office − Ads − Delivery − Redirect',
+  profit_loss: 'Actual Product Value − Actual Product Cost − Staff+Office − Ads − Delivery − Redirect − RTO Cost',
 };
 
 function HeaderWithHelp({ label, helpKey }: { label: string; helpKey: string }) {
