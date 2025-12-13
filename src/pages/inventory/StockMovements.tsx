@@ -351,31 +351,7 @@ export default function StockMovements() {
                     )}
                   </div>
                 )}
-                {/* Reference Order Count - editable */}
-                {form.product_id && form.movement_date && (
-                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 rounded-md">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                          Reference Order (for P/L)
-                        </span>
-                      </div>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.reference_order_count}
-                        onChange={(e) => setForm({ ...form, reference_order_count: +e.target.value })}
-                        className="w-24 h-8 text-center"
-                        placeholder="0"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Auto-fetched from Product Daybook. Edit if needed for P/L calculation.
-                    </p>
-                  </div>
-                )}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Quantity *</Label>
                     <Input type="number" min={0} value={form.qty} onChange={(e) => setForm({ ...form, qty: +e.target.value })} />
@@ -387,6 +363,10 @@ export default function StockMovements() {
                   <div className="space-y-2">
                     <Label>Unit Price</Label>
                     <Input type="number" min={0} value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: +e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ref. Order</Label>
+                    <Input type="number" min={0} value={form.reference_order_count} onChange={(e) => setForm({ ...form, reference_order_count: +e.target.value })} />
                   </div>
                 </div>
                 {/* Display computed totals */}
@@ -491,6 +471,7 @@ export default function StockMovements() {
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Unit Cost</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Ref. Order</TableHead>
                   <TableHead className="text-right">Total Cost</TableHead>
                   <TableHead className="text-right">Total Value</TableHead>
                   <TableHead>Source</TableHead>
@@ -511,6 +492,7 @@ export default function StockMovements() {
                     <TableCell className="text-right">{m.qty}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.unit_cost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.unit_price)}</TableCell>
+                    <TableCell className="text-right">{m.reference_order_count || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_cost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
                     <TableCell>{m.source || m.remark || '-'}</TableCell>
