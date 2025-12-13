@@ -129,11 +129,10 @@ export default function AdminDashboard() {
     return monthlyPL.reduce((acc, row) => ({
       productSold: acc.productSold + row.productSold,
       adsSpend: acc.adsSpend + row.adsSpend,
-      adsSpendUSD: acc.adsSpendUSD + (row.adsSpendUSD || 0),
       deliveryCost: acc.deliveryCost + (row.deliveryCost || 0),
       officeCost: acc.officeCost + row.officeCost,
       pl: acc.pl + row.pl,
-    }), { productSold: 0, adsSpend: 0, adsSpendUSD: 0, deliveryCost: 0, officeCost: 0, pl: 0 });
+    }), { productSold: 0, adsSpend: 0, deliveryCost: 0, officeCost: 0, pl: 0 });
   }, [monthlyPL]);
 
   const exportPLToPDF = () => {
@@ -145,7 +144,6 @@ export default function AdminDashboard() {
       row.month,
       `₹${row.productSold.toLocaleString()}`,
       `₹${row.adsSpend.toLocaleString()}`,
-      `$${(row.adsSpendUSD || 0).toLocaleString()}`,
       `₹${(row.deliveryCost || 0).toLocaleString()}`,
       `₹${row.officeCost.toLocaleString()}`,
       `₹${row.pl.toLocaleString()}`
@@ -155,14 +153,13 @@ export default function AdminDashboard() {
       'Total',
       `₹${plTotals.productSold.toLocaleString()}`,
       `₹${plTotals.adsSpend.toLocaleString()}`,
-      `$${plTotals.adsSpendUSD.toLocaleString()}`,
       `₹${plTotals.deliveryCost.toLocaleString()}`,
       `₹${plTotals.officeCost.toLocaleString()}`,
       `₹${plTotals.pl.toLocaleString()}`
     ]);
 
     autoTable(doc, {
-      head: [['Month', 'Product Sold', 'Ads (NPR)', 'Ads (USD)', 'Delivery', 'Office', 'P/L']],
+      head: [['Month', 'Sales', 'Ads (NPR)', 'Delivery', 'Office', 'P/L']],
       body: tableData,
       startY: 30,
       theme: 'striped',
@@ -175,9 +172,8 @@ export default function AdminDashboard() {
   const exportPLToExcel = () => {
     const data = monthlyPL.map(row => ({
       Month: row.month,
-      'Product Sold (NPR)': row.productSold,
+      'Sales (NPR)': row.productSold,
       'Ads Spend (NPR)': row.adsSpend,
-      'Ads Spend (USD)': row.adsSpendUSD || 0,
       'Delivery Cost (NPR)': row.deliveryCost || 0,
       'Office Cost (NPR)': row.officeCost,
       'P/L (NPR)': row.pl
@@ -185,9 +181,8 @@ export default function AdminDashboard() {
 
     data.push({
       Month: 'Total',
-      'Product Sold (NPR)': plTotals.productSold,
+      'Sales (NPR)': plTotals.productSold,
       'Ads Spend (NPR)': plTotals.adsSpend,
-      'Ads Spend (USD)': plTotals.adsSpendUSD,
       'Delivery Cost (NPR)': plTotals.deliveryCost,
       'Office Cost (NPR)': plTotals.officeCost,
       'P/L (NPR)': plTotals.pl
@@ -549,7 +544,6 @@ export default function AdminDashboard() {
                     <TableHead className="text-xs">Month</TableHead>
                     <TableHead className="text-xs text-right">Sales</TableHead>
                     <TableHead className="text-xs text-right">Ads (NPR)</TableHead>
-                    <TableHead className="text-xs text-right">Ads (USD)</TableHead>
                     <TableHead className="text-xs text-right">Delivery</TableHead>
                     <TableHead className="text-xs text-right">Office</TableHead>
                     <TableHead className="text-xs text-right">P/L</TableHead>
@@ -561,7 +555,6 @@ export default function AdminDashboard() {
                       <TableCell className="text-xs font-medium">{row.month}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.productSold.toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.adsSpend.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right text-muted-foreground">${(row.adsSpendUSD || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right">₹{(row.deliveryCost || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right">₹{row.officeCost.toLocaleString()}</TableCell>
                       <TableCell className={`text-xs text-right font-medium ${row.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
@@ -573,7 +566,6 @@ export default function AdminDashboard() {
                     <TableCell className="text-xs">Total</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.productSold.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.adsSpend.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right text-muted-foreground">${plTotals.adsSpendUSD.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.deliveryCost.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-right">₹{plTotals.officeCost.toLocaleString()}</TableCell>
                     <TableCell className={`text-xs text-right ${plTotals.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
