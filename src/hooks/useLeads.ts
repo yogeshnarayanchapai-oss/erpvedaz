@@ -48,6 +48,7 @@ export interface Lead {
   is_transferred: boolean;
   // Duplicate detection
   is_duplicate: boolean | null;
+  quantity: number | null;
   products?: { name: string } | null;
   assigned_to?: { name: string } | null;
   created_by_staff?: { name: string } | null;
