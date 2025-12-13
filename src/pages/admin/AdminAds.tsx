@@ -4,6 +4,7 @@ import { useAds, useCreateAd, useUpdateAd, useDeleteAd, useDefaultUsdRate, useUp
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useProductROI } from '@/hooks/useProductROI';
+import { useAdSpendReference } from '@/hooks/useAdSpendReference';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,9 @@ export default function AdminAds() {
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: defaultUsdRate = 133.5 } = useDefaultUsdRate();
   const { data: roiData } = useProductROI({ dateFrom, dateTo });
+  
+  // Get reference spend sum for the selected date
+  const { data: refSpendData = [] } = useAdSpendReference({ startDate: dateFrom, endDate: dateTo });
 
   const createAd = useCreateAd();
   const updateAd = useUpdateAd();
@@ -50,7 +54,6 @@ export default function AdminAds() {
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [newDefaultRate, setNewDefaultRate] = useState('');
   const [formData, setFormData] = useState({
-    product_id: '',
     date: format(today, 'yyyy-MM-dd'),
     platform: '',
     amount_usd: '',
@@ -65,12 +68,21 @@ export default function AdminAds() {
     return usd * rate;
   }, [formData.amount_usd, formData.dollar_rate]);
 
-  // Pre-fill USD rate when opening dialog
+  // Calculate reference USD sum for selected date
+  const referenceUsdSum = useMemo(() => {
+    return refSpendData.reduce((sum, item) => sum + item.amount, 0);
+  }, [refSpendData]);
+
+  // Pre-fill USD rate and reference amount when opening dialog
   useEffect(() => {
-    if (isOpen && !editingAd && !formData.dollar_rate) {
-      setFormData(prev => ({ ...prev, dollar_rate: defaultUsdRate.toString() }));
+    if (isOpen && !editingAd) {
+      setFormData(prev => ({ 
+        ...prev, 
+        dollar_rate: prev.dollar_rate || defaultUsdRate.toString(),
+        amount_usd: referenceUsdSum > 0 ? referenceUsdSum.toString() : prev.amount_usd
+      }));
     }
-  }, [isOpen, editingAd, defaultUsdRate, formData.dollar_rate]);
+  }, [isOpen, editingAd, defaultUsdRate, referenceUsdSum]);
 
   const stats = useMemo(() => {
     // Use NPR amount (amount_spent) for all calculations
@@ -105,7 +117,7 @@ export default function AdminAds() {
     const amountSpentNpr = amountUsd * dollarRate;
 
     const data = {
-      product_id: formData.product_id || null,
+      product_id: null,
       date: formData.date,
       platform: formData.platform,
       amount_usd: amountUsd,
@@ -127,7 +139,6 @@ export default function AdminAds() {
 
   const resetForm = () => {
     setFormData({ 
-      product_id: '', 
       date: format(today, 'yyyy-MM-dd'), 
       platform: '', 
       amount_usd: '', 
@@ -139,7 +150,6 @@ export default function AdminAds() {
   const openEdit = (ad: Ad) => {
     setEditingAd(ad);
     setFormData({
-      product_id: ad.product_id || '',
       date: ad.date,
       platform: ad.platform,
       amount_usd: ad.amount_usd?.toString() || '',
@@ -242,19 +252,6 @@ export default function AdminAds() {
                 <DialogTitle>{editingAd ? 'Edit Ad Spend' : 'Add Ad Spend'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Product</Label>
-                  <Select value={formData.product_id} onValueChange={(v) => setFormData({ ...formData, product_id: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Date</Label>
@@ -293,6 +290,9 @@ export default function AdminAds() {
                       <Label className="flex items-center gap-1">
                         <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs">$</Badge>
                         Amount (USD)
+                        {referenceUsdSum > 0 && !editingAd && (
+                          <span className="text-xs text-muted-foreground ml-1">(from ref: ${referenceUsdSum})</span>
+                        )}
                       </Label>
                       <Input
                         type="number"
