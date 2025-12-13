@@ -398,8 +398,8 @@ export default function AdminOrders() {
       // Handle multi-product orders
       const orderItemsList = (order as any).order_items || [];
       const productDisplay = orderItemsList.length > 0 
-        ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
-        : `${order.products?.name || '-'}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}`;
+        ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
+        : `${order.products?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
       const totalQty = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
         : order.quantity || 1;
@@ -643,8 +643,8 @@ export default function AdminOrders() {
                 {filteredOrders.map((order) => {
                   const orderItemsList = (order as any).order_items || [];
                   const productDisplay = orderItemsList.length > 0 
-                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
-                    : `${order.products?.name || '-'}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}`;
+                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
+                    : `${order.products?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                     : (order.amount || 0) * (order.quantity || 1);
