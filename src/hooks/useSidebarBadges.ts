@@ -10,6 +10,8 @@ export interface SidebarBadges {
   notifications: number;
   leaveRequests: number;
   lowStock: number;
+  pendingDocuments: number;
+  todayAttendance: number;
 }
 
 export function useSidebarBadges() {
@@ -68,9 +70,9 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
     queryFn: async (): Promise<SidebarBadges> => {
-      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0 };
+      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0 };
 
-      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0 };
+      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0 };
       const role = profile.role;
 
       // Fetch user view state for "unseen" calculations
@@ -142,6 +144,13 @@ export function useSidebarBadges() {
           .select('*', { count: 'exact', head: true })
           .eq('reorder_required', true);
         badges.lowStock = lowStockCount || 0;
+
+        // Pending documents for approval
+        const { count: docCount } = await supabase
+          .from('employee_documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING');
+        badges.pendingDocuments = docCount || 0;
       }
 
       if (role === 'LEADS' && storeId) {
@@ -194,6 +203,13 @@ export function useSidebarBadges() {
         }
         const { count: leaveCount } = await leaveQuery;
         badges.leaveRequests = leaveCount || 0;
+
+        // Pending documents for approval
+        const { count: docCount } = await supabase
+          .from('employee_documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING');
+        badges.pendingDocuments = docCount || 0;
       }
 
       return badges;
