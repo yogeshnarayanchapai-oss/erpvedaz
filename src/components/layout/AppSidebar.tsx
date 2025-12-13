@@ -83,6 +83,7 @@ const myHRItems: MenuItem[] = [
   { title: 'Leave Requests', url: '/my-hr/leave', icon: Calendar },
   { title: 'My Assets', url: '/my-hr/assets', icon: Box },
   { title: 'Holidays', url: '/my-hr/holidays', icon: Calendar },
+  { title: 'HR Policies', url: '/my-hr/policies', icon: ScrollText },
   { title: 'Notices', url: '/my-hr/notices', icon: Bell },
   { title: 'Team Chat', url: '/my-hr/chat', icon: MessageSquare },
   { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },

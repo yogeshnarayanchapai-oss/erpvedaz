@@ -738,8 +738,27 @@ export function useUpdateLeaveRequest() {
 
             await supabase.from('notifications').insert(notification);
           }
+
+          // Auto-deduct leave quota when leave is approved
+          if (variables.status === 'Approved') {
+            // Find the leave quota for this employee and leave type
+            const { data: quotaRecord } = await supabase
+              .from('leave_quota')
+              .select('*')
+              .eq('employee_id', data.employee_id)
+              .eq('leave_type_id', data.leave_type_id)
+              .single();
+
+            if (quotaRecord) {
+              const newUsedDays = (quotaRecord.used_days || 0) + data.total_days;
+              await supabase
+                .from('leave_quota')
+                .update({ used_days: newUsedDays })
+                .eq('id', quotaRecord.id);
+            }
+          }
         } catch (e) {
-          console.error('Failed to send leave status notification:', e);
+          console.error('Failed to send leave status notification or update quota:', e);
         }
       }
     },

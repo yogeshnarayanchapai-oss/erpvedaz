@@ -128,6 +128,10 @@ import MarketingDashboard from "./pages/marketing/MarketingDashboard";
 // My HR pages
 import MyHRDashboard from "./pages/myhr/MyHRDashboard";
 import MyHRDocuments from "./pages/myhr/MyHRDocuments";
+import MyHRLeave from "./pages/myhr/MyHRLeave";
+import MyHRAttendance from "./pages/myhr/MyHRAttendance";
+import MyHRHolidays from "./pages/myhr/MyHRHolidays";
+import MyHRPolicies from "./pages/myhr/MyHRPolicies";
 
 // Leads pages
 import LeadsDashboard from "./pages/leads/LeadsDashboard";
@@ -275,11 +279,12 @@ const App = () => (
                 <Route path="/training/certificates" element={<MyCertificates />} />
                 <Route path="/my-hr" element={<MyHRDashboard />} />
                 <Route path="/my-hr/documents" element={<MyHRDocuments />} />
-                <Route path="/my-hr/attendance" element={<MyHRDashboard />} />
-                <Route path="/my-hr/leave" element={<HRMLeave />} />
+                <Route path="/my-hr/attendance" element={<MyHRAttendance />} />
+                <Route path="/my-hr/leave" element={<MyHRLeave />} />
                 <Route path="/my-hr/assets" element={<MyHRDashboard />} />
                 <Route path="/my-hr/chat" element={<HRMChat />} />
-                <Route path="/my-hr/holidays" element={<HRMHolidays />} />
+                <Route path="/my-hr/holidays" element={<MyHRHolidays />} />
+                <Route path="/my-hr/policies" element={<MyHRPolicies />} />
                 <Route path="/my-hr/notices" element={<HRMNotices />} />
                 <Route path="/my-hr/salary-slips" element={<StaffSelfService />} />
               </Route>
