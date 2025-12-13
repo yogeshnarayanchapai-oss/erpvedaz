@@ -396,9 +396,9 @@ export default function AdminOrders() {
       const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name || '-';
       
       // Handle multi-product orders
-      const orderItemsList = (order as any).order_items || [];
+      const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
       const productDisplay = orderItemsList.length > 0 
-        ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
+        ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity && item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
         : `${order.products?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
       const totalQty = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
@@ -641,9 +641,9 @@ export default function AdminOrders() {
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => {
-                  const orderItemsList = (order as any).order_items || [];
+                  const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
                   const productDisplay = orderItemsList.length > 0 
-                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
+                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity && item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
                     : `${order.products?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
