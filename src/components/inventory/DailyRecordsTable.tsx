@@ -87,61 +87,61 @@ export function DailyRecordsTable({ records }: Props) {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="overflow-x-auto -mx-2">
+        <Table className="text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead><HeaderWithHelp label="Date" helpKey="date" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Sell" helpKey="sell" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Ads (NPR)" helpKey="ads_spent_npr" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="RTO" helpKey="rto" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="RTO Cost" helpKey="rto_cost" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Staff+Office" helpKey="staff_office_cost" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Actual Sell" helpKey="actual_sell" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Prod. Cost" helpKey="product_cost" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Act. Prod. Cost" helpKey="actual_product_cost" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Prod. Value" helpKey="product_value" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Delivery" helpKey="delivery_charge" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Redirect" helpKey="redirect_cost" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="Act. Prod. Value" helpKey="actual_product_value" /></TableHead>
-              <TableHead className="text-right"><HeaderWithHelp label="P/L" helpKey="profit_loss" /></TableHead>
-              <TableHead></TableHead>
+              <TableHead className="whitespace-nowrap px-2"><HeaderWithHelp label="Date" helpKey="date" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Sell" helpKey="sell" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Ads" helpKey="ads_spent_npr" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="RTO" helpKey="rto" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="RTO$" helpKey="rto_cost" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Staff" helpKey="staff_office_cost" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Act.Sell" helpKey="actual_sell" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="P.Cost" helpKey="product_cost" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Act.P.C" helpKey="actual_product_cost" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="P.Val" helpKey="product_value" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Deliv" helpKey="delivery_charge" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Redir" helpKey="redirect_cost" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="Act.P.V" helpKey="actual_product_value" /></TableHead>
+              <TableHead className="text-right px-1"><HeaderWithHelp label="P/L" helpKey="profit_loss" /></TableHead>
+              <TableHead className="px-1"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {records.map((record) => (
               <TableRow key={record.id}>
-                <TableCell className="font-medium whitespace-nowrap">
-                  {format(new Date(record.record_date), 'MMM dd, yyyy')}
+                <TableCell className="font-medium whitespace-nowrap px-2">
+                  {format(new Date(record.record_date), 'MMM dd')}
                   {record.warehouse && (
-                    <span className="ml-1 text-xs text-muted-foreground">
+                    <span className="ml-1 text-[10px] text-muted-foreground">
                       ({record.warehouse.name})
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="text-right">{record.sell}</TableCell>
-                <TableCell className="text-right text-blue-600">{formatCurrency(record.ads_spent_npr)}</TableCell>
-                <TableCell className="text-right text-orange-600">{record.rto}</TableCell>
-                <TableCell className="text-right text-orange-600">{formatCurrency(record.rto_cost)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(record.staff_office_cost)}</TableCell>
-                <TableCell className="text-right text-green-600">{record.actual_sell}</TableCell>
-                <TableCell className="text-right text-destructive">{formatCurrency(record.product_cost)}</TableCell>
-                <TableCell className="text-right text-destructive">{formatCurrency(record.actual_product_cost)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(record.product_value)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(record.delivery_charge)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(record.redirect_cost)}</TableCell>
-                <TableCell className="text-right text-green-600">{formatCurrency(record.actual_product_value)}</TableCell>
-                <TableCell className={`text-right font-semibold ${record.profit_loss >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                <TableCell className="text-right px-1">{record.sell}</TableCell>
+                <TableCell className="text-right text-blue-600 px-1">{formatCurrency(record.ads_spent_npr)}</TableCell>
+                <TableCell className="text-right text-orange-600 px-1">{record.rto}</TableCell>
+                <TableCell className="text-right text-orange-600 px-1">{formatCurrency(record.rto_cost)}</TableCell>
+                <TableCell className="text-right px-1">{formatCurrency(record.staff_office_cost)}</TableCell>
+                <TableCell className="text-right text-green-600 px-1">{record.actual_sell}</TableCell>
+                <TableCell className="text-right text-destructive px-1">{formatCurrency(record.product_cost)}</TableCell>
+                <TableCell className="text-right text-destructive px-1">{formatCurrency(record.actual_product_cost)}</TableCell>
+                <TableCell className="text-right px-1">{formatCurrency(record.product_value)}</TableCell>
+                <TableCell className="text-right px-1">{formatCurrency(record.delivery_charge)}</TableCell>
+                <TableCell className="text-right px-1">{formatCurrency(record.redirect_cost)}</TableCell>
+                <TableCell className="text-right text-green-600 px-1">{formatCurrency(record.actual_product_value)}</TableCell>
+                <TableCell className={`text-right font-semibold px-1 ${record.profit_loss >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                   {formatCurrency(record.profit_loss)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
                     onClick={() => setDeleteId(record.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </TableCell>
               </TableRow>
