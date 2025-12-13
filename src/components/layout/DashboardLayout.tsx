@@ -139,14 +139,14 @@ function DashboardLayoutInner() {
     }
   }, [user, loading, navigate]);
 
-  // Update document title based on current page and store
+  // Update document title based on portal, page and store
   useEffect(() => {
-    if (currentStore?.name) {
-      document.title = `${pageName} - ${currentStore.name}`;
-    } else {
-      document.title = pageName;
-    }
-  }, [pageName, currentStore?.name]);
+    const portalFirstWord = portalName.split(' ')[0];
+    const title = currentStore?.name 
+      ? `${portalFirstWord} ${pageName} - ${currentStore.name}`
+      : `${portalFirstWord} ${pageName}`;
+    document.title = title;
+  }, [pageName, portalName, currentStore?.name]);
 
   if (loading) {
     return (
