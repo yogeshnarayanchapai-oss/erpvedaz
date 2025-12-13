@@ -545,22 +545,22 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {monthlyPL.map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell className="text-xs font-medium">{row.month}</TableCell>
-                      <TableCell className="text-xs text-right">₹{row.productSold.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right">₹{row.adsSpend.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right">₹{row.officeCost.toLocaleString()}</TableCell>
-                      <TableCell className={`text-xs text-right font-medium ${row.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    <TableRow key={row.month} className="h-8">
+                      <TableCell className="text-xs font-medium py-1">{row.month}</TableCell>
+                      <TableCell className="text-xs text-right py-1">₹{row.productSold.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-right py-1">₹{row.adsSpend.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-right py-1">₹{row.officeCost.toLocaleString()}</TableCell>
+                      <TableCell className={`text-xs text-right font-medium py-1 ${row.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                         ₹{row.pl.toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/50 font-bold">
-                    <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-xs text-right">₹{plTotals.productSold.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right">₹{plTotals.adsSpend.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right">₹{plTotals.officeCost.toLocaleString()}</TableCell>
-                    <TableCell className={`text-xs text-right ${plTotals.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  <TableRow className="bg-muted/50 font-bold h-8">
+                    <TableCell className="text-xs py-1">Total</TableCell>
+                    <TableCell className="text-xs text-right py-1">₹{plTotals.productSold.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right py-1">₹{plTotals.adsSpend.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right py-1">₹{plTotals.officeCost.toLocaleString()}</TableCell>
+                    <TableCell className={`text-xs text-right py-1 ${plTotals.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                       ₹{plTotals.pl.toLocaleString()}
                     </TableCell>
                   </TableRow>
