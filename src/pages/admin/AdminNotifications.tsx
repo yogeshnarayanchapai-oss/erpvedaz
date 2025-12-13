@@ -26,6 +26,20 @@ const NOTIFICATION_TYPES = [
   { value: 'LEAD_FOLLOWUP', label: 'Lead Follow-up' },
   { value: 'LEAD_CANCELLED', label: 'Lead Cancelled' },
   { value: 'LOGISTICS_EXPORTED', label: 'Logistics Export' },
+  // HRM notification types
+  { value: 'DOCUMENT_UPLOADED', label: 'Document Uploaded' },
+  { value: 'DOCUMENT_APPROVED', label: 'Document Approved' },
+  { value: 'DOCUMENT_REJECTED', label: 'Document Rejected' },
+  { value: 'LEAVE_REQUEST', label: 'Leave Request' },
+  { value: 'LEAVE_APPROVED', label: 'Leave Approved' },
+  { value: 'LEAVE_REJECTED', label: 'Leave Rejected' },
+  { value: 'LEAVE_STATUS', label: 'Leave Status' },
+  { value: 'ATTENDANCE', label: 'Attendance' },
+  { value: 'PAYROLL_CREATED', label: 'Payroll Created' },
+  { value: 'PAYROLL_PAID', label: 'Payroll Paid' },
+  { value: 'LEAVE_QUOTA_UPDATED', label: 'Leave Quota Updated' },
+  { value: 'ASSET_ASSIGNED', label: 'Asset Assigned' },
+  { value: 'NOTICE_PUBLISHED', label: 'Notice Published' },
 ];
 
 const PORTAL_OPTIONS = [
@@ -35,6 +49,7 @@ const PORTAL_OPTIONS = [
   { value: 'FOLLOWUP', label: 'Follow-up' },
   { value: 'LOGISTICS', label: 'Logistics' },
   { value: 'LEADS', label: 'Leads' },
+  { value: 'HRM', label: 'HRM' },
 ];
 
 const typeColors: Record<string, string> = {
@@ -46,6 +61,20 @@ const typeColors: Record<string, string> = {
   LEAD_FOLLOWUP: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   LEAD_CANCELLED: 'bg-red-100 text-red-700 border-red-200',
   LOGISTICS_EXPORTED: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  // HRM colors
+  DOCUMENT_UPLOADED: 'bg-teal-100 text-teal-700 border-teal-200',
+  DOCUMENT_APPROVED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  DOCUMENT_REJECTED: 'bg-rose-100 text-rose-700 border-rose-200',
+  LEAVE_REQUEST: 'bg-amber-100 text-amber-700 border-amber-200',
+  LEAVE_APPROVED: 'bg-green-100 text-green-700 border-green-200',
+  LEAVE_REJECTED: 'bg-red-100 text-red-700 border-red-200',
+  LEAVE_STATUS: 'bg-sky-100 text-sky-700 border-sky-200',
+  ATTENDANCE: 'bg-violet-100 text-violet-700 border-violet-200',
+  PAYROLL_CREATED: 'bg-lime-100 text-lime-700 border-lime-200',
+  PAYROLL_PAID: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  LEAVE_QUOTA_UPDATED: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
+  ASSET_ASSIGNED: 'bg-slate-100 text-slate-700 border-slate-200',
+  NOTICE_PUBLISHED: 'bg-pink-100 text-pink-700 border-pink-200',
 };
 
 export default function AdminNotifications() {

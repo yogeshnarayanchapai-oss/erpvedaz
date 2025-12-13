@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { startOfMonth, format } from 'date-fns';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 
 export interface LeaveQuota {
   id: string;
@@ -128,15 +129,36 @@ export function useCreateLeaveQuota() {
           created_by: user.user?.id,
           store_id: storeId,
         } as any)
-        .select()
+        .select('*, employees(full_name, user_id)')
         .single();
 
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['leave-quotas'] });
       toast.success('Leave quota created');
+
+      // Notify the employee about their quota
+      try {
+        const employee = (data as any).employees;
+        if (employee?.user_id) {
+          const actorName = await getCurrentUserName();
+          await notifyStaff({
+            type: 'LEAVE_QUOTA_UPDATED',
+            title: 'Leave Quota Assigned',
+            message: `Your leave quota for ${(data as any).month_start} has been set to ${(data as any).max_days} days`,
+            targetUserId: employee.user_id,
+            actorName,
+            storeId: storeId || undefined,
+            linkPath: '/my-hr/leave',
+            entityType: 'leave_quota',
+            entityId: (data as any).id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send leave quota notification:', e);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to create leave quota');
@@ -146,6 +168,7 @@ export function useCreateLeaveQuota() {
 
 export function useUpdateLeaveQuota() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<LeaveQuota> & { id: string }) => {
@@ -153,15 +176,36 @@ export function useUpdateLeaveQuota() {
         .from('leave_quota' as any)
         .update(data as any)
         .eq('id', id)
-        .select()
+        .select('*, employees(full_name, user_id)')
         .single();
 
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['leave-quotas'] });
       toast.success('Leave quota updated');
+
+      // Notify the employee about updated quota
+      try {
+        const employee = (data as any).employees;
+        if (employee?.user_id) {
+          const actorName = await getCurrentUserName();
+          await notifyStaff({
+            type: 'LEAVE_QUOTA_UPDATED',
+            title: 'Leave Quota Updated',
+            message: `Your leave quota has been updated to ${(data as any).max_days} days`,
+            targetUserId: employee.user_id,
+            actorName,
+            storeId: storeId || undefined,
+            linkPath: '/my-hr/leave',
+            entityType: 'leave_quota',
+            entityId: (data as any).id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send leave quota update notification:', e);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update leave quota');

@@ -15,7 +15,21 @@ export type NotificationType =
   | 'LEAD_FOLLOWUP'
   | 'LEAD_CANCELLED'
   | 'LOGISTICS_EXPORTED'
-  | 'SYSTEM';
+  | 'SYSTEM'
+  // HRM notification types
+  | 'DOCUMENT_UPLOADED'
+  | 'DOCUMENT_APPROVED'
+  | 'DOCUMENT_REJECTED'
+  | 'LEAVE_REQUEST'
+  | 'LEAVE_APPROVED'
+  | 'LEAVE_REJECTED'
+  | 'LEAVE_STATUS'
+  | 'ATTENDANCE'
+  | 'PAYROLL_CREATED'
+  | 'PAYROLL_PAID'
+  | 'LEAVE_QUOTA_UPDATED'
+  | 'ASSET_ASSIGNED'
+  | 'NOTICE_PUBLISHED';
 
 export interface Notification {
   id: string;

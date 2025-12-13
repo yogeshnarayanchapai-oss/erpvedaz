@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 
 export type EmployeeDocType = 'PROFILE_PHOTO' | 'CITIZENSHIP_FRONT' | 'CITIZENSHIP_BACK' | 'PAN_CARD' | 'COMPANY_REQUIREMENT_DOC' | 'OTHER';
 export type EmployeeDocStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
@@ -139,10 +140,33 @@ export function useUploadDocument() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (data, variables) => {
       toast.success('Document uploaded successfully');
       queryClient.invalidateQueries({ queryKey: ['employee-documents', variables.employeeId] });
       queryClient.invalidateQueries({ queryKey: ['all-employee-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+
+      // Notify admin team about new document upload
+      try {
+        const employee = await getEmployeeDetails(variables.employeeId);
+        const actorName = await getCurrentUserName();
+        
+        if (employee?.store_id) {
+          await notifyAdminTeam({
+            type: 'DOCUMENT_UPLOADED',
+            title: 'New Document Uploaded',
+            message: `${employee.full_name} uploaded a ${variables.docType.replace(/_/g, ' ').toLowerCase()} document for review`,
+            actorId: variables.userId,
+            actorName,
+            storeId: employee.store_id,
+            linkPath: '/hrm/staff-documents',
+            entityType: 'document',
+            entityId: data.id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send document upload notification:', e);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to upload document');
@@ -160,11 +184,13 @@ export function useVerifyDocument() {
       status,
       remarks,
       verifierId,
+      employeeId,
     }: {
       documentId: string;
       status: EmployeeDocStatus;
       remarks?: string;
       verifierId: string;
+      employeeId?: string;
     }) => {
       const { data, error } = await supabase
         .from('employee_documents')
@@ -175,16 +201,42 @@ export function useVerifyDocument() {
           verified_at: new Date().toISOString(),
         })
         .eq('id', documentId)
-        .select()
+        .select('*, employees:employee_id(full_name, user_id, store_id)')
         .single();
 
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       toast.success('Document status updated');
       queryClient.invalidateQueries({ queryKey: ['employee-documents'] });
       queryClient.invalidateQueries({ queryKey: ['all-employee-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+
+      // Notify the staff member about document approval/rejection
+      try {
+        const employee = (data as any).employees;
+        if (employee?.user_id) {
+          const actorName = await getCurrentUserName();
+          const statusText = variables.status === 'VERIFIED' ? 'approved' : 'rejected';
+          const notificationType = variables.status === 'VERIFIED' ? 'DOCUMENT_APPROVED' : 'DOCUMENT_REJECTED';
+          
+          await notifyStaff({
+            type: notificationType,
+            title: `Document ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`,
+            message: `Your ${(data as any).doc_type?.replace(/_/g, ' ').toLowerCase() || 'document'} has been ${statusText}${variables.remarks ? `: ${variables.remarks}` : ''}`,
+            targetUserId: employee.user_id,
+            actorId: variables.verifierId,
+            actorName,
+            storeId: employee.store_id,
+            linkPath: '/my-hr/documents',
+            entityType: 'document',
+            entityId: data.id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send document status notification:', e);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update document');

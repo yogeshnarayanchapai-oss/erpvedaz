@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 
 // Types
 export interface Department {
@@ -391,9 +392,30 @@ export function useCreatePayrollRecord() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payroll_records'] });
       toast.success('Payroll record created');
+
+      // Notify the employee about their payroll record
+      try {
+        const employee = await getEmployeeDetails(variables.employee_id);
+        if (employee?.user_id) {
+          const actorName = await getCurrentUserName();
+          await notifyStaff({
+            type: 'PAYROLL_CREATED',
+            title: 'Payroll Record Added',
+            message: `Your payroll for ${variables.month} has been created. Basic: NPR ${variables.basic_salary.toLocaleString()}`,
+            targetUserId: employee.user_id,
+            actorName,
+            storeId: storeId || undefined,
+            linkPath: '/my-hr/salary-slips',
+            entityType: 'payroll',
+            entityId: data.id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send payroll notification:', e);
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -401,15 +423,40 @@ export function useCreatePayrollRecord() {
 
 export function useUpdatePayrollRecord() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; allowances?: number; deductions?: number; payment_status?: string; paid_on?: string; notes?: string }) => {
-      const { data, error } = await supabase.from('payroll_records').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('payroll_records').update(updates).eq('id', id).select('*, employees:employee_id(full_name, user_id)').single();
       if (error) throw error;
-      return data;
+      return { data, updates };
     },
-    onSuccess: () => {
+    onSuccess: async ({ data, updates }) => {
       queryClient.invalidateQueries({ queryKey: ['payroll_records'] });
       toast.success('Payroll updated');
+
+      // Notify employee when payroll is marked as paid
+      if (updates.payment_status === 'Paid') {
+        try {
+          const employee = (data as any).employees;
+          if (employee?.user_id) {
+            const actorName = await getCurrentUserName();
+            await notifyStaff({
+              type: 'PAYROLL_PAID',
+              title: 'Salary Paid',
+              message: `Your salary for ${data.month} has been marked as paid`,
+              targetUserId: employee.user_id,
+              actorName,
+              storeId: storeId || undefined,
+              linkPath: '/my-hr/salary-slips',
+              entityType: 'payroll',
+              entityId: data.id,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to send payroll paid notification:', e);
+        }
+      }
     },
     onError: (e) => toast.error(e.message),
   });
