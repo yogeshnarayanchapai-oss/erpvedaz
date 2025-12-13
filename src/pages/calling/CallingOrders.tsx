@@ -257,14 +257,14 @@ export default function CallingOrders() {
     let productQuantity = 0;
     
     if (orderItemsList.length > 0) {
-      // Format with quantity: "Hair Oil x2" or "Hair Oil x2, Face Cream x1"
-      productName = orderItemsList.map((item: any) => `${item.product_name} x${item.quantity || 1}`).join(', ');
+      // Format with quantity: "Hair Oil (2)" or "Hair Oil (2), Face Cream"
+      productName = orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ');
       productPrice = orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
       productQuantity = orderItemsList.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     } else {
       // Format with quantity for single product
       const qty = order.quantity || 1;
-      productName = `${order.products?.name || ''} x${qty}`;
+      productName = `${order.products?.name || ''}${qty > 1 ? ` (${qty})` : ''}`;
       productPrice = (order.amount || 0) * qty;
       productQuantity = qty;
     }
@@ -546,7 +546,6 @@ export default function CallingOrders() {
                   <TableHead className="table-header">Client</TableHead>
                   <TableHead className="table-header">Contact</TableHead>
                   <TableHead className="table-header">Product</TableHead>
-                  <TableHead className="table-header">Qty</TableHead>
                   <TableHead className="table-header">Amount</TableHead>
                   <TableHead className="table-header">Payment</TableHead>
                   <TableHead className="table-header">Delivery</TableHead>
@@ -571,8 +570,11 @@ export default function CallingOrders() {
                       {order.leads?.client_name || '-'}
                     </TableCell>
                     <TableCell>{order.leads?.contact_number || '-'}</TableCell>
-                    <TableCell>{order.products?.name || '-'}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
+                    <TableCell>
+                      {order.products?.name 
+                        ? `${order.products.name}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}` 
+                        : '-'}
+                    </TableCell>
                     <TableCell className="font-medium">₹{order.amount?.toFixed(0) || '-'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={order.is_cod ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}>

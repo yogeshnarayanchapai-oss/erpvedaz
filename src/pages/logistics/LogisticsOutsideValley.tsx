@@ -555,7 +555,6 @@ export default function LogisticsOutsideValley() {
                   <TableHead className="table-header">Contact</TableHead>
                   <TableHead className="table-header">Alt Phone</TableHead>
                   <TableHead className="table-header">Product</TableHead>
-                  <TableHead className="table-header">Qty</TableHead>
                   <TableHead className="table-header">Amount</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Full Address</TableHead>
@@ -582,8 +581,11 @@ export default function LogisticsOutsideValley() {
                     <TableCell className="font-medium">{order.leads?.client_name || '-'}</TableCell>
                     <TableCell>{order.leads?.contact_number || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{order.leads?.alt_phone || '-'}</TableCell>
-                    <TableCell>{order.products?.name || '-'}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
+                    <TableCell>
+                      {order.products?.name 
+                        ? `${order.products.name}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}` 
+                        : '-'}
+                    </TableCell>
                     <TableCell className="font-medium">₹{order.amount?.toFixed(0) || '-'}</TableCell>
                     <TableCell>{order.branches?.branch_name || order.destination_branch || '-'}</TableCell>
                     <TableCell className="max-w-[150px] truncate" title={order.leads?.full_address || order.full_address || ''}>

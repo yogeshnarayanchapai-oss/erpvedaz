@@ -290,8 +290,8 @@ export default function FollowupOrders() {
                 {filteredOrders.map((order) => {
                   const orderItemsList = (order as any).order_items || [];
                   const productDisplay = orderItemsList.length > 0 
-                    ? orderItemsList.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
-                    : `${(order.products as any)?.name || '-'} x${order.quantity || 1}`;
+                    ? orderItemsList.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
+                    : `${(order.products as any)?.name || '-'}${order.quantity && order.quantity > 1 ? ` (${order.quantity})` : ''}`;
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                     : order.amount || 0;
@@ -384,8 +384,8 @@ export default function FollowupOrders() {
           {selectedOrder && (() => {
             const dialogOrderItems = (selectedOrder as any).order_items || [];
             const dialogProductDisplay = dialogOrderItems.length > 0 
-              ? dialogOrderItems.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ')
-              : `${(selectedOrder.products as any)?.name || '-'} x${selectedOrder.quantity || 1}`;
+              ? dialogOrderItems.map((item: any) => `${item.product_name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`).join(', ')
+              : `${(selectedOrder.products as any)?.name || '-'}${selectedOrder.quantity && selectedOrder.quantity > 1 ? ` (${selectedOrder.quantity})` : ''}`;
             const dialogTotalAmount = dialogOrderItems.length > 0
               ? dialogOrderItems.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
               : selectedOrder.amount || 0;
