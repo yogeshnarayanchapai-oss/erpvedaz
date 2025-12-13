@@ -13,7 +13,7 @@ import { useStockMovements, useCreateStockMovement, useDeleteStockMovement } fro
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
-import { useProductDaybookStats } from '@/hooks/useProductDaybookStats';
+import { useProductDaybookStats, DeliveryLocationFilter } from '@/hooks/useProductDaybookStats';
 import { format, subDays } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
@@ -91,14 +91,23 @@ export default function StockMovements() {
   const { data: products } = useProducts();
   const { data: suppliers } = useParties('SUPPLIER');
   const { data: customers } = useParties('CUSTOMER');
-  const { data: daybookStats, isLoading: statsLoading } = useProductDaybookStats(
-    form.product_id || undefined, 
-    form.movement_date || undefined
-  );
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
 
-  // Auto-fill qty and unit_price from Product Daybook stats when product/date changes
+  // Determine delivery location based on selected warehouse name
+  const selectedWarehouse = warehouses?.find(w => w.id === form.warehouse_id);
+  const warehouseName = selectedWarehouse?.name?.toLowerCase() || '';
+  const deliveryLocationFilter: DeliveryLocationFilter = 
+    warehouseName.includes('office') ? 'OUTSIDE_VALLEY' :
+    warehouseName.includes('valley') ? 'INSIDE_VALLEY' : 'all';
+
+  const { data: daybookStats, isLoading: statsLoading } = useProductDaybookStats(
+    form.product_id || undefined, 
+    form.movement_date || undefined,
+    deliveryLocationFilter
+  );
+
+  // Auto-fill qty and unit_price from Product Daybook stats when product/date/warehouse changes
   useEffect(() => {
     if (daybookStats && daybookStats.totalQty > 0 && dialogOpen) {
       setForm(f => ({
@@ -307,10 +316,12 @@ export default function StockMovements() {
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-4 w-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                        Product Daybook Reference ({form.movement_date})
+                        Product Daybook Reference - {deliveryLocationFilter === 'OUTSIDE_VALLEY' ? 'OVD (Outside Valley)' : deliveryLocationFilter === 'INSIDE_VALLEY' ? 'VD (Inside Valley)' : 'All'} ({form.movement_date})
                       </span>
                     </div>
-                    {statsLoading ? (
+                    {!form.warehouse_id ? (
+                      <p className="text-sm text-muted-foreground">Select a warehouse to see reference data.</p>
+                    ) : statsLoading ? (
                       <p className="text-sm text-muted-foreground">Loading...</p>
                     ) : daybookStats && daybookStats.totalQty > 0 ? (
                       <div className="grid grid-cols-4 gap-2 text-sm">
@@ -332,7 +343,7 @@ export default function StockMovements() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No orders for this product on selected date.</p>
+                      <p className="text-sm text-muted-foreground">No {deliveryLocationFilter === 'OUTSIDE_VALLEY' ? 'OVD' : deliveryLocationFilter === 'INSIDE_VALLEY' ? 'VD' : ''} orders for this product on selected date.</p>
                     )}
                   </div>
                 )}
