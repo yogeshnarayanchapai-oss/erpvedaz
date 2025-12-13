@@ -458,8 +458,8 @@ export default function LogisticsPortalOrders() {
                 {filteredOrders.map((order) => {
                   const orderItems = (order as any).order_items || [];
                   const productDisplay = orderItems.length > 0 
-                    ? orderItems.map((item: any) => `${item.product_name}${item.quantity > 0 ? ` (${item.quantity})` : ''}`).join(', ')
-                    : `${(order.products as any)?.name || '-'}${order.quantity && order.quantity > 0 ? ` (${order.quantity})` : ''}`;
+                    ? orderItems.map((item: any) => `(${item.quantity || 1}) ${item.product_name}`).join(', ')
+                    : `(${order.quantity || 1}) ${(order.products as any)?.name || '-'}`;
                   const totalAmount = orderItems.length > 0
                     ? orderItems.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                     : order.amount || 0;
