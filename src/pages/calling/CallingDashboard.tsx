@@ -18,7 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subDays, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 
-type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
+type DatePreset = 'today' | 'yesterday' | 'last7' | 'last30' | 'custom';
 
 const CHART_COLORS = [
   'hsl(var(--success))',
@@ -41,6 +41,10 @@ export default function CallingDashboard() {
   
   const dateRange = useMemo(() => {
     if (datePreset === 'today') return { from: today, to: today };
+    if (datePreset === 'yesterday') {
+      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+      return { from: yesterday, to: yesterday };
+    }
     if (datePreset === 'last7') return { from: format(subDays(new Date(), 7), 'yyyy-MM-dd'), to: today };
     if (datePreset === 'last30') return { from: format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: today };
     return { from: customDateFrom, to: customDateTo };
@@ -216,6 +220,7 @@ export default function CallingDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="last7">Last 7 days</SelectItem>
               <SelectItem value="last30">Last 30 days</SelectItem>
               <SelectItem value="custom">Custom</SelectItem>
