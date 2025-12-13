@@ -150,7 +150,7 @@ export default function CallingDashboard() {
   const remainingPercent = Math.max(0, 100 - completionRate);
 
   // Product Daybook - count by individual staff
-  // OVD: all confirmed orders, VD: only delivered orders
+  // OVD: confirmed orders (OUTSIDE_VALLEY), VD: confirmed orders with inside_delivery_status = 'Delivered'
   const productDaybookData = useMemo(() => {
     const productMap = new Map<string, { productName: string; ovdQty: number; vdQty: number }>();
     
@@ -158,11 +158,11 @@ export default function CallingDashboard() {
       const orderItems = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
       const deliveryLocation = order.delivery_location;
       const isConfirmed = order.order_status === 'CONFIRMED';
-      const isDelivered = order.order_status === 'DELIVERED';
+      const insideDeliveryStatus = (order as any).inside_delivery_status;
       
-      // OVD counts confirmed, VD counts only delivered
+      // OVD counts confirmed outside valley, VD counts confirmed inside valley with delivery_status = Delivered
       const countForOVD = deliveryLocation === 'OUTSIDE_VALLEY' && isConfirmed;
-      const countForVD = deliveryLocation !== 'OUTSIDE_VALLEY' && isDelivered;
+      const countForVD = deliveryLocation !== 'OUTSIDE_VALLEY' && isConfirmed && insideDeliveryStatus === 'Delivered';
       
       if (!countForOVD && !countForVD) return;
       
