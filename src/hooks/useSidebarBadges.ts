@@ -125,11 +125,15 @@ export function useSidebarBadges() {
           badges.orders = 0;
         }
 
-        // Pending leave requests
-        const { count: leaveCount } = await supabase
+        // Pending leave requests (store-wise)
+        let leaveQuery = supabase
           .from('leave_requests')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'Pending');
+        if (storeId) {
+          leaveQuery = leaveQuery.eq('store_id', storeId);
+        }
+        const { count: leaveCount } = await leaveQuery;
         badges.leaveRequests = leaveCount || 0;
 
         // Low stock alert (products below reorder level)
@@ -180,10 +184,15 @@ export function useSidebarBadges() {
       }
 
       if (role === 'HR') {
-        const { count: leaveCount } = await supabase
+        // Pending leave requests (store-wise)
+        let leaveQuery = supabase
           .from('leave_requests')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'Pending');
+        if (storeId) {
+          leaveQuery = leaveQuery.eq('store_id', storeId);
+        }
+        const { count: leaveCount } = await leaveQuery;
         badges.leaveRequests = leaveCount || 0;
       }
 

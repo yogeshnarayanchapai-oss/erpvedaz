@@ -526,7 +526,8 @@ export function AppSidebar() {
     if (titleLower.includes('order')) return badges.orders;
     if (titleLower.includes('lead') && !titleLower.includes('followup')) return badges.leads;
     if (titleLower.includes('notification')) return badges.notifications;
-    if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER')) return badges.leaveRequests;
+    if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
+    if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower.includes('inventory') || titleLower.includes('stock summary')) return badges.lowStock;
     return 0;
   };
