@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, PhoneOff, Clock, XCircle, Users, TrendingUp, Calendar, BarChart3, ArrowRight, Target, PieChart, PhoneCall, Truck, MapPin, Package, Bell, AlertTriangle } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CheckCircle, PhoneOff, Clock, XCircle, Users, TrendingUp, Calendar, BarChart3, ArrowRight, Target, PieChart, PhoneCall, Truck, MapPin, Package, Bell, AlertTriangle, Copy, ClipboardList } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import { format, subDays, differenceInDays } from 'date-fns';
+import { toast } from 'sonner';
 
 type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 
@@ -142,6 +144,60 @@ export default function CallingDashboard() {
   const callsDone = callLogs.length;
   const completionRate = targetCalls > 0 ? Math.min(100, Math.round((callsDone / targetCalls) * 100)) : 0;
   const remainingPercent = Math.max(0, 100 - completionRate);
+
+  // Product Daybook - count by individual staff
+  const productDaybookData = useMemo(() => {
+    const confirmedOrders = orders.filter(o => o.order_status === 'CONFIRMED');
+    const productMap = new Map<string, { productName: string; ovdQty: number; vdQty: number }>();
+    
+    confirmedOrders.forEach(order => {
+      const orderItems = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
+      const deliveryLocation = order.delivery_location;
+      
+      if (orderItems.length > 0) {
+        orderItems.forEach((item: any) => {
+          const productName = item.product_name || 'Unknown';
+          const qty = item.quantity || 1;
+          const existing = productMap.get(productName) || { productName, ovdQty: 0, vdQty: 0 };
+          if (deliveryLocation === 'OUTSIDE_VALLEY') {
+            existing.ovdQty += qty;
+          } else {
+            existing.vdQty += qty;
+          }
+          productMap.set(productName, existing);
+        });
+      } else {
+        const productName = order.products?.name || 'Unknown';
+        const qty = order.quantity || 1;
+        const existing = productMap.get(productName) || { productName, ovdQty: 0, vdQty: 0 };
+        if (deliveryLocation === 'OUTSIDE_VALLEY') {
+          existing.ovdQty += qty;
+        } else {
+          existing.vdQty += qty;
+        }
+        productMap.set(productName, existing);
+      }
+    });
+    
+    return Array.from(productMap.values()).filter(p => p.ovdQty > 0 || p.vdQty > 0);
+  }, [orders]);
+
+  const handleCopyProductDaybook = () => {
+    const staffName = profile?.name || 'Staff';
+    const dateDisplay = dateRange.from === dateRange.to 
+      ? format(new Date(dateRange.from), 'dd MMM yyyy')
+      : `${format(new Date(dateRange.from), 'dd MMM yyyy')} - ${format(new Date(dateRange.to), 'dd MMM yyyy')}`;
+    
+    const lines = [
+      staffName,
+      dateDisplay,
+      ...productDaybookData.map(p => `${p.productName} (OVD: ${p.ovdQty}) (VD: ${p.vdQty})`)
+    ];
+    
+    navigator.clipboard.writeText(lines.join('\n'));
+    toast.success('Product daybook copied to clipboard');
+  };
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -329,6 +385,46 @@ export default function CallingDashboard() {
                 variant="destructive"
               />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Product Daybook */}
+      {productDaybookData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ClipboardList className="w-5 h-5 text-primary" />
+                My Product Daybook
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={handleCopyProductDaybook}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy My Product
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">OVD Qty</TableHead>
+                  <TableHead className="text-right">VD Qty</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {productDaybookData.map((product, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell className="font-medium">{product.productName}</TableCell>
+                    <TableCell className="text-right">{product.ovdQty}</TableCell>
+                    <TableCell className="text-right">{product.vdQty}</TableCell>
+                    <TableCell className="text-right font-semibold">{product.ovdQty + product.vdQty}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
