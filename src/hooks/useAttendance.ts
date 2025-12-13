@@ -101,13 +101,17 @@ export function useTodayAttendance() {
 
 export function useCheckIn() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      
       const { data: employee } = await supabase
         .from('employees')
-        .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .select('id, full_name')
+        .eq('user_id', userId)
         .single();
 
       if (!employee) throw new Error('Employee not found');
@@ -122,18 +126,48 @@ export function useCheckIn() {
           date: today,
           check_in_time: now,
           status: 'Present',
+          store_id: storeId,
         } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Return employee info for notification
+      return { data, employee_name: employee.full_name, actor_id: userId };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['my-attendance'] });
       toast.success('Checked in successfully');
+
+      // Notify Admin/Manager/HR about check-in
+      try {
+        const { data: storeUsers } = await supabase
+          .from('user_store_access')
+          .select('user_id, store_role')
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .in('store_role', ['ADMIN', 'MANAGER', 'HR', 'OWNER']);
+
+        if (storeUsers && storeUsers.length > 0) {
+          const checkInTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          const notifications = storeUsers.map(u => ({
+            target_user_id: u.user_id,
+            title: 'Staff Check-in',
+            message: `${data.employee_name} checked in at ${checkInTime}`,
+            type: 'ATTENDANCE',
+            store_id: storeId,
+            actor_id: data.actor_id,
+            actor_name: data.employee_name,
+          }));
+
+          await supabase.from('notifications').insert(notifications);
+        }
+      } catch (e) {
+        console.error('Failed to send check-in notifications:', e);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to check in');

@@ -703,15 +703,45 @@ export function useCreateLeaveRequest() {
 
 export function useUpdateLeaveRequest() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; status?: string; approved_by?: string }) => {
       const { data, error } = await supabase.from('leave_requests').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['leave_requests'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+      queryClient.invalidateQueries({ queryKey: ['leave_quotas'] });
       toast.success('Leave request updated');
+
+      // Send notification to the employee when leave is approved/rejected
+      if (variables.status === 'Approved' || variables.status === 'Rejected') {
+        try {
+          // Fetch employee info
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('full_name, user_id')
+            .eq('id', data.employee_id)
+            .single();
+
+          if (employee?.user_id) {
+            const notification = {
+              target_user_id: employee.user_id,
+              title: `Leave ${variables.status}`,
+              message: `Your leave request from ${data.from_date} to ${data.to_date} (${data.total_days} days) has been ${variables.status.toLowerCase()}.`,
+              type: 'LEAVE_STATUS',
+              store_id: storeId,
+            };
+
+            await supabase.from('notifications').insert(notification);
+          }
+        } catch (e) {
+          console.error('Failed to send leave status notification:', e);
+        }
+      }
     },
     onError: (e) => toast.error(e.message),
   });
