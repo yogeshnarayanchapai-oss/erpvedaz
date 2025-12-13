@@ -200,15 +200,47 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         orderItemsData = items || [];
       }
 
-      // Fetch ads spend from ad_spend_reference table
+      // Fetch ALL ad_spend_reference entries to find latest per product (carry-forward logic)
       const { data: adsData, error: adsError } = await supabase
         .from('ad_spend_reference')
-        .select('product_id, amount')
+        .select('product_id, amount, spend_date')
         .eq('store_id', storeId)
-        .gte('spend_date', fromDate)
-        .lte('spend_date', toDate);
+        .order('spend_date', { ascending: false });
 
       if (adsError) throw adsError;
+
+      // Fetch default USD rate from company_info
+      const { data: companyData } = await supabase
+        .from('company_info')
+        .select('other_details')
+        .limit(1)
+        .maybeSingle();
+
+      let dollarRate = 133.5; // Default rate
+      if (companyData?.other_details) {
+        try {
+          const details = JSON.parse(companyData.other_details);
+          if (details.default_usd_rate) {
+            dollarRate = details.default_usd_rate;
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Calculate number of days in filter range (inclusive)
+      const daysDiff = Math.ceil(
+        (new Date(toDate).getTime() - new Date(fromDate).getTime()) / (1000 * 60 * 60 * 24)
+      ) + 1;
+
+      // For each product, find the LATEST ad_spend_reference (carry-forward)
+      const latestAdsByProduct: Record<string, number> = {};
+      (adsData || []).forEach(ad => {
+        if (ad.product_id && !latestAdsByProduct[ad.product_id]) {
+          // First occurrence is the latest due to descending order
+          latestAdsByProduct[ad.product_id] = ad.amount || 0;
+        }
+      });
 
       // Calculate target per product from ads table (for target column)
       const { data: adsTargetData } = await supabase
@@ -221,14 +253,6 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
       (adsTargetData || []).forEach(ad => {
         if (ad.product_id) {
           targetByProduct[ad.product_id] = (targetByProduct[ad.product_id] || 0) + (ad.target_orders || 0);
-        }
-      });
-
-      // Calculate ads spend per product from ad_spend_reference
-      const adsSpendByProduct: Record<string, number> = {};
-      (adsData || []).forEach(ad => {
-        if (ad.product_id) {
-          adsSpendByProduct[ad.product_id] = (adsSpendByProduct[ad.product_id] || 0) + (ad.amount || 0);
         }
       });
 
@@ -263,16 +287,19 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         const adsTarget = targetByProduct[product.id] || 0;
         const qtySold = qtySoldByProduct[product.id] || 0;
         
-        // Get ads spend from ad_spend_reference
-        const adsSpend = adsSpendByProduct[product.id] || 0;
+        // Get ads spend: latest reference × days × dollar rate (carry-forward logic)
+        const dailyAdsUsd = latestAdsByProduct[product.id] || 0;
+        const adsSpend = dailyAdsUsd * daysDiff * dollarRate;
         
-        // Calculate P/L same as Daily Records:
-        // P/L = Revenue - Product Cost - Staff+Office - Ads - Delivery - Redirect - RTO Cost
-        const productCost = orderCount * (product.cost_price || 0);
+        // Calculate P/L with CORRECTED formulas:
+        // Product Cost = qtySold × costPrice (not orderCount)
+        // Redirect = orderCount × 20% × 50 (not qtySold)
+        // RTO = orderCount × RTO% × 200 (not qtySold)
+        const productCost = qtySold * (product.cost_price || 0);
         const staffOfficeCost = orderCount * 50;
         const deliveryCost = orderCount * 250;
-        const redirectCost = Math.round(qtySold * 0.2 * 50);
-        const rtoUnits = Math.round(qtySold * (rtoPercent / 100));
+        const redirectCost = Math.round(orderCount * 0.2 * 50);
+        const rtoUnits = Math.round(orderCount * (rtoPercent / 100));
         const rtoCost = rtoUnits * 200;
         
         const pl = revenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
