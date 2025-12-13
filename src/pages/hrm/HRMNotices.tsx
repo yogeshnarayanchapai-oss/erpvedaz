@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Bell, Pencil, Trash2, Users, Building2, User } from 'lucide-react';
+import { Plus, Bell, Pencil, Trash2, Users, Building2, User, Eye } from 'lucide-react';
 import { FormattedDate } from '@/components/FormattedDate';
 
 type TargetType = 'all' | 'department' | 'employee';
@@ -60,6 +60,7 @@ export default function HRMNotices() {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<NoticeForm>(initialForm);
+  const [viewNotice, setViewNotice] = useState<any>(null);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -295,7 +296,7 @@ export default function HRMNotices() {
                 <TableHead>Start</TableHead>
                 <TableHead>End</TableHead>
                 <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -315,17 +316,20 @@ export default function HRMNotices() {
                   <TableCell><FormattedDate date={n.start_date} /></TableCell>
                   <TableCell><FormattedDate date={n.end_date} /></TableCell>
                   <TableCell><Badge variant={n.is_active ? 'default' : 'secondary'}>{n.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setViewNotice(n)} title="View"><Eye className="w-4 h-4" /></Button>
+                    {isAdmin && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      </>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {notices.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No notices'}
                   </TableCell>
                 </TableRow>
@@ -334,6 +338,35 @@ export default function HRMNotices() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* View Notice Dialog */}
+      <Dialog open={!!viewNotice} onOpenChange={(open) => !open && setViewNotice(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewNotice?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {viewNotice?.message && (
+              <div className="p-4 bg-muted rounded-lg whitespace-pre-wrap">
+                {viewNotice.message}
+              </div>
+            )}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div>
+                <span className="font-medium">Start:</span> <FormattedDate date={viewNotice?.start_date} />
+              </div>
+              {viewNotice?.end_date && (
+                <div>
+                  <span className="font-medium">End:</span> <FormattedDate date={viewNotice?.end_date} />
+                </div>
+              )}
+            </div>
+            <Badge variant={viewNotice?.is_active ? 'default' : 'secondary'}>
+              {viewNotice?.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
