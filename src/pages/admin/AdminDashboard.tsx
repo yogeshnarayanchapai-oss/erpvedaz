@@ -384,43 +384,92 @@ export default function AdminDashboard() {
         <GaaubesiStatsCard dateFrom={dateFrom} dateTo={dateTo} />
       </div>
 
-      {/* Daily Inside/Outside Chart - uses selected date range */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            Daily Orders ({getPeriodLabel()})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72">
-            {dailyDelivery.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={dailyDelivery}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="day" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }} 
-                  />
-                  <Legend />
-                  <Bar dataKey="inside" name="Inside Delivery" fill="hsl(var(--chart-2))" stackId="a" />
-                  <Bar dataKey="outside" name="Outside Delivery" fill="hsl(var(--chart-3))" stackId="a" />
-                  <Line type="monotone" dataKey="total" name="Total" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                No order data for selected period
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Daily Orders Chart + Product Daybook Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Daily Inside/Outside Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Daily Orders ({getPeriodLabel()})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              {dailyDelivery.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={dailyDelivery}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="day" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }} 
+                    />
+                    <Legend />
+                    <Bar dataKey="inside" name="Inside Delivery" fill="hsl(var(--chart-2))" stackId="a" />
+                    <Bar dataKey="outside" name="Outside Delivery" fill="hsl(var(--chart-3))" stackId="a" />
+                    <Line type="monotone" dataKey="total" name="Total" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No order data for selected period
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Daybook - Only show products with orders > 0 */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              Product Daybook ({getPeriodLabel()})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto max-h-64">
+              {sortedProductDaybook.filter(item => item.sales > 0).length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="table-header">Product</TableHead>
+                      <TableHead className="table-header text-right">Target</TableHead>
+                      <TableHead className="table-header text-right">Orders</TableHead>
+                      <TableHead className="table-header text-right">Qty Sold</TableHead>
+                      <TableHead className="table-header text-right">Revenue</TableHead>
+                      <TableHead className="table-header text-right">P/L</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedProductDaybook.filter(item => item.sales > 0).map((item) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-right">{item.target}</TableCell>
+                        <TableCell className="text-right">{item.sales}</TableCell>
+                        <TableCell className="text-right text-primary font-medium">{item.qtySold || 0}</TableCell>
+                        <TableCell className="text-right">₹{item.revenue.toFixed(0)}</TableCell>
+                        <TableCell className={`text-right font-medium ${item.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          ₹{item.pl.toFixed(0)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="h-32 flex items-center justify-center text-muted-foreground">
+                  No product orders for selected period
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Monthly Sales Chart */}
@@ -552,84 +601,42 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Staff Performance Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              Staff Performance ({getPeriodLabel()})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              {staffPerformance.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={staffPerformance} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis type="number" className="text-xs" />
-                    <YAxis dataKey="name" type="category" width={80} className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }} 
-                    />
-                    <Legend />
-                    <Bar dataKey="inside" name="Inside Delivery" fill="hsl(var(--chart-2))" stackId="a" />
-                    <Bar dataKey="outside" name="Outside Delivery" fill="hsl(var(--chart-3))" stackId="a" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
-                  No performance data for selected period
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Product Daybook */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary" />
-              Product Daybook ({getPeriodLabel()})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="table-header">Product</TableHead>
-                    <TableHead className="table-header text-right">Target</TableHead>
-                    <TableHead className="table-header text-right">Orders</TableHead>
-                    <TableHead className="table-header text-right">Qty Sold</TableHead>
-                    <TableHead className="table-header text-right">Revenue</TableHead>
-                    <TableHead className="table-header text-right">P/L</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedProductDaybook.map((item) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="text-right">{item.target}</TableCell>
-                      <TableCell className="text-right">{item.sales}</TableCell>
-                      <TableCell className="text-right text-primary font-medium">{item.qtySold || 0}</TableCell>
-                      <TableCell className="text-right">₹{item.revenue.toFixed(0)}</TableCell>
-                      <TableCell className={`text-right font-medium ${item.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        ₹{item.pl.toFixed(0)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Staff Performance Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Staff Performance ({getPeriodLabel()})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            {staffPerformance.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={staffPerformance} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" className="text-xs" />
+                  <YAxis dataKey="name" type="category" width={80} className="text-xs" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }} 
+                  />
+                  <Legend />
+                  <Bar dataKey="inside" name="Inside Delivery" fill="hsl(var(--chart-2))" stackId="a" />
+                  <Bar dataKey="outside" name="Outside Delivery" fill="hsl(var(--chart-3))" stackId="a" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                No performance data for selected period
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
