@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package } from 'lucide-react';
 import { useStockMovements, useCreateStockMovement, useDeleteStockMovement } from '@/hooks/useStockMovements';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
@@ -66,6 +66,7 @@ export default function StockMovements() {
     sale_category?: string;
     party_id?: string;
     movement_source?: string;
+    reference_order_count: number;
   }>({
     product_id: '',
     warehouse_id: '',
@@ -78,6 +79,7 @@ export default function StockMovements() {
     unit_cost: 0,
     unit_price: 0,
     remark: '',
+    reference_order_count: 0,
   });
 
   const { data: movements, isLoading } = useStockMovements({
@@ -107,13 +109,14 @@ export default function StockMovements() {
     deliveryLocationFilter
   );
 
-  // Auto-fill qty and unit_price from Product Daybook stats when product/date/warehouse changes
+  // Auto-fill qty, unit_price, and reference_order_count from Product Daybook stats when product/date/warehouse changes
   useEffect(() => {
     if (daybookStats && daybookStats.totalQty > 0 && dialogOpen) {
       setForm(f => ({
         ...f,
         qty: daybookStats.totalQty,
         unit_price: daybookStats.avgPrice,
+        reference_order_count: daybookStats.orderCount,
       }));
     }
   }, [daybookStats, dialogOpen]);
@@ -131,6 +134,7 @@ export default function StockMovements() {
       unit_cost: 0,
       unit_price: 0,
       remark: '',
+      reference_order_count: 0,
     });
   };
 
@@ -345,6 +349,30 @@ export default function StockMovements() {
                     ) : (
                       <p className="text-sm text-muted-foreground">No {deliveryLocationFilter === 'OUTSIDE_VALLEY' ? 'OVD' : deliveryLocationFilter === 'INSIDE_VALLEY' ? 'VD' : ''} orders for this product on selected date.</p>
                     )}
+                  </div>
+                )}
+                {/* Reference Order Count - editable */}
+                {form.product_id && form.movement_date && (
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                          Reference Order (for P/L)
+                        </span>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.reference_order_count}
+                        onChange={(e) => setForm({ ...form, reference_order_count: +e.target.value })}
+                        className="w-24 h-8 text-center"
+                        placeholder="0"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Auto-fetched from Product Daybook. Edit if needed for P/L calculation.
+                    </p>
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-4">

@@ -117,6 +117,7 @@ interface CreateStockMovementInput {
   unit_cost?: number | null;
   unit_price?: number | null;
   remark?: string | null;
+  reference_order_count?: number | null;
 }
 
 export function useCreateStockMovement() {
