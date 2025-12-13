@@ -3834,6 +3834,45 @@ export type Database = {
           },
         ]
       }
+      notice_dismissals: {
+        Row: {
+          dismissed_at: string
+          id: string
+          notice_id: string
+          store_id: string | null
+          user_id: string
+        }
+        Insert: {
+          dismissed_at?: string
+          id?: string
+          notice_id: string
+          store_id?: string | null
+          user_id: string
+        }
+        Update: {
+          dismissed_at?: string
+          id?: string
+          notice_id?: string
+          store_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notice_dismissals_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "notices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notice_dismissals_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notices: {
         Row: {
           created_at: string
@@ -3841,9 +3880,13 @@ export type Database = {
           id: string
           is_active: boolean | null
           message: string | null
+          show_as_popup: boolean | null
           start_date: string
           store_id: string | null
           target_audience: string | null
+          target_department_ids: string[] | null
+          target_employee_ids: string[] | null
+          target_type: string | null
           title: string
         }
         Insert: {
@@ -3852,9 +3895,13 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           message?: string | null
+          show_as_popup?: boolean | null
           start_date?: string
           store_id?: string | null
           target_audience?: string | null
+          target_department_ids?: string[] | null
+          target_employee_ids?: string[] | null
+          target_type?: string | null
           title: string
         }
         Update: {
@@ -3863,9 +3910,13 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           message?: string | null
+          show_as_popup?: boolean | null
           start_date?: string
           store_id?: string | null
           target_audience?: string | null
+          target_department_ids?: string[] | null
+          target_employee_ids?: string[] | null
+          target_type?: string | null
           title?: string
         }
         Relationships: [

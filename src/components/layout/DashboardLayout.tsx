@@ -10,6 +10,7 @@ import { DateModeToggle } from '@/components/DateModeToggle';
 import { UnifiedNotificationBell } from '@/components/notifications/UnifiedNotificationBell';
 import { StoreSwitcher } from './StoreSwitcher';
 import { TeamChatButton } from '@/components/chat/TeamChatButton';
+import { NoticePopup } from '@/components/hrm/NoticePopup';
 import { Loader2, Calendar, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -241,6 +242,9 @@ function DashboardLayoutInner() {
         
         {/* Floating Team Chat Button */}
         <TeamChatButton />
+        
+        {/* Notice Popup */}
+        <NoticePopup />
       </div>
     </SidebarProvider>
   );
