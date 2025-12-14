@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package } from 'lucide-react';
-import { useStockMovements, useCreateStockMovement, useDeleteStockMovement } from '@/hooks/useStockMovements';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil } from 'lucide-react';
+import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useUpdateStockMovement, StockMovement } from '@/hooks/useStockMovements';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
@@ -17,6 +17,7 @@ import { useProductDaybookStats, DeliveryLocationFilter } from '@/hooks/useProdu
 import { format, subDays } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT'] as const;
 
@@ -49,6 +50,9 @@ export default function StockMovements() {
   });
   const [filters, setFilters] = useState({ warehouseId: 'all', productId: 'all', movementType: 'all' as any });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);
+  const { effectiveRole } = useEffectiveRole();
+  const canEdit = ['ADMIN', 'OWNER', 'MANAGER'].includes(effectiveRole || '');
   const [form, setForm] = useState<{
     product_id: string;
     warehouse_id: string;
@@ -95,6 +99,7 @@ export default function StockMovements() {
   const { data: customers } = useParties('CUSTOMER');
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
+  const updateMovement = useUpdateStockMovement();
 
   // Determine delivery location based on selected warehouse name
   const selectedWarehouse = warehouses?.find(w => w.id === form.warehouse_id);
@@ -186,9 +191,38 @@ export default function StockMovements() {
       sale_category: isWholesale ? 'WHOLESALE' : (form.sale_category || null),
     };
     
-    await createMovement.mutateAsync(movementData);
+    if (editingMovement) {
+      await updateMovement.mutateAsync({ id: editingMovement.id, ...movementData });
+    } else {
+      await createMovement.mutateAsync(movementData);
+    }
     setDialogOpen(false);
+    setEditingMovement(null);
     resetForm();
+  };
+
+  const handleEdit = (movement: StockMovement) => {
+    setEditingMovement(movement);
+    setForm({
+      product_id: movement.product_id,
+      warehouse_id: movement.warehouse_id,
+      movement_date: movement.movement_date,
+      movement_type: movement.movement_type,
+      source: movement.source || '',
+      reference_type: movement.reference_type || '',
+      reference_id: movement.reference_id || '',
+      qty: movement.qty,
+      unit_cost: movement.unit_cost || 0,
+      unit_price: movement.unit_price || 0,
+      remark: movement.remark || '',
+      movement_reason: movement.movement_reason || undefined,
+      is_sale: movement.is_sale || undefined,
+      sale_category: movement.sale_category || undefined,
+      party_id: movement.party_id || undefined,
+      movement_source: movement.movement_source || undefined,
+      reference_order_count: movement.reference_order_count || 0,
+    });
+    setDialogOpen(true);
   };
 
   const quickAdd = (type: typeof MOVEMENT_TYPES[number], isWholesale = false) => {
@@ -243,13 +277,13 @@ export default function StockMovements() {
           <Button variant="outline" onClick={() => quickAdd('OUT', true)} className="text-purple-600">
             <ShoppingBag className="h-4 w-4 mr-1" />Wholesale OUT
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { resetForm(); setEditingMovement(null); } }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />New Movement</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Add Stock Movement</DialogTitle>
+                <DialogTitle>{editingMovement ? 'Edit Stock Movement' : 'Add Stock Movement'}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="grid grid-cols-2 gap-4">
@@ -396,8 +430,10 @@ export default function StockMovements() {
                   <Textarea value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Cancel</Button>
-                  <Button onClick={handleSubmit} disabled={!form.product_id || !form.warehouse_id || form.qty <= 0}>Save</Button>
+                  <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); setEditingMovement(null); }}>Cancel</Button>
+                  <Button onClick={handleSubmit} disabled={!form.product_id || !form.warehouse_id || form.qty <= 0}>
+                    {editingMovement ? 'Update' : 'Save'}
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -498,21 +534,28 @@ export default function StockMovements() {
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
                     <TableCell>{m.source || m.remark || '-'}</TableCell>
                     <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Movement?</AlertDialogTitle>
-                            <AlertDialogDescription>This will also update the inventory. This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMovement.mutate(m.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(m)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Movement?</AlertDialogTitle>
+                              <AlertDialogDescription>This will also update the inventory. This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMovement.mutate(m.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
