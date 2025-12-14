@@ -118,6 +118,7 @@ export default function AdminDashboard() {
     delivered: 0,
     returned: 0,
     cancelled: 0,
+    redirect: 0,
     insideValley: 0,
     outsideValley: 0,
     totalSales: 0,
@@ -310,10 +311,10 @@ export default function AdminDashboard() {
         />
         <StatCard 
           title="Redirect" 
-          value={stats.redirect} 
+          value={orders.redirect} 
           icon={<ArrowUpRight className="w-5 h-5" />} 
           variant="default" 
-          onClick={() => handleStatCardClick('redirect')}
+          onClick={() => navigate(`/admin/orders?status=REDIRECT&from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
         />
         <StatCard 

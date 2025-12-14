@@ -49,6 +49,7 @@ interface OrderStatsResult {
   delivered: number;
   returned: number;
   cancelled: number;
+  redirect: number;
   insideValley: number;
   outsideValley: number;
   totalSales: number;
@@ -183,6 +184,7 @@ export function useOrderDashboardStats(dateFrom?: string, dateTo?: string) {
         delivered: orders.filter(o => o.order_status === 'DELIVERED').length,
         returned: orders.filter(o => o.order_status === 'RETURNED').length,
         cancelled: orders.filter(o => o.order_status === 'CANCELLED').length,
+        redirect: orders.filter(o => o.order_status === 'REDIRECT').length,
         insideValley: salesOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length,
         outsideValley: salesOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length,
         totalSales: salesOrders.reduce((sum, o) => sum + (o.amount || 0), 0),
