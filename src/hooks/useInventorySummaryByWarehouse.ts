@@ -34,7 +34,7 @@ export function useInventorySummaryByWarehouse(
         .from('product_inventory')
         .select(`
           *,
-          products:product_id(id, name, cost_price, store_id),
+          products:product_id(id, name, cost_price, store_id, is_active),
           warehouses:warehouse_id(id, name, store_id)
         `);
 
@@ -45,12 +45,16 @@ export function useInventorySummaryByWarehouse(
       const { data: inventoryData, error: invErr } = await inventoryQuery;
       if (invErr) throw invErr;
 
-      // Filter by store_id via product or warehouse relation
-      const filteredInventory = storeId 
-        ? (inventoryData || []).filter((inv: any) => 
-            inv.products?.store_id === storeId || inv.warehouses?.store_id === storeId
-          )
-        : inventoryData;
+      // Filter by store_id and only active products
+      const filteredInventory = (inventoryData || []).filter((inv: any) => {
+        // Exclude inactive (deleted) products
+        if (inv.products?.is_active === false) return false;
+        // Filter by store
+        if (storeId) {
+          return inv.products?.store_id === storeId || inv.warehouses?.store_id === storeId;
+        }
+        return true;
+      });
 
       // Get stock movements grouped by product/warehouse
       let movementsQuery = supabase
