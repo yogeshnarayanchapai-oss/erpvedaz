@@ -52,7 +52,7 @@ export default function AdminUsers() {
   
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
   const [storeFilter, setStoreFilter] = useState<string>('ALL');
   
   // Fetch all stores for OWNER filter
