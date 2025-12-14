@@ -17,14 +17,14 @@ export interface StaffMember {
 
 export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'MANAGER', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
 
-export function useStaff(role?: AppRole, includeInactive = false, overrideStoreId?: string) {
+export function useStaff(role?: AppRole, includeInactive = false, overrideStoreId?: string, includeOwnerRole = false) {
   const contextStoreId = useCurrentStoreId();
   const storeId = overrideStoreId || contextStoreId;
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
 
   return useQuery({
-    queryKey: ['staff', role, includeInactive, storeId, isOwner],
+    queryKey: ['staff', role, includeInactive, storeId, isOwner, includeOwnerRole],
     queryFn: async () => {
       // If storeId exists, filter by store (even for OWNER)
       if (storeId) {
@@ -77,8 +77,12 @@ export function useStaff(role?: AppRole, includeInactive = false, overrideStoreI
           .from('profiles')
           .select('*')
           .in('id', filteredUserIds)
-          .neq('role', 'OWNER') // Never show OWNER in store-specific views
           .order('name');
+
+        // Only exclude OWNER role if not explicitly including them
+        if (!includeOwnerRole) {
+          query = query.neq('role', 'OWNER');
+        }
 
         if (!includeInactive) {
           query = query.eq('is_active', true);

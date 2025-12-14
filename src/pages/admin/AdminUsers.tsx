@@ -98,7 +98,9 @@ export default function AdminUsers() {
   const effectiveStoreId = isAdmin 
     ? (currentStore?.id || (storeFilter !== 'ALL' ? storeFilter : undefined))
     : currentStore?.id;
-  const { data: staff = [], isLoading } = useStaff(undefined, includeInactive, effectiveStoreId);
+  
+  // Include OWNER role users in AdminUsers page when filtering by store
+  const { data: staff = [], isLoading } = useStaff(undefined, includeInactive, effectiveStoreId, true);
   const { data: employees = [] } = useEmployees();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
