@@ -109,9 +109,9 @@ export default function StockMovements() {
     deliveryLocationFilter
   );
 
-  // Auto-fill qty, unit_price, and reference_order_count from Product Daybook stats when product/date/warehouse changes
+  // Auto-fill qty, unit_price, and reference_order_count from Product Daybook stats ONLY when movement_type is OUT
   useEffect(() => {
-    if (daybookStats && daybookStats.totalQty > 0 && dialogOpen) {
+    if (daybookStats && daybookStats.totalQty > 0 && dialogOpen && form.movement_type === 'OUT') {
       setForm(f => ({
         ...f,
         qty: daybookStats.totalQty,
@@ -119,7 +119,7 @@ export default function StockMovements() {
         reference_order_count: daybookStats.orderCount,
       }));
     }
-  }, [daybookStats, dialogOpen]);
+  }, [daybookStats, dialogOpen, form.movement_type]);
 
   const resetForm = () => {
     setForm({
