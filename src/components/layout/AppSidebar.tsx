@@ -160,6 +160,7 @@ const inventoryItems: MenuItem[] = [
 // Accounting submenu for Admin
 const accountingItems: MenuItem[] = [
   { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
+  { title: 'Assets', url: '/admin/accounting/assets', icon: Box },
   { title: 'New Deposit', url: '/admin/accounting/new-deposit', icon: DollarSign },
   { title: 'New Expense', url: '/admin/accounting/new-expense', icon: Receipt },
   { title: 'Transfer', url: '/admin/accounting/new-transfer', icon: ArrowLeftRight },
