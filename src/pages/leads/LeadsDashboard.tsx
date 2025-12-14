@@ -93,17 +93,28 @@ export default function LeadsDashboard() {
   // Filter leads in LEADS team pool with IN_POOL status
   const leadsInPool = filteredLeads.filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
   
-  // Today's leads: all leads created today (New + FU + CNR combined)
-  const todayAllLeads = filteredLeads.filter(l => {
-    const isCreatedToday = l.date === today;
-    const isReturnedToday = l.returned_to_leads_at && isToday(new Date(l.returned_to_leads_at));
-    return isCreatedToday || isReturnedToday;
-  });
+  // Today's leads breakdown by lead.date (the date when lead was created/transferred to LEADS team)
+  const todayLeadsByDate = filteredLeads.filter(l => l.date === today);
   
-  // Today's breakdown
-  const todayNewCount = todayAllLeads.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED' && l.status !== 'FOLLOW_UP').length;
-  const todayFUCount = todayAllLeads.filter(l => l.lead_bucket === 'FOLLOW_UP_POOL' || l.current_team === 'FOLLOWUP' || l.status === 'FOLLOW_UP').length;
-  const todayCNRCount = todayAllLeads.filter(l => l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED').length;
+  // New = leads created via lead form (NEW bucket, not CNR or FU status)
+  const todayNewCount = todayLeadsByDate.filter(l => 
+    l.lead_bucket === 'NEW' && 
+    l.status !== 'CALL_NOT_RECEIVED' && 
+    l.status !== 'FOLLOW_UP'
+  ).length;
+  
+  // FU = leads reassigned/transferred from followup (FOLLOW_UP_POOL bucket or FOLLOW_UP status)
+  const todayFUCount = todayLeadsByDate.filter(l => 
+    l.lead_bucket === 'FOLLOW_UP_POOL' || l.status === 'FOLLOW_UP'
+  ).length;
+  
+  // CNR = leads reassigned/transferred as CNR (CNR_POOL bucket or CALL_NOT_RECEIVED status)
+  const todayCNRCount = todayLeadsByDate.filter(l => 
+    l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED'
+  ).length;
+  
+  // Total Today's Leads = sum of all buckets
+  const todayTotalLeads = todayNewCount + todayFUCount + todayCNRCount;
   
   // New leads bucket count - only NEW bucket (not CNR or FU)
   const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED');
@@ -401,7 +412,7 @@ export default function LeadsDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <StatCard
           title="Today's Leads"
-          value={todayAllLeads.length}
+          value={todayTotalLeads}
           description={`New: ${todayNewCount} | FU: ${todayFUCount} | CNR: ${todayCNRCount}`}
           icon={<FileText className="w-5 h-5" />}
           variant="primary"
