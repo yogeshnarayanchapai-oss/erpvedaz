@@ -240,22 +240,24 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header with Date Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Overview of performance and analytics</p>
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {/* Header with Date Filter - Mobile Optimized */}
+      <div className="flex flex-col gap-3 md:gap-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">Admin Dashboard</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Overview of performance and analytics</p>
+          </div>
         </div>
         <DashboardDateFilter value={dateRange} onChange={setDateRange} />
       </div>
 
-      {/* Lead Stats for Selected Period - Now Clickable */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      {/* Lead Stats for Selected Period - Mobile: 2 cols, Tablet: 4 cols, Desktop: 8 cols */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-4">
         <StatCard 
           title="Total Leads" 
           value={stats.total} 
-          icon={<Users className="w-5 h-5" />} 
+          icon={<Users className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -264,7 +266,7 @@ export default function AdminDashboard() {
           title="Pending Transfer" 
           value={stats.pendingTransfer} 
           description="Not yet transferred"
-          icon={<AlertTriangle className="w-5 h-5" />} 
+          icon={<AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="warning" 
           onClick={() => handleStatCardClick('pending_transfer')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -272,7 +274,7 @@ export default function AdminDashboard() {
         <StatCard 
           title="Total Orders" 
           value={orders.total} 
-          icon={<ShoppingCart className="w-5 h-5" />} 
+          icon={<ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="info" 
           onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -280,15 +282,15 @@ export default function AdminDashboard() {
         <StatCard 
           title="Confirmed" 
           value={orders.confirmed} 
-          icon={<CheckCircle className="w-5 h-5" />} 
+          icon={<CheckCircle className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="success" 
           onClick={() => handleStatCardClick('confirmed')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
         />
         <StatCard 
-          title="Call Not Received" 
+          title="CNR" 
           value={stats.callNotReceived} 
-          icon={<PhoneOff className="w-5 h-5" />} 
+          icon={<PhoneOff className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="warning" 
           onClick={() => handleStatCardClick('cnr')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -296,7 +298,7 @@ export default function AdminDashboard() {
         <StatCard 
           title="Follow Up" 
           value={stats.followUp} 
-          icon={<Clock className="w-5 h-5" />} 
+          icon={<Clock className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="info" 
           onClick={() => handleStatCardClick('followup')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -304,7 +306,7 @@ export default function AdminDashboard() {
         <StatCard 
           title="Cancelled" 
           value={stats.cancelled} 
-          icon={<XCircle className="w-5 h-5" />} 
+          icon={<XCircle className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="destructive" 
           onClick={() => handleStatCardClick('cancelled')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -312,7 +314,7 @@ export default function AdminDashboard() {
         <StatCard 
           title="Redirect" 
           value={orders.redirect} 
-          icon={<ArrowUpRight className="w-5 h-5" />} 
+          icon={<ArrowUpRight className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="default" 
           onClick={() => navigate(`/admin/orders?status=REDIRECT&from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
@@ -320,44 +322,44 @@ export default function AdminDashboard() {
         <StatCard 
           title="Cancelled Orders" 
           value={orders.cancelled} 
-          icon={<XCircle className="w-5 h-5" />} 
+          icon={<XCircle className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="destructive" 
         />
         <StatCard 
           title="Returned Orders" 
           value={orders.returned} 
-          icon={<ArrowUpRight className="w-5 h-5" />} 
+          icon={<ArrowUpRight className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="default" 
         />
       </div>
 
-      {/* Sales by Location for Selected Period */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Sales by Location - Mobile: stacked, Desktop: row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4">
         <StatCard
-          title="Inside Valley Sales"
+          title="Inside Valley"
           value={`₹${(salesByRange?.insideValley || 0).toLocaleString()}`}
           description={getPeriodLabel()}
-          icon={<MapPin className="w-5 h-5" />}
+          icon={<MapPin className="w-4 h-4 md:w-5 md:h-5" />}
           variant="success"
         />
         <StatCard
-          title="Outside Valley Sales"
+          title="Outside Valley"
           value={`₹${(salesByRange?.outsideValley || 0).toLocaleString()}`}
           description={getPeriodLabel()}
-          icon={<Truck className="w-5 h-5" />}
+          icon={<Truck className="w-4 h-4 md:w-5 md:h-5" />}
           variant="info"
         />
         <StatCard
           title="Total Sales"
           value={`₹${(salesByRange?.total || 0).toLocaleString()}`}
           description={getPeriodLabel()}
-          icon={<DollarSign className="w-5 h-5" />}
+          icon={<DollarSign className="w-4 h-4 md:w-5 md:h-5" />}
           variant="primary"
         />
       </div>
 
-      {/* Product Target Progress & Staff Leaderboard */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      {/* Product Target Progress & Staff Leaderboard - Stack on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <ProductTargetProgress 
           products={productDaybookWithTargets} 
           periodLabel={getPeriodLabel()} 
@@ -371,12 +373,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* Gaaubesi Logistics Overview */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <GaaubesiStatsCard dateFrom={dateFrom} dateTo={dateTo} />
       </div>
 
-      {/* Daily Orders Chart + Product Daybook Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      {/* Daily Orders Chart + Product Daybook Row - Stack on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Daily Inside/Outside Chart */}
         <Card>
           <CardHeader className="pb-2">

@@ -70,25 +70,25 @@ export function TeamChatButton() {
 
   return (
     <>
-      {/* Floating Action Button - hidden when chat is open */}
+      {/* Floating Action Button - responsive positioning */}
       {!open && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 md:gap-3 safe-bottom">
           {/* Notification toast */}
           {notification && (
-            <div className="animate-in slide-in-from-right-5 fade-in duration-300 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium whitespace-nowrap">
+            <div className="animate-in slide-in-from-right-5 fade-in duration-300 bg-primary text-primary-foreground px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-lg text-xs md:text-sm font-medium whitespace-nowrap max-w-[200px] truncate">
               {notification}
             </div>
           )}
           
           <button
             onClick={() => setOpen(true)}
-            className="relative w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center justify-center"
+            className="relative w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center touch-target no-select"
             aria-label="Open Team Chat"
           >
-            <MessageCircle className="w-6 h-6" />
+            <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
             {/* Unread badge */}
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+              <span className="absolute -top-1 -right-1 min-w-[20px] md:min-w-[22px] h-[20px] md:h-[22px] px-1 md:px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] md:text-xs font-bold rounded-full">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
