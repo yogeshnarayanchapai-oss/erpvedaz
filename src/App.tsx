@@ -81,6 +81,7 @@ import ActivityLog from "./pages/admin/accounting/ActivityLog";
 // Inventory pages
 import StockSummary from "./pages/inventory/StockSummary";
 import StockMovements from "./pages/inventory/StockMovements";
+import InventoryActivityLog from "./pages/inventory/InventoryActivityLog";
 import Parties from "./pages/inventory/Parties";
 import Warehouses from "./pages/inventory/Warehouses";
 import WarehouseDetail from "./pages/inventory/WarehouseDetail";
@@ -250,6 +251,7 @@ const App = () => (
                 <Route path="/admin/ai-insights" element={<AIInsights />} />
                 <Route path="/admin/inventory/stock-summary" element={<StockSummary />} />
                 <Route path="/admin/inventory/movements" element={<StockMovements />} />
+                <Route path="/admin/inventory/activity-log" element={<InventoryActivityLog />} />
                 <Route path="/admin/inventory/parties" element={<Parties />} />
                 <Route path="/admin/inventory/warehouses" element={<Warehouses />} />
                 <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />

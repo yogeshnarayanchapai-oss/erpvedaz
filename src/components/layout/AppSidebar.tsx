@@ -151,6 +151,7 @@ const myTrainingItems: MenuItem[] = [
 const inventoryItems: MenuItem[] = [
   { title: 'Stock Summary', url: '/admin/inventory/stock-summary', icon: Package },
   { title: 'Stock Movements', url: '/admin/inventory/movements', icon: ArrowLeftRight },
+  { title: 'Activity Log', url: '/admin/inventory/activity-log', icon: History },
   { title: 'Parties', url: '/admin/inventory/parties', icon: Users },
   { title: 'Warehouses', url: '/admin/inventory/warehouses', icon: Warehouse },
   { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: Calculator },
