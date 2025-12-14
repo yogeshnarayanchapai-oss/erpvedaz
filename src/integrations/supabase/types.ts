@@ -5803,7 +5803,10 @@ export type Database = {
       stock_movements: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
+          is_deleted: boolean | null
           is_sale: boolean | null
           movement_date: string
           movement_reason: string | null
@@ -5827,7 +5830,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_sale?: boolean | null
           movement_date?: string
           movement_reason?: string | null
@@ -5851,7 +5857,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_sale?: boolean | null
           movement_date?: string
           movement_reason?: string | null

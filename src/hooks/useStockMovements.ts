@@ -27,6 +27,9 @@ export interface StockMovement {
   total_value: number | null;
   remark: string | null;
   reference_order_count: number | null;
+  is_deleted: boolean | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   created_at: string;
   updated_at: string;
   products?: { id: string; name: string; wholesale_price?: number; store_id?: string | null };
@@ -43,6 +46,7 @@ interface MovementFilters {
   movementReason?: string;
   saleCategory?: 'RETAIL' | 'WHOLESALE';
   storeId?: string;
+  includeDeleted?: boolean; // For activity log - show all including deleted
 }
 
 export function useStockMovements(filters: MovementFilters = {}) {
@@ -62,6 +66,11 @@ export function useStockMovements(filters: MovementFilters = {}) {
         `)
         .order('movement_date', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // Filter out deleted movements unless includeDeleted is true (for activity log)
+      if (!filters.includeDeleted) {
+        query = query.or('is_deleted.is.null,is_deleted.eq.false');
+      }
 
       if (filters.startDate) {
         query = query.gte('movement_date', filters.startDate);
@@ -183,15 +192,20 @@ export function useDeleteStockMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Soft delete - mark as deleted instead of removing
       const { error } = await supabase
         .from('stock_movements')
-        .delete()
+        .update({ 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString(),
+        })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory_summary_warehouse'] });
       queryClient.invalidateQueries({ queryKey: ['daily_pl'] });
       toast.success('Movement deleted');
     },

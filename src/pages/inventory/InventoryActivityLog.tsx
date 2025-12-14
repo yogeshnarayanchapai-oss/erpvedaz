@@ -58,6 +58,7 @@ export default function InventoryActivityLog() {
     movementType: typeFilter !== 'all' ? typeFilter as DBMovementType : undefined,
     startDate: dateRange.startDate || undefined,
     endDate: dateRange.endDate || undefined,
+    includeDeleted: true, // Activity log shows ALL movements including deleted
   });
 
   const { data: warehouses = [] } = useWarehouses();
@@ -248,11 +249,16 @@ export default function InventoryActivityLog() {
                   </TableHeader>
                   <TableBody>
                     {filteredMovements.map(m => (
-                      <TableRow key={m.id}>
+                      <TableRow key={m.id} className={m.is_deleted ? 'opacity-50 bg-red-50 dark:bg-red-950/20' : ''}>
                         <TableCell className="whitespace-nowrap">
                           {m.movement_date ? format(new Date(m.movement_date), 'dd MMM yyyy') : '-'}
                         </TableCell>
-                        <TableCell className="font-medium">{m.products?.name || '-'}</TableCell>
+                        <TableCell className="font-medium">
+                          {m.products?.name || '-'}
+                          {m.is_deleted && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Deleted</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{m.warehouses?.name || '-'}</TableCell>
                         <TableCell>
                           <Badge className={getTypeColor(m.movement_type)}>
