@@ -15,6 +15,7 @@ export interface DashboardMetrics {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
+  totalAssetItems: number; // Asset items from transactions
   totalIncome: number;
   totalExpense: number;
   profitLoss: number;
@@ -28,6 +29,8 @@ export interface DashboardMetrics {
 const ASSET_TYPES = ['cash', 'bank', 'savings', 'investment', 'receivable', 'asset'];
 // Account types that are considered liabilities
 const LIABILITY_TYPES = ['credit_card', 'loan', 'payable', 'liability'];
+// Asset category names to look for (case-insensitive)
+const ASSET_CATEGORY_NAMES = ['asset', 'assets', 'assests'];
 
 export function useAccountingDashboardMetrics(startDate: string, endDate: string) {
   const storeId = useCurrentStoreId();
@@ -63,8 +66,44 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
         }
       });
       
-      const totalAssets = assetAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+      const totalAccountBalance = assetAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
       const totalLiabilities = liabilityAccounts.reduce((sum, acc) => sum + Math.abs(acc.current_balance || 0), 0);
+
+      // Get asset items from transactions (transactions with asset category)
+      let categoryQuery = supabase
+        .from('transaction_categories')
+        .select('id, name')
+        .eq('nature', 'expense');
+      
+      if (storeId) {
+        categoryQuery = categoryQuery.or(`store_id.is.null,store_id.eq.${storeId}`);
+      }
+
+      const { data: categories } = await categoryQuery;
+      
+      const assetCategoryIds = categories
+        ?.filter(cat => ASSET_CATEGORY_NAMES.some(name => 
+          cat.name.toLowerCase().includes(name.toLowerCase())
+        ))
+        .map(cat => cat.id) || [];
+
+      let totalAssetItems = 0;
+      if (assetCategoryIds.length > 0) {
+        let assetTxQuery = supabase
+          .from('transactions')
+          .select('amount')
+          .in('category_id', assetCategoryIds);
+
+        if (storeId) {
+          assetTxQuery = assetTxQuery.eq('store_id', storeId);
+        }
+
+        const { data: assetTransactions } = await assetTxQuery;
+        totalAssetItems = assetTransactions?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
+      }
+
+      // Net Worth = Asset Items (Saman) + Account Balances - Liabilities
+      const totalAssets = totalAssetItems + totalAccountBalance;
       const netWorth = totalAssets - totalLiabilities;
 
       // Get income for period from transactions table
@@ -153,6 +192,7 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
         netWorth,
         totalAssets,
         totalLiabilities,
+        totalAssetItems,
         totalIncome,
         totalExpense,
         profitLoss: totalIncome - totalExpense,

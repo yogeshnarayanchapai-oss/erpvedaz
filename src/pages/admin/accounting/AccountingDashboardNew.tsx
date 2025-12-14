@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useAccountingDashboardMetrics, useNetWorthOverTime, useExpenseByCategory } from '@/hooks/useAccountingDashboardMetrics';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
-import { TrendingUp, TrendingDown, DollarSign, Wallet, CreditCard, AlertCircle, ArrowRight, Building, Scale } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Wallet, CreditCard, AlertCircle, ArrowRight, Building, Scale, Package } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 
@@ -40,7 +40,7 @@ export default function AccountingDashboardNew() {
       value: `NPR ${metrics?.netWorth.toLocaleString() || 0}`,
       icon: Scale,
       color: (metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive',
-      description: `Assets: ${metrics?.totalAssets.toLocaleString() || 0} - Liabilities: ${metrics?.totalLiabilities.toLocaleString() || 0}`,
+      description: `Assets: ${(metrics?.totalAssetItems || 0).toLocaleString()} + Accounts: ${metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - Liabilities: ${metrics?.totalLiabilities.toLocaleString() || 0}`,
       onClick: () => setShowNetWorthDetail(true),
     },
     {
@@ -98,24 +98,32 @@ export default function AccountingDashboardNew() {
           </DialogHeader>
           <div className="space-y-6">
             {/* Summary */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="bg-emerald-50 dark:bg-emerald-950/30">
                 <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Total Assets</p>
+                  <p className="text-sm text-muted-foreground">Asset Items (Saman)</p>
                   <p className="text-xl font-bold text-emerald-600">
-                    NPR {metrics?.totalAssets.toLocaleString() || 0}
+                    NPR {(metrics?.totalAssetItems || 0).toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-50 dark:bg-blue-950/30">
+                <CardContent className="pt-4">
+                  <p className="text-sm text-muted-foreground">Account Balances</p>
+                  <p className="text-xl font-bold text-blue-600">
+                    NPR {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0}
                   </p>
                 </CardContent>
               </Card>
               <Card className="bg-red-50 dark:bg-red-950/30">
                 <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">Total Liabilities</p>
+                  <p className="text-sm text-muted-foreground">Liabilities</p>
                   <p className="text-xl font-bold text-destructive">
                     NPR {metrics?.totalLiabilities.toLocaleString() || 0}
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-blue-50 dark:bg-blue-950/30">
+              <Card className="bg-primary/10">
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Net Worth</p>
                   <p className={`text-xl font-bold ${(metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
@@ -125,25 +133,55 @@ export default function AccountingDashboardNew() {
               </Card>
             </div>
 
+            {/* Formula explanation */}
+            <div className="p-4 border rounded-lg bg-muted/50">
+              <p className="text-sm font-medium mb-2">Net Worth Formula:</p>
+              <p className="text-sm text-muted-foreground">
+                Net Worth = Asset Items (Saman) + Account Balances - Liabilities
+              </p>
+              <p className="text-sm text-primary mt-2">
+                = {(metrics?.totalAssetItems || 0).toLocaleString()} + {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - {metrics?.totalLiabilities.toLocaleString() || 0} = {metrics?.netWorth.toLocaleString() || 0}
+              </p>
+            </div>
+
+            {/* Asset Items Link */}
+            <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Package className="h-4 w-4 text-emerald-600" />
+                Asset Items (Saman)
+              </h4>
+              <div className="p-3 border rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Total Asset Transactions</p>
+                    <p className="text-xs text-muted-foreground">From transactions with Asset category</p>
+                  </div>
+                  <p className="font-semibold text-emerald-600">
+                    NPR {(metrics?.totalAssetItems || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Asset Accounts */}
             <div>
               <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <Building className="h-4 w-4 text-emerald-600" />
-                Asset Accounts
+                <Building className="h-4 w-4 text-blue-600" />
+                Account Balances
               </h4>
               <div className="space-y-2">
                 {metrics?.assetAccounts?.length ? metrics.assetAccounts.map((acc) => (
-                  <div key={acc.id} className="flex justify-between items-center p-3 border rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20">
+                  <div key={acc.id} className="flex justify-between items-center p-3 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
                     <div>
                       <p className="font-medium">{acc.name}</p>
                       <p className="text-xs text-muted-foreground capitalize">{acc.type}</p>
                     </div>
-                    <p className="font-semibold text-emerald-600">
+                    <p className="font-semibold text-blue-600">
                       {acc.currency} {acc.current_balance?.toLocaleString() || 0}
                     </p>
                   </div>
                 )) : (
-                  <p className="text-sm text-muted-foreground">No asset accounts found</p>
+                  <p className="text-sm text-muted-foreground">No accounts found</p>
                 )}
               </div>
             </div>
