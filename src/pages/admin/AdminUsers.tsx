@@ -93,7 +93,9 @@ export default function AdminUsers() {
   // Determine includeInactive based on statusFilter
   const includeInactive = statusFilter === 'ALL' || statusFilter === 'INACTIVE';
   
-  const { data: staff = [], isLoading } = useStaff(undefined, includeInactive);
+  // For OWNER with store filter, pass the selected store to filter at DB level
+  const effectiveStoreId = isAdmin && storeFilter !== 'ALL' ? storeFilter : undefined;
+  const { data: staff = [], isLoading } = useStaff(undefined, includeInactive, effectiveStoreId);
   const { data: employees = [] } = useEmployees();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -205,14 +207,8 @@ const usersWithEmployee = useMemo(() => {
       (statusFilter === 'ACTIVE' && s.is_active) ||
       (statusFilter === 'INACTIVE' && !s.is_active);
     
-    // Store filter (OWNER only)
-    let matchesStore = true;
-    if (isAdmin && storeFilter !== 'ALL') {
-      const userStores = userStoreMap.get(s.id) || [];
-      matchesStore = userStores.some(store => store.id === storeFilter);
-    }
-    
-    return matchesSearch && matchesRole && matchesStatus && matchesStore;
+    // Store filter is now handled at DB level via effectiveStoreId
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
 

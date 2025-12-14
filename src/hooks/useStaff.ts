@@ -17,8 +17,9 @@ export interface StaffMember {
 
 export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'MANAGER', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
 
-export function useStaff(role?: AppRole, includeInactive = false) {
-  const storeId = useCurrentStoreId();
+export function useStaff(role?: AppRole, includeInactive = false, overrideStoreId?: string) {
+  const contextStoreId = useCurrentStoreId();
+  const storeId = overrideStoreId || contextStoreId;
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
 
