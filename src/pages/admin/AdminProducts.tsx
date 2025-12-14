@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
+import { useActiveWarehouses } from '@/hooks/useWarehouses';
+import { useCreateInventory } from '@/hooks/useInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -7,13 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Plus, Edit2, Search, Trash2 } from 'lucide-react';
 
 export default function AdminProducts() {
   const { data: products = [], isLoading } = useProducts();
+  const { data: warehouses = [] } = useActiveWarehouses();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const createInventory = useCreateInventory();
   
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -24,6 +29,8 @@ export default function AdminProducts() {
     cost_price: '',
     sell_price: '',
     wholesale_price: '',
+    opening_stock: '',
+    warehouse_id: '',
   });
 
   // Filter products based on search
@@ -51,12 +58,25 @@ export default function AdminProducts() {
     if (editingProduct) {
       await updateProduct.mutateAsync({ id: editingProduct.id, ...data });
     } else {
-      await createProduct.mutateAsync(data);
+      const newProduct = await createProduct.mutateAsync(data);
+      
+      // Create inventory record if opening stock and warehouse provided
+      const openingStock = formData.opening_stock ? parseFloat(formData.opening_stock) : 0;
+      if (formData.warehouse_id && newProduct) {
+        await createInventory.mutateAsync({
+          product_id: newProduct.id,
+          warehouse_id: formData.warehouse_id,
+          opening_stock: openingStock,
+          current_stock: openingStock,
+          reorder_level: 0,
+          reorder_required: false,
+        });
+      }
     }
 
     setIsOpen(false);
     setEditingProduct(null);
-    setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '' });
+    setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '', opening_stock: '', warehouse_id: '' });
   };
 
   const openEdit = (product: any) => {
@@ -67,6 +87,8 @@ export default function AdminProducts() {
       cost_price: product.cost_price?.toString() || '',
       sell_price: product.sell_price?.toString() || '',
       wholesale_price: product.wholesale_price?.toString() || '',
+      opening_stock: '',
+      warehouse_id: '',
     });
     setIsOpen(true);
   };
@@ -81,7 +103,7 @@ export default function AdminProducts() {
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingProduct(null); setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '' }); }}>
+              <Button onClick={() => { setEditingProduct(null); setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '', opening_stock: '', warehouse_id: '' }); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Product
               </Button>
@@ -143,7 +165,42 @@ export default function AdminProducts() {
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={createProduct.isPending || updateProduct.isPending}>
+                
+                {/* Opening Stock section - only for new products */}
+                {!editingProduct && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                    <div className="space-y-2">
+                      <Label htmlFor="warehouse">Warehouse</Label>
+                      <Select
+                        value={formData.warehouse_id}
+                        onValueChange={(value) => setFormData({ ...formData, warehouse_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select warehouse" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouses.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="opening_stock">Opening Stock</Label>
+                      <Input
+                        id="opening_stock"
+                        type="number"
+                        value={formData.opening_stock}
+                        onChange={(e) => setFormData({ ...formData, opening_stock: e.target.value })}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <Button type="submit" className="w-full" disabled={createProduct.isPending || updateProduct.isPending || createInventory.isPending}>
                   {editingProduct ? 'Update Product' : 'Create Product'}
                 </Button>
               </form>
