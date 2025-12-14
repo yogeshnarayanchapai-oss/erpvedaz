@@ -447,12 +447,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Calculator,
       children: accountingItems,
     },
-    {
-      title: 'Inventory',
-      url: '/admin/inventory/stock-summary',
-      icon: Warehouse,
-      children: inventoryItems,
-    },
+    { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: TrendingUp },
     {
       title: 'My Training',
       url: '/training/my-courses',
