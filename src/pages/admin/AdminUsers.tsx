@@ -885,8 +885,8 @@ const usersWithEmployee = useMemo(() => {
               </Select>
             </div>
 
-            {/* Store Assignment for OWNER (not for OWNER users) */}
-            {isAdmin && allStores.length > 0 && editingUser?.role !== 'OWNER' && (
+            {/* Store Assignment - OWNER can assign to any user including other OWNERs */}
+            {isAdmin && allStores.length > 0 && (
               <div className="space-y-2">
                 <Label>Assign to Stores</Label>
                 <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
