@@ -29,11 +29,17 @@ export function useStaff(role?: AppRole, includeInactive = false, overrideStoreI
       // If storeId exists, filter by store (even for OWNER)
       if (storeId) {
         // Get user IDs that have access to this store, including store_role
-        const { data: storeUsers, error: storeError } = await supabase
+        let storeAccessQuery = supabase
           .from('user_store_access')
           .select('user_id, store_role')
-          .eq('store_id', storeId)
-          .eq('is_active', true);
+          .eq('store_id', storeId);
+        
+        // Only filter by is_active if we're not including inactive users
+        if (!includeInactive) {
+          storeAccessQuery = storeAccessQuery.eq('is_active', true);
+        }
+        
+        const { data: storeUsers, error: storeError } = await storeAccessQuery;
 
         if (storeError) throw storeError;
 
