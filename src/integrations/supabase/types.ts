@@ -2818,6 +2818,74 @@ export type Database = {
           },
         ]
       }
+      inventory_activity_logs: {
+        Row: {
+          action_type: string
+          amount: number | null
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          movement_type: string | null
+          new_values: Json | null
+          old_values: Json | null
+          performed_at: string
+          performed_by: string | null
+          performer_name: string | null
+          product_name: string | null
+          qty: number | null
+          store_id: string | null
+          warehouse_name: string | null
+        }
+        Insert: {
+          action_type: string
+          amount?: number | null
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          movement_type?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_at?: string
+          performed_by?: string | null
+          performer_name?: string | null
+          product_name?: string | null
+          qty?: number | null
+          store_id?: string | null
+          warehouse_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          amount?: number | null
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          movement_type?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_at?: string
+          performed_by?: string | null
+          performer_name?: string | null
+          product_name?: string | null
+          qty?: number | null
+          store_id?: string | null
+          warehouse_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_activity_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_history: {
         Row: {
           action: string
