@@ -218,29 +218,6 @@ export default function AdminProducts() {
                   </div>
                 </div>
                 
-                {/* Opening Stock per Warehouse */}
-                {warehouses.length > 0 && (
-                  <div className="pt-2 border-t space-y-3">
-                    <Label className="text-sm font-medium">Opening Stock by Warehouse</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {warehouses.map((wh) => (
-                        <div key={wh.id} className="space-y-1">
-                          <Label htmlFor={`stock-${wh.id}`} className="text-xs text-muted-foreground">
-                            {wh.name}
-                          </Label>
-                          <Input
-                            id={`stock-${wh.id}`}
-                            type="number"
-                            value={warehouseStocks[wh.id] || ''}
-                            onChange={(e) => setWarehouseStocks(prev => ({ ...prev, [wh.id]: e.target.value }))}
-                            placeholder="0"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
                 <Button type="submit" className="w-full" disabled={createProduct.isPending || updateProduct.isPending || createInventory.isPending}>
                   {editingProduct ? 'Update Product' : 'Create Product'}
                 </Button>
