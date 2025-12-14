@@ -129,31 +129,32 @@ export default function FollowupOrders() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl md:text-2xl font-bold">
             {viewMode === 'today' ? "Today's Orders" : "All Orders"}
           </h1>
-          <p className="text-muted-foreground">
-            {viewMode === 'today' ? "View and redirect today's orders" : "View all orders"}
+          <p className="text-sm text-muted-foreground">
+            {viewMode === 'today' ? "View and redirect orders" : "View all orders"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'today' | 'all')}>
-            <TabsList>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="all">All Orders</TabsTrigger>
+            <TabsList className="h-9">
+              <TabsTrigger value="today" className="text-xs md:text-sm px-2 md:px-3">Today</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs md:text-sm px-2 md:px-3">All Orders</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            Import
+          <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm" className="h-9">
+            <Upload className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Import</span>
           </Button>
           {isFetching && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Updating...</span>
+              <span className="text-sm hidden sm:inline">Updating...</span>
             </div>
           )}
         </div>
@@ -165,99 +166,84 @@ export default function FollowupOrders() {
         portalType="FOLLOWUP"
       />
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Summary Stats - Mobile optimized */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
         <Card className="bg-card">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="w-5 h-5 text-primary" />
+          <CardContent className="p-3 md:pt-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-primary/10">
+                <Package className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total</p>
+                <p className="text-lg md:text-2xl font-bold">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <MapPin className="w-5 h-5 text-blue-600" />
+          <CardContent className="p-3 md:pt-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-blue-100">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Inside Valley</p>
-                <p className="text-2xl font-bold">{stats.inside}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Inside Valley</p>
+                <p className="text-lg md:text-2xl font-bold">{stats.inside}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-100">
-                <Globe className="w-5 h-5 text-orange-600" />
+          <CardContent className="p-3 md:pt-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-red-100">
+                <RotateCcw className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Outside Valley</p>
-                <p className="text-2xl font-bold">{stats.outside}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100">
-                <RotateCcw className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Redirected</p>
-                <p className="text-2xl font-bold">{stats.redirected}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Redirected</p>
+                <p className="text-lg md:text-2xl font-bold">{stats.redirected}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Mobile optimized */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Orders - {format(today, 'dd MMM yyyy')}
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                (Live updates enabled)
-              </span>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+              <Package className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden sm:inline">Orders - {format(today, 'dd MMM yyyy')}</span>
+              <span className="sm:hidden">Orders</span>
             </CardTitle>
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative">
+              <div className="relative flex-1 min-w-[150px] sm:min-w-0 sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search client, phone, branch..."
+                  placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-[200px]"
+                  className="pl-9 h-9 w-full sm:w-[180px]"
                 />
               </div>
               <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[110px] sm:w-[140px] h-9">
                   <SelectValue placeholder="Delivery" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Deliveries</SelectItem>
-                  <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                  <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="INSIDE_VALLEY">Inside</SelectItem>
+                  <SelectItem value="OUTSIDE_VALLEY">Outside</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[100px] sm:w-[130px] h-9">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="CONFIRMED">Confirmed</SelectItem>
                   <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
                   <SelectItem value="CALL_NOT_RECEIVED">CNR</SelectItem>
@@ -268,8 +254,54 @@ export default function FollowupOrders() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-2 p-4 pt-0">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No orders found</div>
+            ) : (
+              filteredOrders.slice(0, 50).map((order) => (
+                <Card key={order.id} className="p-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{(order.leads as any)?.client_name || '-'}</p>
+                      <p className="text-sm text-muted-foreground">{(order.leads as any)?.contact_number || '-'}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {getDeliveryBadge(order.delivery_location)}
+                      {getStatusBadge(order.order_status)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Branch</span>
+                      <p className="truncate">{order.destination_branch || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Amount</span>
+                      <p>Rs {((order.amount || 0) * (order.quantity || 1)).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  {canRedirect(order) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenEdit(order)}
+                      className="w-full mt-2"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Redirect
+                    </Button>
+                  )}
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
                 <TableHeader>
                 <TableRow>
