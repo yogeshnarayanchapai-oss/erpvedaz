@@ -31,6 +31,16 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && profile) {
+      // Check if user is inactive
+      if (profile.is_active === false) {
+        toast.error('Your account has been deactivated. Please contact admin.');
+        // Sign out the inactive user
+        import('@/integrations/supabase/client').then(({ supabase }) => {
+          supabase.auth.signOut();
+        });
+        return;
+      }
+      
       if (!profile.role) {
         toast.error('No role assigned to your account. Please contact admin.');
         return;
