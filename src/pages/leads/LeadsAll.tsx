@@ -225,6 +225,7 @@ export default function LeadsAll() {
         to_team: 'CALLING' as const,
         to_user_id: transferForm.staffId,
         transferred_by_user_id: user.id,
+        store_id: currentStore?.id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
@@ -282,6 +283,7 @@ export default function LeadsAll() {
         to_team: 'CALLING' as const,
         to_user_id: reassignStaffId,
         transferred_by_user_id: user.id,
+        store_id: currentStore?.id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);

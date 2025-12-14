@@ -3,6 +3,7 @@ import { useLeads, useTransferLeads } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ type FollowupTab = 'ALL' | 'FOLLOW_UP' | 'CNR';
 export default function LeadsFollowup() {
   const today = new Date();
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(today),
     to: endOfDay(today),
@@ -152,6 +154,7 @@ export default function LeadsFollowup() {
         to_team: 'CALLING' as const,
         to_user_id: transferStaffId,
         transferred_by_user_id: user.id,
+        store_id: currentStore?.id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);

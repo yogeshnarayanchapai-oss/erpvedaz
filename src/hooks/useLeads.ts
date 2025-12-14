@@ -526,12 +526,21 @@ export function useReturnLeadsToQueue() {
 
       if (updateError) throw updateError;
 
+      // Get the store_id from first lead for transfer record
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('store_id')
+        .in('id', leadIds)
+        .limit(1)
+        .single();
+
       // Create transfer records for audit
       const transfers = leadIds.map(leadId => ({
         lead_id: leadId,
         from_team: 'CALLING' as const,
         to_team: 'LEADS' as const,
         transferred_by_user_id: user.id,
+        store_id: leadData?.store_id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
@@ -787,12 +796,21 @@ export function useAdminResendCNRToPool() {
 
       if (updateError) throw updateError;
 
+      // Get the store_id from first lead for transfer record
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('store_id')
+        .in('id', leadIds)
+        .limit(1)
+        .single();
+
       // Create transfer records for audit
       const transfers = leadIds.map(leadId => ({
         lead_id: leadId,
         from_team: 'CALLING' as const,
         to_team: 'LEADS' as const,
         transferred_by_user_id: user.id,
+        store_id: leadData?.store_id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
@@ -832,12 +850,21 @@ export function useAdminResendFollowupToPool() {
 
       if (updateError) throw updateError;
 
+      // Get the store_id from first lead for transfer record
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('store_id')
+        .in('id', leadIds)
+        .limit(1)
+        .single();
+
       // Create transfer records for audit
       const transfers = leadIds.map(leadId => ({
         lead_id: leadId,
         from_team: 'CALLING' as const,
         to_team: 'LEADS' as const,
         transferred_by_user_id: user.id,
+        store_id: leadData?.store_id || null,
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
