@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { ArrowLeft, User, Calendar, FileText, Building2, Phone, Mail, Briefcase, DollarSign, CreditCard, Wallet, CheckCircle, XCircle, Clock, Shield } from 'lucide-react';
+import { ArrowLeft, User, Calendar, FileText, Building2, Phone, Mail, Briefcase, DollarSign, CreditCard, Wallet, CheckCircle, XCircle, Clock, Shield, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,8 @@ import { useAttendanceRecords } from '@/hooks/useAttendance';
 import { useLeaveRequests, useDepartments, usePayrollRecords } from '@/hooks/useHRM';
 import { EmployeeDocumentsTab } from '@/components/hrm/EmployeeDocumentsTab';
 import { EmployeeBankAccountsCard } from '@/components/hrm/EmployeeBankAccountsCard';
+import { EmployeeAssignedAssetsCard } from '@/components/hrm/EmployeeAssignedAssetsCard';
+import { EmployeeLeaveQuotaCard } from '@/components/hrm/EmployeeLeaveQuotaCard';
 
 interface EmployeeDetail {
   id: string;
@@ -260,15 +262,14 @@ export default function HRMEmployeeDetail() {
             <Wallet className="h-4 w-4" />
             Payroll
           </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-2">
+            <Package className="h-4 w-4" />
+            Assets
+          </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
-
-        {/* Documents Tab */}
-        <TabsContent value="documents">
-          <EmployeeDocumentsTab employeeId={employee.id} employee={employee} />
-        </TabsContent>
           <div className="grid gap-6 md:grid-cols-2">
             {/* Personal Information */}
             <Card>
@@ -372,6 +373,9 @@ export default function HRMEmployeeDetail() {
             {/* Employee Bank Accounts */}
             <EmployeeBankAccountsCard employeeId={employee.id} />
 
+            {/* Leave Quota */}
+            <EmployeeLeaveQuotaCard employeeId={employee.id} />
+
             {/* Notes */}
             <Card>
               <CardHeader>
@@ -384,6 +388,11 @@ export default function HRMEmployeeDetail() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents">
+          <EmployeeDocumentsTab employeeId={employee.id} employee={employee} />
         </TabsContent>
 
         {/* Attendance Tab */}
@@ -580,6 +589,11 @@ export default function HRMEmployeeDetail() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Assets Tab */}
+        <TabsContent value="assets">
+          <EmployeeAssignedAssetsCard employeeId={employee.id} />
         </TabsContent>
       </Tabs>
     </div>
