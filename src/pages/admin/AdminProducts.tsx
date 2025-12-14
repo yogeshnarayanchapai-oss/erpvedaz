@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Plus, Edit2, Search, Trash2 } from 'lucide-react';
 
 export default function AdminProducts() {
@@ -31,9 +30,8 @@ export default function AdminProducts() {
     cost_price: '',
     sell_price: '',
     wholesale_price: '',
-    opening_stock: '',
-    warehouse_id: '',
   });
+  const [warehouseStocks, setWarehouseStocks] = useState<Record<string, string>>({});
 
   // Filter products based on search
   const filteredProducts = useMemo(() => {
@@ -46,22 +44,39 @@ export default function AdminProducts() {
     );
   }, [products, searchQuery]);
 
-  // Get existing inventory for the editing product
-  const existingInventory = useMemo(() => {
-    if (!editingProduct || !inventoryData.length) return null;
-    return inventoryData.find(inv => inv.product_id === editingProduct.id);
+  // Get existing inventory for the editing product (all warehouses)
+  const productInventoryMap = useMemo(() => {
+    if (!editingProduct || !inventoryData.length) return {};
+    const map: Record<string, { id: string; opening_stock: number; current_stock: number }> = {};
+    inventoryData
+      .filter(inv => inv.product_id === editingProduct.id)
+      .forEach(inv => {
+        map[inv.warehouse_id] = {
+          id: inv.id,
+          opening_stock: inv.opening_stock || 0,
+          current_stock: inv.current_stock || 0,
+        };
+      });
+    return map;
   }, [editingProduct, inventoryData]);
 
-  // Update form when existing inventory is found
+  // Update warehouse stocks when editing product changes
   useEffect(() => {
-    if (existingInventory && editingProduct) {
-      setFormData(prev => ({
-        ...prev,
-        opening_stock: existingInventory.opening_stock?.toString() || '',
-        warehouse_id: existingInventory.warehouse_id || '',
-      }));
+    if (editingProduct && warehouses.length) {
+      const stocks: Record<string, string> = {};
+      warehouses.forEach(wh => {
+        const inv = productInventoryMap[wh.id];
+        stocks[wh.id] = inv ? inv.opening_stock.toString() : '';
+      });
+      setWarehouseStocks(stocks);
     }
-  }, [existingInventory, editingProduct]);
+  }, [editingProduct, productInventoryMap, warehouses]);
+
+  const resetForm = () => {
+    setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '' });
+    setWarehouseStocks({});
+    setEditingProduct(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,52 +89,48 @@ export default function AdminProducts() {
       wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price) : null,
     };
 
-    const openingStock = formData.opening_stock ? parseFloat(formData.opening_stock) : 0;
+    let productId = editingProduct?.id;
 
     if (editingProduct) {
       await updateProduct.mutateAsync({ id: editingProduct.id, ...data });
-      
-      // Update or create inventory record for existing product
-      if (formData.warehouse_id) {
-        if (existingInventory) {
-          // Update existing inventory
-          const stockDiff = openingStock - (existingInventory.opening_stock || 0);
-          await updateInventory.mutateAsync({
-            id: existingInventory.id,
-            opening_stock: openingStock,
-            current_stock: (existingInventory.current_stock || 0) + stockDiff,
-          });
-        } else {
-          // Create new inventory record
-          await createInventory.mutateAsync({
-            product_id: editingProduct.id,
-            warehouse_id: formData.warehouse_id,
-            opening_stock: openingStock,
-            current_stock: openingStock,
-            reorder_level: 0,
-            reorder_required: false,
-          });
-        }
-      }
     } else {
       const newProduct = await createProduct.mutateAsync(data);
-      
-      // Create inventory record if opening stock and warehouse provided
-      if (formData.warehouse_id && newProduct) {
-        await createInventory.mutateAsync({
-          product_id: newProduct.id,
-          warehouse_id: formData.warehouse_id,
-          opening_stock: openingStock,
-          current_stock: openingStock,
-          reorder_level: 0,
-          reorder_required: false,
-        });
+      productId = newProduct?.id;
+    }
+
+    // Update or create inventory records for each warehouse
+    if (productId) {
+      for (const wh of warehouses) {
+        const stockValue = warehouseStocks[wh.id];
+        const openingStock = stockValue ? parseFloat(stockValue) : 0;
+        const existingInv = productInventoryMap[wh.id];
+
+        if (openingStock > 0 || existingInv) {
+          if (existingInv) {
+            // Update existing inventory
+            const stockDiff = openingStock - existingInv.opening_stock;
+            await updateInventory.mutateAsync({
+              id: existingInv.id,
+              opening_stock: openingStock,
+              current_stock: existingInv.current_stock + stockDiff,
+            });
+          } else if (openingStock > 0) {
+            // Create new inventory record
+            await createInventory.mutateAsync({
+              product_id: productId,
+              warehouse_id: wh.id,
+              opening_stock: openingStock,
+              current_stock: openingStock,
+              reorder_level: 0,
+              reorder_required: false,
+            });
+          }
+        }
       }
     }
 
     setIsOpen(false);
-    setEditingProduct(null);
-    setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '', opening_stock: '', warehouse_id: '' });
+    resetForm();
   };
 
   const openEdit = (product: any) => {
@@ -130,8 +141,6 @@ export default function AdminProducts() {
       cost_price: product.cost_price?.toString() || '',
       sell_price: product.sell_price?.toString() || '',
       wholesale_price: product.wholesale_price?.toString() || '',
-      opening_stock: '',
-      warehouse_id: '',
     });
     setIsOpen(true);
   };
@@ -144,9 +153,9 @@ export default function AdminProducts() {
             <h1 className="text-2xl font-bold">Products</h1>
             <p className="text-muted-foreground">Manage product catalog and pricing</p>
           </div>
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingProduct(null); setFormData({ name: '', target_per_day: '', cost_price: '', sell_price: '', wholesale_price: '', opening_stock: '', warehouse_id: '' }); }}>
+              <Button onClick={() => resetForm()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Product
               </Button>
@@ -209,37 +218,28 @@ export default function AdminProducts() {
                   </div>
                 </div>
                 
-                {/* Opening Stock section */}
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                  <div className="space-y-2">
-                    <Label htmlFor="warehouse">Warehouse</Label>
-                    <Select
-                      value={formData.warehouse_id}
-                      onValueChange={(value) => setFormData({ ...formData, warehouse_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select warehouse" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {warehouses.map((wh) => (
-                          <SelectItem key={wh.id} value={wh.id}>
+                {/* Opening Stock per Warehouse */}
+                {warehouses.length > 0 && (
+                  <div className="pt-2 border-t space-y-3">
+                    <Label className="text-sm font-medium">Opening Stock by Warehouse</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {warehouses.map((wh) => (
+                        <div key={wh.id} className="space-y-1">
+                          <Label htmlFor={`stock-${wh.id}`} className="text-xs text-muted-foreground">
                             {wh.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                          <Input
+                            id={`stock-${wh.id}`}
+                            type="number"
+                            value={warehouseStocks[wh.id] || ''}
+                            onChange={(e) => setWarehouseStocks(prev => ({ ...prev, [wh.id]: e.target.value }))}
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="opening_stock">Opening Stock</Label>
-                    <Input
-                      id="opening_stock"
-                      type="number"
-                      value={formData.opening_stock}
-                      onChange={(e) => setFormData({ ...formData, opening_stock: e.target.value })}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
+                )}
                 
                 <Button type="submit" className="w-full" disabled={createProduct.isPending || updateProduct.isPending || createInventory.isPending}>
                   {editingProduct ? 'Update Product' : 'Create Product'}
