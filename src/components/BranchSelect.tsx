@@ -3,7 +3,7 @@ import { useBranches, Branch } from '@/hooks/useBranches';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Check, ChevronsUpDown, MapPin, Clock, Phone, DollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -123,8 +123,7 @@ export function BranchSelect({
               className="h-9"
             />
           </div>
-          <ScrollArea className="h-[250px]">
-            <div className="p-1">
+          <div className="h-[250px] overflow-y-auto overscroll-contain p-1">
               {/* Custom entry option */}
               {allowCustom && search.trim() && !hasExactMatch && (
                 <button
@@ -174,8 +173,7 @@ export function BranchSelect({
                   </button>
                 ))
               )}
-            </div>
-          </ScrollArea>
+          </div>
           {(value || customValue) && (
             <div className="border-t border-border p-2">
               <Button
