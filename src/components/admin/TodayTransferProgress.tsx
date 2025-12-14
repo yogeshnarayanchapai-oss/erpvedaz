@@ -1,14 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, CheckCircle, MapPin, Percent, Inbox } from 'lucide-react';
+import { TrendingUp, Send, PhoneOff, Percent, Inbox } from 'lucide-react';
 
 interface TodayTransferProgressProps {
   totalTodayLeads: number;
   transferredToday: number;
   remainingTodayLeads: number;
-  confirmedOrders?: number;
-  insideValley?: number;
-  outsideValley?: number;
+  todayLeadsTransferred?: number;
+  cnrLeadsTransferred?: number;
   totalRemainingInPool?: number;
   dateLabel?: string;
 }
@@ -17,9 +16,8 @@ export function TodayTransferProgress({
   totalTodayLeads,
   transferredToday,
   remainingTodayLeads,
-  confirmedOrders = 0,
-  insideValley = 0,
-  outsideValley = 0,
+  todayLeadsTransferred = 0,
+  cnrLeadsTransferred = 0,
   totalRemainingInPool = 0,
   dateLabel = "Today",
 }: TodayTransferProgressProps) {
@@ -28,7 +26,7 @@ export function TodayTransferProgress({
     : 0;
   
   const achievementPercent = totalTodayLeads > 0
-    ? Math.round((confirmedOrders / totalTodayLeads) * 100)
+    ? Math.round((todayLeadsTransferred / totalTodayLeads) * 100)
     : 0;
 
   const isToday = dateLabel === 'Today';
@@ -77,25 +75,17 @@ export function TodayTransferProgress({
       <div className="flex flex-wrap gap-3">
         <Card className="border shadow-sm min-w-[120px]">
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <CheckCircle className="w-5 h-5 text-success mb-1" />
-            <span className="text-2xl font-bold">{confirmedOrders.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Confirmed</span>
+            <Send className="w-5 h-5 text-success mb-1" />
+            <span className="text-2xl font-bold">{todayLeadsTransferred.toLocaleString()}</span>
+            <span className="text-xs text-muted-foreground">Today Lead</span>
           </CardContent>
         </Card>
 
         <Card className="border shadow-sm min-w-[120px]">
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <MapPin className="w-5 h-5 text-chart-1 mb-1" />
-            <span className="text-2xl font-bold">{insideValley.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Inside Valley</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm min-w-[120px]">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <MapPin className="w-5 h-5 text-chart-2 mb-1" />
-            <span className="text-2xl font-bold">{outsideValley.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Outside Valley</span>
+            <PhoneOff className="w-5 h-5 text-destructive mb-1" />
+            <span className="text-2xl font-bold">{cnrLeadsTransferred.toLocaleString()}</span>
+            <span className="text-xs text-muted-foreground">CNR Lead</span>
           </CardContent>
         </Card>
 

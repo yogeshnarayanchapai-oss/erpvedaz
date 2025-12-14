@@ -295,22 +295,31 @@ export default function LeadsDashboard() {
       l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
     ).length;
     
-    // Today's order stats - use filtered orders
-    const confirmedOrders = filteredOrders.filter(o => 
-      ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status || '')
-    ).length;
-    const insideValley = filteredOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
-    const outsideValley = filteredOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+    // Today Lead = leads created from add lead form that have been transferred today (NEW bucket, transferred)
+    const todayLeadsTransferred = filteredLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      const assignedToday = isToday(new Date(l.assigned_at));
+      // NEW bucket leads that got transferred
+      return assignedToday && l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED';
+    }).length;
+    
+    // CNR Lead = CNR leads that have been transferred or reassigned today
+    const cnrLeadsTransferred = filteredLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      const assignedToday = isToday(new Date(l.assigned_at));
+      // CNR bucket/status leads that got transferred
+      return assignedToday && (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
+    }).length;
     
     // Total remaining in pool (filtered leads)
     const totalRemainingInPool = leadsInPool.length;
     
     return { 
       totalTodayLeads, transferredToday, remainingTodayLeads, 
-      confirmedOrders, insideValley, outsideValley,
+      todayLeadsTransferred, cnrLeadsTransferred,
       totalRemainingInPool
     };
-  }, [filteredLeads, filteredOrders, today, leadsInPool]);
+  }, [filteredLeads, today, leadsInPool]);
 
   // Bucket Conversion Analytics - uses role-filtered leads
   const bucketAnalytics = useMemo(() => {
@@ -466,9 +475,8 @@ export default function LeadsDashboard() {
         totalTodayLeads={todayProgressStats.totalTodayLeads}
         transferredToday={todayProgressStats.transferredToday}
         remainingTodayLeads={todayProgressStats.remainingTodayLeads}
-        confirmedOrders={todayProgressStats.confirmedOrders}
-        insideValley={todayProgressStats.insideValley}
-        outsideValley={todayProgressStats.outsideValley}
+        todayLeadsTransferred={todayProgressStats.todayLeadsTransferred}
+        cnrLeadsTransferred={todayProgressStats.cnrLeadsTransferred}
         totalRemainingInPool={todayProgressStats.totalRemainingInPool}
       />
 

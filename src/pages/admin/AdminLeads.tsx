@@ -175,7 +175,7 @@ export default function AdminLeads() {
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
   const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ id: string; assigned_to_user_id: string; first_assigned_to_user_id: string | null; created_by_user_id: string | null; product_id: string | null }[]>([]);
-  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null }[]>([]);
+  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null; lead_bucket: string | null }[]>([]);
   
   // Fetch all store leads for product summary (not filtered by date range)
   useEffect(() => {
@@ -183,7 +183,7 @@ export default function AdminLeads() {
       if (!storeId) return;
       const { data } = await supabase
         .from('leads')
-        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status')
+        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status, lead_bucket')
         .eq('store_id', storeId);
       
       setAllStoreLeads(data || []);
@@ -394,28 +394,31 @@ export default function AdminLeads() {
     // Remaining = total leads in range minus transferred in range
     const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
     
-    // Order stats for date range
-    const ordersInRange = orders.filter(o => {
-      if (!o.order_date) return false;
-      const orderDate = o.order_date.split('T')[0];
-      return orderDate >= dateFrom && orderDate <= dateTo;
-    });
-    const confirmedOrders = ordersInRange.filter(o => 
-      ['CONFIRMED', 'DELIVERED', 'DISPATCHED'].includes(o.order_status || '')
-    ).length;
-    const insideValley = ordersInRange.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
-    const outsideValley = ordersInRange.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
+    // Today Lead = NEW bucket leads that have been transferred in date range
+    const todayLeadsTransferred = allStoreLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      const assignedDate = l.assigned_at.split('T')[0];
+      const inRange = assignedDate >= dateFrom && assignedDate <= dateTo;
+      return inRange && l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED';
+    }).length;
+    
+    // CNR Lead = CNR leads that have been transferred/reassigned in date range
+    const cnrLeadsTransferred = allStoreLeads.filter(l => {
+      if (!l.assigned_at) return false;
+      const assignedDate = l.assigned_at.split('T')[0];
+      const inRange = assignedDate >= dateFrom && assignedDate <= dateTo;
+      return inRange && (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
+    }).length;
     
     return { 
       totalLeadsInRange, 
       transferredInRange, 
       remainingInRange, 
-      confirmedOrders, 
-      insideValley, 
-      outsideValley,
+      todayLeadsTransferred,
+      cnrLeadsTransferred,
       totalRemainingInPool: totalPoolCount
     };
-  }, [allStoreLeads, orders, dateFrom, dateTo, totalPoolCount]);
+  }, [allStoreLeads, dateFrom, dateTo, totalPoolCount]);
 
   // Check if "Send back to Leads" button should be shown
   const showReturnButton = selectedStatus === 'CALL_NOT_RECEIVED' && canReturnLeads;
@@ -792,9 +795,8 @@ export default function AdminLeads() {
           totalTodayLeads={transferProgressStats.totalLeadsInRange}
           transferredToday={transferProgressStats.transferredInRange}
           remainingTodayLeads={transferProgressStats.remainingInRange}
-          confirmedOrders={transferProgressStats.confirmedOrders}
-          insideValley={transferProgressStats.insideValley}
-          outsideValley={transferProgressStats.outsideValley}
+          todayLeadsTransferred={transferProgressStats.todayLeadsTransferred}
+          cnrLeadsTransferred={transferProgressStats.cnrLeadsTransferred}
           totalRemainingInPool={transferProgressStats.totalRemainingInPool}
           dateLabel={dateFrom === dateTo ? 'Today' : `${dateFrom} to ${dateTo}`}
         />
