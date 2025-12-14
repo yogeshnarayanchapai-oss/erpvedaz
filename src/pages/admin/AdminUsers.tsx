@@ -766,19 +766,22 @@ const usersWithEmployee = useMemo(() => {
                     placeholder="+977 98XXXXXXXX"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Role *</Label>
-                  <Select value={formData.role} onValueChange={(v: AppRole) => setFormData({ ...formData, role: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableRoles().map((role) => (
-                        <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Global role - only show for Manager (ADMIN) assignment when no stores selected */}
+                {(!isOwnerRole || selectedStoreIds.length === 0) && (
+                  <div className="space-y-2">
+                    <Label>Role *</Label>
+                    <Select value={formData.role} onValueChange={(v: AppRole) => setFormData({ ...formData, role: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableRoles().map((role) => (
+                          <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Store Selection for OWNER */}
                 {isOwnerRole && allStores.length > 0 && (
@@ -872,19 +875,22 @@ const usersWithEmployee = useMemo(() => {
                 onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={editFormData.role} onValueChange={(v: AppRole) => setEditFormData({ ...editFormData, role: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableRoles().map((role) => (
-                    <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Global role - only show when no store-specific roles assigned */}
+            {(!isOwnerRole || editSelectedStoreIds.length === 0) && (
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={editFormData.role} onValueChange={(v: AppRole) => setEditFormData({ ...editFormData, role: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableRoles().map((role) => (
+                      <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Store Assignment - OWNER can assign to any user including other OWNERs */}
             {isOwnerRole && allStores.length > 0 && (
