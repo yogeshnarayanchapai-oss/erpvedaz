@@ -167,55 +167,77 @@ function DashboardLayoutInner() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+        <SidebarInset className="flex-1 flex flex-col min-w-0">
+          {/* Mobile-optimized header */}
+          <header className="flex h-12 md:h-14 shrink-0 items-center gap-1 md:gap-2 border-b bg-background px-2 md:px-4 sticky top-0 z-40">
+            <SidebarTrigger className="-ml-1 h-9 w-9 md:h-10 md:w-10" />
+            <Separator orientation="vertical" className="mr-1 md:mr-2 h-4 hidden sm:block" />
             
-            {/* Store Switcher */}
+            {/* Store Switcher - compact on mobile */}
             <StoreSwitcher />
             
-            <Separator orientation="vertical" className="mx-2 h-4" />
+            {/* Breadcrumb - hidden on mobile */}
+            <div className="hidden md:flex items-center">
+              <Separator orientation="vertical" className="mx-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="text-sm font-medium">
+                      {pageName}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
             
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-sm font-medium">
-                    {pageName}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="ml-auto flex items-center gap-1 md:gap-4">
+              {/* Date - hidden on mobile */}
+              <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                 <span className="text-foreground font-medium">
                   ({getCurrentBSDate().day} {getBSMonthName(getCurrentBSDate().month)} {getCurrentBSDate().year})
                 </span>
               </div>
-              <Separator orientation="vertical" className="h-4 hidden sm:block" />
+              <Separator orientation="vertical" className="h-4 hidden lg:block" />
+              
               <UnifiedNotificationBell 
                 showViewAll={isAdminOrManager(profile.role)}
                 viewAllPath="/admin/notifications"
               />
+              
+              {/* Date toggle - always visible but compact on mobile */}
               <DateModeToggle />
+              
+              {/* User menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2">
+                  <Button variant="ghost" size="sm" className="gap-1 md:gap-2 h-9 px-2 md:px-3">
                     <User className="w-4 h-4" />
-                    <span className="hidden sm:inline">{profile.name}</span>
+                    <span className="hidden sm:inline max-w-[100px] truncate">{profile.name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
+                  <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{profile.name}</p>
-                      <p className="text-xs text-muted-foreground">{profile.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
                       <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(profile.role)}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  
+                  {/* Mobile: show date info in dropdown */}
+                  <div className="lg:hidden px-2 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3 h-3" />
+                      <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                    </div>
+                    <div className="mt-0.5 text-foreground font-medium">
+                      {getCurrentBSDate().day} {getBSMonthName(getCurrentBSDate().month)} {getCurrentBSDate().year} BS
+                    </div>
+                  </div>
+                  
                   <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     My Profile
@@ -235,12 +257,19 @@ function DashboardLayoutInner() {
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 p-6 overflow-auto">
+          
+          {/* Mobile page title */}
+          <div className="md:hidden px-4 py-2 border-b border-border bg-muted/30">
+            <h1 className="text-sm font-medium text-foreground truncate">{pageName}</h1>
+          </div>
+          
+          {/* Main content - responsive padding */}
+          <main className="flex-1 p-3 md:p-6 overflow-auto">
             <Outlet />
           </main>
         </SidebarInset>
         
-        {/* Floating Team Chat Button */}
+        {/* Floating Team Chat Button - positioned for mobile */}
         <TeamChatButton />
         
         {/* Notice Popup */}

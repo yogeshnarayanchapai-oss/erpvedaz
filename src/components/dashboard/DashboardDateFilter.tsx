@@ -59,13 +59,14 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap rounded-lg border border-border bg-muted/30 p-1">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+      {/* Preset buttons - scrollable on mobile */}
+      <div className="flex w-full sm:w-auto overflow-x-auto scrollbar-hide rounded-lg border border-border bg-muted/30 p-1">
         <Button
           variant={activePreset === 'today' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handlePresetClick('today')}
-          className="h-7 px-3 text-xs"
+          className="h-7 px-2 sm:px-3 text-xs shrink-0"
         >
           Today
         </Button>
@@ -73,7 +74,7 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
           variant={activePreset === 'yesterday' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handlePresetClick('yesterday')}
-          className="h-7 px-3 text-xs"
+          className="h-7 px-2 sm:px-3 text-xs shrink-0"
         >
           Yesterday
         </Button>
@@ -81,23 +82,23 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
           variant={activePreset === '7days' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handlePresetClick('7days')}
-          className="h-7 px-3 text-xs"
+          className="h-7 px-2 sm:px-3 text-xs shrink-0"
         >
-          7 Days
+          7D
         </Button>
         <Button
           variant={activePreset === '30days' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handlePresetClick('30days')}
-          className="h-7 px-3 text-xs"
+          className="h-7 px-2 sm:px-3 text-xs shrink-0"
         >
-          30 Days
+          30D
         </Button>
         <Button
           variant={activePreset === 'custom' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setActivePreset('custom')}
-          className="h-7 px-3 text-xs"
+          className="h-7 px-2 sm:px-3 text-xs shrink-0"
         >
           Custom
         </Button>
@@ -110,22 +111,24 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
               variant="outline"
               size="sm"
               className={cn(
-                'h-8 justify-start text-left font-normal',
+                'h-8 justify-start text-left font-normal w-full sm:w-auto',
                 !value && 'text-muted-foreground'
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value?.from ? (
-                value.to ? (
-                  <>
-                    {formatDateDisplay(value.from)} – {formatDateDisplay(value.to)}
-                  </>
+              <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {value?.from ? (
+                  value.to ? (
+                    <>
+                      {formatDateDisplay(value.from)} – {formatDateDisplay(value.to)}
+                    </>
+                  ) : (
+                    formatDateDisplay(value.from)
+                  )
                 ) : (
-                  formatDateDisplay(value.from)
-                )
-              ) : (
-                <span>Pick dates</span>
-              )}
+                  <span>Pick dates</span>
+                )}
+              </span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
@@ -141,7 +144,7 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
                   onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
                 }
               }}
-              numberOfMonths={2}
+              numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
               className="pointer-events-auto"
             />
           </PopoverContent>

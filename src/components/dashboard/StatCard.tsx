@@ -38,19 +38,24 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
   
   return (
     <Component 
-      className={cn('stat-card border animate-fade-in w-full text-left', variantStyles[variant], className)}
+      className={cn(
+        'stat-card border animate-fade-in w-full text-left touch-target',
+        variantStyles[variant],
+        onClick && 'active:scale-[0.98] transition-transform',
+        className
+      )}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="stat-label">{title}</p>
-          <p className="stat-value">{value}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
+          <p className="stat-label truncate">{title}</p>
+          <p className="stat-value truncate">{value}</p>
           {description && (
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{description}</p>
           )}
           {trend && (
             <p className={cn(
-              'text-xs font-medium',
+              'text-[10px] md:text-xs font-medium',
               trend.isPositive ? 'text-success' : 'text-destructive'
             )}>
               {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
@@ -58,7 +63,7 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
           )}
         </div>
         {icon && (
-          <div className={cn('p-2.5 rounded-lg', iconStyles[variant])}>
+          <div className={cn('p-1.5 md:p-2.5 rounded-lg shrink-0', iconStyles[variant])}>
             {icon}
           </div>
         )}
