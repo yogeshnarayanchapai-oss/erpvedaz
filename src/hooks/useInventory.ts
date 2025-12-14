@@ -56,6 +56,10 @@ export function useInventory(warehouseId?: string, productSearch?: string, reord
           inv.products?.name?.toLowerCase().includes(search)
         );
       }
+      
+      // Sort by current stock descending (highest stock first)
+      result.sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0));
+      
       return result;
     },
     enabled: !!storeId,
