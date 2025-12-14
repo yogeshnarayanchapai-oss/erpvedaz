@@ -430,8 +430,10 @@ export default function AdminDashboard() {
                     <TableRow>
                       <TableHead className="table-header">Product</TableHead>
                       <TableHead className="table-header text-right">Target</TableHead>
-                      <TableHead className="table-header text-right">Orders</TableHead>
-                      <TableHead className="table-header text-right">Qty Sold</TableHead>
+                      <TableHead className="table-header text-right">OVD</TableHead>
+                      <TableHead className="table-header text-right">VD</TableHead>
+                      <TableHead className="table-header text-right">OVD Qty</TableHead>
+                      <TableHead className="table-header text-right">VD Qty</TableHead>
                       <TableHead className="table-header text-right">Revenue</TableHead>
                       <TableHead className="table-header text-right">P/L</TableHead>
                     </TableRow>
@@ -441,8 +443,10 @@ export default function AdminDashboard() {
                       <TableRow key={item.name}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell className="text-right">{item.target}</TableCell>
-                        <TableCell className="text-right">{item.sales}</TableCell>
-                        <TableCell className="text-right text-primary font-medium">{item.qtySold || 0}</TableCell>
+                        <TableCell className="text-right">{item.ovdOrders || 0}</TableCell>
+                        <TableCell className="text-right">{item.vdOrders || 0}</TableCell>
+                        <TableCell className="text-right text-primary font-medium">{item.ovdQtySold || 0}</TableCell>
+                        <TableCell className="text-right text-primary font-medium">{item.vdQtySold || 0}</TableCell>
                         <TableCell className="text-right">₹{item.revenue.toFixed(0)}</TableCell>
                         <TableCell className={`text-right font-medium ${item.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                           ₹{item.pl.toFixed(0)}
