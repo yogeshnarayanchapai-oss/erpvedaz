@@ -329,15 +329,43 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
   ],
   MANAGER: [
-    { title: 'Dashboard', url: '/manager/dashboard', icon: LayoutDashboard },
-    { title: 'Reports', url: '/manager/reports', icon: FileText },
-    { title: 'Staff Targets', url: '/manager/targets', icon: Target },
-    { title: 'Approvals', url: '/manager/approvals', icon: CheckSquare },
+    { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+    {
+      title: 'Sales',
+      url: '/admin/products',
+      icon: TrendingUp,
+      children: salesItems,
+    },
+    {
+      title: 'Inventory',
+      url: '/admin/inventory/stock-summary',
+      icon: Warehouse,
+      children: inventoryItems,
+    },
+    {
+      title: 'Accounting',
+      url: '/admin/accounting/dashboard-new',
+      icon: Calculator,
+      children: accountingItems,
+    },
+    {
+      title: 'Marketing',
+      url: '/admin/marketing/ads',
+      icon: Megaphone,
+      children: marketingItems,
+    },
+    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',
       icon: BookOpen,
       children: knowledgeCenterItems,
+    },
+    {
+      title: 'HRM',
+      url: '/hrm/employees',
+      icon: Briefcase,
+      children: hrmItems,
     },
     {
       title: 'My Training',
