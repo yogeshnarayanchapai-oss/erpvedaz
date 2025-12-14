@@ -5,11 +5,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Boxes, DollarSign, AlertTriangle, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { useInventorySummaryByWarehouse } from '@/hooks/useInventorySummaryByWarehouse';
+import { Package, Boxes, DollarSign, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Pencil, Check, X } from 'lucide-react';
+import { useInventorySummaryByWarehouse, WarehouseStockSummary } from '@/hooks/useInventorySummaryByWarehouse';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import DateQuickFilters, { DateRange, getPresetRanges } from '@/components/inventory/DateQuickFilters';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 export default function StockSummary() {
   const [activeTab, setActiveTab] = useState('all');
@@ -22,6 +26,11 @@ export default function StockSummary() {
     label: 'This Month',
   });
 
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<number>(0);
+  const queryClient = useQueryClient();
+
   const { data: warehouses } = useActiveWarehouses();
   const { data: inventoryData, isLoading } = useInventorySummaryByWarehouse(
     activeTab,
@@ -30,6 +39,38 @@ export default function StockSummary() {
   );
 
   const formatCurrency = (val: number) => `Rs ${val.toLocaleString()}`;
+
+  const handleEditClick = (item: WarehouseStockSummary) => {
+    setEditingId(`${item.product_id}_${item.warehouse_id}`);
+    setEditValue(item.reorder_level);
+  };
+
+  const handleSave = async (item: WarehouseStockSummary) => {
+    try {
+      const newReorderRequired = item.current_stock <= editValue;
+      
+      const { error } = await supabase
+        .from('product_inventory')
+        .update({ 
+          reorder_level: editValue,
+          reorder_required: newReorderRequired
+        })
+        .eq('product_id', item.product_id)
+        .eq('warehouse_id', item.warehouse_id);
+
+      if (error) throw error;
+
+      toast({ title: 'Reorder level updated' });
+      queryClient.invalidateQueries({ queryKey: ['inventory_summary_warehouse'] });
+      setEditingId(null);
+    } catch (err: any) {
+      toast({ title: 'Failed to update', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+  };
 
   // Filter items by search and reorder
   const filteredItems =
@@ -202,7 +243,37 @@ export default function StockSummary() {
                           -{inv.total_out}
                         </TableCell>
                         <TableCell className="text-right font-semibold">{inv.current_stock}</TableCell>
-                        <TableCell className="text-right">{inv.reorder_level}</TableCell>
+                        <TableCell className="text-right">
+                          {editingId === `${inv.product_id}_${inv.warehouse_id}` ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(parseInt(e.target.value) || 0)}
+                                className="w-20 h-7 text-right"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSave(inv);
+                                  if (e.key === 'Escape') handleCancel();
+                                }}
+                              />
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleSave(inv)}>
+                                <Check className="h-3 w-3 text-green-600" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancel}>
+                                <X className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span 
+                              className="cursor-pointer hover:text-primary flex items-center justify-end gap-1"
+                              onClick={() => handleEditClick(inv)}
+                            >
+                              {inv.reorder_level}
+                              <Pencil className="h-3 w-3 opacity-50" />
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {inv.reorder_required ? (
                             <Badge variant="destructive">Yes</Badge>
