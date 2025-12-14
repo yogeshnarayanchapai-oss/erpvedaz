@@ -314,8 +314,8 @@ export default function StockMovements() {
                     </Select>
                   </div>
                 )}
-                {/* Product Daybook Reference Stats */}
-                {form.product_id && form.movement_date && (
+                {/* Product Daybook Reference Stats - only for OUT type */}
+                {form.movement_type === 'OUT' && form.product_id && form.movement_date && (
                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-md">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-4 w-4 text-blue-600" />
