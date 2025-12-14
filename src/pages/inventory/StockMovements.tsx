@@ -294,17 +294,18 @@ export default function StockMovements() {
                       {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Customer (Optional)'}
                     </Label>
                     <Select 
-                      value={form.party_id || ''} 
+                      value={form.party_id || 'none'} 
                       onValueChange={(v) => setForm({ 
                         ...form, 
-                        party_id: v || undefined,
-                        movement_source: form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER'
+                        party_id: v === 'none' ? undefined : v,
+                        movement_source: v === 'none' ? undefined : (form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER')
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={form.movement_type === 'IN' ? 'Select supplier' : 'Select customer'} />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
                         {(form.movement_type === 'IN' ? suppliers : customers)?.map((party) => (
                           <SelectItem key={party.id} value={party.id}>
                             {party.name}
