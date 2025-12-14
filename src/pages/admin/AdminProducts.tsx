@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
-import { useCreateInventory } from '@/hooks/useInventory';
+import { useCreateInventory, useUpdateInventory, useInventory } from '@/hooks/useInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,12 @@ import { Package, Plus, Edit2, Search, Trash2 } from 'lucide-react';
 export default function AdminProducts() {
   const { data: products = [], isLoading } = useProducts();
   const { data: warehouses = [] } = useActiveWarehouses();
+  const { data: inventoryData = [] } = useInventory();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const createInventory = useCreateInventory();
+  const updateInventory = useUpdateInventory();
   
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -44,6 +46,23 @@ export default function AdminProducts() {
     );
   }, [products, searchQuery]);
 
+  // Get existing inventory for the editing product
+  const existingInventory = useMemo(() => {
+    if (!editingProduct || !inventoryData.length) return null;
+    return inventoryData.find(inv => inv.product_id === editingProduct.id);
+  }, [editingProduct, inventoryData]);
+
+  // Update form when existing inventory is found
+  useEffect(() => {
+    if (existingInventory && editingProduct) {
+      setFormData(prev => ({
+        ...prev,
+        opening_stock: existingInventory.opening_stock?.toString() || '',
+        warehouse_id: existingInventory.warehouse_id || '',
+      }));
+    }
+  }, [existingInventory, editingProduct]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -55,13 +74,37 @@ export default function AdminProducts() {
       wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price) : null,
     };
 
+    const openingStock = formData.opening_stock ? parseFloat(formData.opening_stock) : 0;
+
     if (editingProduct) {
       await updateProduct.mutateAsync({ id: editingProduct.id, ...data });
+      
+      // Update or create inventory record for existing product
+      if (formData.warehouse_id) {
+        if (existingInventory) {
+          // Update existing inventory
+          const stockDiff = openingStock - (existingInventory.opening_stock || 0);
+          await updateInventory.mutateAsync({
+            id: existingInventory.id,
+            opening_stock: openingStock,
+            current_stock: (existingInventory.current_stock || 0) + stockDiff,
+          });
+        } else {
+          // Create new inventory record
+          await createInventory.mutateAsync({
+            product_id: editingProduct.id,
+            warehouse_id: formData.warehouse_id,
+            opening_stock: openingStock,
+            current_stock: openingStock,
+            reorder_level: 0,
+            reorder_required: false,
+          });
+        }
+      }
     } else {
       const newProduct = await createProduct.mutateAsync(data);
       
       // Create inventory record if opening stock and warehouse provided
-      const openingStock = formData.opening_stock ? parseFloat(formData.opening_stock) : 0;
       if (formData.warehouse_id && newProduct) {
         await createInventory.mutateAsync({
           product_id: newProduct.id,
@@ -166,39 +209,37 @@ export default function AdminProducts() {
                   </div>
                 </div>
                 
-                {/* Opening Stock section - only for new products */}
-                {!editingProduct && (
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                    <div className="space-y-2">
-                      <Label htmlFor="warehouse">Warehouse</Label>
-                      <Select
-                        value={formData.warehouse_id}
-                        onValueChange={(value) => setFormData({ ...formData, warehouse_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select warehouse" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {warehouses.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="opening_stock">Opening Stock</Label>
-                      <Input
-                        id="opening_stock"
-                        type="number"
-                        value={formData.opening_stock}
-                        onChange={(e) => setFormData({ ...formData, opening_stock: e.target.value })}
-                        placeholder="0"
-                      />
-                    </div>
+                {/* Opening Stock section */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                  <div className="space-y-2">
+                    <Label htmlFor="warehouse">Warehouse</Label>
+                    <Select
+                      value={formData.warehouse_id}
+                      onValueChange={(value) => setFormData({ ...formData, warehouse_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select warehouse" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouses.map((wh) => (
+                          <SelectItem key={wh.id} value={wh.id}>
+                            {wh.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <Label htmlFor="opening_stock">Opening Stock</Label>
+                    <Input
+                      id="opening_stock"
+                      type="number"
+                      value={formData.opening_stock}
+                      onChange={(e) => setFormData({ ...formData, opening_stock: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
                 
                 <Button type="submit" className="w-full" disabled={createProduct.isPending || updateProduct.isPending || createInventory.isPending}>
                   {editingProduct ? 'Update Product' : 'Create Product'}
