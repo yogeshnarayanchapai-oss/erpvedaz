@@ -415,15 +415,16 @@ export default function LogisticsDashboard() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Logistics Dashboard</h1>
-          <p className="text-muted-foreground">Delivery performance metrics and trends</p>
+          <h1 className="text-xl md:text-2xl font-bold">Logistics Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Delivery performance metrics</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select value={period} onValueChange={(v) => setPeriod(v as TimePeriod)}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-32 md:w-40 h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -435,12 +436,12 @@ export default function LogisticsDashboard() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export
+              <Button variant="outline" size="sm" className="h-9">
+                <Download className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Export</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="bg-popover">
               <DropdownMenuItem onClick={exportToExcel}>
                 <FileSpreadsheet className="w-4 h-4 mr-2" />
                 Export to Excel
@@ -456,6 +457,7 @@ export default function LogisticsDashboard() {
           <Button 
             variant={alertSettings.enabled ? "default" : "outline"} 
             size="icon"
+            className="h-9 w-9"
             onClick={toggleAlerts}
             title={alertSettings.enabled ? "Alerts enabled" : "Alerts disabled"}
           >

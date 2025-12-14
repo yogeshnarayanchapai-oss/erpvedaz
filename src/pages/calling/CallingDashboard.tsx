@@ -215,18 +215,19 @@ export default function CallingDashboard() {
 
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Calling Dashboard</h1>
-          <p className="text-muted-foreground">Your performance overview</p>
+          <h1 className="text-xl md:text-2xl font-bold">Calling Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Your performance overview</p>
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
           {/* Date Filter */}
           <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[120px] md:w-[140px] h-9">
+              <Calendar className="w-4 h-4 mr-1 md:mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -239,32 +240,32 @@ export default function CallingDashboard() {
           </Select>
           
           {datePreset === 'custom' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input
                 type="date"
                 value={customDateFrom}
                 onChange={(e) => setCustomDateFrom(e.target.value)}
-                className="w-36"
+                className="flex-1 sm:w-32 h-9"
               />
-              <span className="text-muted-foreground">to</span>
+              <span className="text-muted-foreground text-sm">to</span>
               <Input
                 type="date"
                 value={customDateTo}
                 onChange={(e) => setCustomDateTo(e.target.value)}
-                className="w-36"
+                className="flex-1 sm:w-32 h-9"
               />
             </div>
           )}
           
-          <Button onClick={() => navigate('/calling/leads')} variant="outline">
+          <Button onClick={() => navigate('/calling/leads')} variant="outline" size="sm" className="hidden sm:flex">
             <ArrowRight className="w-4 h-4 mr-2" />
             Go to My Leads
           </Button>
         </div>
       </div>
 
-      {/* Stats - All cards are clickable to filter My Leads */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      {/* Stats - Mobile: 2 cols, Tablet: 4 cols, Desktop: 7 cols */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-4">
         <StatCard
           title="Assigned"
           value={assignedCount}
@@ -323,14 +324,14 @@ export default function CallingDashboard() {
 
       {/* Follow-Up Statistics */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Bell className="w-5 h-5 text-primary" />
+        <CardHeader className="pb-2 md:pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+            <Bell className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             Follow-Up Statistics
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
             <StatCard
               title="Today Follow-Ups Due"
               value={followupStats.todayFollowupsDue}
@@ -368,14 +369,14 @@ export default function CallingDashboard() {
       {/* Inside Valley Delivery Stats */}
       {insideValleyOrdersCount > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MapPin className="w-5 h-5 text-primary" />
-              Inside Valley Delivery Status
+          <CardHeader className="pb-2 md:pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+              <MapPin className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              Inside Valley Delivery
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
               <StatCard
                 title="IV Delivered"
                 value={ivDelivered}
