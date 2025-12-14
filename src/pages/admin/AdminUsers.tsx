@@ -47,7 +47,8 @@ function generatePassword(length = 12): string {
 export default function AdminUsers() {
   const { profile } = useAuth();
   const { currentStore } = useCurrentStore();
-  const isAdmin = isAdminRole(profile?.role);
+  const isOwnerRole = isAdminRole(profile?.role); // OWNER role (displays as "Admin")
+  const isManagerRole = profile?.role === 'ADMIN'; // ADMIN role (displays as "Manager")
   
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -74,7 +75,7 @@ export default function AdminUsers() {
       if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: isOwnerRole,
   });
   
   // Create a map of user_id -> store info
@@ -93,10 +94,10 @@ export default function AdminUsers() {
   // Determine includeInactive based on statusFilter
   const includeInactive = statusFilter === 'ALL' || statusFilter === 'INACTIVE';
   
-  // For OWNER: use header store switcher (currentStore) if selected, otherwise use dropdown filter
-  // For non-OWNER: always use currentStore from context
-  const effectiveStoreId = isAdmin 
-    ? (currentStore?.id || (storeFilter !== 'ALL' ? storeFilter : undefined))
+  // For OWNER: use store dropdown filter (storeFilter), if 'ALL' show all users
+  // For Manager (ADMIN role): always use currentStore from context (their assigned store only)
+  const effectiveStoreId = isOwnerRole 
+    ? (storeFilter !== 'ALL' ? storeFilter : undefined)
     : currentStore?.id;
   
   // Include OWNER role users in AdminUsers page when filtering by store
@@ -363,7 +364,7 @@ const usersWithEmployee = useMemo(() => {
       if (roleError) throw roleError;
 
       // Handle store assignments for OWNER
-      if (isAdmin && editingUser.role !== 'OWNER') {
+      if (isOwnerRole && editingUser.role !== 'OWNER') {
         const currentStoreIds = editingUserStoreAccess.map(a => a.store_id);
         
         // Remove stores that were deselected
@@ -473,13 +474,13 @@ const usersWithEmployee = useMemo(() => {
     e.preventDefault();
     
     // Non-OWNER users must have a current store to create users
-    if (!isAdmin && !currentStore?.id) {
+    if (!isOwnerRole && !currentStore?.id) {
       toast.error('No store context. Please access this page from a store portal.');
       return;
     }
 
     // OWNER must select at least one store if stores exist
-    if (isAdmin && allStores.length > 0 && selectedStoreIds.length === 0) {
+    if (isOwnerRole && allStores.length > 0 && selectedStoreIds.length === 0) {
       toast.error('Please select at least one store for this user.');
       return;
     }
@@ -498,7 +499,7 @@ const usersWithEmployee = useMemo(() => {
           phone: formData.phone || null,
           role: formData.role,
           // Always pass current store_id for non-OWNER users
-          store_id: isAdmin ? undefined : currentStore?.id,
+          store_id: isOwnerRole ? undefined : currentStore?.id,
         },
       });
 
@@ -543,7 +544,7 @@ const usersWithEmployee = useMemo(() => {
       const createdUserId = response.data?.user?.id;
 
       // For OWNER: Assign selected stores with per-store roles
-      if (isAdmin && createdUserId && selectedStoreIds.length > 0) {
+      if (isOwnerRole && createdUserId && selectedStoreIds.length > 0) {
         for (const storeId of selectedStoreIds) {
           try {
             await assignStoreMutation.mutateAsync({
@@ -780,7 +781,7 @@ const usersWithEmployee = useMemo(() => {
                 </div>
 
                 {/* Store Selection for OWNER */}
-                {isAdmin && allStores.length > 0 && (
+                {isOwnerRole && allStores.length > 0 && (
                   <div className="space-y-2">
                     <Label>Assign to Stores *</Label>
                     <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
@@ -886,7 +887,7 @@ const usersWithEmployee = useMemo(() => {
             </div>
 
             {/* Store Assignment - OWNER can assign to any user including other OWNERs */}
-            {isAdmin && allStores.length > 0 && (
+            {isOwnerRole && allStores.length > 0 && (
               <div className="space-y-2">
                 <Label>Assign to Stores</Label>
                 <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
@@ -976,7 +977,7 @@ const usersWithEmployee = useMemo(() => {
                   <SelectItem value="ALL">All Status</SelectItem>
                 </SelectContent>
               </Select>
-              {isAdmin && (
+              {isOwnerRole && (
                 <Select value={storeFilter} onValueChange={setStoreFilter}>
                   <SelectTrigger className="w-[150px]">
                     <Store className="w-4 h-4 mr-2" />
@@ -1002,7 +1003,7 @@ const usersWithEmployee = useMemo(() => {
                   <TableHead className="table-header">Email</TableHead>
                   <TableHead className="table-header">Phone</TableHead>
                   <TableHead className="table-header">Role</TableHead>
-                  {isAdmin && <TableHead className="table-header">Store</TableHead>}
+                  {isOwnerRole && <TableHead className="table-header">Store</TableHead>}
                   <TableHead className="table-header">Employee</TableHead>
                   <TableHead className="table-header">Status</TableHead>
                   <TableHead className="table-header">Actions</TableHead>
@@ -1022,7 +1023,7 @@ const usersWithEmployee = useMemo(() => {
                           {getRoleDisplayLabel(user.role)}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
+                      {isOwnerRole && (
                         <TableCell>
                           {user.role === 'OWNER' ? (
                             <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
@@ -1130,7 +1131,7 @@ const usersWithEmployee = useMemo(() => {
                 })}
                 {filteredStaff.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={isOwnerRole ? 8 : 7} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
