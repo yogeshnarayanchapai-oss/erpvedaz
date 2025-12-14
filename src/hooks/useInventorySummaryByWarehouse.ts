@@ -122,7 +122,7 @@ export function useInventorySummaryByWarehouse(
           last_movement_date: movements.last_date,
           drawer_number: inv.drawer_number,
         };
-      });
+      }).sort((a, b) => b.current_stock - a.current_stock);
 
       // Calculate totals
       const totals = summary.reduce(
