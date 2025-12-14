@@ -172,6 +172,32 @@ const accountingItems: MenuItem[] = [
   { title: 'Audit Dashboard', url: '/admin/accounting/audit', icon: ClipboardList },
 ];
 
+// Sales submenu for Admin/Owner
+const salesItems: MenuItem[] = [
+  { title: 'Products', url: '/admin/products', icon: Package },
+  { title: 'Branches', url: '/admin/branches', icon: Building2 },
+  { title: 'Leads', url: '/admin/leads', icon: Phone },
+  { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
+  { title: 'Customers', url: '/admin/customers', icon: Users },
+  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { 
+    title: 'Reports', 
+    url: '/admin/reports', 
+    icon: FileText,
+    children: [
+      { title: 'All Reports', url: '/admin/reports', icon: FileText },
+      { title: 'Daily Performance', url: '/admin/reports/daily-performance', icon: TrendingUp },
+    ]
+  },
+  { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
+  {
+    title: 'Courier Integration',
+    url: '/admin/logistics-dashboard',
+    icon: Truck,
+    children: logisticsItems,
+  },
+];
+
 const menuItems: Record<AppRole, MenuItem[]> = {
   OWNER: [
     { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
@@ -184,9 +210,13 @@ const menuItems: Record<AppRole, MenuItem[]> = {
         { title: 'Roles & Permissions', url: '/admin/roles-permissions', icon: Shield },
       ]
     },
-    { title: 'Products', url: '/admin/products', icon: Package },
     { title: 'Stores', url: '/admin/stores', icon: Store },
-    { title: 'Branches', url: '/admin/branches', icon: Building2 },
+    {
+      title: 'Sales',
+      url: '/admin/products',
+      icon: TrendingUp,
+      children: salesItems,
+    },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -205,29 +235,9 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Megaphone,
       children: marketingItems,
     },
-    { title: 'Leads', url: '/admin/leads', icon: Phone },
-    { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
-    { title: 'Customers', url: '/admin/customers', icon: Users },
-    { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
-    { 
-      title: 'Reports', 
-      url: '/admin/reports', 
-      icon: FileText,
-      children: [
-        { title: 'All Reports', url: '/admin/reports', icon: FileText },
-        { title: 'Daily Performance', url: '/admin/reports/daily-performance', icon: TrendingUp },
-      ]
-    },
-    { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
     { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     { title: 'Branding', url: '/admin/branding', icon: Palette },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
-    {
-      title: 'Courier Integration',
-      url: '/admin/logistics-dashboard',
-      icon: Package,
-      children: logisticsItems,
-    },
     {
       title: 'Messaging',
       url: '/admin/messaging/channels',
@@ -258,8 +268,12 @@ const menuItems: Record<AppRole, MenuItem[]> = {
         { title: 'Roles & Permissions', url: '/admin/roles-permissions', icon: Shield },
       ]
     },
-    { title: 'Products', url: '/admin/products', icon: Package },
-    { title: 'Branches', url: '/admin/branches', icon: Building2 },
+    {
+      title: 'Sales',
+      url: '/admin/products',
+      icon: TrendingUp,
+      children: salesItems,
+    },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -278,28 +292,8 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Megaphone,
       children: marketingItems,
     },
-    { title: 'Leads', url: '/admin/leads', icon: Phone },
-    { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
-    { title: 'Customers', url: '/admin/customers', icon: Users },
-    { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
-    { 
-      title: 'Reports', 
-      url: '/admin/reports', 
-      icon: FileText,
-      children: [
-        { title: 'All Reports', url: '/admin/reports', icon: FileText },
-        { title: 'Daily Performance', url: '/admin/reports/daily-performance', icon: TrendingUp },
-      ]
-    },
-    { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
     { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
-    {
-      title: 'Courier Integration',
-      url: '/admin/logistics-dashboard',
-      icon: Package,
-      children: logisticsItems,
-    },
     {
       title: 'Messaging',
       url: '/admin/messaging/channels',
