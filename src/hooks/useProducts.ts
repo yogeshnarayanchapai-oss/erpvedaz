@@ -100,6 +100,31 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // First check if product has inventory with stock > 0
+      const { data: inventoryData, error: invError } = await supabase
+        .from('product_inventory')
+        .select('id, current_stock')
+        .eq('product_id', id);
+
+      if (invError) throw invError;
+
+      // Check if any inventory has stock > 0
+      const hasStock = inventoryData?.some(inv => (inv.current_stock || 0) > 0);
+      if (hasStock) {
+        throw new Error('Cannot delete product with existing inventory stock. Please clear stock first.');
+      }
+
+      // Delete related inventory records (where stock is 0)
+      if (inventoryData && inventoryData.length > 0) {
+        const { error: deleteInvError } = await supabase
+          .from('product_inventory')
+          .delete()
+          .eq('product_id', id);
+
+        if (deleteInvError) throw deleteInvError;
+      }
+
+      // Soft delete the product
       const { error } = await supabase
         .from('products')
         .update({ is_active: false })
@@ -109,6 +134,8 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory_summary_warehouse'] });
       toast.success('Product deleted successfully');
     },
     onError: (error) => {
