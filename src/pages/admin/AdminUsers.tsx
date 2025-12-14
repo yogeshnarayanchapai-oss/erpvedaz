@@ -810,7 +810,7 @@ const usersWithEmployee = useMemo(() => {
                                   <SelectValue placeholder="Select role for this store" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {getAvailableRoles().filter(r => r !== 'OWNER').map((role) => (
+                                  {getAvailableRoles().map((role) => (
                                     <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -916,7 +916,7 @@ const usersWithEmployee = useMemo(() => {
                               <SelectValue placeholder="Select role for this store" />
                             </SelectTrigger>
                             <SelectContent>
-                              {getAvailableRoles().filter(r => r !== 'OWNER').map((role) => (
+                              {getAvailableRoles().map((role) => (
                                 <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
                               ))}
                             </SelectContent>
