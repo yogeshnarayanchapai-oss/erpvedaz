@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface WarehouseStockSummary {
   product_id: string;
@@ -23,16 +24,18 @@ export function useInventorySummaryByWarehouse(
   startDate?: string,
   endDate?: string
 ) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['inventory_summary_warehouse', warehouseId, startDate, endDate],
+    queryKey: ['inventory_summary_warehouse', warehouseId, startDate, endDate, storeId],
     queryFn: async () => {
-      // Get inventory records
+      // Get inventory records with store filtering via products
       let inventoryQuery = supabase
         .from('product_inventory')
         .select(`
           *,
-          products:product_id(id, name, cost_price),
-          warehouses:warehouse_id(id, name)
+          products:product_id(id, name, cost_price, store_id),
+          warehouses:warehouse_id(id, name, store_id)
         `);
 
       if (warehouseId && warehouseId !== 'all') {
@@ -41,6 +44,13 @@ export function useInventorySummaryByWarehouse(
 
       const { data: inventoryData, error: invErr } = await inventoryQuery;
       if (invErr) throw invErr;
+
+      // Filter by store_id via product or warehouse relation
+      const filteredInventory = storeId 
+        ? (inventoryData || []).filter((inv: any) => 
+            inv.products?.store_id === storeId || inv.warehouses?.store_id === storeId
+          )
+        : inventoryData;
 
       // Get stock movements grouped by product/warehouse
       let movementsQuery = supabase
@@ -87,7 +97,7 @@ export function useInventorySummaryByWarehouse(
       });
 
       // Build summary
-      const summary: WarehouseStockSummary[] = (inventoryData || []).map((inv: any) => {
+      const summary: WarehouseStockSummary[] = (filteredInventory || []).map((inv: any) => {
         const key = `${inv.product_id}_${inv.warehouse_id}`;
         const movements = movementTotals[key] || { total_in: 0, total_out: 0, last_date: null };
         const costPrice = inv.products?.cost_price || 0;
@@ -124,5 +134,6 @@ export function useInventorySummaryByWarehouse(
 
       return { items: summary, totals };
     },
+    enabled: !!storeId,
   });
 }

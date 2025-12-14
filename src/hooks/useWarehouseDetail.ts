@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export interface WarehouseDetailStats {
   totalCurrentStock: number;
@@ -9,42 +10,56 @@ export interface WarehouseDetailStats {
 }
 
 export function useWarehouseById(warehouseId: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouse', warehouseId],
+    queryKey: ['warehouse', warehouseId, storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('warehouses')
         .select('*')
-        .eq('id', warehouseId)
-        .maybeSingle();
+        .eq('id', warehouseId);
+
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!warehouseId,
+    enabled: !!warehouseId && !!storeId,
   });
 }
 
 export function useWarehouseStats(warehouseId: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouse_stats', warehouseId],
+    queryKey: ['warehouse_stats', warehouseId, storeId],
     queryFn: async () => {
-      // Get inventory for this warehouse
+      // Get inventory for this warehouse with store filtering
       const { data: inventory, error: invErr } = await supabase
         .from('product_inventory')
         .select(`
           current_stock,
           reorder_level,
-          products:product_id(cost_price)
+          products:product_id(cost_price, store_id)
         `)
         .eq('warehouse_id', warehouseId);
 
       if (invErr) throw invErr;
 
+      // Filter by store
+      const filteredInventory = storeId
+        ? (inventory || []).filter((item: any) => item.products?.store_id === storeId)
+        : inventory;
+
       let totalCurrentStock = 0;
       let stockValue = 0;
       let lowStockProducts = 0;
 
-      inventory?.forEach((item: any) => {
+      filteredInventory?.forEach((item: any) => {
         totalCurrentStock += item.current_stock || 0;
         const costPrice = item.products?.cost_price || 0;
         stockValue += (item.current_stock || 0) * costPrice;
@@ -53,21 +68,26 @@ export function useWarehouseStats(warehouseId: string) {
         }
       });
 
-      // Get units sold in last 30 days
+      // Get units sold in last 30 days - filter by warehouse (which is already store-scoped)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const thirtyDaysStr = thirtyDaysAgo.toISOString().split('T')[0];
 
       const { data: movements, error: movErr } = await supabase
         .from('stock_movements')
-        .select('qty')
+        .select('qty, products:product_id(store_id)')
         .eq('warehouse_id', warehouseId)
         .eq('movement_type', 'OUT')
         .gte('movement_date', thirtyDaysStr);
 
       if (movErr) throw movErr;
 
-      const unitsSoldLast30Days = movements?.reduce((sum, m) => sum + (m.qty || 0), 0) || 0;
+      // Filter by store via product
+      const filteredMovements = storeId
+        ? (movements || []).filter((m: any) => m.products?.store_id === storeId)
+        : movements;
+
+      const unitsSoldLast30Days = filteredMovements?.reduce((sum: number, m: any) => sum + (m.qty || 0), 0) || 0;
 
       return {
         totalCurrentStock,
@@ -76,29 +96,36 @@ export function useWarehouseStats(warehouseId: string) {
         unitsSoldLast30Days,
       } as WarehouseDetailStats;
     },
-    enabled: !!warehouseId,
+    enabled: !!warehouseId && !!storeId,
   });
 }
 
 export function useWarehouseInventory(warehouseId: string, startDate?: string, endDate?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouse_inventory', warehouseId, startDate, endDate],
+    queryKey: ['warehouse_inventory', warehouseId, startDate, endDate, storeId],
     queryFn: async () => {
       // Get inventory records for this warehouse
       const { data: inventoryData, error: invErr } = await supabase
         .from('product_inventory')
         .select(`
           *,
-          products:product_id(id, name, cost_price)
+          products:product_id(id, name, cost_price, store_id)
         `)
         .eq('warehouse_id', warehouseId);
 
       if (invErr) throw invErr;
 
+      // Filter by store
+      const filteredInventory = storeId
+        ? (inventoryData || []).filter((inv: any) => inv.products?.store_id === storeId)
+        : inventoryData;
+
       // Get stock movements grouped by product for this warehouse
       let movementsQuery = supabase
         .from('stock_movements')
-        .select('product_id, movement_type, qty, movement_date')
+        .select('product_id, movement_type, qty, movement_date, products:product_id(store_id)')
         .eq('warehouse_id', warehouseId);
 
       if (startDate) {
@@ -111,10 +138,15 @@ export function useWarehouseInventory(warehouseId: string, startDate?: string, e
       const { data: movementsData, error: movErr } = await movementsQuery;
       if (movErr) throw movErr;
 
+      // Filter movements by store via product
+      const filteredMovements = storeId
+        ? (movementsData || []).filter((m: any) => m.products?.store_id === storeId)
+        : movementsData;
+
       // Calculate In/Out per product
       const movementTotals: Record<string, { total_in: number; total_out: number }> = {};
 
-      movementsData?.forEach((m: any) => {
+      (filteredMovements || []).forEach((m: any) => {
         const pid = m.product_id;
         if (!movementTotals[pid]) {
           movementTotals[pid] = { total_in: 0, total_out: 0 };
@@ -128,7 +160,7 @@ export function useWarehouseInventory(warehouseId: string, startDate?: string, e
       });
 
       // Build summary
-      const summary = (inventoryData || []).map((inv: any) => {
+      const summary = (filteredInventory || []).map((inv: any) => {
         const movements = movementTotals[inv.product_id] || { total_in: 0, total_out: 0 };
         const costPrice = inv.products?.cost_price || 0;
 
@@ -149,19 +181,21 @@ export function useWarehouseInventory(warehouseId: string, startDate?: string, e
 
       return summary;
     },
-    enabled: !!warehouseId,
+    enabled: !!warehouseId && !!storeId,
   });
 }
 
 export function useWarehouseMovements(warehouseId: string, startDate?: string, endDate?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['warehouse_movements', warehouseId, startDate, endDate],
+    queryKey: ['warehouse_movements', warehouseId, startDate, endDate, storeId],
     queryFn: async () => {
       let query = supabase
         .from('stock_movements')
         .select(`
           *,
-          products:product_id(name)
+          products:product_id(name, store_id)
         `)
         .eq('warehouse_id', warehouseId)
         .order('movement_date', { ascending: false })
@@ -176,8 +210,14 @@ export function useWarehouseMovements(warehouseId: string, startDate?: string, e
 
       const { data, error } = await query.limit(100);
       if (error) throw error;
-      return data;
+
+      // Filter by store via product
+      const filteredData = storeId
+        ? (data || []).filter((m: any) => m.products?.store_id === storeId)
+        : data;
+
+      return filteredData;
     },
-    enabled: !!warehouseId,
+    enabled: !!warehouseId && !!storeId,
   });
 }
