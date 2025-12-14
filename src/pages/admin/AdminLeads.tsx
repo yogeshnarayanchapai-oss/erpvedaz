@@ -799,6 +799,7 @@ export default function AdminLeads() {
           cnrLeadsTransferred={transferProgressStats.cnrLeadsTransferred}
           totalRemainingInPool={transferProgressStats.totalRemainingInPool}
           dateLabel={dateFrom === dateTo ? 'Today' : `${dateFrom} to ${dateTo}`}
+          showTotalInstead={true}
         />
       )}
 

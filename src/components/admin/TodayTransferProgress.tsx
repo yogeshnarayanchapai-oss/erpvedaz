@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Send, PhoneOff, Percent, Inbox } from 'lucide-react';
+import { TrendingUp, Send, PhoneOff, Percent, Inbox, LayoutList } from 'lucide-react';
 
 interface TodayTransferProgressProps {
   totalTodayLeads: number;
@@ -10,6 +10,7 @@ interface TodayTransferProgressProps {
   cnrLeadsTransferred?: number;
   totalRemainingInPool?: number;
   dateLabel?: string;
+  showTotalInstead?: boolean; // If true, shows "Total" instead of "Total Remaining"
 }
 
 export function TodayTransferProgress({
@@ -20,6 +21,7 @@ export function TodayTransferProgress({
   cnrLeadsTransferred = 0,
   totalRemainingInPool = 0,
   dateLabel = "Today",
+  showTotalInstead = false,
 }: TodayTransferProgressProps) {
   const progressPercent = totalTodayLeads > 0 
     ? Math.round((transferredToday / totalTodayLeads) * 100) 
@@ -62,12 +64,20 @@ export function TodayTransferProgress({
         </CardContent>
       </Card>
 
-      {/* Total Remaining Card */}
+      {/* Total / Total Remaining Card */}
       <Card className="border shadow-sm min-w-[140px]">
         <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-          <Inbox className="w-5 h-5 text-chart-3 mb-1" />
-          <span className="text-2xl font-bold">{totalRemainingInPool.toLocaleString()}</span>
-          <span className="text-xs text-muted-foreground">Total Remaining</span>
+          {showTotalInstead ? (
+            <LayoutList className="w-5 h-5 text-primary mb-1" />
+          ) : (
+            <Inbox className="w-5 h-5 text-chart-3 mb-1" />
+          )}
+          <span className="text-2xl font-bold">
+            {showTotalInstead ? totalTodayLeads.toLocaleString() : totalRemainingInPool.toLocaleString()}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {showTotalInstead ? 'Total' : 'Total Remaining'}
+          </span>
         </CardContent>
       </Card>
 
