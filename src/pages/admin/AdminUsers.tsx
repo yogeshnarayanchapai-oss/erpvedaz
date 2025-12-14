@@ -93,8 +93,11 @@ export default function AdminUsers() {
   // Determine includeInactive based on statusFilter
   const includeInactive = statusFilter === 'ALL' || statusFilter === 'INACTIVE';
   
-  // For OWNER with store filter, pass the selected store to filter at DB level
-  const effectiveStoreId = isAdmin && storeFilter !== 'ALL' ? storeFilter : undefined;
+  // For OWNER: use header store switcher (currentStore) if selected, otherwise use dropdown filter
+  // For non-OWNER: always use currentStore from context
+  const effectiveStoreId = isAdmin 
+    ? (currentStore?.id || (storeFilter !== 'ALL' ? storeFilter : undefined))
+    : currentStore?.id;
   const { data: staff = [], isLoading } = useStaff(undefined, includeInactive, effectiveStoreId);
   const { data: employees = [] } = useEmployees();
   const [isOpen, setIsOpen] = useState(false);
