@@ -168,10 +168,10 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
   return useQuery({
     queryKey: ['product_daybook_by_range', fromDate, toDate, products.map(p => p.id), storeId],
     queryFn: async () => {
-      // Fetch orders for confirmed/dispatched status, filtered by store
+      // Fetch orders with delivery_location and inside_delivery_status for OVD/VD split
       let ordersQuery = supabase
         .from('orders')
-        .select('id, product_id, amount, order_status, store_id')
+        .select('id, product_id, amount, order_status, store_id, delivery_location, inside_delivery_status')
         .eq('is_deleted', false)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`);
@@ -184,17 +184,32 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
 
       if (ordersError) throw ordersError;
 
-      // Fetch order_items to get quantities
-      const orderIds = (orders || [])
-        .filter(o => ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || ''))
+      // OVD orders: OUTSIDE_VALLEY with CONFIRMED/DISPATCHED
+      const ovdOrderIds = (orders || [])
+        .filter(o => 
+          o.delivery_location === 'OUTSIDE_VALLEY' && 
+          ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || '')
+        )
         .map(o => o.id);
 
-      let orderItemsData: { product_id: string | null; quantity: number | null }[] = [];
-      if (orderIds.length > 0) {
+      // VD orders: INSIDE_VALLEY with CONFIRMED and inside_delivery_status = DELIVERED
+      const vdOrderIds = (orders || [])
+        .filter(o => 
+          o.delivery_location === 'INSIDE_VALLEY' && 
+          o.order_status === 'CONFIRMED' && 
+          o.inside_delivery_status === 'DELIVERED'
+        )
+        .map(o => o.id);
+
+      // Combined order IDs for fetching items
+      const allValidOrderIds = [...new Set([...ovdOrderIds, ...vdOrderIds])];
+
+      let orderItemsData: { order_id: string | null; product_id: string | null; quantity: number | null }[] = [];
+      if (allValidOrderIds.length > 0) {
         const { data: items, error: itemsError } = await supabase
           .from('order_items')
-          .select('product_id, quantity')
-          .in('order_id', orderIds);
+          .select('order_id, product_id, quantity')
+          .in('order_id', allValidOrderIds);
 
         if (itemsError) throw itemsError;
         orderItemsData = items || [];
@@ -256,11 +271,18 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         }
       });
 
-      // Calculate qty sold per product from order_items
-      const qtySoldByProduct: Record<string, number> = {};
+      // Calculate qty sold per product from order_items, split by OVD/VD
+      const ovdQtySoldByProduct: Record<string, number> = {};
+      const vdQtySoldByProduct: Record<string, number> = {};
+      
       orderItemsData.forEach(item => {
-        if (item.product_id) {
-          qtySoldByProduct[item.product_id] = (qtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+        if (item.product_id && item.order_id) {
+          if (ovdOrderIds.includes(item.order_id)) {
+            ovdQtySoldByProduct[item.product_id] = (ovdQtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+          }
+          if (vdOrderIds.includes(item.order_id)) {
+            vdQtySoldByProduct[item.product_id] = (vdQtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+          }
         }
       });
 
@@ -275,17 +297,32 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
 
       const rtoPercent = rtoSetting?.rto_percent || 0;
 
+      // Create sets for faster lookup
+      const ovdOrderIdSet = new Set(ovdOrderIds);
+      const vdOrderIdSet = new Set(vdOrderIds);
+
       return products.map(product => {
-        // Filter orders for CONFIRMED or DISPATCHED status
-        const productOrders = (orders || []).filter(
-          o => o.product_id === product.id && ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || '')
+        // Count OVD and VD orders separately
+        const ovdProductOrders = (orders || []).filter(
+          o => o.product_id === product.id && ovdOrderIdSet.has(o.id)
         );
-        const revenue = productOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-        const orderCount = productOrders.length;
+        const vdProductOrders = (orders || []).filter(
+          o => o.product_id === product.id && vdOrderIdSet.has(o.id)
+        );
+        
+        const ovdOrderCount = ovdProductOrders.length;
+        const vdOrderCount = vdProductOrders.length;
+        const totalOrderCount = ovdOrderCount + vdOrderCount;
+        
+        const ovdRevenue = ovdProductOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const vdRevenue = vdProductOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const totalRevenue = ovdRevenue + vdRevenue;
         
         // Use ads spend target for target column
         const adsTarget = targetByProduct[product.id] || 0;
-        const qtySold = qtySoldByProduct[product.id] || 0;
+        const ovdQtySold = ovdQtySoldByProduct[product.id] || 0;
+        const vdQtySold = vdQtySoldByProduct[product.id] || 0;
+        const totalQtySold = ovdQtySold + vdQtySold;
         
         // Get ads spend: latest reference × days × dollar rate (carry-forward logic)
         const dailyAdsUsd = latestAdsByProduct[product.id] || 0;
@@ -295,21 +332,25 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         // Product Cost = qtySold × costPrice (not orderCount)
         // Redirect = orderCount × 20% × 50 (not qtySold)
         // RTO = orderCount × RTO% × 200 (not qtySold)
-        const productCost = qtySold * (product.cost_price || 0);
-        const staffOfficeCost = orderCount * 50;
-        const deliveryCost = orderCount * 250;
-        const redirectCost = Math.round(orderCount * 0.2 * 50);
-        const rtoUnits = Math.round(orderCount * (rtoPercent / 100));
+        const productCost = totalQtySold * (product.cost_price || 0);
+        const staffOfficeCost = totalOrderCount * 50;
+        const deliveryCost = totalOrderCount * 250;
+        const redirectCost = Math.round(totalOrderCount * 0.2 * 50);
+        const rtoUnits = Math.round(totalOrderCount * (rtoPercent / 100));
         const rtoCost = rtoUnits * 200;
         
-        const pl = revenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
+        const pl = totalRevenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
         
         return {
           name: product.name,
           target: adsTarget,
-          sales: orderCount,
-          qtySold,
-          revenue,
+          sales: totalOrderCount,
+          ovdOrders: ovdOrderCount,
+          vdOrders: vdOrderCount,
+          qtySold: totalQtySold,
+          ovdQtySold,
+          vdQtySold,
+          revenue: totalRevenue,
           costPrice: product.cost_price || 0,
           sellPrice: product.sell_price || 0,
           pl,
