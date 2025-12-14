@@ -12,9 +12,14 @@ import { useProducts } from '@/hooks/useProducts';
 import { Package, ArrowDownCircle, ArrowUpCircle, Search, History } from 'lucide-react';
 import DateQuickFilters, { DateRange, getPresetRanges } from '@/components/inventory/DateQuickFilters';
 import { Outlet } from 'react-router-dom';
+import { ArrowLeftRight } from 'lucide-react';
 
-const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT'] as const;
-type MovementType = typeof MOVEMENT_TYPES[number];
+// Valid DB types for filtering
+const DB_MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT'] as const;
+type DBMovementType = typeof DB_MOVEMENT_TYPES[number];
+
+// Display types (including any additional types that may exist in data)
+const DISPLAY_MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT'] as const;
 
 function getTypeColor(type: string) {
   switch (type) {
@@ -50,7 +55,7 @@ export default function InventoryActivityLog() {
   const { data: movements = [], isLoading } = useStockMovements({
     warehouseId: warehouseFilter !== 'all' ? warehouseFilter : undefined,
     productId: productFilter !== 'all' ? productFilter : undefined,
-    movementType: typeFilter !== 'all' ? typeFilter as MovementType : undefined,
+    movementType: typeFilter !== 'all' ? typeFilter as DBMovementType : undefined,
     startDate: dateRange.startDate || undefined,
     endDate: dateRange.endDate || undefined,
   });
@@ -78,9 +83,10 @@ export default function InventoryActivityLog() {
     setSearchQuery('');
   };
 
-  // Calculate summary stats
+  // Calculate summary stats - include all stock movements
   const totalIn = filteredMovements.filter(m => ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type)).reduce((sum, m) => sum + (m.qty || 0), 0);
   const totalOut = filteredMovements.filter(m => ['OUT', 'TRANSFER_OUT', 'RTO_OUT'].includes(m.movement_type)).reduce((sum, m) => sum + (m.qty || 0), 0);
+  const totalAdjustments = filteredMovements.filter(m => m.movement_type === 'ADJUSTMENT').reduce((sum, m) => sum + (m.qty || 0), 0);
 
   return (
     <>
@@ -96,7 +102,7 @@ export default function InventoryActivityLog() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -119,6 +125,19 @@ export default function InventoryActivityLog() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Stock Out</p>
                   <p className="text-2xl font-bold text-red-600">{totalOut}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900">
+                  <ArrowLeftRight className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Adjustments</p>
+                  <p className="text-2xl font-bold text-yellow-600">{totalAdjustments}</p>
                 </div>
               </div>
             </CardContent>
@@ -184,7 +203,7 @@ export default function InventoryActivityLog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {MOVEMENT_TYPES.map(type => (
+                  {DB_MOVEMENT_TYPES.map(type => (
                     <SelectItem key={type} value={type}>{type.replace('_', ' ')}</SelectItem>
                   ))}
                 </SelectContent>
