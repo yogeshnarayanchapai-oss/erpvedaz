@@ -19,7 +19,7 @@ export function useProductDaybookStats(
       }
 
       // Build query for orders
-      // For INSIDE_VALLEY (VD): order_status = CONFIRMED AND delivery_status = DELIVERED
+      // For INSIDE_VALLEY (VD): order_status = CONFIRMED AND inside_delivery_status = DELIVERED
       // For OUTSIDE_VALLEY (OVD): CONFIRMED, DISPATCHED, DELIVERED orders
       let query = supabase
         .from('order_items')
@@ -27,7 +27,7 @@ export function useProductDaybookStats(
           quantity,
           unit_price,
           total_price,
-          orders!inner (id, order_status, order_date, store_id, delivery_location, delivery_status)
+          orders!inner (id, order_status, order_date, store_id, delivery_location, inside_delivery_status)
         `)
         .eq('product_id', productId)
         .gte('orders.order_date', `${date}T00:00:00`)
@@ -36,10 +36,10 @@ export function useProductDaybookStats(
 
       // Apply filters based on delivery location
       if (deliveryLocation === 'INSIDE_VALLEY') {
-        // VD: order_status = CONFIRMED AND delivery_status = DELIVERED
+        // VD: order_status = CONFIRMED AND inside_delivery_status = DELIVERED
         query = query
           .eq('orders.order_status', 'CONFIRMED')
-          .eq('orders.delivery_status', 'DELIVERED')
+          .eq('orders.inside_delivery_status', 'DELIVERED')
           .eq('orders.delivery_location', 'INSIDE_VALLEY');
       } else if (deliveryLocation === 'OUTSIDE_VALLEY') {
         // OVD: CONFIRMED, DISPATCHED, DELIVERED orders
