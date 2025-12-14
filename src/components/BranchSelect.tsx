@@ -41,12 +41,31 @@ export function BranchSelect({
   const filteredBranches = useMemo(() => {
     if (!search) return branches;
     const term = search.toLowerCase();
-    return branches.filter(b => 
+    const filtered = branches.filter(b => 
       b.branch_name.toLowerCase().includes(term) ||
       b.district?.toLowerCase().includes(term) ||
       b.province?.toLowerCase().includes(term) ||
       b.area_covered?.toLowerCase().includes(term)
     );
+    
+    // Sort: exact match first, then starts-with, then contains
+    return filtered.sort((a, b) => {
+      const aName = a.branch_name.toLowerCase();
+      const bName = b.branch_name.toLowerCase();
+      
+      // Exact match gets highest priority
+      if (aName === term && bName !== term) return -1;
+      if (bName === term && aName !== term) return 1;
+      
+      // Starts-with gets second priority
+      const aStarts = aName.startsWith(term);
+      const bStarts = bName.startsWith(term);
+      if (aStarts && !bStarts) return -1;
+      if (bStarts && !aStarts) return 1;
+      
+      // Then alphabetical
+      return aName.localeCompare(bName);
+    });
   }, [branches, search]);
 
   // Check if search matches any existing branch exactly
