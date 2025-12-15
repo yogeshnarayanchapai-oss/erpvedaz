@@ -67,62 +67,9 @@ export function useCreatePartyPayment() {
         .single();
       if (paymentError) throw paymentError;
 
-      // Get party name for transaction description
-      const { data: party } = await supabase
-        .from('parties')
-        .select('name')
-        .eq('id', payment.party_id)
-        .single();
-      
-      const partyName = party?.name || 'Party';
-      const isReceived = payment.payment_type === 'RECEIVED';
-      const transactionType = isReceived ? 'income' : 'expense';
-      const description = isReceived 
-        ? `Payment received from ${partyName}` 
-        : `Payment made to ${partyName}`;
-
-      // Create corresponding transaction entry (marked as cleared since payment is recorded)
-      const { data: transactionResult, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          date: payment.date,
-          type: transactionType,
-          amount: payment.amount,
-          account_id: accountId,
-          party_id: payment.party_id,
-          description: description,
-          note: payment.note,
-          reference_no: payment.reference,
-          is_cleared: true,
-          store_id: storeId,
-          currency: 'NPR',
-        })
-        .select()
-        .single();
-
-      if (transactionError) {
-        console.error('Failed to create transaction:', transactionError);
-      }
-
-      // Update account balance if an account was selected
-      if (accountId) {
-        const { data: account } = await supabase
-          .from('accounts')
-          .select('current_balance')
-          .eq('id', accountId)
-          .single();
-        
-        if (account) {
-          const newBalance = isReceived 
-            ? account.current_balance + payment.amount 
-            : account.current_balance - payment.amount;
-          
-          await supabase
-            .from('accounts')
-            .update({ current_balance: newBalance })
-            .eq('id', accountId);
-        }
-      }
+      // Transaction is auto-created by database trigger (create_accounting_transaction_on_payment)
+      // Account balance is auto-updated by trigger (trigger_update_account_balance on transactions)
+      // No manual transaction creation or balance update needed here
       
       return paymentResult;
     },
