@@ -50,6 +50,7 @@ export default function PartyStatement() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [selectedPendingEntry, setSelectedPendingEntry] = useState<typeof statement[0] | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [bulkPayAmount, setBulkPayAmount] = useState<string>('');
   const [isClearing, setIsClearing] = useState(false);
 
   const { data: accounts = [] } = useAccounts();
@@ -446,7 +447,7 @@ export default function PartyStatement() {
     }
   };
 
-  // Handle bulk payment for multiple pending transactions
+  // Handle bulk payment for multiple pending transactions with partial payment support
   const [isBulkPaying, setIsBulkPaying] = useState(false);
 
   const handleBulkPayment = async () => {
@@ -454,42 +455,130 @@ export default function PartyStatement() {
       toast.error('Please select an account');
       return;
     }
+    
+    const payAmount = parseFloat(bulkPayAmount) || 0;
+    if (payAmount <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
+    if (payAmount > selectedPendingStats.total) {
+      toast.error('Payment amount cannot exceed total pending');
+      return;
+    }
+    
     setIsBulkPaying(true);
     try {
       const selectedEntries = pendingEntries.filter(e => selectedPendingIds.includes(e.id));
       
-      for (const entry of selectedEntries) {
-        if (entry.type === 'PENDING') {
-          // Clear pending transaction
-          await supabase
-            .from('transactions')
-            .update({ is_cleared: true, account_id: selectedAccountId })
-            .eq('id', entry.id);
-        } else if (entry.type === 'TRANSACTION') {
-          // Mark inventory transaction as settled
-          await supabase
-            .from('party_transactions')
-            .update({
-              is_settled: true,
-              settled_at: new Date().toISOString(),
-              settled_account_id: selectedAccountId,
-            })
-            .eq('id', entry.id);
+      // Sort by date ascending (oldest first)
+      const sortedEntries = [...selectedEntries].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      
+      let remainingPayment = payAmount;
+      const today = format(new Date(), 'yyyy-MM-dd');
+      let fullyCleared = 0;
+      let partiallyCleared = 0;
+      
+      for (const entry of sortedEntries) {
+        if (remainingPayment <= 0) break;
+        
+        const entryAmount = entry.debit > 0 ? entry.debit : entry.credit;
+        
+        if (remainingPayment >= entryAmount) {
+          // Fully pay this transaction
+          const paymentRemark = `Rs ${entryAmount.toLocaleString()} paid on ${today}`;
           
-          // Create a transaction record for account balance update
-          const amount = entry.debit > 0 ? entry.debit : entry.credit;
-          const isReceiving = entry.debit > 0;
+          if (entry.type === 'PENDING') {
+            await supabase
+              .from('transactions')
+              .update({ 
+                is_cleared: true, 
+                account_id: selectedAccountId,
+                note: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
+              })
+              .eq('id', entry.id);
+          } else if (entry.type === 'TRANSACTION') {
+            await supabase
+              .from('party_transactions')
+              .update({
+                is_settled: true,
+                settled_at: new Date().toISOString(),
+                settled_account_id: selectedAccountId,
+                remarks: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
+              })
+              .eq('id', entry.id);
+            
+            // Create a transaction record for account balance update
+            const isReceiving = entry.debit > 0;
+            await supabase.from('transactions').insert({
+              date: today,
+              type: isReceiving ? 'income' : 'expense',
+              account_id: selectedAccountId,
+              party_id: selectedPartyId,
+              amount: entryAmount,
+              description: `Settlement: ${entry.particulars}`,
+              is_cleared: true,
+              store_id: selectedParty?.store_id,
+            });
+          }
           
-          await supabase.from('transactions').insert({
-            date: new Date().toISOString().split('T')[0],
-            type: isReceiving ? 'income' : 'expense',
-            account_id: selectedAccountId,
-            party_id: selectedPartyId,
-            amount: amount,
-            description: `Settlement: ${entry.particulars}`,
-            is_cleared: true,
-            store_id: selectedParty?.store_id,
-          });
+          remainingPayment -= entryAmount;
+          fullyCleared++;
+        } else {
+          // Partial payment - update amount to remaining, add remark
+          const paidAmount = remainingPayment;
+          const remainingAmount = entryAmount - paidAmount;
+          const paymentRemark = `Rs ${paidAmount.toLocaleString()} paid from Rs ${entryAmount.toLocaleString()} on ${today}`;
+          
+          if (entry.type === 'PENDING') {
+            await supabase
+              .from('transactions')
+              .update({ 
+                amount: remainingAmount,
+                note: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
+              })
+              .eq('id', entry.id);
+            
+            // Create cleared transaction for the paid portion
+            const isReceiving = entry.credit > 0;
+            await supabase.from('transactions').insert({
+              date: today,
+              type: isReceiving ? 'income' : 'expense',
+              account_id: selectedAccountId,
+              party_id: selectedPartyId,
+              amount: paidAmount,
+              description: `Partial: ${entry.particulars}`,
+              note: paymentRemark,
+              is_cleared: true,
+              store_id: selectedParty?.store_id,
+            });
+          } else if (entry.type === 'TRANSACTION') {
+            await supabase
+              .from('party_transactions')
+              .update({
+                amount: remainingAmount,
+                remarks: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
+              })
+              .eq('id', entry.id);
+            
+            // Create a transaction record for the paid portion
+            const isReceiving = entry.debit > 0;
+            await supabase.from('transactions').insert({
+              date: today,
+              type: isReceiving ? 'income' : 'expense',
+              account_id: selectedAccountId,
+              party_id: selectedPartyId,
+              amount: paidAmount,
+              description: `Partial Settlement: ${entry.particulars}`,
+              note: paymentRemark,
+              is_cleared: true,
+              store_id: selectedParty?.store_id,
+            });
+          }
+          
+          remainingPayment = 0;
+          partiallyCleared++;
         }
       }
       
@@ -498,10 +587,15 @@ export default function PartyStatement() {
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast.success(`${selectedPendingIds.length} transactions cleared`);
+      
+      const message = partiallyCleared > 0 
+        ? `${fullyCleared} cleared, ${partiallyCleared} partially paid` 
+        : `${fullyCleared} transactions cleared`;
+      toast.success(message);
       setBulkPayDialogOpen(false);
       setSelectedPendingIds([]);
       setSelectedAccountId('');
+      setBulkPayAmount('');
     } catch (error: any) {
       toast.error(`Failed to process: ${error.message}`);
     } finally {
@@ -820,7 +914,12 @@ export default function PartyStatement() {
         </Dialog>
 
         {/* Bulk Pay/Receive Dialog */}
-        <Dialog open={bulkPayDialogOpen} onOpenChange={setBulkPayDialogOpen}>
+        <Dialog open={bulkPayDialogOpen} onOpenChange={(open) => {
+          setBulkPayDialogOpen(open);
+          if (open) {
+            setBulkPayAmount(selectedPendingStats.total.toString());
+          }
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -831,8 +930,26 @@ export default function PartyStatement() {
               <div className="space-y-2">
                 <Label>Selected Transactions</Label>
                 <p className="text-sm text-muted-foreground">
-                  {selectedPendingIds.length} transactions • Total: ₹{selectedPendingStats.total.toLocaleString()}
+                  {selectedPendingIds.length} transactions • Total Pending: ₹{selectedPendingStats.total.toLocaleString()}
                 </p>
+                <p className="text-xs text-muted-foreground italic">
+                  Oldest transactions will be cleared first
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Amount</Label>
+                <Input 
+                  type="number" 
+                  value={bulkPayAmount} 
+                  onChange={(e) => setBulkPayAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  max={selectedPendingStats.total}
+                />
+                {parseFloat(bulkPayAmount) < selectedPendingStats.total && parseFloat(bulkPayAmount) > 0 && (
+                  <p className="text-xs text-amber-600">
+                    Partial payment: Rs {(selectedPendingStats.total - parseFloat(bulkPayAmount)).toLocaleString()} will remain pending
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Select Account</Label>
@@ -850,8 +967,11 @@ export default function PartyStatement() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setBulkPayDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleBulkPayment} disabled={isBulkPaying || !selectedAccountId}>
-                {isBulkPaying ? 'Processing...' : 'Confirm'}
+              <Button 
+                onClick={handleBulkPayment} 
+                disabled={isBulkPaying || !selectedAccountId || !bulkPayAmount || parseFloat(bulkPayAmount) <= 0}
+              >
+                {isBulkPaying ? 'Processing...' : `Pay ₹${parseFloat(bulkPayAmount || '0').toLocaleString()}`}
               </Button>
             </DialogFooter>
           </DialogContent>
