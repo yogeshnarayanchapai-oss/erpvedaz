@@ -25,7 +25,8 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
         .from('stock_movements')
         .select('qty, total_cost, total_value, reference_order_count, warehouse_id, products:product_id(store_id)')
         .eq('movement_type', 'OUT')
-        .eq('movement_date', date);
+        .eq('movement_date', date)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (warehouseId && warehouseId !== 'all') {
         movementQuery = movementQuery.eq('warehouse_id', warehouseId);
