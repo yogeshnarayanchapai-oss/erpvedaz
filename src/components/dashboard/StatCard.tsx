@@ -48,10 +48,10 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
     >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
-          <p className="stat-label truncate">{title}</p>
-          <p className="stat-value truncate">{value}</p>
+          <p className="stat-label truncate sm:overflow-visible sm:text-clip sm:whitespace-normal">{title}</p>
+          <p className="stat-value truncate sm:overflow-visible sm:text-clip">{value}</p>
           {description && (
-            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{description}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground truncate sm:overflow-visible sm:whitespace-normal">{description}</p>
           )}
           {trend && (
             <p className={cn(

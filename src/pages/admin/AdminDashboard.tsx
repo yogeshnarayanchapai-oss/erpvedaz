@@ -252,8 +252,8 @@ export default function AdminDashboard() {
         <DashboardDateFilter value={dateRange} onChange={setDateRange} />
       </div>
 
-      {/* Lead Stats for Selected Period - Mobile: 2 cols, Tablet: 4 cols, Desktop: 8 cols */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-4">
+      {/* Lead Stats for Selected Period - Mobile: 2 cols, Tablet: 4 cols, Desktop: 5 cols */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
         <StatCard 
           title="Total Leads" 
           value={stats.total} 
