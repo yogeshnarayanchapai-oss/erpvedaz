@@ -295,7 +295,13 @@ export default function Parties() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={party.transaction_count > 0}
+                        title={party.transaction_count > 0 ? 'Cannot delete party with transactions' : 'Delete party'}
                         onClick={() => {
+                          if (party.transaction_count > 0) {
+                            toast.error('Cannot delete party with existing transactions');
+                            return;
+                          }
                           setPartyToDelete(party.id);
                           setDeleteDialogOpen(true);
                         }}
