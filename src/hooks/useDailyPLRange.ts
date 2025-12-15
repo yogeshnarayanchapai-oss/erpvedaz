@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
 export interface PLSummary {
   total_units_sold: number;
@@ -27,16 +28,20 @@ export interface DailyTrend {
 }
 
 export function usePLSummaryByRange(startDate: string, endDate: string, warehouseId?: string) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['pl_summary_range', startDate, endDate, warehouseId],
+    queryKey: ['pl_summary_range', storeId, startDate, endDate, warehouseId],
     queryFn: async () => {
       // Get all OUT movements (sales) for the date range
+      // Filter by products that belong to current store
       let salesQuery = supabase
         .from('stock_movements')
-        .select('qty, total_cost, total_value, warehouse_id, warehouses:warehouse_id(id, name)')
+        .select('qty, total_cost, total_value, warehouse_id, warehouses:warehouse_id(id, name), products:product_id(store_id)')
         .eq('movement_type', 'OUT')
         .gte('movement_date', startDate)
-        .lte('movement_date', endDate);
+        .lte('movement_date', endDate)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (warehouseId && warehouseId !== 'all') {
         salesQuery = salesQuery.eq('warehouse_id', warehouseId);
@@ -45,13 +50,17 @@ export function usePLSummaryByRange(startDate: string, endDate: string, warehous
       const { data: salesMovements, error: salesErr } = await salesQuery;
       if (salesErr) throw salesErr;
 
+      // Filter by store through products relationship
+      const storeFilteredSales = salesMovements?.filter((m: any) => m.products?.store_id === storeId) || [];
+
       // Get RTO movements
       let rtoQuery = supabase
         .from('stock_movements')
-        .select('qty, total_cost, total_value, warehouse_id')
+        .select('qty, total_cost, total_value, warehouse_id, products:product_id(store_id)')
         .in('movement_type', ['RTO_IN', 'RTO_OUT'])
         .gte('movement_date', startDate)
-        .lte('movement_date', endDate);
+        .lte('movement_date', endDate)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (warehouseId && warehouseId !== 'all') {
         rtoQuery = rtoQuery.eq('warehouse_id', warehouseId);
@@ -60,6 +69,9 @@ export function usePLSummaryByRange(startDate: string, endDate: string, warehous
       const { data: rtoMovements, error: rtoErr } = await rtoQuery;
       if (rtoErr) throw rtoErr;
 
+      // Filter RTO movements by store
+      const storeFilteredRTO = rtoMovements?.filter((m: any) => m.products?.store_id === storeId) || [];
+
       // Calculate totals
       let total_units_sold = 0;
       let gross_sales_value = 0;
@@ -67,7 +79,7 @@ export function usePLSummaryByRange(startDate: string, endDate: string, warehous
 
       const warehouseBreakdown: Record<string, WarehousePLBreakdown> = {};
 
-      salesMovements?.forEach((m: any) => {
+      storeFilteredSales.forEach((m: any) => {
         total_units_sold += m.qty || 0;
         gross_sales_value += m.total_value || 0;
         product_cost += m.total_cost || 0;
@@ -93,7 +105,7 @@ export function usePLSummaryByRange(startDate: string, endDate: string, warehous
 
       let rto_units = 0;
       let rto_value = 0;
-      rtoMovements?.forEach((m: any) => {
+      storeFilteredRTO.forEach((m: any) => {
         rto_units += m.qty || 0;
         rto_value += m.total_value || 0;
       });
@@ -112,7 +124,7 @@ export function usePLSummaryByRange(startDate: string, endDate: string, warehous
         warehouseBreakdown: Object.values(warehouseBreakdown),
       };
     },
-    enabled: !!startDate && !!endDate,
+    enabled: !!storeId && !!startDate && !!endDate,
   });
 }
 
