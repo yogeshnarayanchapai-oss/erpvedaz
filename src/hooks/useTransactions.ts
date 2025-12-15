@@ -353,12 +353,28 @@ export function useDeleteTransaction() {
   
   return useMutation({
     mutationFn: async (id: string) => {
+      // First get the transaction to find its transaction_code
+      const { data: transaction } = await supabase
+        .from('transactions')
+        .select('transaction_code')
+        .eq('id', id)
+        .single();
+      
+      // Delete from transactions table
       const { error } = await supabase
         .from('transactions')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
+      
+      // Also delete linked party_transaction if transaction_code exists
+      if (transaction?.transaction_code) {
+        await supabase
+          .from('party_transactions')
+          .delete()
+          .eq('transaction_code', transaction.transaction_code);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -368,6 +384,9 @@ export function useDeleteTransaction() {
       queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
       queryClient.invalidateQueries({ queryKey: ['pending-party-receivables'] });
       queryClient.invalidateQueries({ queryKey: ['pending-party-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       toast.success('Transaction deleted');
     },
     onError: (error: Error) => {
