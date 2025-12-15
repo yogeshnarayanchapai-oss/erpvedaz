@@ -146,8 +146,8 @@ export function useStaffLeaderboard(dateRange: DateRange) {
         });
       });
 
-      // Sort by confirmed orders descending
-      leaderboard.sort((a, b) => b.confirmedOrders - a.confirmedOrders);
+      // Sort by conversion rate descending (top performers first)
+      leaderboard.sort((a, b) => b.conversionRate - a.conversionRate);
 
       return leaderboard;
     },
