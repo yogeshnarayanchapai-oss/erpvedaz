@@ -332,15 +332,6 @@ export default function AdminAds() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Target Orders</Label>
-                  <Input
-                    type="number"
-                    value={formData.target_orders}
-                    onChange={(e) => setFormData({ ...formData, target_orders: e.target.value })}
-                    placeholder="Optional"
-                  />
-                </div>
                 <Button type="submit" className="w-full" disabled={createAd.isPending || updateAd.isPending}>
                   {editingAd ? 'Update' : 'Create'}
                 </Button>

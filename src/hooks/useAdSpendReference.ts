@@ -10,6 +10,7 @@ export interface AdSpendReference {
   product_id: string;
   spend_date: string;
   amount: number;
+  target_orders: number;
   notes: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -95,6 +96,7 @@ interface UpsertAdSpendInput {
   product_id: string;
   spend_date: string;
   amount: number;
+  target_orders?: number;
   notes?: string | null;
 }
 
@@ -123,6 +125,7 @@ export function useUpsertAdSpendReference() {
           .from('ad_spend_reference')
           .update({
             amount: input.amount,
+            target_orders: input.target_orders ?? 0,
             notes: input.notes,
             updated_by: user.id,
           })
@@ -141,6 +144,7 @@ export function useUpsertAdSpendReference() {
             product_id: input.product_id,
             spend_date: input.spend_date,
             amount: input.amount,
+            target_orders: input.target_orders ?? 0,
             notes: input.notes,
             created_by: user.id,
             updated_by: user.id,

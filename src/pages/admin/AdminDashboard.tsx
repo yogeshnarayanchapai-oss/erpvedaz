@@ -6,6 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStaff } from '@/hooks/useStaff';
 import { useStaffLeaderboard } from '@/hooks/useStaffLeaderboard';
 import { useLeadDashboardStats, useOrderDashboardStats, getNepalDate } from '@/hooks/useDashboardStats';
+import { useAdSpendReference } from '@/hooks/useAdSpendReference';
 import { 
   useMonthlySalesChart, 
   useMonthlyPLData,
@@ -86,16 +87,36 @@ export default function AdminDashboard() {
     sell_price: p.sell_price,
   })), [products]);
   const { data: productDaybook = [] } = useProductDaybookByDateRange(dateRange, productList);
+  
+  // Fetch ad spend reference targets for today
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const { data: adSpendRefData = [] } = useAdSpendReference({ startDate: todayStr, endDate: todayStr });
 
   // Sort product daybook by orders (sales) descending
   const sortedProductDaybook = useMemo(() => {
     return [...productDaybook].sort((a, b) => b.sales - a.sales);
   }, [productDaybook]);
 
-  // Filter product daybook to only show products with targets > 0
+  // Build product targets from ad_spend_reference
   const productDaybookWithTargets = useMemo(() => {
-    return sortedProductDaybook.filter(p => p.target > 0);
-  }, [sortedProductDaybook]);
+    // Create a map of product_id -> target from ad_spend_reference
+    const targetMap = new Map<string, number>();
+    adSpendRefData.forEach(ref => {
+      targetMap.set(ref.product_id, ref.target_orders || 0);
+    });
+
+    // Map products with targets from reference spend
+    return sortedProductDaybook
+      .map(p => {
+        const productId = products.find(prod => prod.name === p.name)?.id;
+        const refTarget = productId ? (targetMap.get(productId) || 0) : 0;
+        return {
+          ...p,
+          target: refTarget, // Use target from ad_spend_reference
+        };
+      })
+      .filter(p => p.target > 0); // Only show products with targets
+  }, [sortedProductDaybook, adSpendRefData, products]);
 
   // Default lead stats if not loaded yet
   const stats = leadStats || {

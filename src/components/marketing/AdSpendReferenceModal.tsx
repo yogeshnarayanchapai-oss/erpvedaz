@@ -26,6 +26,8 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
   const [showAddRow, setShowAddRow] = useState(false);
   const [newProductId, setNewProductId] = useState<string>('');
   const [newAmount, setNewAmount] = useState<string>('');
+  const [newTarget, setNewTarget] = useState<string>('');
+  const [editTarget, setEditTarget] = useState<string>('');
   const [productOpen, setProductOpen] = useState(false);
 
   const { effectiveRole } = useEffectiveRole();
@@ -76,21 +78,25 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
   const handleStartEdit = (item: any) => {
     setEditingId(item.id);
     setEditAmount(String(item.amount));
+    setEditTarget(String(item.target_orders || 0));
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditAmount('');
+    setEditTarget('');
   };
 
   const handleSaveEdit = async (item: any) => {
     const amount = parseFloat(editAmount);
     if (isNaN(amount) || amount < 0) return;
+    const target = parseInt(editTarget) || 0;
 
     await upsertMutation.mutateAsync({
       product_id: item.product_id,
       spend_date: item.spend_date,
       amount,
+      target_orders: target,
       notes: item.notes,
     });
     handleCancelEdit();
@@ -100,17 +106,20 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
     if (!newProductId) return;
     const amount = parseFloat(newAmount) || 0;
     if (amount < 0) return;
+    const target = parseInt(newTarget) || 0;
 
     await upsertMutation.mutateAsync({
       product_id: newProductId,
       spend_date: today,
       amount,
+      target_orders: target,
       notes: null,
     });
 
     setShowAddRow(false);
     setNewProductId('');
     setNewAmount('');
+    setNewTarget('');
   };
 
   const selectedProduct = products?.find(p => p.id === newProductId);
@@ -137,7 +146,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
 
         {showAddRow && (
           <div className="border rounded-lg p-4 mb-4 bg-muted/50">
-            <div className="grid grid-cols-4 gap-3 items-end">
+            <div className="grid grid-cols-5 gap-3 items-end">
               {/* Product Name - Searchable Combobox */}
               <div>
                 <label className="text-sm text-muted-foreground mb-1 block">Product Name</label>
@@ -184,12 +193,6 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                 </Popover>
               </div>
 
-              {/* Type - Auto Daily */}
-              <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Type</label>
-                <Input value="Daily" disabled className="bg-muted" />
-              </div>
-
               {/* Ad Spend (USD) */}
               <div>
                 <label className="text-sm text-muted-foreground mb-1 block flex items-center gap-1">
@@ -203,6 +206,18 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                   value={newAmount}
                   onChange={(e) => setNewAmount(e.target.value)}
                   placeholder="0.00"
+                />
+              </div>
+
+              {/* Target Orders */}
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Target</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={newTarget}
+                  onChange={(e) => setNewTarget(e.target.value)}
+                  placeholder="0"
                 />
               </div>
 
@@ -224,7 +239,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                 <Button onClick={handleAddNew} disabled={!newProductId || upsertMutation.isPending} size="sm">
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setShowAddRow(false); setNewProductId(''); setNewAmount(''); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setShowAddRow(false); setNewProductId(''); setNewAmount(''); setNewTarget(''); }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -238,11 +253,11 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
             <TableHeader>
               <TableRow>
                 <TableHead>Product Name</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead className="text-right">
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20 mr-1">$</Badge>
                   Spend (USD)
                 </TableHead>
+                <TableHead className="text-right">Target</TableHead>
                 <TableHead className="text-right">
                   <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 mr-1">₹</Badge>
                   Amount (NPR)
@@ -271,7 +286,6 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.product?.name || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">Daily</TableCell>
                       <TableCell className="text-right">
                         {isEditing ? (
                           <Input
@@ -285,6 +299,19 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                           />
                         ) : (
                           <span className="text-blue-600 font-medium">${item.amount.toLocaleString()}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editTarget}
+                            onChange={(e) => setEditTarget(e.target.value)}
+                            className="w-20 ml-auto"
+                          />
+                        ) : (
+                          <span className="font-medium">{item.target_orders || 0}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">

@@ -760,6 +760,7 @@ export type Database = {
           product_id: string
           spend_date: string
           store_id: string
+          target_orders: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -772,6 +773,7 @@ export type Database = {
           product_id: string
           spend_date?: string
           store_id: string
+          target_orders?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -784,6 +786,7 @@ export type Database = {
           product_id?: string
           spend_date?: string
           store_id?: string
+          target_orders?: number | null
           updated_at?: string
           updated_by?: string | null
         }
