@@ -650,14 +650,6 @@ export default function PartyStatement() {
                       />
                     </TableHead>
                   )}
-                  {isOwner && (
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={selectedIds.length === statement.length && statement.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                  )}
                   <TableHead>Date</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Particulars</TableHead>
@@ -671,8 +663,8 @@ export default function PartyStatement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementLoading && <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {statementLoading && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
                 {statement.map((entry) => {
                   const isPending = (entry.type === 'PENDING' && entry.is_pending) || (entry.type === 'TRANSACTION' && !entry.is_settled && entry.id !== 'opening-balance');
                   return (
@@ -685,14 +677,6 @@ export default function PartyStatement() {
                             onCheckedChange={() => togglePendingSelect(entry.id)}
                           />
                         ) : null}
-                      </TableCell>
-                    )}
-                    {isOwner && (
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.includes(entry.id)}
-                          onCheckedChange={() => toggleSelect(entry.id)}
-                        />
                       </TableCell>
                     )}
                     <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
