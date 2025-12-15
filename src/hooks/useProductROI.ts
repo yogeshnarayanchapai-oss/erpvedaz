@@ -29,11 +29,12 @@ export function useProductROI(params: UseProductROIParams) {
       
       if (adsError) throw adsError;
 
-      // Get sales revenue by product from stock movements (OUT type = sales)
+      // Get sales revenue by product from stock movements (OUT type = sales, exclude deleted)
       let movementsQuery = supabase
         .from('stock_movements')
         .select('product_id, total_value')
         .eq('movement_type', 'OUT')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', params.dateFrom)
         .lte('movement_date', params.dateTo);
 

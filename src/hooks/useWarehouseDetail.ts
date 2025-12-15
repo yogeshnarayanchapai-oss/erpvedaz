@@ -78,6 +78,7 @@ export function useWarehouseStats(warehouseId: string) {
         .select('qty, products:product_id(store_id)')
         .eq('warehouse_id', warehouseId)
         .eq('movement_type', 'OUT')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', thirtyDaysStr);
 
       if (movErr) throw movErr;
@@ -126,7 +127,8 @@ export function useWarehouseInventory(warehouseId: string, startDate?: string, e
       let movementsQuery = supabase
         .from('stock_movements')
         .select('product_id, movement_type, qty, movement_date, products:product_id(store_id)')
-        .eq('warehouse_id', warehouseId);
+        .eq('warehouse_id', warehouseId)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (startDate) {
         movementsQuery = movementsQuery.gte('movement_date', startDate);
@@ -198,6 +200,7 @@ export function useWarehouseMovements(warehouseId: string, startDate?: string, e
           products:product_id(name, store_id)
         `)
         .eq('warehouse_id', warehouseId)
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('movement_date', { ascending: false })
         .order('created_at', { ascending: false });
 
