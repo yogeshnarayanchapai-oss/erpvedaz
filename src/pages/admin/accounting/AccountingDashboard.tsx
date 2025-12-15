@@ -95,14 +95,15 @@ export default function AccountingDashboard() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Accounting Dashboard</h1>
-          <p className="text-muted-foreground">Complete financial overview</p>
+          <h1 className="text-xl md:text-3xl font-bold">Accounting Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Complete financial overview</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
+            size="sm"
             variant={dateRange.startDate === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'}
             onClick={() => setDateRange({
               startDate: format(new Date(), 'yyyy-MM-dd'),
@@ -112,6 +113,7 @@ export default function AccountingDashboard() {
             Today
           </Button>
           <Button
+            size="sm"
             variant={dateRange.startDate === format(subDays(new Date(), 7), 'yyyy-MM-dd') ? 'default' : 'outline'}
             onClick={() => setDateRange({
               startDate: format(subDays(new Date(), 7), 'yyyy-MM-dd'),
@@ -121,6 +123,7 @@ export default function AccountingDashboard() {
             7 Days
           </Button>
           <Button
+            size="sm"
             variant={dateRange.startDate === format(subDays(new Date(), 30), 'yyyy-MM-dd') ? 'default' : 'outline'}
             onClick={() => setDateRange({
               startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -132,29 +135,30 @@ export default function AccountingDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats - Mobile: 2 cols, Tablet: 2 cols, Desktop: 4 cols */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         {stats.map((stat, index) => (
           <Card 
             key={index} 
             className="cursor-pointer hover:shadow-md transition-shadow hover:border-primary/50"
             onClick={() => stat.link && navigate(stat.link)}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground truncate pr-2">
                 {stat.title}
               </CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color} shrink-0`} />
             </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${stat.color}`}>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className={`text-base md:text-2xl font-bold ${stat.color} truncate`}>
                 {stat.value}
               </div>
               {stat.description && (
-                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{stat.description}</p>
               )}
               {stat.link && (
-                <p className="text-xs text-primary flex items-center gap-1 mt-2">
-                  View details <ArrowRight className="h-3 w-3" />
+                <p className="text-[10px] md:text-xs text-primary flex items-center gap-1 mt-1 md:mt-2">
+                  View <ArrowRight className="h-3 w-3" />
                 </p>
               )}
             </CardContent>
@@ -162,46 +166,46 @@ export default function AccountingDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full" variant="outline" onClick={() => navigate('/admin/accounting/deposit')}>
+            <Button className="w-full justify-start" variant="outline" size="sm" onClick={() => navigate('/admin/accounting/deposit')}>
               <TrendingUp className="w-4 h-4 mr-2" /> New Deposit
             </Button>
-            <Button className="w-full" variant="outline" onClick={() => navigate('/admin/accounting/expense')}>
+            <Button className="w-full justify-start" variant="outline" size="sm" onClick={() => navigate('/admin/accounting/expense')}>
               <TrendingDown className="w-4 h-4 mr-2" /> New Expense
             </Button>
-            <Button className="w-full" variant="outline" onClick={() => navigate('/admin/accounting/transfer')}>
+            <Button className="w-full justify-start" variant="outline" size="sm" onClick={() => navigate('/admin/accounting/transfer')}>
               <CreditCard className="w-4 h-4 mr-2" /> Transfer
             </Button>
-            <Button className="w-full" variant="outline" onClick={() => navigate('/admin/accounting/transactions')}>
+            <Button className="w-full justify-start" variant="outline" size="sm" onClick={() => navigate('/admin/accounting/transactions')}>
               <Receipt className="w-4 h-4 mr-2" /> View Transactions
             </Button>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Financial Health</CardTitle>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Financial Health</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total Assets</span>
+          <CardContent className="space-y-3 md:space-y-4">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Total Assets</span>
               <span className="font-semibold">NPR {((dashboard?.cashBalance || 0) + (dashboard?.bankBalance || 0)).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Net Receivables</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Net Receivables</span>
               <span className="font-semibold text-orange-600">NPR {dashboard?.totalReceivable.toLocaleString() || 0}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Net Payables</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Net Payables</span>
               <span className="font-semibold text-purple-600">NPR {dashboard?.totalPayable.toLocaleString() || 0}</span>
             </div>
-            <div className="flex justify-between items-center pt-4 border-t">
-              <span className="text-sm font-semibold">Net Position</span>
+            <div className="flex justify-between items-center pt-3 md:pt-4 border-t text-sm">
+              <span className="font-semibold">Net Position</span>
               <span className={`font-bold ${(dashboard?.totalReceivable || 0) - (dashboard?.totalPayable || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 NPR {((dashboard?.totalReceivable || 0) - (dashboard?.totalPayable || 0)).toLocaleString()}
               </span>

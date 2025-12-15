@@ -441,104 +441,111 @@ export default function AdminOrders() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Orders</h1>
-            <p className="text-muted-foreground">View and manage all orders</p>
+            <h1 className="text-xl md:text-2xl font-bold">Orders</h1>
+            <p className="text-sm text-muted-foreground">View and manage all orders</p>
           </div>
           {duplicateOrderCount > 0 && (
             <Button 
               variant={showDuplicatesOnly ? 'default' : 'outline'} 
+              size="sm"
               onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-              className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 hover:text-orange-700"
+              className="gap-1 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 hover:text-orange-700 text-xs"
             >
-              Double Orders ({duplicateOrderCount})
+              Duplicates ({duplicateOrderCount})
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="all">All Orders</TabsTrigger>
+            <TabsList className="h-8">
+              <TabsTrigger value="today" className="text-xs px-3">Today</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs px-3">All</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={exportCSV} variant="outline">
+          <Button onClick={exportCSV} variant="outline" size="sm" className="hidden sm:flex">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            Export
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Responsive layout */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {activeTab === 'all' && (
-              <DateRangeFilter value={dateRange} onChange={setDateRange} />
-            )}
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="PACKED">Packed</SelectItem>
-                <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="RETURNED">Returned</SelectItem>
-                <SelectItem value="REDIRECT">Redirect</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Delivery" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Deliveries</SelectItem>
-                <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Product" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Products</SelectItem>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sales Person" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staff.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by client or phone..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col gap-3">
+            {/* First row: Date + Search */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {activeTab === 'all' && (
+                <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              )}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search client or phone..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
+            </div>
+            
+            {/* Second row: Status filters - Scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="PACKED">Packed</SelectItem>
+                  <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                  <SelectItem value="DELIVERED">Delivered</SelectItem>
+                  <SelectItem value="RETURNED">Returned</SelectItem>
+                  <SelectItem value="REDIRECT">Redirect</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Delivery" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Delivery</SelectItem>
+                  <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
+                  <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Products</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staff.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -615,14 +622,100 @@ export default function AdminOrders() {
 
       {/* Orders Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-primary" />
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             {activeTab === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-2 p-4 pt-0">
+            {filteredOrders.length === 0 && (
+              <p className="text-center py-8 text-muted-foreground text-sm">
+                {isLoading ? 'Loading...' : 'No orders found'}
+              </p>
+            )}
+            {filteredOrders.map((order) => {
+              const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
+              const productDisplay = orderItemsList.length > 0 
+                ? orderItemsList.map((item: any) => {
+                    const qty = item.quantity ?? 1;
+                    return qty > 0 ? `(${qty}) ${item.product_name}` : item.product_name;
+                  }).join(', ')
+                : (() => {
+                    const qty = order.quantity ?? 1;
+                    const baseName = order.products?.name || '-';
+                    return qty > 0 ? `(${qty}) ${baseName}` : baseName;
+                  })();
+              const totalAmount = orderItemsList.length > 0
+                ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
+                : (order.amount || 0) * (order.quantity || 1);
+              const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name || '-';
+              
+              return (
+                <Card 
+                  key={order.id} 
+                  className="p-3 cursor-pointer active:bg-muted/50"
+                  onClick={() => navigate(`/admin/orders/${order.id}`)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{order.leads?.client_name || '-'}</p>
+                      <p className="text-xs text-muted-foreground">{order.leads?.contact_number || '-'}</p>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`${orderStatusColors[order.order_status || 'CONFIRMED']} shrink-0 text-xs`}
+                    >
+                      {order.order_status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{productDisplay}</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                    <div>
+                      <span className="text-muted-foreground">Amount</span>
+                      <p className="font-medium">Rs. {totalAmount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Date</span>
+                      <p className="font-medium"><FormattedDate date={order.order_date} /></p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">By</span>
+                      <p className="font-medium truncate">{confirmedByName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className={order.delivery_location === 'INSIDE_VALLEY' ? 'bg-success/10 text-success text-xs' : 'bg-info/10 text-info text-xs'}>
+                        {order.delivery_location === 'INSIDE_VALLEY' ? 'IV' : 'OV'}
+                      </Badge>
+                      <Badge variant="outline" className={`${paymentStatusColors[order.payment_status || 'COD']} text-xs`}>
+                        {order.payment_status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setEditingOrder(order);
+                          setEditSheetOpen(true);
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -708,7 +801,6 @@ export default function AdminOrders() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {/* Show who confirmed/created the order - prefer confirmed_by_profile, then created_by_staff, then sales_person */}
                       {(() => {
                         const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name;
                         if (confirmedByName) {
