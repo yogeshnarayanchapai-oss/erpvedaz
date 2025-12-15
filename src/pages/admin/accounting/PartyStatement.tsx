@@ -40,6 +40,7 @@ export default function PartyStatement() {
   const [endDate, setEndDate] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
+  const [balanceFilter, setBalanceFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -70,9 +71,17 @@ export default function PartyStatement() {
       const matchesSearch = !searchTerm || 
         party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         party.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesType && matchesSearch;
+      
+      // Balance filter logic
+      const partyReceivable = Math.max(0, party.net_receivable + party.pending_receivable_amount);
+      const partyPayable = Math.max(0, party.net_payable + party.pending_payable_amount);
+      const matchesBalance = !balanceFilter || balanceFilter === 'all' ||
+        (balanceFilter === 'receivable' && partyReceivable > 0) ||
+        (balanceFilter === 'payable' && partyPayable > 0);
+      
+      return matchesType && matchesSearch && matchesBalance;
     });
-  }, [parties, partyTypeFilter, searchTerm]);
+  }, [parties, partyTypeFilter, searchTerm, balanceFilter]);
 
   const summaryStats = useMemo(() => {
     // Receivable = unsettled receivables (net_receivable), Payable = unsettled payables (net_payable)
@@ -748,10 +757,21 @@ export default function PartyStatement() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Search</Label>
               <Input placeholder="Search by name or phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Balance Type</Label>
+              <Select value={balanceFilter} onValueChange={setBalanceFilter}>
+                <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="receivable">Has Receivable</SelectItem>
+                  <SelectItem value="payable">Has Payable</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Party Type</Label>
@@ -766,7 +786,7 @@ export default function PartyStatement() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={() => { setSearchTerm(''); setPartyTypeFilter(''); }} className="w-full">Clear</Button>
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setPartyTypeFilter(''); setBalanceFilter(''); }} className="w-full">Clear</Button>
             </div>
           </div>
         </CardContent>
