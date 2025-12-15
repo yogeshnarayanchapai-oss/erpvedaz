@@ -239,11 +239,12 @@ export default function ViewTransactions() {
 
             <div className="space-y-2">
               <Label htmlFor="account">Account</Label>
-              <Select value={filters.accountId} onValueChange={(value) => setFilters({ ...filters, accountId: value })}>
+              <Select value={filters.accountId} onValueChange={(value) => setFilters({ ...filters, accountId: value === 'all' ? '' : value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Accounts" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
                   {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
                   ))}
@@ -253,11 +254,12 @@ export default function ViewTransactions() {
 
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select value={filters.categoryId} onValueChange={(value) => setFilters({ ...filters, categoryId: value })}>
+              <Select value={filters.categoryId} onValueChange={(value) => setFilters({ ...filters, categoryId: value === 'all' ? '' : value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}
@@ -267,11 +269,12 @@ export default function ViewTransactions() {
 
             <div className="space-y-2">
               <Label htmlFor="party">Party</Label>
-              <Select value={filters.partyId} onValueChange={(value) => setFilters({ ...filters, partyId: value })}>
+              <Select value={filters.partyId} onValueChange={(value) => setFilters({ ...filters, partyId: value === 'all' ? '' : value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Parties" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Parties</SelectItem>
                   {parties.map(party => (
                     <SelectItem key={party.id} value={party.id}>{party.name}</SelectItem>
                   ))}
