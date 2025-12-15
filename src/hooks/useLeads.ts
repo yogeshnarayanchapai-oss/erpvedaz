@@ -108,9 +108,7 @@ export function useLeads(filters?: {
           created_by_staff:profiles!leads_created_by_staff_id_fkey(name),
           branches:branch_id(branch_name, district, arrival_time, contact_phone, base_charge, area_covered)
         `)
-        // Exclude confirmed leads - they appear in Orders only
-        .neq('status', 'CONFIRMED')
-        .is('order_id', null)
+        // Include ALL leads (including confirmed) - date field is source of truth
         .order('created_at', { ascending: false });
 
       // Filter by store_id
@@ -130,11 +128,12 @@ export function useLeads(filters?: {
       if (filters?.productId) {
         query = query.eq('product_id', filters.productId);
       }
+      // Use 'date' field for filtering (matches dashboard logic)
       if (filters?.dateFrom) {
-        query = query.gte('created_at', filters.dateFrom + 'T00:00:00');
+        query = query.gte('date', filters.dateFrom);
       }
       if (filters?.dateTo) {
-        query = query.lte('created_at', filters.dateTo + 'T23:59:59');
+        query = query.lte('date', filters.dateTo);
       }
       if (filters?.leadBucket) {
         query = query.eq('lead_bucket', filters.leadBucket);
