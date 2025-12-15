@@ -725,7 +725,10 @@ export default function PartyStatement() {
           <h1 className="text-2xl font-bold">Party Statement</h1>
           <p className="text-muted-foreground">View all party balances and statements</p>
         </div>
-        {canEdit && <AddPartyDialog />}
+        <div className="flex items-center gap-2">
+          {canEdit && <AddPartyTransactionDialog />}
+          {canEdit && <AddPartyDialog />}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Parties</CardTitle></CardHeader>
@@ -793,12 +796,7 @@ export default function PartyStatement() {
                     <TableCell className="text-right text-green-600">{partyReceivable > 0 ? `₹${partyReceivable.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className="text-right text-red-600">{partyPayable > 0 ? `₹${partyPayable.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(partyBalance).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {canEdit && <AddPartyTransactionDialog partyId={party.id} partyName={party.name} />}
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button>
-                      </div>
-                    </TableCell>
+                    <TableCell><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
                   </TableRow>
                 );
               })}
