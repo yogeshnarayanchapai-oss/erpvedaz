@@ -142,6 +142,14 @@
     @apply text-xs md:text-sm font-medium text-muted-foreground;
   }
 
+@layer utilities {
+  .truncate-none {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
   .table-header {
     @apply bg-muted/50 text-muted-foreground font-medium text-xs uppercase tracking-wider;
   }
