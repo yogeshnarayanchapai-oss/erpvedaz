@@ -768,8 +768,8 @@ export default function PartyStatement() {
                 <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="receivable">Has Receivable</SelectItem>
-                  <SelectItem value="payable">Has Payable</SelectItem>
+                  <SelectItem value="receivable">Receivable</SelectItem>
+                  <SelectItem value="payable">Payable</SelectItem>
                 </SelectContent>
               </Select>
             </div>
