@@ -76,6 +76,13 @@ export default function ViewTransactions() {
     if (selectedIds.length === 0) return;
     setIsDeleting(true);
     try {
+      // Get transaction codes for selected transactions to delete linked party_transactions
+      const selectedTransactions = filteredTransactions.filter(t => selectedIds.includes(t.id));
+      const transactionCodes = selectedTransactions
+        .map(t => t.transaction_code)
+        .filter((code): code is string => !!code);
+      
+      // Delete from transactions table
       const { error } = await supabase
         .from('transactions')
         .delete()
@@ -83,9 +90,17 @@ export default function ViewTransactions() {
       
       if (error) throw error;
       
+      // Also delete linked party_transactions by transaction_code
+      if (transactionCodes.length > 0) {
+        await supabase.from('party_transactions').delete().in('transaction_code', transactionCodes);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       toast.success(`${selectedIds.length} transactions deleted`);
       setSelectedIds([]);
       setBulkDeleteOpen(false);

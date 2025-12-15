@@ -115,25 +115,37 @@ export default function PartyStatement() {
       // Separate IDs by type (exclude opening-balance which can't be deleted)
       const deletableIds = selectedIds.filter(id => id !== 'opening-balance');
       const transactionIds: string[] = [];
+      const transactionCodes: string[] = [];
       const paymentIds: string[] = [];
+      const pendingIds: string[] = [];
+      const pendingCodes: string[] = [];
       
       statement.forEach(entry => {
         if (deletableIds.includes(entry.id)) {
           if (entry.type === 'TRANSACTION') {
             transactionIds.push(entry.id);
+            if (entry.transaction_code) transactionCodes.push(entry.transaction_code);
           } else if (entry.type === 'PAYMENT') {
             paymentIds.push(entry.id);
+          } else if (entry.type === 'PENDING') {
+            pendingIds.push(entry.id);
+            if (entry.transaction_code) pendingCodes.push(entry.transaction_code);
           }
         }
       });
 
-      // Delete from party_transactions
+      // Delete from party_transactions and linked transactions
       if (transactionIds.length > 0) {
         const { error: transError } = await supabase
           .from('party_transactions')
           .delete()
           .in('id', transactionIds);
         if (transError) throw transError;
+        
+        // Also delete linked transactions from transactions table
+        if (transactionCodes.length > 0) {
+          await supabase.from('transactions').delete().in('transaction_code', transactionCodes);
+        }
       }
 
       // Delete from party_payments
@@ -144,11 +156,26 @@ export default function PartyStatement() {
           .in('id', paymentIds);
         if (payError) throw payError;
       }
+
+      // Delete pending transactions and linked party_transactions
+      if (pendingIds.length > 0) {
+        const { error: pendingError } = await supabase
+          .from('transactions')
+          .delete()
+          .in('id', pendingIds);
+        if (pendingError) throw pendingError;
+        
+        // Also delete linked party_transactions
+        if (pendingCodes.length > 0) {
+          await supabase.from('party_transactions').delete().in('transaction_code', pendingCodes);
+        }
+      }
       
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['party-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success(`${deletableIds.length} entries deleted`);
       setSelectedIds([]);
       setBulkDeleteOpen(false);
@@ -166,14 +193,26 @@ export default function PartyStatement() {
     }
     try {
       if (entry.type === 'TRANSACTION') {
+        // Delete from party_transactions
         const { error } = await supabase.from('party_transactions').delete().eq('id', entry.id);
         if (error) throw error;
+        
+        // Also delete linked transaction from transactions table if transaction_code exists
+        if (entry.transaction_code) {
+          await supabase.from('transactions').delete().eq('transaction_code', entry.transaction_code);
+        }
       } else if (entry.type === 'PAYMENT') {
         const { error } = await supabase.from('party_payments').delete().eq('id', entry.id);
         if (error) throw error;
       } else if (entry.type === 'PENDING') {
+        // Delete from transactions table
         const { error } = await supabase.from('transactions').delete().eq('id', entry.id);
         if (error) throw error;
+        
+        // Also delete linked party_transaction if transaction_code exists
+        if (entry.transaction_code) {
+          await supabase.from('party_transactions').delete().eq('transaction_code', entry.transaction_code);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
