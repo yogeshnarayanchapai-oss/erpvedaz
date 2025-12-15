@@ -43,7 +43,9 @@ export default function PartyStatement() {
   const [balanceFilter, setBalanceFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkPayDialogOpen, setBulkPayDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [selectedPendingEntry, setSelectedPendingEntry] = useState<typeof statement[0] | null>(null);
@@ -125,6 +127,22 @@ export default function PartyStatement() {
     return { totalDebit, totalCredit, balance, pendingCount, pendingCredit, pendingDebit };
   }, [statement]);
 
+  // Get all pending entries that can be selected for bulk pay/receive
+  const pendingEntries = useMemo(() => {
+    return statement.filter(e => 
+      e.id !== 'opening-balance' && 
+      ((e.type === 'PENDING' && e.is_pending) || (e.type === 'TRANSACTION' && !e.is_settled))
+    );
+  }, [statement]);
+
+  // Calculate selected pending totals
+  const selectedPendingStats = useMemo(() => {
+    const selectedEntries = pendingEntries.filter(e => selectedPendingIds.includes(e.id));
+    const totalDebit = selectedEntries.reduce((sum, e) => sum + e.debit, 0);
+    const totalCredit = selectedEntries.reduce((sum, e) => sum + e.credit, 0);
+    return { count: selectedEntries.length, totalDebit, totalCredit, total: totalDebit + totalCredit };
+  }, [pendingEntries, selectedPendingIds]);
+
   const toggleSelectAll = () => {
     if (selectedIds.length === statement.length) {
       setSelectedIds([]);
@@ -137,6 +155,20 @@ export default function PartyStatement() {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+  };
+
+  const togglePendingSelect = (id: string) => {
+    setSelectedPendingIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const togglePendingSelectAll = () => {
+    if (selectedPendingIds.length === pendingEntries.length) {
+      setSelectedPendingIds([]);
+    } else {
+      setSelectedPendingIds(pendingEntries.map(e => e.id));
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -414,6 +446,69 @@ export default function PartyStatement() {
     }
   };
 
+  // Handle bulk payment for multiple pending transactions
+  const [isBulkPaying, setIsBulkPaying] = useState(false);
+
+  const handleBulkPayment = async () => {
+    if (selectedPendingIds.length === 0 || !selectedAccountId) {
+      toast.error('Please select an account');
+      return;
+    }
+    setIsBulkPaying(true);
+    try {
+      const selectedEntries = pendingEntries.filter(e => selectedPendingIds.includes(e.id));
+      
+      for (const entry of selectedEntries) {
+        if (entry.type === 'PENDING') {
+          // Clear pending transaction
+          await supabase
+            .from('transactions')
+            .update({ is_cleared: true, account_id: selectedAccountId })
+            .eq('id', entry.id);
+        } else if (entry.type === 'TRANSACTION') {
+          // Mark inventory transaction as settled
+          await supabase
+            .from('party_transactions')
+            .update({
+              is_settled: true,
+              settled_at: new Date().toISOString(),
+              settled_account_id: selectedAccountId,
+            })
+            .eq('id', entry.id);
+          
+          // Create a transaction record for account balance update
+          const amount = entry.debit > 0 ? entry.debit : entry.credit;
+          const isReceiving = entry.debit > 0;
+          
+          await supabase.from('transactions').insert({
+            date: new Date().toISOString().split('T')[0],
+            type: isReceiving ? 'income' : 'expense',
+            account_id: selectedAccountId,
+            party_id: selectedPartyId,
+            amount: amount,
+            description: `Settlement: ${entry.particulars}`,
+            is_cleared: true,
+            store_id: selectedParty?.store_id,
+          });
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast.success(`${selectedPendingIds.length} transactions cleared`);
+      setBulkPayDialogOpen(false);
+      setSelectedPendingIds([]);
+      setSelectedAccountId('');
+    } catch (error: any) {
+      toast.error(`Failed to process: ${error.message}`);
+    } finally {
+      setIsBulkPaying(false);
+    }
+  };
+
   const exportToCSV = () => {
     if (!selectedParty) return;
     const headers = ['Date', 'Particulars', 'Qty', 'Rate', 'Debit', 'Credit', 'Balance', 'Remarks'];
@@ -525,11 +620,36 @@ export default function PartyStatement() {
             <CardContent><Button variant="outline" size="sm" onClick={exportToCSV} className="w-full"><FileSpreadsheet className="w-4 h-4 mr-2" />CSV</Button></CardContent></Card>
         </div>
         <Card>
-          <CardHeader><CardTitle>Transaction Ledger</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Transaction Ledger</CardTitle>
+            {canEdit && selectedPendingIds.length > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Selected:</span>
+                  <span className="font-medium ml-1">{selectedPendingIds.length}</span>
+                  <span className="mx-2">|</span>
+                  <span className="text-muted-foreground">Total:</span>
+                  <span className="font-bold text-primary ml-1">₹{selectedPendingStats.total.toLocaleString()}</span>
+                </div>
+                <Button onClick={() => setBulkPayDialogOpen(true)}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {selectedPendingStats.totalCredit > selectedPendingStats.totalDebit ? 'Receive' : 'Pay'}
+                </Button>
+              </div>
+            )}
+          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canEdit && pendingEntries.length > 0 && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={selectedPendingIds.length === pendingEntries.length && pendingEntries.length > 0}
+                        onCheckedChange={togglePendingSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   {isOwner && (
                     <TableHead className="w-10">
                       <Checkbox
@@ -547,14 +667,26 @@ export default function PartyStatement() {
                   <TableHead className="text-right">Credit</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead>Remarks</TableHead>
-                  <TableHead className="w-32">Action</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementLoading && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
-                {statement.map((entry) => (
+                {statementLoading && <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {statement.map((entry) => {
+                  const isPending = (entry.type === 'PENDING' && entry.is_pending) || (entry.type === 'TRANSACTION' && !entry.is_settled && entry.id !== 'opening-balance');
+                  return (
                   <TableRow key={entry.id} className={entry.is_pending ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
+                    {canEdit && pendingEntries.length > 0 && (
+                      <TableCell>
+                        {isPending ? (
+                          <Checkbox
+                            checked={selectedPendingIds.includes(entry.id)}
+                            onCheckedChange={() => togglePendingSelect(entry.id)}
+                          />
+                        ) : null}
+                      </TableCell>
+                    )}
                     {isOwner && (
                       <TableCell>
                         <Checkbox
@@ -577,17 +709,6 @@ export default function PartyStatement() {
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 items-center">
-                        {/* Pay/Receive for pending transactions (manual) - Debit = Pay, Credit = Receive */}
-                        {entry.type === 'PENDING' && entry.is_pending && canEdit && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => { setSelectedPendingEntry(entry); setClearDialogOpen(true); }}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {entry.credit > 0 ? 'Receive' : 'Pay'}
-                          </Button>
-                        )}
                         {/* Show status badge for settled manual transactions */}
                         {entry.type === 'PENDING' && !entry.is_pending && entry.is_settled && (
                           <Badge variant="outline" className="text-green-600 border-green-600">
@@ -599,17 +720,6 @@ export default function PartyStatement() {
                           <Badge variant="outline" className="text-green-600 border-green-600">
                             {entry.debit > 0 ? 'Paid' : 'Received'}
                           </Badge>
-                        )}
-                        {/* Pay/Receive button for unsettled inventory transactions */}
-                        {entry.type === 'TRANSACTION' && entry.id !== 'opening-balance' && !entry.is_settled && canEdit && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => { setSelectedInventoryEntry(entry); setInventoryPayDialogOpen(true); }}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {entry.debit > 0 ? 'Pay' : 'Receive'}
-                          </Button>
                         )}
                         {/* Delete button for all entries except opening balance */}
                         {isOwner && entry.id !== 'opening-balance' && (
@@ -642,7 +752,8 @@ export default function PartyStatement() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -719,6 +830,44 @@ export default function PartyStatement() {
               <Button variant="outline" onClick={() => setInventoryPayDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleInventoryPayment} disabled={isInventoryPaying || !selectedAccountId}>
                 {isInventoryPaying ? 'Processing...' : 'Confirm'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Pay/Receive Dialog */}
+        <Dialog open={bulkPayDialogOpen} onOpenChange={setBulkPayDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedPendingStats.totalCredit > selectedPendingStats.totalDebit ? 'Receive Payment' : 'Make Payment'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Selected Transactions</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedPendingIds.length} transactions • Total: ₹{selectedPendingStats.total.toLocaleString()}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Select Account</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} (₹{acc.current_balance?.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkPayDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleBulkPayment} disabled={isBulkPaying || !selectedAccountId}>
+                {isBulkPaying ? 'Processing...' : 'Confirm'}
               </Button>
             </DialogFooter>
           </DialogContent>
