@@ -146,21 +146,21 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Products</h1>
-            <p className="text-muted-foreground">Manage product catalog and pricing</p>
+            <h1 className="text-xl md:text-2xl font-bold">Products</h1>
+            <p className="text-sm text-muted-foreground">Manage product catalog and pricing</p>
           </div>
           <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
+              <Button onClick={() => resetForm()} size="sm" className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md mx-4 sm:mx-auto">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
               </DialogHeader>
@@ -227,7 +227,7 @@ export default function AdminProducts() {
         </div>
 
         {/* Search Bar */}
-        <div className="relative max-w-md">
+        <div className="relative w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search product..."
@@ -239,88 +239,160 @@ export default function AdminProducts() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Package className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             Product Catalog
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="table-header">Product Name</TableHead>
-                <TableHead className="table-header text-right">Target/Day</TableHead>
-                <TableHead className="table-header text-right">Cost Price</TableHead>
-                <TableHead className="table-header text-right">Sell Price</TableHead>
-                <TableHead className="table-header text-right">Wholesale</TableHead>
-                <TableHead className="table-header text-right">Margin</TableHead>
-                <TableHead className="table-header w-20">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length === 0 && !isLoading && (
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-2 p-4 pt-0">
+            {filteredProducts.length === 0 && !isLoading && (
+              <p className="text-center py-8 text-muted-foreground text-sm">
+                {searchQuery ? 'No products found matching your search' : 'No products found'}
+              </p>
+            )}
+            {isLoading && <p className="text-center py-8 text-muted-foreground text-sm">Loading...</p>}
+            {filteredProducts.map((product) => {
+              const margin = (product.sell_price && product.cost_price)
+                ? ((product.sell_price - product.cost_price) / product.sell_price * 100).toFixed(1)
+                : '-';
+              return (
+                <Card key={product.id} className="p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="font-medium text-sm">{product.name}</p>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(product)}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-sm mx-4">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{product.name}"?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteProduct.mutate(product.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Target</span>
+                      <p className="font-medium">{product.target_per_day || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Cost</span>
+                      <p className="font-medium">₹{product.cost_price?.toFixed(0) || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Sell</span>
+                      <p className="font-medium">₹{product.sell_price?.toFixed(0) || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
+                    <span className="text-muted-foreground">Wholesale: ₹{product.wholesale_price?.toFixed(0) || '-'}</span>
+                    <span className="text-success font-medium">Margin: {margin}%</span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {searchQuery ? 'No products found matching your search' : 'No products found'}
-                  </TableCell>
+                  <TableHead className="table-header">Product Name</TableHead>
+                  <TableHead className="table-header text-right">Target/Day</TableHead>
+                  <TableHead className="table-header text-right">Cost Price</TableHead>
+                  <TableHead className="table-header text-right">Sell Price</TableHead>
+                  <TableHead className="table-header text-right">Wholesale</TableHead>
+                  <TableHead className="table-header text-right">Margin</TableHead>
+                  <TableHead className="table-header w-20">Actions</TableHead>
                 </TableRow>
-              )}
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredProducts.map((product) => {
-                const margin = (product.sell_price && product.cost_price)
-                  ? ((product.sell_price - product.cost_price) / product.sell_price * 100).toFixed(1)
-                  : '-';
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell className="text-right">{product.target_per_day || '-'}</TableCell>
-                    <TableCell className="text-right">₹{product.cost_price?.toFixed(2) || '-'}</TableCell>
-                    <TableCell className="text-right">₹{product.sell_price?.toFixed(2) || '-'}</TableCell>
-                    <TableCell className="text-right">₹{product.wholesale_price?.toFixed(2) || '-'}</TableCell>
-                    <TableCell className="text-right text-success">{margin}%</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(product)}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Product</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{product.name}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteProduct.mutate(product.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length === 0 && !isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? 'No products found matching your search' : 'No products found'}
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                )}
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredProducts.map((product) => {
+                  const margin = (product.sell_price && product.cost_price)
+                    ? ((product.sell_price - product.cost_price) / product.sell_price * 100).toFixed(1)
+                    : '-';
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell className="text-right">{product.target_per_day || '-'}</TableCell>
+                      <TableCell className="text-right">₹{product.cost_price?.toFixed(2) || '-'}</TableCell>
+                      <TableCell className="text-right">₹{product.sell_price?.toFixed(2) || '-'}</TableCell>
+                      <TableCell className="text-right">₹{product.wholesale_price?.toFixed(2) || '-'}</TableCell>
+                      <TableCell className="text-right text-success">{margin}%</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(product)}>
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteProduct.mutate(product.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

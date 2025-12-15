@@ -204,19 +204,19 @@ export default function DailyPL() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Daily Profit / Loss</h1>
-          <p className="text-muted-foreground">
-            Aggregated P/L – {selectedWarehouseName} ({dateRange.label})
+          <h1 className="text-xl md:text-2xl font-bold">Daily Profit / Loss</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">
+            P/L – {selectedWarehouseName} ({dateRange.label})
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Warehouse" />
+            <SelectTrigger className="w-[140px] md:w-[180px] h-9 text-xs md:text-sm">
+              <SelectValue placeholder="Warehouse" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Warehouses</SelectItem>
@@ -232,15 +232,15 @@ export default function DailyPL() {
           {/* RTO Settings Button */}
           <Dialog open={rtoSettingsOpen} onOpenChange={setRtoSettingsOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="h-9 w-9">
                 <Settings className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto mx-4 sm:mx-auto">
               <DialogHeader>
                 <DialogTitle>RTO % Settings by Month</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              <div className="space-y-4">
                 {last12Months.map((month) => (
                   <div key={month} className="flex items-center gap-3">
                     <Label className="w-24 text-sm font-medium">
@@ -276,78 +276,78 @@ export default function DailyPL() {
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <>
-          {/* Top Cards */}
-          <div className="grid gap-4 md:grid-cols-6">
+          {/* Top Cards - 2 cols on mobile, 3 on tablet, 6 on desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Units Sold</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">Units Sold</CardTitle>
+                <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{U}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold">{U}</div>
+                <p className="text-[10px] md:text-xs text-muted-foreground">
                   From stock movements
                 </p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gross Sales</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">Gross Sales</CardTitle>
+                <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(GS)}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(GS)}</div>
+                <p className="text-[10px] md:text-xs text-muted-foreground">
                   From stock movements
                 </p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Actual Sales</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">Actual Sales</CardTitle>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500 shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold text-green-600 truncate">
                   {formatCurrency(actualSales)}
                 </div>
-                <p className="text-xs text-muted-foreground">After {R}% RTO deduction</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground">After {R}% RTO</p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Expense</CardTitle>
-                <TrendingDown className="h-4 w-4 text-destructive" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">Total Expense</CardTitle>
+                <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-destructive shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold text-destructive truncate">
                   {formatCurrency(totalExpense)}
                 </div>
-                <p className="text-xs text-muted-foreground">Office management</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground">Office management</p>
               </CardContent>
             </Card>
             <Card className={actualProfit >= 0 ? 'border-green-500' : 'border-destructive'}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Actual Profit</CardTitle>
-                <Percent className="h-4 w-4" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">Actual Profit</CardTitle>
+                <Percent className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className={`text-lg md:text-2xl font-bold truncate ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                   {formatCurrency(actualProfit)}
                 </div>
-                <p className="text-xs text-muted-foreground">Margin: {profitMargin}%</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground">Margin: {profitMargin}%</p>
               </CardContent>
             </Card>
             <Card className={roiAds >= 0 ? 'border-blue-500 bg-blue-500/5' : 'border-orange-500 bg-orange-500/5'}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">ROI (Ads)</CardTitle>
-                <Target className="h-4 w-4 text-blue-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1 md:p-6 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium truncate pr-1">ROI (Ads)</CardTitle>
+                <Target className="h-3 w-3 md:h-4 md:w-4 text-blue-500 shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${roiAds >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className={`text-lg md:text-2xl font-bold ${roiAds >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
                   {roiAds.toFixed(2)}x
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] md:text-xs text-muted-foreground">
                   Ads: {formatCurrency(adsFromTable)}
                 </p>
               </CardContent>

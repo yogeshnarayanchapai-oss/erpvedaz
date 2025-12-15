@@ -148,22 +148,22 @@ export default function HRMEmployees() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Employees</h1>
-          <p className="text-muted-foreground">Manage employee records</p>
+          <h1 className="text-xl md:text-2xl font-bold">Employees</h1>
+          <p className="text-sm text-muted-foreground">Manage employee records</p>
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Add Employee</Button>
+            <Button size="sm" className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-2" />Add Employee</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader><DialogTitle>{editing ? 'Edit Employee' : 'Add Employee'}</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Link Existing User - at the top */}
               <div className="space-y-2 p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5">
-                <Label className="flex items-center gap-2">
+                <Label className="flex items-center gap-2 text-sm">
                   <Link2 className="w-4 h-4" />
                   Link Existing User (Optional)
                 </Label>
@@ -181,11 +181,11 @@ export default function HRMEmployees() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Linking a user will auto-fill name and email. You can still edit them.
+                  Linking a user will auto-fill name and email.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Full Name *</Label>
                   <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
@@ -229,7 +229,7 @@ export default function HRMEmployees() {
                   <Label>Base Salary</Label>
                   <Input type="number" value={form.base_salary} onChange={(e) => setForm({ ...form, base_salary: e.target.value })} />
                 </div>
-                <div className="space-y-2 col-span-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Bank Account</Label>
                   <Select value={form.bank_account_id} onValueChange={(v) => setForm({ ...form, bank_account_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
@@ -238,7 +238,7 @@ export default function HRMEmployees() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 col-span-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Notes</Label>
                   <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
                 </div>
@@ -251,36 +251,98 @@ export default function HRMEmployees() {
         </Dialog>
       </div>
 
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <Select value={filterDept} onValueChange={setFilterDept}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Departments" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={filterDept} onValueChange={setFilterDept}>
+                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Department" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Depts</SelectItem>
+                  {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Employee List */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-primary" />Employees ({filtered.length})</CardTitle></CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Users className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+            Employees ({filtered.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-2 p-4 pt-0">
+            {filtered.length === 0 && (
+              <p className="text-center py-8 text-muted-foreground text-sm">
+                {isLoading ? 'Loading...' : 'No employees'}
+              </p>
+            )}
+            {filtered.map((e: any) => (
+              <Card key={e.id} className="p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{e.full_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{e.position || 'No position'}</p>
+                  </div>
+                  <Badge variant={e.status === 'Active' ? 'default' : 'secondary'} className="shrink-0 text-xs">
+                    {e.status}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div>
+                    <span className="text-muted-foreground">Department</span>
+                    <p className="font-medium truncate">{e.departments?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Joined</span>
+                    <p className="font-medium"><FormattedDate date={e.joining_date} /></p>
+                  </div>
+                </div>
+                {e.user_id && (
+                  <Badge 
+                    variant="outline" 
+                    className="bg-primary/10 text-primary border-primary/20 text-xs mb-2"
+                  >
+                    <Link2 className="w-3 h-3 mr-1" />
+                    Linked
+                  </Badge>
+                )}
+                <div className="flex items-center justify-end gap-1 pt-2 border-t">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/hrm/employees/${e.id}`)}>
+                    <Eye className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(e)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(e.id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
