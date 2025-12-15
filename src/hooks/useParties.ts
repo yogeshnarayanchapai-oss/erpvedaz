@@ -42,6 +42,7 @@ export interface PartyWithBalances extends Party {
   pending_payable_transactions: PendingTransaction[];
   pending_receivable_amount: number;
   pending_payable_amount: number;
+  transaction_count: number;
 }
 
 export function useParties(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') {
@@ -120,6 +121,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
         const typedParty = party as Party;
         const partyTransactions = transactions?.filter(t => t.party_id === party.id) || [];
         const partyPayments = payments?.filter(p => p.party_id === party.id) || [];
+        const transaction_count = partyTransactions.length + partyPayments.length;
         const partyPendingTxns = pendingTxns?.filter(t => t.party_id === party.id) || [];
 
         // Only count unsettled transactions for balance
@@ -199,6 +201,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
           pending_payable_transactions,
           pending_receivable_amount,
           pending_payable_amount,
+          transaction_count,
         };
       });
 
