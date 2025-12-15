@@ -204,14 +204,20 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                   min="0"
                   step="0.01"
                   value={newAmount}
-                  onChange={(e) => setNewAmount(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewAmount(val);
+                    // Auto-calculate target as 60% of spend
+                    const amount = parseFloat(val) || 0;
+                    setNewTarget(String(Math.round(amount * 0.6)));
+                  }}
                   placeholder="0.00"
                 />
               </div>
 
-              {/* Target Orders */}
+              {/* Target Orders (auto-calculated, editable) */}
               <div>
-                <label className="text-sm text-muted-foreground mb-1 block">Target</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Target (60%)</label>
                 <Input
                   type="number"
                   min="0"
@@ -293,7 +299,13 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
                             min="0"
                             step="0.01"
                             value={editAmount}
-                            onChange={(e) => setEditAmount(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditAmount(val);
+                              // Auto-calculate target as 60% of spend
+                              const amount = parseFloat(val) || 0;
+                              setEditTarget(String(Math.round(amount * 0.6)));
+                            }}
                             className="w-24 ml-auto"
                             autoFocus
                           />
