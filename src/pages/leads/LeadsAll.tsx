@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLeads, useTransferLeads } from '@/hooks/useLeads';
+import { useLeadAssignmentCounts } from '@/hooks/useLeadAssignmentCounts';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,7 +31,7 @@ import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
-type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED';
+type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED' | 'CONFIRMED';
 
 export default function LeadsAll() {
   const today = new Date();
@@ -63,6 +64,13 @@ export default function LeadsAll() {
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const transferLeads = useTransferLeads();
+  
+  // Get transfer counts for the selected date range
+  const { data: transferCounts } = useLeadAssignmentCounts({
+    dateFrom: format(dateRange.from, 'yyyy-MM-dd'),
+    dateTo: format(dateRange.to, 'yyyy-MM-dd'),
+    excludeSelfCreated: true, // Count only admin-transferred leads
+  });
 
   const [transferForm, setTransferForm] = useState({
     staffId: '',
@@ -85,7 +93,7 @@ export default function LeadsAll() {
   // Sync bucket filter with URL params
   useEffect(() => {
     const urlBucket = searchParams.get('bucket') as LeadBucketFilter;
-    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED'].includes(urlBucket)) {
+    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED', 'CONFIRMED'].includes(urlBucket)) {
       setBucketFilter(urlBucket);
     }
   }, [searchParams]);
@@ -117,9 +125,11 @@ export default function LeadsAll() {
       } else if (bucketFilter === 'FOLLOWUP') {
         matchesBucket = lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.current_team === 'FOLLOWUP' || lead.status === 'FOLLOW_UP';
       } else if (bucketFilter === 'NEW') {
-        matchesBucket = lead.lead_bucket === 'NEW' && lead.status !== 'CALL_NOT_RECEIVED' && lead.status !== 'FOLLOW_UP';
+        matchesBucket = lead.lead_bucket === 'NEW' && lead.status !== 'CALL_NOT_RECEIVED' && lead.status !== 'FOLLOW_UP' && lead.status !== 'CONFIRMED';
       } else if (bucketFilter === 'CANCELLED') {
         matchesBucket = lead.lead_bucket === 'CANCELLED';
+      } else if (bucketFilter === 'CONFIRMED') {
+        matchesBucket = lead.status === 'CONFIRMED';
       }
       
       // Check for reference ID search
@@ -153,11 +163,13 @@ export default function LeadsAll() {
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
   const bucketCounts = useMemo(() => {
-    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0 };
+    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0 };
     allLeads.forEach(lead => {
       counts.ALL++;
-      // Check CNR first - status takes priority for CNR classification
-      if (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED') {
+      // Check CONFIRMED first
+      if (lead.status === 'CONFIRMED') {
+        counts.CONFIRMED++;
+      } else if (lead.lead_bucket === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED') {
         counts.CNR++;
       } else if (lead.lead_bucket === 'FOLLOW_UP_POOL' || lead.current_team === 'FOLLOWUP' || lead.status === 'FOLLOW_UP') {
         counts.FOLLOWUP++;
@@ -442,15 +454,36 @@ export default function LeadsAll() {
       {/* Lead Bucket Tabs - scrollable on mobile */}
       <Tabs value={bucketFilter} onValueChange={(v) => setBucketFilter(v as LeadBucketFilter)} className="w-full">
         <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-          <TabsList className="grid w-max md:w-full grid-cols-5 min-w-[500px] md:min-w-0 md:max-w-lg">
+          <TabsList className="grid w-max md:w-full grid-cols-6 min-w-[600px] md:min-w-0 md:max-w-2xl">
             <TabsTrigger value="ALL" className="text-xs md:text-sm">All ({bucketCounts.ALL})</TabsTrigger>
             <TabsTrigger value="NEW" className="text-xs md:text-sm">New ({bucketCounts.NEW})</TabsTrigger>
             <TabsTrigger value="FOLLOWUP" className="text-xs md:text-sm">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
             <TabsTrigger value="CNR" className="text-xs md:text-sm">CNR ({bucketCounts.CNR})</TabsTrigger>
+            <TabsTrigger value="CONFIRMED" className="text-xs md:text-sm">Confirmed ({bucketCounts.CONFIRMED})</TabsTrigger>
             <TabsTrigger value="CANCELLED" className="text-xs md:text-sm">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
           </TabsList>
         </div>
       </Tabs>
+
+      {/* Transfer Progress Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+        <Card className="p-3">
+          <div className="text-xs text-muted-foreground">Total Leads</div>
+          <div className="text-lg font-bold">{bucketCounts.ALL}</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-xs text-muted-foreground">Transferred</div>
+          <div className="text-lg font-bold text-green-600">{transferCounts?.totalCount || 0}</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-xs text-muted-foreground">In My Orders</div>
+          <div className="text-lg font-bold text-blue-600">{bucketCounts.CONFIRMED}</div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-xs text-muted-foreground">Pending Transfer</div>
+          <div className="text-lg font-bold text-orange-600">{bucketCounts.NEW}</div>
+        </Card>
+      </div>
 
       {/* Filters */}
       <Card>
