@@ -350,13 +350,14 @@ export function usePendingPartyPayables() {
 
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // First get the transaction so we can clean up any linked records
+      // First get the transaction so we can clean up any linked records and log activity
       const { data: transaction, error: fetchError } = await supabase
         .from('transactions')
-        .select('transaction_code, amount, party_id, date, account_id, description')
+        .select('transaction_code, amount, party_id, date, account_id, description, type, store_id')
         .eq('id', id)
         .maybeSingle();
 
@@ -371,6 +372,21 @@ export function useDeleteTransaction() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity for deleted transaction
+      if (transaction) {
+        const typeLabel = transaction.type === 'income' ? 'Deposit' : transaction.type === 'expense' ? 'Expense' : 'Transfer';
+        await supabase.from('accounting_activity_logs').insert({
+          entity_type: 'transaction',
+          entity_id: id,
+          action_type: 'DELETE',
+          description: `${typeLabel} ${transactionCode || ''} deleted - Rs. ${(transaction.amount || 0).toLocaleString()}`,
+          amount: transaction.amount,
+          store_id: transaction.store_id || storeId,
+          performed_by: (await supabase.auth.getUser()).data.user?.id || null,
+          old_values: transaction,
+        });
+      }
 
       // Also delete linked party_transaction if transaction_code exists
       if (transactionCode) {
@@ -429,6 +445,7 @@ export function useDeleteTransaction() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-activity-logs'] });
       queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
       queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
       queryClient.invalidateQueries({ queryKey: ['pending-party-receivables'] });
