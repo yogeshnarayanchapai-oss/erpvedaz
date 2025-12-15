@@ -231,12 +231,15 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
 
-      // Calculate running balance (exclude settled transactions from running balance)
+      // Calculate running balance (only PENDING/unsettled transactions affect running balance)
+      // Cleared/settled transactions are already accounted for
       let runningBalance = 0;
       entries.forEach(entry => {
-        // Settled transactions don't affect running balance (already settled)
-        if (!entry.is_settled) {
-          runningBalance += entry.debit - entry.credit;
+        // Only unsettled/pending transactions affect the running balance (what's still owed)
+        const isPending = entry.is_pending === true || (entry.type === 'TRANSACTION' && entry.is_settled !== true);
+        if (isPending) {
+          // Credit = receivable (party owes us), Debit = payable (we owe party)
+          runningBalance += entry.credit - entry.debit;
         }
         entry.balance = runningBalance;
       });

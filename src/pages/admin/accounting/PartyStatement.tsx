@@ -83,15 +83,36 @@ export default function PartyStatement() {
   }, [parties]);
 
   const statementSummary = useMemo(() => {
-    // Total Debit = sum of ALL debit amounts, Total Credit = sum of ALL credit amounts
+    // Separate cleared (received/paid) vs pending transactions
     const allEntries = statement.filter(e => e.id !== 'opening-balance');
-    const totalDebit = allEntries.reduce((sum, entry) => sum + entry.debit, 0);
-    const totalCredit = allEntries.reduce((sum, entry) => sum + entry.credit, 0);
-    // Balance = Credit - Debit
-    const balance = totalCredit - totalDebit;
+    
+    // Cleared entries = PAYMENT type OR (type that is settled/cleared)
+    const clearedEntries = allEntries.filter(e => 
+      e.type === 'PAYMENT' || e.is_settled === true || (e.type === 'PENDING' && !e.is_pending)
+    );
+    
+    // Pending entries = entries that are not yet cleared/settled
+    const pendingEntries = allEntries.filter(e => 
+      e.is_pending === true || (e.type === 'TRANSACTION' && e.is_settled !== true)
+    );
+    
+    // Total Debit = only CLEARED debit amounts (actually paid out)
+    const totalDebit = clearedEntries.reduce((sum, entry) => sum + entry.debit, 0);
+    // Total Credit = only CLEARED credit amounts (actually received)
+    const totalCredit = clearedEntries.reduce((sum, entry) => sum + entry.credit, 0);
+    
+    // Pending amounts (still owed)
+    const pendingDebit = pendingEntries.reduce((sum, entry) => sum + entry.debit, 0);
+    const pendingCredit = pendingEntries.reduce((sum, entry) => sum + entry.credit, 0);
+    
+    // Balance = pending receivable - pending payable (what's still owed to us net)
+    // If positive = party owes us, if negative = we owe party
+    const balance = pendingCredit - pendingDebit;
+    
     // Pending = count of not settled transactions
-    const pendingCount = statement.filter(e => e.is_pending || (e.type === 'TRANSACTION' && !e.is_settled)).length;
-    return { totalDebit, totalCredit, balance, pendingCount };
+    const pendingCount = pendingEntries.length;
+    
+    return { totalDebit, totalCredit, balance, pendingCount, pendingCredit, pendingDebit };
   }, [statement]);
 
   const toggleSelectAll = () => {
