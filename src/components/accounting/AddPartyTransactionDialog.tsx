@@ -12,19 +12,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAccounts } from '@/hooks/useAccounts';
 import { SearchableCategorySelect } from './SearchableCategorySelect';
+import { SearchablePartySelect } from './SearchablePartySelect';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 interface AddPartyTransactionDialogProps {
-  partyId: string;
-  partyName: string;
+  partyId?: string;
+  partyName?: string;
 }
 
-export function AddPartyTransactionDialog({ partyId, partyName }: AddPartyTransactionDialogProps) {
+export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }: AddPartyTransactionDialogProps) {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [selectedPartyId, setSelectedPartyId] = useState(initialPartyId || '');
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('income');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
@@ -37,6 +39,7 @@ export function AddPartyTransactionDialog({ partyId, partyName }: AddPartyTransa
   const { data: accounts = [] } = useAccounts();
 
   const resetForm = () => {
+    if (!initialPartyId) setSelectedPartyId('');
     setTransactionType('income');
     setDate(new Date().toISOString().split('T')[0]);
     setAmount('');
@@ -48,6 +51,10 @@ export function AddPartyTransactionDialog({ partyId, partyName }: AddPartyTransa
   };
 
   const handleSubmit = async () => {
+    if (!selectedPartyId) {
+      toast.error('Please select a party');
+      return;
+    }
     if (!amount || parseFloat(amount) <= 0) {
       toast.error('Please enter a valid amount');
       return;
@@ -70,7 +77,7 @@ export function AddPartyTransactionDialog({ partyId, partyName }: AddPartyTransa
         description: description.trim(),
         category_id: categoryId || null,
         account_id: isCleared ? accountId : null,
-        party_id: partyId,
+        party_id: selectedPartyId,
         is_cleared: isCleared,
         notes: notes.trim() || null,
         store_id: storeId,
@@ -102,9 +109,20 @@ export function AddPartyTransactionDialog({ partyId, partyName }: AddPartyTransa
       </DialogTrigger>
       <DialogContent className="max-w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle>Add Transaction for {partyName}</DialogTitle>
+          <DialogTitle>{partyName ? `Add Transaction for ${partyName}` : 'Add Party Transaction'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          {!initialPartyId && (
+            <div className="space-y-2">
+              <Label>Party</Label>
+              <SearchablePartySelect 
+                value={selectedPartyId} 
+                onValueChange={setSelectedPartyId}
+                placeholder="Select party..."
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Transaction Type</Label>
             <Select value={transactionType} onValueChange={(v) => setTransactionType(v as 'income' | 'expense')}>
