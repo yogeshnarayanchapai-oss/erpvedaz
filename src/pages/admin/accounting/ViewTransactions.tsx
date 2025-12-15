@@ -12,7 +12,6 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
-import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
@@ -42,10 +41,9 @@ export default function ViewTransactions() {
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
   const { canEdit } = useAccountingEditAccess();
-  const { effectiveRole } = useEffectiveRole();
   const deleteTransaction = useDeleteTransaction();
   
-  const isOwner = effectiveRole === 'OWNER';
+  const canDelete = canEdit; // OWNER and ACCOUNTANT can delete
 
   const filteredTransactions = transactions.filter(t => {
     if (!filters.search) return true;
@@ -211,7 +209,7 @@ export default function ViewTransactions() {
           <p className="text-muted-foreground">All accounting transactions</p>
         </div>
         <div className="flex items-center gap-2">
-          {isOwner && selectedIds.length > 0 && (
+          {canDelete && selectedIds.length > 0 && (
             <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
@@ -361,7 +359,7 @@ export default function ViewTransactions() {
           <Table>
             <TableHeader>
               <TableRow>
-                {isOwner && (
+                {canDelete && (
                   <TableHead className="w-10">
                     <Checkbox
                       checked={selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0}
@@ -378,25 +376,25 @@ export default function ViewTransactions() {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Reference</TableHead>
                 <TableHead>Cleared</TableHead>
-                {(canEdit || isOwner) && <TableHead className="w-24">Action</TableHead>}
+                {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={isOwner ? 12 : 10} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isOwner ? 12 : 10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
               )}
               {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
-                  {isOwner && (
+                  {canDelete && (
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.includes(transaction.id)}
@@ -429,7 +427,7 @@ export default function ViewTransactions() {
                       {transaction.is_cleared ? 'Cleared' : 'Pending'}
                     </Badge>
                   </TableCell>
-                  {(canEdit || isOwner) && (
+                  {(canEdit || canDelete) && (
                     <TableCell>
                       <div className="flex items-center gap-1">
                         {canEdit && (
@@ -441,7 +439,7 @@ export default function ViewTransactions() {
                             <Pencil className="w-4 h-4" />
                           </Button>
                         )}
-                        {isOwner && (
+                        {canDelete && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
