@@ -81,6 +81,51 @@ export default function ViewTransactions() {
       const transactionCodes = selectedTransactions
         .map(t => t.transaction_code)
         .filter((code): code is string => !!code);
+
+      // Detect transactions that originated from party payments so we can also delete those payments
+      const paymentLikeTransactions = selectedTransactions.filter(t => {
+        if (!t.party_id || !t.account_id || !t.amount || !t.description) return false;
+        return (
+          t.description.startsWith('Payment received from') ||
+          t.description.startsWith('Payment made to')
+        );
+      });
+
+      let partyPaymentIdsToDelete: string[] = [];
+      if (paymentLikeTransactions.length > 0) {
+        const partyIds = Array.from(
+          new Set(paymentLikeTransactions.map(t => t.party_id as string))
+        );
+
+        const { data: candidatePayments, error: paymentFetchError } = await supabase
+          .from('party_payments')
+          .select('id, party_id, date, amount, payment_type, bank_account_id')
+          .in('party_id', partyIds);
+
+        if (paymentFetchError) throw paymentFetchError;
+
+        if (candidatePayments) {
+          for (const tx of paymentLikeTransactions) {
+            const desc = tx.description as string;
+            const isPaymentReceived = desc.startsWith('Payment received from');
+            const isPaymentMade = desc.startsWith('Payment made to');
+            const paymentType = isPaymentReceived ? 'RECEIVED' : isPaymentMade ? 'PAID' : null;
+            if (!paymentType) continue;
+
+            const matches = candidatePayments.filter((p: any) =>
+              p.party_id === tx.party_id &&
+              p.bank_account_id === tx.account_id &&
+              p.amount === tx.amount &&
+              p.payment_type === paymentType &&
+              p.date === tx.date
+            );
+            partyPaymentIdsToDelete.push(...matches.map((p: any) => p.id as string));
+          }
+        }
+
+        // Remove duplicates
+        partyPaymentIdsToDelete = Array.from(new Set(partyPaymentIdsToDelete));
+      }
       
       // Delete from transactions table
       const { error } = await supabase
@@ -93,6 +138,14 @@ export default function ViewTransactions() {
       // Also delete linked party_transactions by transaction_code
       if (transactionCodes.length > 0) {
         await supabase.from('party_transactions').delete().in('transaction_code', transactionCodes);
+      }
+
+      // Also delete any linked party_payments found above
+      if (partyPaymentIdsToDelete.length > 0) {
+        await supabase
+          .from('party_payments')
+          .delete()
+          .in('id', partyPaymentIdsToDelete);
       }
       
       queryClient.invalidateQueries({ queryKey: ['transactions'] });

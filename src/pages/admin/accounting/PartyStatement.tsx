@@ -148,8 +148,47 @@ export default function PartyStatement() {
         }
       }
 
-      // Delete from party_payments
+      // Delete from party_payments and any linked transactions
       if (paymentIds.length > 0) {
+        const { data: paymentsToDelete, error: payFetchError } = await supabase
+          .from('party_payments')
+          .select('id, party_id, date, amount, payment_type, bank_account_id')
+          .in('id', paymentIds);
+        
+        if (payFetchError) throw payFetchError;
+
+        if (paymentsToDelete && paymentsToDelete.length > 0) {
+          for (const payment of paymentsToDelete as any[]) {
+            const descPrefix =
+              payment.payment_type === 'RECEIVED' ? 'Payment received from' : 'Payment made to';
+
+            const { data: relatedTransactions, error: txError } = await supabase
+              .from('transactions')
+              .select('id')
+              .eq('party_id', payment.party_id)
+              .eq('amount', payment.amount)
+              .eq('date', payment.date)
+              .eq('account_id', payment.bank_account_id)
+              .ilike('description', `${descPrefix}%`);
+
+            if (txError) {
+              console.warn('Failed to load linked transactions for payment deletion:', txError);
+              continue;
+            }
+
+            if (relatedTransactions && relatedTransactions.length > 0) {
+              const txIds = relatedTransactions.map((t: any) => t.id as string);
+              const { error: delTxError } = await supabase
+                .from('transactions')
+                .delete()
+                .in('id', txIds);
+              if (delTxError) {
+                console.warn('Failed to delete linked transactions for payment:', delTxError);
+              }
+            }
+          }
+        }
+
         const { error: payError } = await supabase
           .from('party_payments')
           .delete()
@@ -202,6 +241,42 @@ export default function PartyStatement() {
           await supabase.from('transactions').delete().eq('transaction_code', entry.transaction_code);
         }
       } else if (entry.type === 'PAYMENT') {
+        // Fetch payment so we can also delete any linked transactions
+        const { data: payment, error: fetchError } = await supabase
+          .from('party_payments')
+          .select('id, party_id, date, amount, payment_type, bank_account_id')
+          .eq('id', entry.id)
+          .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (payment) {
+          const descPrefix =
+            payment.payment_type === 'RECEIVED' ? 'Payment received from' : 'Payment made to';
+
+          const { data: relatedTransactions, error: txError } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('party_id', payment.party_id)
+            .eq('amount', payment.amount)
+            .eq('date', payment.date)
+            .eq('account_id', payment.bank_account_id)
+            .ilike('description', `${descPrefix}%`);
+
+          if (txError) {
+            console.warn('Failed to load linked transactions for payment deletion:', txError);
+          } else if (relatedTransactions && relatedTransactions.length > 0) {
+            const txIds = relatedTransactions.map((t: any) => t.id as string);
+            const { error: delTxError } = await supabase
+              .from('transactions')
+              .delete()
+              .in('id', txIds);
+            if (delTxError) {
+              console.warn('Failed to delete linked transactions for payment:', delTxError);
+            }
+          }
+        }
+
         const { error } = await supabase.from('party_payments').delete().eq('id', entry.id);
         if (error) throw error;
       } else if (entry.type === 'PENDING') {
