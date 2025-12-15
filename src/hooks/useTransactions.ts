@@ -354,11 +354,15 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: async (id: string) => {
       // First get the transaction to find its transaction_code
-      const { data: transaction } = await supabase
+      const { data: transaction, error: fetchError } = await supabase
         .from('transactions')
         .select('transaction_code')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+      
+      if (fetchError) throw fetchError;
+      
+      const transactionCode = transaction?.transaction_code;
       
       // Delete from transactions table
       const { error } = await supabase
@@ -369,11 +373,15 @@ export function useDeleteTransaction() {
       if (error) throw error;
       
       // Also delete linked party_transaction if transaction_code exists
-      if (transaction?.transaction_code) {
-        await supabase
+      if (transactionCode) {
+        const { error: partyDeleteError } = await supabase
           .from('party_transactions')
           .delete()
-          .eq('transaction_code', transaction.transaction_code);
+          .eq('transaction_code', transactionCode);
+        
+        if (partyDeleteError) {
+          console.warn('Failed to delete linked party_transaction:', partyDeleteError);
+        }
       }
     },
     onSuccess: () => {

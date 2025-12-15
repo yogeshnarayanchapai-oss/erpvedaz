@@ -90,11 +90,15 @@ export function useDeletePartyTransaction() {
   return useMutation({
     mutationFn: async (transactionId: string) => {
       // First get the transaction to find its transaction_code
-      const { data: partyTrans } = await supabase
+      const { data: partyTrans, error: fetchError } = await supabase
         .from('party_transactions')
         .select('transaction_code')
         .eq('id', transactionId)
-        .single();
+        .maybeSingle();
+      
+      if (fetchError) throw fetchError;
+      
+      const transactionCode = partyTrans?.transaction_code;
       
       // Delete from party_transactions table
       const { error } = await supabase
@@ -104,11 +108,15 @@ export function useDeletePartyTransaction() {
       if (error) throw error;
       
       // Also delete linked transaction from transactions table if transaction_code exists
-      if (partyTrans?.transaction_code) {
-        await supabase
+      if (transactionCode) {
+        const { error: transDeleteError } = await supabase
           .from('transactions')
           .delete()
-          .eq('transaction_code', partyTrans.transaction_code);
+          .eq('transaction_code', transactionCode);
+        
+        if (transDeleteError) {
+          console.warn('Failed to delete linked transaction:', transDeleteError);
+        }
       }
     },
     onSuccess: () => {
@@ -117,6 +125,9 @@ export function useDeletePartyTransaction() {
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-payables'] });
       toast.success('Transaction deleted');
     },
     onError: (error: Error) => {
