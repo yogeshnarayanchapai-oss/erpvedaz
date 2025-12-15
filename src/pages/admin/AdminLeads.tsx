@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
+import { cn } from '@/lib/utils';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
@@ -746,43 +747,47 @@ export default function AdminLeads() {
   const duplicateCount = leads.filter(l => l.is_duplicate).length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in p-2 md:p-0">
+      {/* Header */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Leads</h1>
-            <p className="text-muted-foreground">View and filter all leads in the system</p>
+            <h1 className="text-xl md:text-2xl font-bold">Leads</h1>
+            <p className="text-sm text-muted-foreground hidden sm:block">View and filter all leads</p>
           </div>
           {duplicateCount > 0 && (
             <Button 
               variant={selectedStatus === 'duplicate' ? 'default' : 'outline'} 
+              size="sm"
               onClick={() => setSelectedStatus(selectedStatus === 'duplicate' ? 'all' : 'duplicate')}
-              className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 hover:text-orange-700"
+              className="gap-1 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20 text-xs md:text-sm"
             >
-              Double Leads ({duplicateCount})
+              Double ({duplicateCount})
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        
+        {/* Actions Row */}
+        <div className="flex flex-wrap items-center gap-2">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="all">All Leads</TabsTrigger>
+            <TabsList className="h-8">
+              <TabsTrigger value="today" className="text-xs md:text-sm h-7 px-2 md:px-3">Today</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs md:text-sm h-7 px-2 md:px-3">All</TabsTrigger>
             </TabsList>
           </Tabs>
           {canManageLeads && (
             <>
-              <Button variant="outline" onClick={() => setShowTransferLeadsModal(true)} className="gap-2">
-                <ArrowRightLeft className="w-4 h-4" />
-                Transfer Leads
+              <Button variant="outline" size="sm" onClick={() => setShowTransferLeadsModal(true)} className="gap-1 text-xs md:text-sm">
+                <ArrowRightLeft className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Transfer</span>
               </Button>
-              <Button variant="outline" onClick={() => setShowImportDialog(true)} className="gap-2">
-                <FileSpreadsheet className="w-4 h-4" />
-                Import
+              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)} className="gap-1 text-xs md:text-sm">
+                <FileSpreadsheet className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Import</span>
               </Button>
-              <Button onClick={() => setShowAddLeadDialog(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Leads
+              <Button size="sm" onClick={() => setShowAddLeadDialog(true)} className="gap-1 text-xs md:text-sm">
+                <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Add</span>
               </Button>
             </>
           )}
@@ -805,43 +810,43 @@ export default function AdminLeads() {
 
       {/* Leads Overview - Admin Summary Cards */}
       {canManageLeads && (
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Product Leads Summary */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Product Leads Summary
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <Package className="w-4 h-4 md:w-5 md:h-5" />
+                Product Summary
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 md:px-6 md:pb-6">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="table-header">Product</TableHead>
-                      <TableHead className="table-header text-center">Leads</TableHead>
-                      <TableHead className="table-header text-center">Transferred</TableHead>
-                      <TableHead className="table-header text-center">Remaining</TableHead>
+                      <TableHead className="table-header text-xs md:text-sm">Product</TableHead>
+                      <TableHead className="table-header text-center text-xs md:text-sm">Leads</TableHead>
+                      <TableHead className="table-header text-center text-xs md:text-sm">Transferred</TableHead>
+                      <TableHead className="table-header text-center text-xs md:text-sm">Remaining</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {productSummary.length > 0 ? (
                       productSummary.map((product) => (
                         <TableRow key={product.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">{product.name}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-info/5">
+                            <Badge variant="outline" className="bg-info/5 text-xs">
                               {product.leadsInRange.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-success/5">
+                            <Badge variant="outline" className="bg-success/5 text-xs">
                               {product.transferredInRange.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-warning/5">
+                            <Badge variant="outline" className="bg-warning/5 text-xs">
                               {product.remaining.toLocaleString()}
                             </Badge>
                           </TableCell>
@@ -849,8 +854,8 @@ export default function AdminLeads() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No leads transferred in selected date range
+                        <TableCell colSpan={4} className="text-center py-4 text-xs md:text-sm text-muted-foreground">
+                          No leads in selected range
                         </TableCell>
                       </TableRow>
                     )}
@@ -862,40 +867,40 @@ export default function AdminLeads() {
 
           {/* Staff Transfer Summary */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <Users className="w-4 h-4 md:w-5 md:h-5" />
                 Staff Transfer Summary
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 md:px-6 md:pb-6">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="table-header">Staff Name</TableHead>
-                      <TableHead className="table-header text-center">Transferred</TableHead>
-                      <TableHead className="table-header text-center">New</TableHead>
-                      <TableHead className="table-header">Products</TableHead>
+                      <TableHead className="table-header text-xs md:text-sm">Staff</TableHead>
+                      <TableHead className="table-header text-center text-xs md:text-sm">Transferred</TableHead>
+                      <TableHead className="table-header text-center text-xs md:text-sm">New</TableHead>
+                      <TableHead className="table-header text-xs md:text-sm hidden md:table-cell">Products</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {staffTransferSummary.length > 0 ? (
                       staffTransferSummary.map((staff) => (
                         <TableRow key={staff.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{staff.name}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">{staff.name}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-primary/5">
+                            <Badge variant="outline" className="bg-primary/5 text-xs">
                               {staff.transferCount.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-secondary/5">
+                            <Badge variant="outline" className="bg-secondary/5 text-xs">
                               {staff.newLeads.toLocaleString()}
                             </Badge>
                           </TableCell>
                           <TableCell 
-                            className="text-sm text-muted-foreground max-w-[200px]"
+                            className="text-xs text-muted-foreground max-w-[150px] truncate hidden md:table-cell"
                             title={staff.fullProducts}
                           >
                             {staff.products}
@@ -904,8 +909,8 @@ export default function AdminLeads() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No transfers in selected date range
+                        <TableCell colSpan={4} className="text-center py-4 text-xs md:text-sm text-muted-foreground">
+                          No transfers in selected range
                         </TableCell>
                       </TableRow>
                     )}
@@ -919,56 +924,10 @@ export default function AdminLeads() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {activeTab === 'all' && (
-              <>
-                <DateRangeFilter value={dateRange} onChange={setDateRange} />
-                <span className="text-xs text-muted-foreground">Filters based on lead creation date</span>
-              </>
-            )}
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Products" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Products</SelectItem>
-                {products.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending_transfer">Pending Transfer</SelectItem>
-                <SelectItem value="duplicate">Duplicate</SelectItem>
-                <SelectItem value="NEW">New</SelectItem>
-                <SelectItem value="ASSIGNED">Assigned</SelectItem>
-                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
-                <SelectItem value="CALL_NOT_RECEIVED">Call Not Received</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                <SelectItem value="REDIRECT">Redirect</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Assigned To" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
-                {callingStaff.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 min-w-[200px]">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col gap-3">
+            {/* Search first on mobile */}
+            <div className="relative md:hidden">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name or phone..."
@@ -977,18 +936,79 @@ export default function AdminLeads() {
                 className="pl-9"
               />
             </div>
+            
+            {/* Filters row - scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 md:pb-0 md:flex-wrap md:items-center">
+              {activeTab === 'all' && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <DateRangeFilter value={dateRange} onChange={setDateRange} />
+                  <span className="text-xs text-muted-foreground hidden lg:inline">by creation date</span>
+                </div>
+              )}
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger className="w-[120px] md:w-[180px] h-9 flex-shrink-0">
+                  <SelectValue placeholder="Product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Products</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[100px] md:w-[150px] h-9 flex-shrink-0">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending_transfer">Pending Transfer</SelectItem>
+                  <SelectItem value="duplicate">Duplicate</SelectItem>
+                  <SelectItem value="NEW">New</SelectItem>
+                  <SelectItem value="ASSIGNED">Assigned</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
+                  <SelectItem value="CALL_NOT_RECEIVED">CNR</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="REDIRECT">Redirect</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+                <SelectTrigger className="w-[110px] md:w-[150px] h-9 flex-shrink-0">
+                  <SelectValue placeholder="Assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+                  {callingStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Desktop search */}
+              <div className="relative flex-1 min-w-[200px] hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or phone..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Leads Table */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-primary" />
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-6">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             {activeTab === 'today' ? "Today's Leads" : 'Leads'} ({filteredLeads.length})
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {showReturnButton && (
               <>
                 <Button
@@ -996,30 +1016,30 @@ export default function AdminLeads() {
                   size="sm"
                   onClick={() => setSelectedLeads(filteredLeads.map(l => l.id))}
                   disabled={filteredLeads.length === 0 || selectedLeads.length === filteredLeads.length}
-                  className="gap-2"
+                  className="gap-1 text-xs"
                 >
-                  <CheckSquare className="w-4 h-4" />
-                  Select All CNR ({filteredLeads.length})
+                  <CheckSquare className="w-3 h-3" />
+                  <span className="hidden sm:inline">Select All</span> ({filteredLeads.length})
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
                   onClick={() => setShowPoolDialog(true)}
                   disabled={!canReturn || resendCNRToPool.isPending}
-                  className="gap-2"
+                  className="gap-1 text-xs"
                 >
-                  <Send className="w-4 h-4" />
-                  Send to Leads Pool {selectedLeads.length > 0 && `(${selectedLeads.length})`}
+                  <Send className="w-3 h-3" />
+                  <span className="hidden sm:inline">Pool</span> {selectedLeads.length > 0 && `(${selectedLeads.length})`}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowReturnDialog(true)}
                   disabled={!canReturn || returnLeadsToQueue.isPending}
-                  className="gap-2"
+                  className="gap-1 text-xs"
                 >
-                  <RotateCcw className="w-4 h-4" />
-                  Send back to Leads {selectedLeads.length > 0 && `(${selectedLeads.length})`}
+                  <RotateCcw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Return</span> {selectedLeads.length > 0 && `(${selectedLeads.length})`}
                 </Button>
               </>
             )}
@@ -1028,9 +1048,9 @@ export default function AdminLeads() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsReassignOpen(true)}
-                className="gap-2"
+                className="gap-1 text-xs"
               >
-                <UserPlus className="w-4 h-4" />
+                <UserPlus className="w-3 h-3" />
                 Reassign ({selectedLeads.length})
               </Button>
             )}
@@ -1040,8 +1060,67 @@ export default function AdminLeads() {
             />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-0 md:p-6 md:pt-0">
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-2 p-3">
+            {filteredLeads.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {isLoading ? 'Loading...' : 'No leads found'}
+              </div>
+            ) : (
+              filteredLeads.map((lead, index) => (
+                <div 
+                  key={lead.id}
+                  className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleViewLead(lead)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedLeads.includes(lead.id)}
+                        onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
+                      />
+                      <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className={cn("text-xs", getLeadStatusBadgeClass(lead.status || 'NEW'))}>
+                        {formatStatusLabel(lead.status || 'NEW')}
+                      </Badge>
+                      {(lead.status === 'CONFIRMED' || lead.order_id) && (
+                        <Lock className="w-3 h-3 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="pl-6">
+                    <div className="flex items-center gap-2 font-medium">
+                      {lead.client_name}
+                      <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
+                    </div>
+                    <div className="text-sm text-muted-foreground">{lead.contact_number}</div>
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                      <span className="bg-muted px-2 py-0.5 rounded">{lead.products?.name || 'No product'}</span>
+                      {lead.destination_branch && <span className="bg-muted px-2 py-0.5 rounded">{lead.destination_branch}</span>}
+                    </div>
+                    <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
+                      <FormattedDate date={lead.date} />
+                      <span>{lead.assigned_to?.name || 'Unassigned'}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" onClick={() => handleViewLead(lead)} className="h-7 w-7 p-0">
+                      <Eye className="w-3 h-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)} className="h-7 w-7 p-0">
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

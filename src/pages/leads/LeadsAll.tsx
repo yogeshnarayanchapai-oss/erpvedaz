@@ -393,18 +393,20 @@ export default function LeadsAll() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 animate-fade-in p-2 md:p-0">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">All Leads</h1>
-          <p className="text-muted-foreground">View and manage all leads</p>
+          <h1 className="text-xl md:text-2xl font-bold">All Leads</h1>
+          <p className="text-sm text-muted-foreground">View and manage all leads</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                <Upload className="w-4 h-4 mr-2" />
-                Import CSV
+              <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                <Upload className="w-4 h-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Import CSV</span>
+                <span className="sm:hidden">Import</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -429,77 +431,33 @@ export default function LeadsAll() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button onClick={exportToCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
+          <Button onClick={exportToCSV} size="sm" className="text-xs md:text-sm">
+            <Download className="w-4 h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
         </div>
       </div>
 
-      {/* Lead Bucket Tabs */}
+      {/* Lead Bucket Tabs - scrollable on mobile */}
       <Tabs value={bucketFilter} onValueChange={(v) => setBucketFilter(v as LeadBucketFilter)} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-lg">
-          <TabsTrigger value="ALL">All ({bucketCounts.ALL})</TabsTrigger>
-          <TabsTrigger value="NEW">New ({bucketCounts.NEW})</TabsTrigger>
-          <TabsTrigger value="FOLLOWUP">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
-          <TabsTrigger value="CNR">CNR ({bucketCounts.CNR})</TabsTrigger>
-          <TabsTrigger value="CANCELLED">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+          <TabsList className="grid w-max md:w-full grid-cols-5 min-w-[500px] md:min-w-0 md:max-w-lg">
+            <TabsTrigger value="ALL" className="text-xs md:text-sm">All ({bucketCounts.ALL})</TabsTrigger>
+            <TabsTrigger value="NEW" className="text-xs md:text-sm">New ({bucketCounts.NEW})</TabsTrigger>
+            <TabsTrigger value="FOLLOWUP" className="text-xs md:text-sm">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
+            <TabsTrigger value="CNR" className="text-xs md:text-sm">CNR ({bucketCounts.CNR})</TabsTrigger>
+            <TabsTrigger value="CANCELLED" className="text-xs md:text-sm">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
+          </TabsList>
+        </div>
       </Tabs>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Date Range</label>
-              <DateRangeFilter value={dateRange} onChange={setDateRange} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Product</label>
-              <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="w-[130px] h-9">
-                  <SelectValue placeholder="All products" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Products</SelectItem>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[120px] h-9">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s === 'ALL' ? 'All Statuses' : s === 'CALL_NOT_RECEIVED' ? 'CNR' : s.replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Assigned To</label>
-              <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                <SelectTrigger className="w-[130px] h-9">
-                  <SelectValue placeholder="All Staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Staff</SelectItem>
-                  <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
-                  {callingStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1 flex-1 min-w-[150px]">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col md:flex-row md:flex-wrap gap-3 md:items-end">
+            {/* Search first on mobile */}
+            <div className="space-y-1 md:order-last md:flex-1 md:min-w-[150px]">
               <label className="text-xs font-medium">Search</label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -511,21 +469,73 @@ export default function LeadsAll() {
                 />
               </div>
             </div>
+            
+            {/* Filter row - scrollable on mobile */}
+            <div className="flex gap-2 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 md:pb-0">
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Date</label>
+                <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              </div>
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Product</label>
+                <Select value={productFilter} onValueChange={setProductFilter}>
+                  <SelectTrigger className="w-[110px] md:w-[130px] h-9">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Products</SelectItem>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[100px] md:w-[120px] h-9">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s === 'ALL' ? 'All' : s === 'CALL_NOT_RECEIVED' ? 'CNR' : s.replace(/_/g, ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Assigned</label>
+                <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+                  <SelectTrigger className="w-[110px] md:w-[130px] h-9">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Staff</SelectItem>
+                    <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+                    {callingStaff.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Leads Table */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Leads ({filteredLeads.length})</CardTitle>
-          <div className="flex items-center gap-2">
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-6">
+          <CardTitle className="text-base md:text-lg">Leads ({filteredLeads.length})</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
             {selectedLeads.length > 0 && (
               <>
                 <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <UserPlus className="w-4 h-4 mr-2" />
+                    <Button variant="outline" size="sm" className="text-xs">
+                      <UserPlus className="w-3 h-3 mr-1" />
                       Reassign ({selectedLeads.length})
                     </Button>
                   </DialogTrigger>
@@ -557,18 +567,19 @@ export default function LeadsAll() {
                   variant="outline" 
                   size="sm" 
                   onClick={() => setIsBulkEditOpen(true)}
+                  className="text-xs"
                 >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Bulk Edit ({selectedLeads.length})
+                  <Edit className="w-3 h-3 mr-1" />
+                  Edit ({selectedLeads.length})
                 </Button>
               </>
             )}
             {selectedUnassignedLeads.length > 0 && (
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Send className="w-4 h-4 mr-2" />
-                    Transfer Selected ({selectedUnassignedLeads.length})
+                  <Button variant="outline" size="sm" className="text-xs">
+                    <Send className="w-3 h-3 mr-1" />
+                    Transfer ({selectedUnassignedLeads.length})
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -602,8 +613,56 @@ export default function LeadsAll() {
             />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-0 md:p-6 md:pt-0">
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-2 p-3">
+            {filteredLeads.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {isLoading ? 'Loading...' : 'No leads found'}
+              </div>
+            ) : (
+              filteredLeads.map((lead, index) => (
+                <div 
+                  key={lead.id} 
+                  className={cn(
+                    "border rounded-lg p-3 space-y-2",
+                    isTodayFilter && lead.assigned_to_user_id && 'bg-muted/30'
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedLeads.includes(lead.id)}
+                        onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
+                      />
+                      <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                    </div>
+                    <Badge variant="outline" className={cn("text-xs", getLeadStatusBadgeClass(lead.status))}>
+                      {formatStatusLabel(lead.status)}
+                    </Badge>
+                  </div>
+                  <div className="pl-6">
+                    <div className="flex items-center gap-2 font-medium">
+                      {lead.client_name}
+                      <DuplicateBadge phone={lead.contact_number} isDuplicate={lead.is_duplicate} />
+                    </div>
+                    <div className="text-sm text-muted-foreground">{lead.contact_number}</div>
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                      <span className="bg-muted px-2 py-0.5 rounded">{lead.products?.name || 'No product'}</span>
+                      {lead.source && <span className="bg-muted px-2 py-0.5 rounded">{lead.source}</span>}
+                    </div>
+                    <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
+                      <FormattedDate date={lead.date} />
+                      <span>{lead.assigned_to?.name || 'Unassigned'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
