@@ -353,34 +353,75 @@ export function useDeleteTransaction() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // First get the transaction to find its transaction_code
+      // First get the transaction so we can clean up any linked records
       const { data: transaction, error: fetchError } = await supabase
         .from('transactions')
-        .select('transaction_code')
+        .select('transaction_code, amount, party_id, date, account_id, description')
         .eq('id', id)
         .maybeSingle();
-      
+
       if (fetchError) throw fetchError;
-      
-      const transactionCode = transaction?.transaction_code;
-      
+
+      const transactionCode = transaction?.transaction_code as string | undefined;
+
       // Delete from transactions table
       const { error } = await supabase
         .from('transactions')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
-      
+
       // Also delete linked party_transaction if transaction_code exists
       if (transactionCode) {
         const { error: partyDeleteError } = await supabase
           .from('party_transactions')
           .delete()
           .eq('transaction_code', transactionCode);
-        
+
         if (partyDeleteError) {
           console.warn('Failed to delete linked party_transaction:', partyDeleteError);
+        }
+      }
+
+      // If this transaction came from a party payment, also delete matching party_payments
+      if (
+        transaction &&
+        transaction.party_id &&
+        transaction.account_id &&
+        transaction.amount &&
+        transaction.date &&
+        transaction.description
+      ) {
+        const desc = transaction.description as string;
+        const isPaymentReceived = desc.startsWith('Payment received from');
+        const isPaymentMade = desc.startsWith('Payment made to');
+
+        if (isPaymentReceived || isPaymentMade) {
+          const paymentType = isPaymentReceived ? 'RECEIVED' : 'PAID';
+
+          const { data: payments, error: paymentsError } = await supabase
+            .from('party_payments')
+            .select('id')
+            .eq('party_id', transaction.party_id)
+            .eq('bank_account_id', transaction.account_id)
+            .eq('amount', transaction.amount)
+            .eq('payment_type', paymentType)
+            .eq('date', transaction.date);
+
+          if (paymentsError) {
+            console.warn('Failed to load linked party_payments for deletion:', paymentsError);
+          } else if (payments && payments.length > 0) {
+            const ids = payments.map((p: any) => p.id as string);
+            const { error: deletePaymentsError } = await supabase
+              .from('party_payments')
+              .delete()
+              .in('id', ids);
+
+            if (deletePaymentsError) {
+              console.warn('Failed to delete linked party_payments:', deletePaymentsError);
+            }
+          }
         }
       }
     },
