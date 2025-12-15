@@ -71,8 +71,6 @@ import NewExpense from "./pages/admin/accounting/NewExpense";
 import NewTransfer from "./pages/admin/accounting/NewTransfer";
 import ViewTransactions from "./pages/admin/accounting/ViewTransactions";
 import AccountsManagement from "./pages/admin/accounting/AccountsManagement";
-import Receivables from "./pages/admin/accounting/Receivables";
-import Payables from "./pages/admin/accounting/Payables";
 import CashBank from "./pages/admin/accounting/CashBank";
 import PartyStatement from "./pages/admin/accounting/PartyStatement";
 import CategoryManagement from "./pages/admin/accounting/CategoryManagement";
@@ -219,8 +217,6 @@ const App = () => (
                 <Route path="/admin/accounting/new-transfer" element={<NewTransfer />} />
                 <Route path="/admin/accounting/transactions" element={<ViewTransactions />} />
                 <Route path="/admin/accounting/accounts" element={<AccountsManagement />} />
-                <Route path="/admin/accounting/receivables" element={<Receivables />} />
-                <Route path="/admin/accounting/payables" element={<Payables />} />
                 <Route path="/admin/accounting/cash-bank" element={<CashBank />} />
                 <Route path="/admin/accounting/party-statement" element={<PartyStatement />} />
                 <Route path="/admin/accounting/categories" element={<CategoryManagement />} />
@@ -363,8 +359,7 @@ const App = () => (
                 <Route path="/accounting/new-transfer" element={<NewTransfer />} />
                 <Route path="/accounting/transactions" element={<ViewTransactions />} />
                 <Route path="/accounting/accounts" element={<AccountsManagement />} />
-                <Route path="/accounting/receivables" element={<Receivables />} />
-                <Route path="/accounting/payables" element={<Payables />} />
+                <Route path="/accounting/cash-bank" element={<CashBank />} />
                 <Route path="/accounting/cash-bank" element={<CashBank />} />
                 <Route path="/accounting/party-statement" element={<PartyStatement />} />
                 <Route path="/accounting/audit" element={<AuditDashboard />} />

@@ -15,11 +15,12 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { FileSpreadsheet, ArrowLeft, Eye, Trash2, CheckCircle } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Eye, Trash2, CheckCircle, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAccounts } from '@/hooks/useAccounts';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
+import { AddPartyTransactionDialog } from '@/components/accounting/AddPartyTransactionDialog';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -792,7 +793,12 @@ export default function PartyStatement() {
                     <TableCell className="text-right text-green-600">{partyReceivable > 0 ? `₹${partyReceivable.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className="text-right text-red-600">{partyPayable > 0 ? `₹${partyPayable.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(partyBalance).toLocaleString()}</TableCell>
-                    <TableCell><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {canEdit && <AddPartyTransactionDialog partyId={party.id} partyName={party.name} />}
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}

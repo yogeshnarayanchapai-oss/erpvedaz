@@ -169,8 +169,6 @@ const accountingItems: MenuItem[] = [
   { title: 'Accounts', url: '/admin/accounting/accounts', icon: Wallet },
   { title: 'Categories', url: '/admin/accounting/categories', icon: ClipboardList },
   { title: 'Party Statement', url: '/admin/accounting/party-statement', icon: FileText },
-  { title: 'Receivables', url: '/admin/accounting/receivables', icon: TrendingUp },
-  { title: 'Payables', url: '/admin/accounting/payables', icon: Receipt },
   { title: 'Audit Dashboard', url: '/admin/accounting/audit', icon: ClipboardList },
 ];
 
