@@ -169,7 +169,14 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       });
 
       // Add manual transactions from transactions table (both pending and cleared)
+      // EXCLUDE transactions auto-created from party_payments to avoid duplicates
       partyManualTransactions?.forEach(t => {
+        const desc = t.description || '';
+        // Skip transactions that were auto-created from party_payments trigger
+        if (desc.startsWith('Payment received from') || desc.startsWith('Payment made to')) {
+          return;
+        }
+        
         const categoryName = t.categories?.name || '';
         const accountName = t.account_id ? accountsMap[t.account_id] || '' : '';
         const isIncome = t.type === 'income';
