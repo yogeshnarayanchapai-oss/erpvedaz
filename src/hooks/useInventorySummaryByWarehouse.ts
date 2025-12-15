@@ -56,10 +56,11 @@ export function useInventorySummaryByWarehouse(
         return true;
       });
 
-      // Get stock movements grouped by product/warehouse
+      // Get stock movements grouped by product/warehouse - filter by store via product
       let movementsQuery = supabase
         .from('stock_movements')
-        .select('product_id, warehouse_id, movement_type, qty, movement_date');
+        .select('product_id, warehouse_id, movement_type, qty, movement_date, products!inner(store_id)')
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (warehouseId && warehouseId !== 'all') {
         movementsQuery = movementsQuery.eq('warehouse_id', warehouseId);
@@ -69,6 +70,10 @@ export function useInventorySummaryByWarehouse(
       }
       if (endDate) {
         movementsQuery = movementsQuery.lte('movement_date', endDate);
+      }
+      // Filter by store_id via the products table
+      if (storeId) {
+        movementsQuery = movementsQuery.eq('products.store_id', storeId);
       }
 
       const { data: movementsData, error: movErr } = await movementsQuery;
