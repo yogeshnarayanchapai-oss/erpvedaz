@@ -97,11 +97,12 @@ export function useAuditSummary(filters: AuditFilters) {
       
       const totalPayroll = payrollData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
 
-      // Fetch purchase data (stock IN movements)
+      // Fetch purchase data (stock IN movements, exclude deleted)
       const { data: purchaseData } = await supabase
         .from('stock_movements')
         .select('qty, unit_cost')
         .eq('movement_type', 'IN')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', startDate || '2020-01-01')
         .lte('movement_date', endDate || new Date().toISOString().split('T')[0]);
       

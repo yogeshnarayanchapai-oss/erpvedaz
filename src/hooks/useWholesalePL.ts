@@ -12,12 +12,13 @@ export function useWholesalePLSummary(startDate: string, endDate: string, wareho
   return useQuery({
     queryKey: ['wholesale_pl_summary', startDate, endDate, warehouseId],
     queryFn: async () => {
-      // Get wholesale movements (OUT with WHOLESALE reason/category)
+      // Get wholesale movements (OUT with WHOLESALE reason/category, exclude deleted)
       let query = supabase
         .from('stock_movements')
         .select('qty, total_cost, total_value, movement_type, movement_reason, sale_category')
         .eq('movement_type', 'OUT')
         .eq('sale_category', 'WHOLESALE')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', startDate)
         .lte('movement_date', endDate);
 

@@ -64,11 +64,12 @@ export function useDailyPL(date: string) {
 
       if (fetchError) throw fetchError;
 
-      // Get aggregated data from stock_movements for that date
+      // Get aggregated data from stock_movements for that date (exclude deleted)
       const { data: movements, error: movErr } = await supabase
         .from('stock_movements')
         .select('movement_type, qty, total_cost, total_value')
-        .eq('movement_date', date);
+        .eq('movement_date', date)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (movErr) throw movErr;
 
@@ -243,7 +244,8 @@ export function useDailySalesByProduct(date: string) {
           products:product_id(name)
         `)
         .eq('movement_date', date)
-        .eq('movement_type', 'OUT');
+        .eq('movement_type', 'OUT')
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (error) throw error;
 

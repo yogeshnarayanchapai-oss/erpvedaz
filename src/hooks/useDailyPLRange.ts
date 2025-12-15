@@ -149,11 +149,12 @@ export function useDailyPLTrend(days: number = 30) {
 
       if (plErr) throw plErr;
 
-      // Also get sales by date from movements for dates without PL records
+      // Also get sales by date from movements for dates without PL records (exclude deleted)
       const { data: salesByDate, error: salesErr } = await supabase
         .from('stock_movements')
         .select('movement_date, total_value, total_cost')
         .eq('movement_type', 'OUT')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', startStr)
         .lte('movement_date', endStr);
 

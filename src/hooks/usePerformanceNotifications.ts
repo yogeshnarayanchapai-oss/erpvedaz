@@ -68,11 +68,12 @@ export function usePerformanceNotifications() {
         }
       }
 
-      // Get today's sales by product for ROI
+      // Get today's sales by product for ROI (exclude deleted)
       const { data: salesMovements, error: salesErr } = await supabase
         .from('stock_movements')
         .select('product_id, total_value, products:product_id(name)')
         .eq('movement_type', 'OUT')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .gte('movement_date', today)
         .lte('movement_date', today);
 
