@@ -35,7 +35,8 @@ export function usePartyTransactions(partyId: string, filters?: { startDate?: st
           warehouses:warehouse_id(id, name)
         `)
         .eq('party_id', partyId)
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (storeId) {
         query = query.eq('store_id', storeId);
