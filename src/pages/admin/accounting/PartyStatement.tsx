@@ -39,6 +39,7 @@ export default function PartyStatement() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
+  const [statementSearch, setStatementSearch] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [balanceFilter, setBalanceFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,13 +129,23 @@ export default function PartyStatement() {
     return { totalDebit, totalCredit, balance, pendingCount, pendingCredit, pendingDebit };
   }, [statement]);
 
+  // Filter statement by search term (particulars or remarks)
+  const filteredStatement = useMemo(() => {
+    if (!statementSearch.trim()) return statement;
+    const search = statementSearch.toLowerCase();
+    return statement.filter(e => 
+      e.particulars?.toLowerCase().includes(search) || 
+      e.remarks?.toLowerCase().includes(search)
+    );
+  }, [statement, statementSearch]);
+
   // Get all pending entries that can be selected for bulk pay/receive
   const pendingEntries = useMemo(() => {
-    return statement.filter(e => 
+    return filteredStatement.filter(e => 
       e.id !== 'opening-balance' && 
       ((e.type === 'PENDING' && e.is_pending) || (e.type === 'TRANSACTION' && !e.is_settled))
     );
-  }, [statement]);
+  }, [filteredStatement]);
 
   // Calculate selected pending totals
   const selectedPendingStats = useMemo(() => {
@@ -148,7 +159,7 @@ export default function PartyStatement() {
     if (selectedIds.length === statement.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(statement.map(e => e.id));
+      setSelectedIds(filteredStatement.map(e => e.id));
     }
   };
 
@@ -671,7 +682,15 @@ export default function PartyStatement() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label>Search</Label>
+                <Input 
+                  placeholder="Search particulars/remarks..." 
+                  value={statementSearch} 
+                  onChange={(e) => setStatementSearch(e.target.value)} 
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Start Date</Label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -690,7 +709,7 @@ export default function PartyStatement() {
                 </Select>
               </div>
               <div className="flex items-end">
-                <Button variant="outline" onClick={() => { setStartDate(''); setEndDate(''); setSelectedProduct(''); }} className="w-full">Clear</Button>
+                <Button variant="outline" onClick={() => { setStartDate(''); setEndDate(''); setSelectedProduct(''); setStatementSearch(''); }} className="w-full">Clear</Button>
               </div>
             </div>
           </CardContent>
@@ -758,8 +777,8 @@ export default function PartyStatement() {
               </TableHeader>
               <TableBody>
                 {statementLoading && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-                {!statementLoading && statement.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
-                {statement.map((entry) => {
+                {!statementLoading && filteredStatement.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No transactions</TableCell></TableRow>}
+                {filteredStatement.map((entry) => {
                   const isPending = (entry.type === 'PENDING' && entry.is_pending) || (entry.type === 'TRANSACTION' && !entry.is_settled && entry.id !== 'opening-balance');
                   return (
                   <TableRow key={entry.id} className={entry.is_pending ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
