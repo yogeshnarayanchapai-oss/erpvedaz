@@ -88,21 +88,30 @@ export default function AdminDashboard() {
   })), [products]);
   const { data: productDaybook = [] } = useProductDaybookByDateRange(dateRange, productList);
   
-  // Fetch ad spend reference targets for today
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const { data: adSpendRefData = [] } = useAdSpendReference({ startDate: todayStr, endDate: todayStr });
+  // Fetch ad spend reference targets - fetch all to use carry-forward logic for targets
+  const { data: adSpendRefData = [] } = useAdSpendReference();
 
   // Sort product daybook by orders (sales) descending
   const sortedProductDaybook = useMemo(() => {
     return [...productDaybook].sort((a, b) => b.sales - a.sales);
   }, [productDaybook]);
 
-  // Build product targets from ad_spend_reference
+  // Build product targets from ad_spend_reference using carry-forward logic
   const productDaybookWithTargets = useMemo(() => {
-    // Create a map of product_id -> target from ad_spend_reference
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
+    // Create a map of product_id -> latest target (carry-forward: latest entry <= today)
     const targetMap = new Map<string, number>();
-    adSpendRefData.forEach(ref => {
-      targetMap.set(ref.product_id, ref.target_orders || 0);
+    
+    // Sort by date descending and pick the first (latest) entry for each product <= today
+    const sortedRefs = [...adSpendRefData]
+      .filter(ref => ref.spend_date <= todayStr)
+      .sort((a, b) => b.spend_date.localeCompare(a.spend_date));
+    
+    sortedRefs.forEach(ref => {
+      if (!targetMap.has(ref.product_id) && ref.target_orders && ref.target_orders > 0) {
+        targetMap.set(ref.product_id, ref.target_orders);
+      }
     });
 
     // Map products with targets from reference spend
@@ -112,7 +121,7 @@ export default function AdminDashboard() {
         const refTarget = productId ? (targetMap.get(productId) || 0) : 0;
         return {
           ...p,
-          target: refTarget, // Use target from ad_spend_reference
+          target: refTarget, // Use target from ad_spend_reference (carry-forward)
         };
       })
       .filter(p => p.target > 0); // Only show products with targets
