@@ -76,7 +76,7 @@ export default function CallingOrderDetail() {
   }
 
   const orderItemsTotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
-  const subtotal = orderItems.length > 0 ? orderItemsTotal : (order.amount || 0) * (order.quantity || 1);
+  const subtotal = orderItems.length > 0 ? orderItemsTotal : (order.amount || 0);
   const deliveryCharge = 0;
   const total = subtotal + deliveryCharge;
 

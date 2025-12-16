@@ -150,7 +150,7 @@ export function GaaubesiLogisticsCard({ order }: GaaubesiLogisticsCardProps) {
                 {order.cod_status || 'Pending'}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                Rs. {((order.amount || 0) * (order.quantity || 1)).toLocaleString()}
+                Rs. {(order.amount || 0).toLocaleString()}
               </span>
             </div>
           </div>

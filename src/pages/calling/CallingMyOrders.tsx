@@ -144,7 +144,7 @@ export default function CallingMyOrders() {
     if (orderItems.length > 0) {
       return orderItems.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
     }
-    return (order.amount || 0) * (order.quantity || 1);
+    return order.amount || 0;
   };
 
   // Calculate stats
@@ -194,7 +194,7 @@ export default function CallingMyOrders() {
         : order.quantity || 1;
       const totalAmount = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
-        : (order.amount || 0) * (order.quantity || 1);
+        : (order.amount || 0);
       const orderBy = (order as any).created_by_staff?.name || order.sales_person?.name || '-';
       
       return [
@@ -462,7 +462,7 @@ export default function CallingMyOrders() {
                       : `(${order.quantity || 1}) ${order.products?.name || '-'}`;
                     const totalAmount = orderItemsList.length > 0
                       ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
-                      : (order.amount || 0) * (order.quantity || 1);
+                      : (order.amount || 0);
                       
                     return (
                     <TableRow key={order.id} className="hover:bg-muted/50">

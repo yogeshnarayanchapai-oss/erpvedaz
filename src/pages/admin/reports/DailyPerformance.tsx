@@ -55,7 +55,7 @@ export default function DailyPerformance() {
     if (orderItems.length > 0) {
       return orderItems.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
     }
-    return (order.amount || 0) * (order.quantity || 1);
+    return order.amount || 0;
   };
 
   // Summary stats

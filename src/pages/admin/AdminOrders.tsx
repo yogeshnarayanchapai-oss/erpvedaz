@@ -253,7 +253,7 @@ export default function AdminOrders() {
         const productId = order.product_id || 'unknown';
         const productName = order.products?.name || 'Unknown Product';
         const qty = order.quantity || 1;
-        const amount = (order.amount || 0) * qty;
+        const amount = order.amount || 0;
         
         if (productMap.has(productId)) {
           const existing = productMap.get(productId)!;
@@ -412,7 +412,7 @@ export default function AdminOrders() {
         : order.quantity || 1;
       const totalAmount = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
-        : (order.amount || 0) * (order.quantity || 1);
+        : (order.amount || 0);
       
       return [
         order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
@@ -650,7 +650,7 @@ export default function AdminOrders() {
                   })();
               const totalAmount = orderItemsList.length > 0
                 ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
-                : (order.amount || 0) * (order.quantity || 1);
+                : (order.amount || 0);
               const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name || '-';
               
               return (
@@ -754,7 +754,7 @@ export default function AdminOrders() {
                       })();
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
-                    : (order.amount || 0) * (order.quantity || 1);
+                    : (order.amount || 0);
                   
                   return (
                   <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">

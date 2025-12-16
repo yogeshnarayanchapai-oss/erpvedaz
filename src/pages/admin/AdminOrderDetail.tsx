@@ -113,7 +113,7 @@ export default function AdminOrderDetail() {
     );
   }
 
-  const subtotal = (order.amount || 0) * (order.quantity || 1);
+  const subtotal = order.amount || 0;
   const deliveryCharge = 0;
   const discount = 0;
   const total = subtotal + deliveryCharge - discount;
