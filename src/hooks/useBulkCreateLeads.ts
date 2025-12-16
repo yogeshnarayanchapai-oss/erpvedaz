@@ -61,6 +61,7 @@ export function useBulkCreateLeads() {
           pool_status: 'IN_POOL' as const,
           store_id: currentStore?.id || null,
           is_duplicate: isDuplicate,
+          entry_type: 'BULK',
         };
       });
       

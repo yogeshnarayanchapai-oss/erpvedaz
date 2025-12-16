@@ -198,6 +198,7 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
         lead_bucket: 'NEW' as const,
         pool_status: 'IN_POOL' as const,
         store_id: currentStore?.id || null,
+        entry_type: 'BULK',
       }));
 
       const { error } = await supabase.from('leads').insert(leadsToInsert);

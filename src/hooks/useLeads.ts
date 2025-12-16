@@ -202,6 +202,7 @@ export function useCreateLead() {
           status: 'NEW',
           current_team: 'LEADS',
           store_id: storeId,
+          entry_type: 'SINGLE',
         })
         .select()
         .single();

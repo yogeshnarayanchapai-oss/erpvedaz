@@ -132,6 +132,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
         pool_status: 'ASSIGNED' as const,
         store_id: currentStore?.id || null,
         is_duplicate: result.isDuplicate,
+        entry_type: rows.length > 1 ? 'BULK' : 'SINGLE',
       }));
 
       const { data: insertedLeads, error } = await supabase

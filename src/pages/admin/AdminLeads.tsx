@@ -176,7 +176,7 @@ export default function AdminLeads() {
   // Fetch total remaining in pool (all time, not filtered by date)
   const [totalPoolCount, setTotalPoolCount] = useState(0);
   const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ id: string; assigned_to_user_id: string; first_assigned_to_user_id: string | null; created_by_user_id: string | null; product_id: string | null }[]>([]);
-  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null; lead_bucket: string | null }[]>([]);
+  const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null; lead_bucket: string | null; entry_type: string | null }[]>([]);
   
   // Fetch all store leads for product summary (not filtered by date range)
   useEffect(() => {
@@ -184,7 +184,7 @@ export default function AdminLeads() {
       if (!storeId) return;
       const { data } = await supabase
         .from('leads')
-        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status, lead_bucket')
+        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status, lead_bucket, entry_type')
         .eq('store_id', storeId);
       
       setAllStoreLeads(data || []);
@@ -375,50 +375,57 @@ export default function AdminLeads() {
     }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0);
   }, [products, allStoreLeads, dateFrom, dateTo]);
 
-  // Transfer Progress calculation - uses date filter and store filter
-  // NOTE: Some leads may be created earlier but transferred (assigned) today and then appear in "My Orders".
-  // For progress stats we include BOTH:
-  // - leads created in range (lead.date)
-  // - leads assigned/transferred in range (assigned_at)
+  // Transfer Progress calculation - uses lead_transfers (via useLeadAssignmentCounts) as source of truth
+  // This ensures Today's Transfer Progress matches Staff Transfer Summary
   const transferProgressStats = useMemo(() => {
-    const inDateRangeByLeadDate = (l: typeof allStoreLeads[number]) => {
+    // Use lead_transfers-based count for transferred (same as Staff Transfer Summary)
+    const transferredInRange = leadAssignmentCounts?.totalCount || 0;
+    
+    // Get all lead IDs that were transferred in date range from the hook
+    const transferredLeadIds = new Set<string>();
+    Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
+      transfers.forEach(t => transferredLeadIds.add(t.leadId));
+    });
+    
+    // Leads created in date range (for total calculation)
+    const leadsCreatedInRange = allStoreLeads.filter(l => {
       if (!l.date) return false;
       const leadDate = l.date.split('T')[0];
       return leadDate >= dateFrom && leadDate <= dateTo;
-    };
-
-    const inDateRangeByAssignedAt = (l: typeof allStoreLeads[number]) => {
-      if (!l.assigned_at) return false;
-      const assignedDate = l.assigned_at.split('T')[0];
-      return assignedDate >= dateFrom && assignedDate <= dateTo;
-    };
-
-    // Total leads = unique leads either created in range OR assigned in range
-    const totalLeadIds = new Set<string>();
-    allStoreLeads.forEach((l) => {
-      if (inDateRangeByLeadDate(l) || inDateRangeByAssignedAt(l)) {
-        totalLeadIds.add(l.id);
-      }
     });
+    
+    // Total = leads created in range OR transferred in range (unique)
+    const totalLeadIds = new Set<string>();
+    leadsCreatedInRange.forEach(l => totalLeadIds.add(l.id));
+    transferredLeadIds.forEach(id => totalLeadIds.add(id));
     const totalLeadsInRange = totalLeadIds.size;
-
-    // Transferred in range: leads assigned within selected date range
-    const transferredInRange = allStoreLeads.filter(inDateRangeByAssignedAt).length;
-
-    // Remaining = total leads in range minus transferred in range
+    
+    // Remaining = total minus transferred
     const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
-
-    // Today Lead = NEW bucket leads that have been transferred in date range
-    const todayLeadsTransferred = allStoreLeads.filter((l) => {
-      if (!inDateRangeByAssignedAt(l)) return false;
-      return l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED';
-    }).length;
-
-    // CNR Lead = CNR leads that have been transferred/reassigned in date range
-    const cnrLeadsTransferred = allStoreLeads.filter((l) => {
-      if (!inDateRangeByAssignedAt(l)) return false;
-      return l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED';
-    }).length;
+    
+    // Today Lead = NEW bucket leads that have been transferred (from transferredLeadIds)
+    const todayLeadsTransferred = allStoreLeads.filter(l => 
+      transferredLeadIds.has(l.id) && 
+      l.lead_bucket === 'NEW' && 
+      l.status !== 'CALL_NOT_RECEIVED'
+    ).length;
+    
+    // CNR Lead = CNR leads that have been transferred (from transferredLeadIds)
+    const cnrLeadsTransferred = allStoreLeads.filter(l => 
+      transferredLeadIds.has(l.id) && 
+      (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED')
+    ).length;
+    
+    // Entry type breakdown (from transferred leads)
+    const bulkEntryTransferred = allStoreLeads.filter(l => 
+      transferredLeadIds.has(l.id) && l.entry_type === 'BULK'
+    ).length;
+    const importEntryTransferred = allStoreLeads.filter(l => 
+      transferredLeadIds.has(l.id) && l.entry_type === 'IMPORT'
+    ).length;
+    const singleEntryTransferred = allStoreLeads.filter(l => 
+      transferredLeadIds.has(l.id) && (l.entry_type === 'SINGLE' || !l.entry_type)
+    ).length;
 
     return {
       totalLeadsInRange,
@@ -427,8 +434,11 @@ export default function AdminLeads() {
       todayLeadsTransferred,
       cnrLeadsTransferred,
       totalRemainingInPool: totalPoolCount,
+      bulkEntryTransferred,
+      importEntryTransferred,
+      singleEntryTransferred,
     };
-  }, [allStoreLeads, dateFrom, dateTo, totalPoolCount]);
+  }, [allStoreLeads, dateFrom, dateTo, totalPoolCount, leadAssignmentCounts]);
 
   // Check if "Send back to Leads" button should be shown
   const showReturnButton = selectedStatus === 'CALL_NOT_RECEIVED' && canReturnLeads;
@@ -814,6 +824,9 @@ export default function AdminLeads() {
           totalRemainingInPool={transferProgressStats.totalRemainingInPool}
           dateLabel={dateFrom === dateTo ? 'Today' : `${dateFrom} to ${dateTo}`}
           showTotalInstead={true}
+          bulkEntryTransferred={transferProgressStats.bulkEntryTransferred}
+          importEntryTransferred={transferProgressStats.importEntryTransferred}
+          singleEntryTransferred={transferProgressStats.singleEntryTransferred}
         />
       )}
 
