@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Send, PhoneOff, Percent, Inbox, LayoutList, FileSpreadsheet, PlusCircle } from 'lucide-react';
+import { TrendingUp, Send, PhoneOff, LayoutList, Inbox } from 'lucide-react';
 
 interface TodayTransferProgressProps {
   totalTodayLeads: number;
@@ -10,10 +10,7 @@ interface TodayTransferProgressProps {
   cnrLeadsTransferred?: number;
   totalRemainingInPool?: number;
   dateLabel?: string;
-  showTotalInstead?: boolean; // If true, shows "Total" instead of "Total Remaining"
-  bulkEntryTransferred?: number;
-  importEntryTransferred?: number;
-  singleEntryTransferred?: number;
+  showTotalInstead?: boolean;
 }
 
 export function TodayTransferProgress({
@@ -25,16 +22,9 @@ export function TodayTransferProgress({
   totalRemainingInPool = 0,
   dateLabel = "Today",
   showTotalInstead = false,
-  bulkEntryTransferred = 0,
-  importEntryTransferred = 0,
-  singleEntryTransferred = 0,
 }: TodayTransferProgressProps) {
   const progressPercent = totalTodayLeads > 0 
     ? Math.round((transferredToday / totalTodayLeads) * 100) 
-    : 0;
-  
-  const achievementPercent = totalTodayLeads > 0
-    ? Math.round((todayLeadsTransferred / totalTodayLeads) * 100)
     : 0;
 
   const isToday = dateLabel === 'Today';
@@ -87,7 +77,7 @@ export function TodayTransferProgress({
         </CardContent>
       </Card>
 
-      {/* Quick Stat Cards */}
+      {/* Quick Stat Cards - Only Today Lead and CNR Lead */}
       <div className="flex flex-wrap gap-3">
         <Card className="border shadow-sm min-w-[120px]">
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
@@ -102,22 +92,6 @@ export function TodayTransferProgress({
             <PhoneOff className="w-5 h-5 text-destructive mb-1" />
             <span className="text-2xl font-bold">{cnrLeadsTransferred.toLocaleString()}</span>
             <span className="text-xs text-muted-foreground">CNR Lead</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm min-w-[120px]">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <FileSpreadsheet className="w-5 h-5 text-blue-500 mb-1" />
-            <span className="text-2xl font-bold">{bulkEntryTransferred.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Bulk Entry</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm min-w-[120px]">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <Percent className="w-5 h-5 text-primary mb-1" />
-            <span className="text-2xl font-bold">{achievementPercent}%</span>
-            <span className="text-xs text-muted-foreground">Achieved</span>
           </CardContent>
         </Card>
       </div>
