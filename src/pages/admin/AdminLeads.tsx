@@ -406,24 +406,11 @@ export default function AdminLeads() {
       t.fromTeam === 'LEADS'
     ).length;
     
-    // CNR Lead = Reassignments (from_team = 'CALLING') OR leads with CNR status
-    // Count unique lead IDs that are CNR transfers
-    const cnrTransferLeadIds = new Set<string>();
-    allTransfers.forEach(t => {
-      // from_team = 'CALLING' means reassignment between calling staff (typically CNR)
-      if (t.fromTeam === 'CALLING') {
-        cnrTransferLeadIds.add(t.leadId);
-      }
-      // Also check if lead is CNR from allStoreLeads
-      const lead = allStoreLeads.find(l => l.id === t.leadId);
-      if (lead && (lead.pool_status === 'CNR_POOL' || lead.status === 'CALL_NOT_RECEIVED')) {
-        // Only count if not already counted as Today Lead (from_team = 'LEADS')
-        if (t.fromTeam !== 'LEADS') {
-          cnrTransferLeadIds.add(t.leadId);
-        }
-      }
-    });
-    const cnrLeadsTransferred = cnrTransferLeadIds.size;
+    // CNR Lead = ANY reassignment of existing leads (from_team != 'LEADS')
+    // These are old leads being reassigned, not newly created
+    const cnrLeadsTransferred = allTransfers.filter(t => 
+      t.fromTeam !== 'LEADS' && t.fromTeam !== null
+    ).length;
     
     // Total Transfer = Today Lead + CNR Lead
     const transferredInRange = todayLeadsTransferred + cnrLeadsTransferred;
