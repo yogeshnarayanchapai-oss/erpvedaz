@@ -378,9 +378,6 @@ export default function AdminLeads() {
   // Transfer Progress calculation - uses lead_transfers (via useLeadAssignmentCounts) as source of truth
   // This ensures Today's Transfer Progress matches Staff Transfer Summary
   const transferProgressStats = useMemo(() => {
-    // Use lead_transfers-based count for transferred (same as Staff Transfer Summary)
-    const transferredInRange = leadAssignmentCounts?.totalCount || 0;
-    
     // Get all lead IDs that were transferred in date range from the hook
     const transferredLeadIds = new Set<string>();
     Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
@@ -400,21 +397,26 @@ export default function AdminLeads() {
     transferredLeadIds.forEach(id => totalLeadIds.add(id));
     const totalLeadsInRange = totalLeadIds.size;
     
-    // Remaining = total minus transferred
-    const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
-    
-    // Today Lead = NEW bucket leads transferred (from Add New Leads form, not CNR)
+    // Today Lead = BULK entry leads transferred (from Add New Leads form)
+    // Exclude CNR leads to avoid double counting
     const todayLeadsTransferred = allStoreLeads.filter(l => 
       transferredLeadIds.has(l.id) && 
-      l.lead_bucket !== 'CNR_POOL' && 
+      l.entry_type === 'BULK' &&
+      l.pool_status !== 'CNR_POOL' && 
       l.status !== 'CALL_NOT_RECEIVED'
     ).length;
     
-    // CNR Lead = CNR_POOL or status CALL_NOT_RECEIVED leads transferred
+    // CNR Lead = CNR_POOL or status CALL_NOT_RECEIVED leads transferred/reassigned
     const cnrLeadsTransferred = allStoreLeads.filter(l => 
       transferredLeadIds.has(l.id) && 
-      (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED')
+      (l.pool_status === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED')
     ).length;
+    
+    // Total Transfer = Today Lead + CNR Lead (as per user requirement)
+    const transferredInRange = todayLeadsTransferred + cnrLeadsTransferred;
+    
+    // Remaining = total minus transferred
+    const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
 
     return {
       totalLeadsInRange,
