@@ -379,9 +379,9 @@ export default function AdminLeads() {
   // This ensures Today's Transfer Progress matches Staff Transfer Summary
   const transferProgressStats = useMemo(() => {
     // Get all transfers in date range from the hook
-    const allTransfers: { leadId: string; fromTeam: string | null; leadDate: string | null }[] = [];
+    const allTransfers: { leadId: string; fromTeam: string | null; leadType: string | null }[] = [];
     Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
-      transfers.forEach(t => allTransfers.push({ leadId: t.leadId, fromTeam: t.fromTeam, leadDate: t.leadDate }));
+      transfers.forEach(t => allTransfers.push({ leadId: t.leadId, fromTeam: t.fromTeam, leadType: t.leadType }));
     });
     
     // Unique lead IDs transferred
@@ -400,21 +400,19 @@ export default function AdminLeads() {
     transferredLeadIds.forEach(id => totalLeadIds.add(id));
     const totalLeadsInRange = totalLeadIds.size;
     
-    // Today Lead = leads where lead.date is within selected date range (newly created leads transferred)
-    // These are fresh leads created in the selected period
-    const todayLeadsTransferred = allTransfers.filter(t => {
-      if (!t.leadDate) return false;
-      const leadDateStr = t.leadDate.split('T')[0];
-      return leadDateStr >= dateFrom && leadDateStr <= dateTo;
-    }).length;
+    // Today Lead = Leads transferred with lead_type = 'NEW' (fresh new leads from transfer popup)
+    const todayLeadsTransferred = allTransfers.filter(t => 
+      t.leadType === 'NEW'
+    ).length;
     
-    // CNR Lead = leads where lead.date is OLDER than the selected date range (reassigned old leads)
-    // These are old leads being reassigned
-    const cnrLeadsTransferred = allTransfers.filter(t => {
-      if (!t.leadDate) return true; // If no date, treat as old lead
-      const leadDateStr = t.leadDate.split('T')[0];
-      return leadDateStr < dateFrom; // Lead was created before the filter date range
-    }).length;
+    // CNR Lead = Reassigned leads + CNR_POOL + FOLLOW_UP_POOL (anything that's not NEW)
+    // lead_type = 'CNR_POOL' OR 'FOLLOW_UP_POOL' OR 'REASSIGN' OR (lead_type is null and it looks like a reassignment)
+    const cnrLeadsTransferred = allTransfers.filter(t => 
+      t.leadType === 'CNR_POOL' || 
+      t.leadType === 'FOLLOW_UP_POOL' ||
+      t.leadType === 'REASSIGN' ||
+      (t.leadType === null && t.fromTeam !== null && t.fromTeam !== 'LEADS')
+    ).length;
     
     // Total Transfer = Today Lead + CNR Lead
     const transferredInRange = todayLeadsTransferred + cnrLeadsTransferred;
@@ -722,13 +720,14 @@ export default function AdminLeads() {
 
       if (error) throw error;
 
-      // Log transfers with store_id for unified counting
+      // Log transfers with store_id and lead_type for unified counting
       const transfers = selectedLeads.map(leadId => ({
         lead_id: leadId,
         from_user_id: profile?.id,
         to_user_id: reassignStaffId,
         transferred_at: new Date().toISOString(),
         store_id: storeId,
+        lead_type: 'REASSIGN', // This is a reassignment between staff
       }));
       await supabase.from('lead_transfers').insert(transfers);
 

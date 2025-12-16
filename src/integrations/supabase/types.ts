@@ -2974,6 +2974,7 @@ export type Database = {
           from_user_id: string | null
           id: string
           lead_id: string | null
+          lead_type: string | null
           store_id: string | null
           to_team: Database["public"]["Enums"]["team_type"] | null
           to_user_id: string | null
@@ -2985,6 +2986,7 @@ export type Database = {
           from_user_id?: string | null
           id?: string
           lead_id?: string | null
+          lead_type?: string | null
           store_id?: string | null
           to_team?: Database["public"]["Enums"]["team_type"] | null
           to_user_id?: string | null
@@ -2996,6 +2998,7 @@ export type Database = {
           from_user_id?: string | null
           id?: string
           lead_id?: string | null
+          lead_type?: string | null
           store_id?: string | null
           to_team?: Database["public"]["Enums"]["team_type"] | null
           to_user_id?: string | null

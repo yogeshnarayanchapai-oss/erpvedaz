@@ -238,6 +238,7 @@ export default function LeadsAll() {
         to_user_id: transferForm.staffId,
         transferred_by_user_id: user.id,
         store_id: currentStore?.id || null,
+        lead_type: 'NEW', // Fresh leads from LEADS portal
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
@@ -296,6 +297,7 @@ export default function LeadsAll() {
         to_user_id: reassignStaffId,
         transferred_by_user_id: user.id,
         store_id: currentStore?.id || null,
+        lead_type: 'REASSIGN', // Reassignment within LEADS portal
       }));
 
       await supabase.from('lead_transfers').insert(transfers);

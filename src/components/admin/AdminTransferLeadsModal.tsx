@@ -339,7 +339,7 @@ export function AdminTransferLeadsModal({
 
       if (updateError) throw updateError;
 
-      // Create transfer records for Staff Transfer Summary tracking (include store_id for unified counting)
+      // Create transfer records for Staff Transfer Summary tracking (include store_id and lead_type for unified counting)
       const transferRecords = leadIds.map(leadId => ({
         lead_id: leadId,
         from_user_id: null,
@@ -347,6 +347,7 @@ export function AdminTransferLeadsModal({
         transferred_by_user_id: user.id,
         transferred_at: new Date().toISOString(),
         store_id: storeId,
+        lead_type: leadType, // Track if NEW, FOLLOW_UP_POOL, or CNR_POOL
       }));
       await supabase.from('lead_transfers').insert(transferRecords);
 

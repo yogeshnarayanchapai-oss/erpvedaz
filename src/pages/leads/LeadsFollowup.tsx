@@ -155,6 +155,7 @@ export default function LeadsFollowup() {
         to_user_id: transferStaffId,
         transferred_by_user_id: user.id,
         store_id: currentStore?.id || null,
+        lead_type: 'FOLLOW_UP_POOL', // Follow-up leads transfer
       }));
 
       await supabase.from('lead_transfers').insert(transfers);
