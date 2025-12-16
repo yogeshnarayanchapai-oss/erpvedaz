@@ -379,9 +379,9 @@ export default function AdminLeads() {
   // This ensures Today's Transfer Progress matches Staff Transfer Summary
   const transferProgressStats = useMemo(() => {
     // Get all transfers in date range from the hook
-    const allTransfers: { leadId: string; fromTeam: string | null }[] = [];
+    const allTransfers: { leadId: string; fromTeam: string | null; leadDate: string | null }[] = [];
     Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
-      transfers.forEach(t => allTransfers.push({ leadId: t.leadId, fromTeam: t.fromTeam }));
+      transfers.forEach(t => allTransfers.push({ leadId: t.leadId, fromTeam: t.fromTeam, leadDate: t.leadDate }));
     });
     
     // Unique lead IDs transferred
@@ -400,17 +400,21 @@ export default function AdminLeads() {
     transferredLeadIds.forEach(id => totalLeadIds.add(id));
     const totalLeadsInRange = totalLeadIds.size;
     
-    // Today Lead = NEW leads transferred from LEADS team (from_team = 'LEADS')
-    // These are fresh leads created in the leads form and transferred to calling
-    const todayLeadsTransferred = allTransfers.filter(t => 
-      t.fromTeam === 'LEADS'
-    ).length;
+    // Today Lead = leads where lead.date is within selected date range (newly created leads transferred)
+    // These are fresh leads created in the selected period
+    const todayLeadsTransferred = allTransfers.filter(t => {
+      if (!t.leadDate) return false;
+      const leadDateStr = t.leadDate.split('T')[0];
+      return leadDateStr >= dateFrom && leadDateStr <= dateTo;
+    }).length;
     
-    // CNR Lead = ANY reassignment of existing leads (from_team != 'LEADS')
-    // These are old leads being reassigned, not newly created
-    const cnrLeadsTransferred = allTransfers.filter(t => 
-      t.fromTeam !== 'LEADS' && t.fromTeam !== null
-    ).length;
+    // CNR Lead = leads where lead.date is OLDER than the selected date range (reassigned old leads)
+    // These are old leads being reassigned
+    const cnrLeadsTransferred = allTransfers.filter(t => {
+      if (!t.leadDate) return true; // If no date, treat as old lead
+      const leadDateStr = t.leadDate.split('T')[0];
+      return leadDateStr < dateFrom; // Lead was created before the filter date range
+    }).length;
     
     // Total Transfer = Today Lead + CNR Lead
     const transferredInRange = todayLeadsTransferred + cnrLeadsTransferred;

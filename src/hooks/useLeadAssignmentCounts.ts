@@ -12,7 +12,7 @@ interface LeadAssignmentCountOptions {
 interface LeadAssignmentCountResult {
   countsByStaff: Record<string, number>;
   totalCount: number;
-  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null }[]>;
+  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]>;
 }
 
 /**
@@ -71,28 +71,31 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
 
       let filteredTransfers = transfers || [];
 
-      // For excludeSelfCreated, we need to check if the transfer was to the creator
-      // This requires fetching lead creator info
-      if (options.excludeSelfCreated && filteredTransfers.length > 0) {
-        const leadIds = [...new Set(filteredTransfers.map(t => t.lead_id))];
-        
+      // We always need to fetch lead info to get the lead date
+      // Also used for excludeSelfCreated check
+      const leadIds = [...new Set(filteredTransfers.map(t => t.lead_id))];
+      let leadDataMap = new Map<string, { creatorId: string | null; date: string | null }>();
+      
+      if (leadIds.length > 0) {
         const { data: leads } = await supabase
           .from('leads')
-          .select('id, created_by_user_id')
+          .select('id, created_by_user_id, date')
           .in('id', leadIds);
         
-        const leadCreatorMap = new Map(leads?.map(l => [l.id, l.created_by_user_id]) || []);
-        
-        // Filter out transfers where to_user_id = created_by_user_id (self-created)
+        leadDataMap = new Map(leads?.map(l => [l.id, { creatorId: l.created_by_user_id, date: l.date }]) || []);
+      }
+
+      // For excludeSelfCreated, filter out self-created transfers
+      if (options.excludeSelfCreated && filteredTransfers.length > 0) {
         filteredTransfers = filteredTransfers.filter(t => {
-          const creatorId = leadCreatorMap.get(t.lead_id);
-          return creatorId !== t.to_user_id;
+          const leadData = leadDataMap.get(t.lead_id);
+          return leadData?.creatorId !== t.to_user_id;
         });
       }
 
       // Group by staff and count unique leads (Set ensures no double counting)
       const staffCounts = new Map<string, Set<string>>();
-      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null }[]>();
+      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]>();
 
       filteredTransfers.forEach(transfer => {
         const staffId = transfer.to_user_id;
@@ -104,20 +107,22 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
         }
         staffCounts.get(staffId)!.add(transfer.lead_id);
 
-        // Track individual transfers for reference
+        // Track individual transfers for reference with lead date
         if (!staffTransfers.has(staffId)) {
           staffTransfers.set(staffId, []);
         }
+        const leadData = leadDataMap.get(transfer.lead_id);
         staffTransfers.get(staffId)!.push({
           leadId: transfer.lead_id,
           transferredAt: transfer.transferred_at,
           fromTeam: transfer.from_team,
+          leadDate: leadData?.date || null,
         });
       });
 
       // Build result
       const countsByStaff: Record<string, number> = {};
-      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null }[]> = {};
+      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]> = {};
       let totalCount = 0;
 
       staffCounts.forEach((leadIds, id) => {
