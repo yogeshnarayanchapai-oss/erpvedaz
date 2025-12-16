@@ -272,16 +272,27 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
       });
 
       // Calculate qty sold per product from order_items, split by OVD/VD
+      // Also count distinct orders per product for sales count
       const ovdQtySoldByProduct: Record<string, number> = {};
       const vdQtySoldByProduct: Record<string, number> = {};
+      const ovdOrdersByProduct: Record<string, Set<string>> = {};
+      const vdOrdersByProduct: Record<string, Set<string>> = {};
       
       orderItemsData.forEach(item => {
         if (item.product_id && item.order_id) {
           if (ovdOrderIds.includes(item.order_id)) {
             ovdQtySoldByProduct[item.product_id] = (ovdQtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+            if (!ovdOrdersByProduct[item.product_id]) {
+              ovdOrdersByProduct[item.product_id] = new Set();
+            }
+            ovdOrdersByProduct[item.product_id].add(item.order_id);
           }
           if (vdOrderIds.includes(item.order_id)) {
             vdQtySoldByProduct[item.product_id] = (vdQtySoldByProduct[item.product_id] || 0) + (item.quantity || 0);
+            if (!vdOrdersByProduct[item.product_id]) {
+              vdOrdersByProduct[item.product_id] = new Set();
+            }
+            vdOrdersByProduct[item.product_id].add(item.order_id);
           }
         }
       });
@@ -297,25 +308,24 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
 
       const rtoPercent = rtoSetting?.rto_percent || 0;
 
-      // Create sets for faster lookup
-      const ovdOrderIdSet = new Set(ovdOrderIds);
-      const vdOrderIdSet = new Set(vdOrderIds);
 
       return products.map(product => {
-        // Count OVD and VD orders separately
-        const ovdProductOrders = (orders || []).filter(
-          o => o.product_id === product.id && ovdOrderIdSet.has(o.id)
-        );
-        const vdProductOrders = (orders || []).filter(
-          o => o.product_id === product.id && vdOrderIdSet.has(o.id)
-        );
-        
-        const ovdOrderCount = ovdProductOrders.length;
-        const vdOrderCount = vdProductOrders.length;
+        // Count from order_items (multi-product orders)
+        const ovdOrderCount = ovdOrdersByProduct[product.id]?.size || 0;
+        const vdOrderCount = vdOrdersByProduct[product.id]?.size || 0;
         const totalOrderCount = ovdOrderCount + vdOrderCount;
         
-        const ovdRevenue = ovdProductOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-        const vdRevenue = vdProductOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        // Get order IDs that have this product
+        const ovdOrderIdsForProduct = ovdOrdersByProduct[product.id] || new Set();
+        const vdOrderIdsForProduct = vdOrdersByProduct[product.id] || new Set();
+        
+        // Calculate revenue from orders that contain this product
+        const ovdRevenue = (orders || [])
+          .filter(o => ovdOrderIdsForProduct.has(o.id))
+          .reduce((sum, o) => sum + (o.amount || 0), 0);
+        const vdRevenue = (orders || [])
+          .filter(o => vdOrderIdsForProduct.has(o.id))
+          .reduce((sum, o) => sum + (o.amount || 0), 0);
         const totalRevenue = ovdRevenue + vdRevenue;
         
         // Use ads spend target for target column
