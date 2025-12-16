@@ -376,48 +376,57 @@ export default function AdminLeads() {
   }, [products, allStoreLeads, dateFrom, dateTo]);
 
   // Transfer Progress calculation - uses date filter and store filter
+  // NOTE: Some leads may be created earlier but transferred (assigned) today and then appear in "My Orders".
+  // For progress stats we include BOTH:
+  // - leads created in range (lead.date)
+  // - leads assigned/transferred in range (assigned_at)
   const transferProgressStats = useMemo(() => {
-    // Leads in date range: leads where lead.date is within selected date range
-    const leadsInRange = allStoreLeads.filter(l => {
+    const inDateRangeByLeadDate = (l: typeof allStoreLeads[number]) => {
       if (!l.date) return false;
       const leadDate = l.date.split('T')[0];
       return leadDate >= dateFrom && leadDate <= dateTo;
-    });
-    const totalLeadsInRange = leadsInRange.length;
-    
-    // Transferred in date range: leads assigned within selected date range
-    const transferredInRange = allStoreLeads.filter(l => {
+    };
+
+    const inDateRangeByAssignedAt = (l: typeof allStoreLeads[number]) => {
       if (!l.assigned_at) return false;
       const assignedDate = l.assigned_at.split('T')[0];
       return assignedDate >= dateFrom && assignedDate <= dateTo;
-    }).length;
-    
+    };
+
+    // Total leads = unique leads either created in range OR assigned in range
+    const totalLeadIds = new Set<string>();
+    allStoreLeads.forEach((l) => {
+      if (inDateRangeByLeadDate(l) || inDateRangeByAssignedAt(l)) {
+        totalLeadIds.add(l.id);
+      }
+    });
+    const totalLeadsInRange = totalLeadIds.size;
+
+    // Transferred in range: leads assigned within selected date range
+    const transferredInRange = allStoreLeads.filter(inDateRangeByAssignedAt).length;
+
     // Remaining = total leads in range minus transferred in range
     const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
-    
+
     // Today Lead = NEW bucket leads that have been transferred in date range
-    const todayLeadsTransferred = allStoreLeads.filter(l => {
-      if (!l.assigned_at) return false;
-      const assignedDate = l.assigned_at.split('T')[0];
-      const inRange = assignedDate >= dateFrom && assignedDate <= dateTo;
-      return inRange && l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED';
+    const todayLeadsTransferred = allStoreLeads.filter((l) => {
+      if (!inDateRangeByAssignedAt(l)) return false;
+      return l.lead_bucket === 'NEW' && l.status !== 'CALL_NOT_RECEIVED';
     }).length;
-    
+
     // CNR Lead = CNR leads that have been transferred/reassigned in date range
-    const cnrLeadsTransferred = allStoreLeads.filter(l => {
-      if (!l.assigned_at) return false;
-      const assignedDate = l.assigned_at.split('T')[0];
-      const inRange = assignedDate >= dateFrom && assignedDate <= dateTo;
-      return inRange && (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED');
+    const cnrLeadsTransferred = allStoreLeads.filter((l) => {
+      if (!inDateRangeByAssignedAt(l)) return false;
+      return l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED';
     }).length;
-    
-    return { 
-      totalLeadsInRange, 
-      transferredInRange, 
-      remainingInRange, 
+
+    return {
+      totalLeadsInRange,
+      transferredInRange,
+      remainingInRange,
       todayLeadsTransferred,
       cnrLeadsTransferred,
-      totalRemainingInPool: totalPoolCount
+      totalRemainingInPool: totalPoolCount,
     };
   }, [allStoreLeads, dateFrom, dateTo, totalPoolCount]);
 
