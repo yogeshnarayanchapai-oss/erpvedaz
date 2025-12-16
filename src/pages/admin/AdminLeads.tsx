@@ -403,35 +403,17 @@ export default function AdminLeads() {
     // Remaining = total minus transferred
     const remainingInRange = Math.max(0, totalLeadsInRange - transferredInRange);
     
-    // MUTUALLY EXCLUSIVE categories that sum to total:
-    // 1. CNR Lead = CNR_POOL or status = CALL_NOT_RECEIVED (first priority)
-    const cnrLeadsTransferred = allStoreLeads.filter(l => 
+    // Today Lead = NEW bucket leads transferred (from Add New Leads form, not CNR)
+    const todayLeadsTransferred = allStoreLeads.filter(l => 
       transferredLeadIds.has(l.id) && 
-      (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED')
-    ).length;
-    
-    // 2. Bulk Entry = entry_type BULK, but NOT CNR (second priority)
-    const bulkEntryTransferred = allStoreLeads.filter(l => 
-      transferredLeadIds.has(l.id) && 
-      l.entry_type === 'BULK' &&
       l.lead_bucket !== 'CNR_POOL' && 
       l.status !== 'CALL_NOT_RECEIVED'
     ).length;
     
-    // 3. Today Lead = everything else (SINGLE/null/IMPORT entry, not CNR, not BULK)
-    const todayLeadsTransferred = allStoreLeads.filter(l => 
+    // CNR Lead = CNR_POOL or status CALL_NOT_RECEIVED leads transferred
+    const cnrLeadsTransferred = allStoreLeads.filter(l => 
       transferredLeadIds.has(l.id) && 
-      l.lead_bucket !== 'CNR_POOL' && 
-      l.status !== 'CALL_NOT_RECEIVED' &&
-      l.entry_type !== 'BULK'
-    ).length;
-    
-    // These are for reference (not used in UI currently)
-    const importEntryTransferred = allStoreLeads.filter(l => 
-      transferredLeadIds.has(l.id) && l.entry_type === 'IMPORT'
-    ).length;
-    const singleEntryTransferred = allStoreLeads.filter(l => 
-      transferredLeadIds.has(l.id) && (l.entry_type === 'SINGLE' || !l.entry_type)
+      (l.lead_bucket === 'CNR_POOL' || l.status === 'CALL_NOT_RECEIVED')
     ).length;
 
     return {
@@ -441,9 +423,6 @@ export default function AdminLeads() {
       todayLeadsTransferred,
       cnrLeadsTransferred,
       totalRemainingInPool: totalPoolCount,
-      bulkEntryTransferred,
-      importEntryTransferred,
-      singleEntryTransferred,
     };
   }, [allStoreLeads, dateFrom, dateTo, totalPoolCount, leadAssignmentCounts]);
 
@@ -831,9 +810,6 @@ export default function AdminLeads() {
           totalRemainingInPool={transferProgressStats.totalRemainingInPool}
           dateLabel={dateFrom === dateTo ? 'Today' : `${dateFrom} to ${dateTo}`}
           showTotalInstead={true}
-          bulkEntryTransferred={transferProgressStats.bulkEntryTransferred}
-          importEntryTransferred={transferProgressStats.importEntryTransferred}
-          singleEntryTransferred={transferProgressStats.singleEntryTransferred}
         />
       )}
 
