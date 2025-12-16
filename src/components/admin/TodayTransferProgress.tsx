@@ -79,10 +79,10 @@ export function TodayTransferProgress({
             <Inbox className="w-5 h-5 text-chart-3 mb-1" />
           )}
           <span className="text-2xl font-bold">
-            {showTotalInstead ? totalTodayLeads.toLocaleString() : totalRemainingInPool.toLocaleString()}
+            {showTotalInstead ? transferredToday.toLocaleString() : totalRemainingInPool.toLocaleString()}
           </span>
           <span className="text-xs text-muted-foreground">
-            {showTotalInstead ? 'Total' : 'Total Remaining'}
+            {showTotalInstead ? 'Total Transferred' : 'Total Remaining'}
           </span>
         </CardContent>
       </Card>
