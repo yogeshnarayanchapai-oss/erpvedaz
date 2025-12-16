@@ -12,7 +12,7 @@ interface LeadAssignmentCountOptions {
 interface LeadAssignmentCountResult {
   countsByStaff: Record<string, number>;
   totalCount: number;
-  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]>;
+  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>;
 }
 
 /**
@@ -54,7 +54,8 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
           transferred_at,
           transferred_by_user_id,
           store_id,
-          from_team
+          from_team,
+          lead_type
         `)
         .eq('store_id', storeId)
         .gte('transferred_at', dateFromStart)
@@ -95,7 +96,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
 
       // Group by staff and count unique leads (Set ensures no double counting)
       const staffCounts = new Map<string, Set<string>>();
-      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]>();
+      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>();
 
       filteredTransfers.forEach(transfer => {
         const staffId = transfer.to_user_id;
@@ -107,7 +108,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
         }
         staffCounts.get(staffId)!.add(transfer.lead_id);
 
-        // Track individual transfers for reference with lead date
+        // Track individual transfers for reference with lead date and type
         if (!staffTransfers.has(staffId)) {
           staffTransfers.set(staffId, []);
         }
@@ -117,12 +118,13 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
           transferredAt: transfer.transferred_at,
           fromTeam: transfer.from_team,
           leadDate: leadData?.date || null,
+          leadType: (transfer as any).lead_type || null,
         });
       });
 
       // Build result
       const countsByStaff: Record<string, number> = {};
-      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null }[]> = {};
+      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]> = {};
       let totalCount = 0;
 
       staffCounts.forEach((leadIds, id) => {
