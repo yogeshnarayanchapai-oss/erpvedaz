@@ -256,6 +256,7 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
           lead_bucket: leadBucket,
           source: 'Facebook Ads', // Default source
           store_id: currentStore.id,
+          entry_type: 'IMPORT',
         };
         
         // Portal-specific settings
