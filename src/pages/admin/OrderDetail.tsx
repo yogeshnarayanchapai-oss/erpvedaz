@@ -101,7 +101,7 @@ export default function OrderDetail() {
     );
   }
 
-  const subtotal = (order.amount || 0) * (order.quantity || 1);
+  const subtotal = order.amount || 0;
   const orderNumber = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
 
   const getStatusColor = (status: string) => {

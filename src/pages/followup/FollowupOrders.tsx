@@ -281,7 +281,7 @@ export default function FollowupOrders() {
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">Amount</span>
-                      <p>Rs {((order.amount || 0) * (order.quantity || 1)).toLocaleString()}</p>
+                      <p>Rs {(order.amount || 0).toLocaleString()}</p>
                     </div>
                   </div>
                   {canRedirect(order) && (
