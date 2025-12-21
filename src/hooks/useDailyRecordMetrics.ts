@@ -23,7 +23,7 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       // 1. Get stock movements for the date (OUT type = sales)
       let movementQuery = supabase
         .from('stock_movements')
-        .select('qty, total_cost, total_value, reference_order_count, warehouse_id, products:product_id(store_id)')
+        .select('qty, total_cost, total_value, warehouse_id, products:product_id(store_id)')
         .eq('movement_type', 'OUT')
         .eq('movement_date', date)
         .or('is_deleted.is.null,is_deleted.eq.false');
@@ -41,10 +41,25 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       const sell = filteredMovements.reduce((sum, m) => sum + (m.qty || 0), 0);
       const productCost = filteredMovements.reduce((sum, m) => sum + (m.total_cost || 0), 0);
       const productValue = filteredMovements.reduce((sum, m) => sum + (m.total_value || 0), 0);
-      // Use reference_order_count from stock movements instead of counting orders
-      const totalOrders = filteredMovements.reduce((sum, m) => sum + (m.reference_order_count || 0), 0);
 
-      // 2. Get ads spend for the date from ads table
+      // 2. Get actual order count from orders table for that date
+      const startOfDay = `${date}T00:00:00`;
+      const endOfDay = `${date}T23:59:59`;
+      
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('is_deleted', false)
+        .gte('order_date', startOfDay)
+        .lte('order_date', endOfDay)
+        .not('order_status', 'eq', 'CANCELLED');
+
+      if (ordersError) throw ordersError;
+      
+      const totalOrders = ordersData?.length || 0;
+
+      // 3. Get ads spend for the date from ads table
       const { data: adSpendData, error: adsError } = await supabase
         .from('ads')
         .select('amount_spent')
