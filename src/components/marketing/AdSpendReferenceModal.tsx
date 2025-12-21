@@ -33,14 +33,15 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
   const { effectiveRole } = useEffectiveRole();
   const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
   const isMarketing = effectiveRole === 'MARKETING';
+  const canEditAds = isAdmin || isMarketing;
   const { data: usdRate = 133.5 } = useDefaultUsdRate();
 
   // Calculate editable date range based on role
+  // Admin and Marketing can edit any date
   const minEditableDate = useMemo(() => {
-    if (isAdmin) return undefined;
-    if (isMarketing) return subDays(new Date(), 7);
+    if (canEditAds) return undefined;
     return new Date();
-  }, [isAdmin, isMarketing]);
+  }, [canEditAds]);
 
   // Fetch all reference spend data (no date filter, sorted by product spend)
   const { data: spendData, isLoading } = useAdSpendReference();
@@ -69,7 +70,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
   }, [spendData]);
 
   const canEditRow = (spendDate: string) => {
-    if (isAdmin) return true;
+    if (canEditAds) return true;
     if (!minEditableDate) return false;
     const rowDate = new Date(spendDate);
     return rowDate >= minEditableDate;
@@ -374,7 +375,7 @@ export function AdSpendReferenceModal({ open, onOpenChange }: AdSpendReferenceMo
         </div>
 
         <div className="text-xs text-muted-foreground mt-2">
-          {isAdmin ? 'Admin: Can edit any date' : isMarketing ? 'Marketing: Can edit last 7 days' : 'View only'}
+          {canEditAds ? 'Can edit any date' : 'View only'}
           {' • '}Products sorted by highest spend first
         </div>
       </DialogContent>
