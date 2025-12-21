@@ -42,22 +42,32 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
       const productCost = filteredMovements.reduce((sum, m) => sum + (m.total_cost || 0), 0);
       const productValue = filteredMovements.reduce((sum, m) => sum + (m.total_value || 0), 0);
 
-      // 2. Get actual order count from orders table for that date
+      // 2. Get order counts for delivery charge calculation
       const startOfDay = `${date}T00:00:00`;
       const endOfDay = `${date}T23:59:59`;
       
+      // Get all orders for the date
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('id')
+        .select('id, delivery_location, order_status, inside_delivery_status')
         .eq('store_id', storeId)
         .eq('is_deleted', false)
         .gte('order_date', startOfDay)
-        .lte('order_date', endOfDay)
-        .not('order_status', 'eq', 'CANCELLED');
-
+        .lte('order_date', endOfDay);
+      
       if (ordersError) throw ordersError;
       
-      const totalOrders = ordersData?.length || 0;
+      // OVD orders with status CONFIRMED
+      const ovdCount = ordersData?.filter(o => 
+        o.delivery_location === 'OUTSIDE_VALLEY' && o.order_status === 'CONFIRMED'
+      ).length || 0;
+      
+      // VD orders with status CONFIRMED and inside_delivery_status DELIVERED
+      const vdCount = ordersData?.filter(o => 
+        o.delivery_location === 'INSIDE_VALLEY' && o.order_status === 'CONFIRMED' && o.inside_delivery_status === 'DELIVERED'
+      ).length || 0;
+      
+      const totalOrders = ovdCount + vdCount;
 
       // 3. Get ads spend for the date from ads table
       const { data: adSpendData, error: adsError } = await supabase
