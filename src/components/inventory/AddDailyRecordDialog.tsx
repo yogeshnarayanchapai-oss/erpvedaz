@@ -49,8 +49,8 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
   const actualSell = sell - rto;
   // Actual Product Cost = Product Cost - (Product Cost × RTO% / 100)
   const actualProductCost = productCost - (productCost * rtoPercent / 100);
-  // Delivery Charge = Total Orders × 250
-  const deliveryCharge = totalOrders * 250;
+  // Delivery Charge = Sell (units) × 250
+  const deliveryCharge = sell * 250;
   // Redirect Cost = Sell × 20% × 50
   const redirectCost = Math.round(sell * 0.20 * 50);
   // Actual Product Value = productValue (from stock movement OUT)
