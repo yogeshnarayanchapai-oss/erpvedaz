@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
 import {
   useAllEmployeeDocuments,
   useVerifyDocument,
   useDeleteDocument,
+  useMyEmployeeProfile,
+  useEmployeeDocuments,
   EmployeeDocument,
   EmployeeDocStatus,
   EmployeeDocType,
@@ -38,6 +42,7 @@ const STATUS_OPTIONS: { value: EmployeeDocStatus; label: string }[] = [
 
 export default function HRMStaffDocuments() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState<EmployeeDocStatus | 'ALL'>('ALL');
   const [docTypeFilter, setDocTypeFilter] = useState<EmployeeDocType | 'ALL'>('ALL');
   
@@ -56,8 +61,17 @@ export default function HRMStaffDocuments() {
     docType: docTypeFilter !== 'ALL' ? docTypeFilter : undefined,
   });
   
+  // My own profile and documents for self-upload
+  const { data: myEmployee, isLoading: loadingMyEmployee } = useMyEmployeeProfile();
+  const { data: myDocuments, isLoading: loadingMyDocs } = useEmployeeDocuments(myEmployee?.id);
+  
   const verifyMutation = useVerifyDocument();
   const deleteMutation = useDeleteDocument();
+  
+  // Get existing doc by type for my documents
+  const getMyDocByType = (type: string): EmployeeDocument | undefined => {
+    return myDocuments?.find(d => d.doc_type === type);
+  };
 
   const handleView = async (doc: EmployeeDocument) => {
     setViewDoc(doc);
@@ -115,6 +129,67 @@ export default function HRMStaffDocuments() {
           </p>
         </div>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="all" className="gap-2">
+            <FileText className="h-4 w-4" />
+            All Documents
+          </TabsTrigger>
+          <TabsTrigger value="my" className="gap-2">
+            <User className="h-4 w-4" />
+            My Documents
+          </TabsTrigger>
+        </TabsList>
+
+        {/* My Documents Tab */}
+        <TabsContent value="my" className="space-y-6">
+          {loadingMyEmployee ? (
+            <Skeleton className="h-48" />
+          ) : !myEmployee ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">No Employee Profile</h3>
+                <p className="text-muted-foreground">Your account is not linked to an employee record.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <DocumentUploadCard
+                title="Profile Photo"
+                docType="PROFILE_PHOTO"
+                employeeId={myEmployee.id}
+                existingDoc={getMyDocByType('PROFILE_PHOTO')}
+                description="Your official profile photo"
+              />
+              <DocumentUploadCard
+                title="Citizenship (Front)"
+                docType="CITIZENSHIP_FRONT"
+                employeeId={myEmployee.id}
+                existingDoc={getMyDocByType('CITIZENSHIP_FRONT')}
+                description="Front side of citizenship"
+              />
+              <DocumentUploadCard
+                title="Citizenship (Back)"
+                docType="CITIZENSHIP_BACK"
+                employeeId={myEmployee.id}
+                existingDoc={getMyDocByType('CITIZENSHIP_BACK')}
+                description="Back side of citizenship"
+              />
+              <DocumentUploadCard
+                title="PAN Card"
+                docType="PAN_CARD"
+                employeeId={myEmployee.id}
+                existingDoc={getMyDocByType('PAN_CARD')}
+                description="Personal PAN card"
+              />
+            </div>
+          )}
+        </TabsContent>
+
+        {/* All Documents Tab */}
+        <TabsContent value="all" className="space-y-6">
 
       {/* Filters */}
       <Card>
