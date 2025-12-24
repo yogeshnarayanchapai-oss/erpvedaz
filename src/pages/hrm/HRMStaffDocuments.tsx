@@ -398,6 +398,9 @@ export default function HRMStaffDocuments() {
         </DialogContent>
       </Dialog>
 
+        </TabsContent>
+      </Tabs>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteDoc} onOpenChange={() => setDeleteDoc(null)}>
         <DialogContent>
