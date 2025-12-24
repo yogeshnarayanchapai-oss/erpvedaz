@@ -23,14 +23,14 @@ export function useStaffLeaderboard(dateRange: DateRange) {
   const storeId = currentStore?.id;
 
   // Use unified lead assignment counts hook (excludeSelfCreated: false for leaderboard)
-  const { data: leadCounts } = useLeadAssignmentCounts({
+  const { data: leadCounts, isLoading: leadCountsLoading } = useLeadAssignmentCounts({
     dateFrom,
     dateTo,
     excludeSelfCreated: false, // Include all leads for Staff Leaderboard
   });
 
   return useQuery({
-    queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId, leadCounts?.countsByStaff],
+    queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId, JSON.stringify(leadCounts?.countsByStaff || {})],
     queryFn: async () => {
       // Fetch all orders with sales person info, filtered by store
       let ordersQuery = supabase
@@ -151,6 +151,6 @@ export function useStaffLeaderboard(dateRange: DateRange) {
 
       return leaderboard;
     },
-    enabled: !!storeId,
+    enabled: !!storeId && !leadCountsLoading && !!leadCounts,
   });
 }
