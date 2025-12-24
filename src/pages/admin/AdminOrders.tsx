@@ -55,6 +55,20 @@ const paymentStatusColors: Record<string, string> = {
   COD: 'bg-info/10 text-info border-info/20',
 };
 
+const insideDeliveryStatusLabels: Record<string, string> = {
+  PENDING: 'Pending',
+  DELIVERED: 'Delivered',
+  REACHED_CNR: 'Reached - CNR',
+  CUSTOMER_CANCELLED: 'Customer Cancelled',
+};
+
+const insideDeliveryStatusColors: Record<string, string> = {
+  PENDING: 'bg-muted/50 text-muted-foreground border-muted/20',
+  DELIVERED: 'bg-success/10 text-success border-success/20',
+  REACHED_CNR: 'bg-warning/10 text-warning border-warning/20',
+  CUSTOMER_CANCELLED: 'bg-destructive/10 text-destructive border-destructive/20',
+};
+
 export default function AdminOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -652,6 +666,7 @@ export default function AdminOrders() {
                 ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                 : (order.amount || 0);
               const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name || '-';
+              const mobileInsideDeliveryStatus = (order as any).inside_delivery_status || 'PENDING';
               
               return (
                 <Card 
@@ -687,10 +702,18 @@ export default function AdminOrders() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap">
                       <Badge variant="outline" className={order.delivery_location === 'INSIDE_VALLEY' ? 'bg-success/10 text-success text-xs' : 'bg-info/10 text-info text-xs'}>
                         {order.delivery_location === 'INSIDE_VALLEY' ? 'IV' : 'OV'}
                       </Badge>
+                      {order.delivery_location === 'INSIDE_VALLEY' && (
+                        <Badge 
+                          variant="outline" 
+                          className={`${insideDeliveryStatusColors[mobileInsideDeliveryStatus] || 'bg-muted/50 text-muted-foreground'} text-xs`}
+                        >
+                          {insideDeliveryStatusLabels[mobileInsideDeliveryStatus] || mobileInsideDeliveryStatus}
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={`${paymentStatusColors[order.payment_status || 'COD']} text-xs`}>
                         {order.payment_status}
                       </Badge>
@@ -734,6 +757,7 @@ export default function AdminOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Order Status</TableHead>
+                  <TableHead className="table-header">Delivery Status</TableHead>
                   <TableHead className="table-header">Payment</TableHead>
                   <TableHead className="table-header">Confirmed By</TableHead>
                   <TableHead className="table-header w-[60px]">Actions</TableHead>
@@ -755,6 +779,7 @@ export default function AdminOrders() {
                   const totalAmount = orderItemsList.length > 0
                     ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
                     : (order.amount || 0);
+                  const insideDeliveryStatus = (order as any).inside_delivery_status || 'PENDING';
                   
                   return (
                   <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
@@ -794,6 +819,18 @@ export default function AdminOrders() {
                       >
                         {order.order_status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {order.delivery_location === 'INSIDE_VALLEY' ? (
+                        <Badge 
+                          variant="outline" 
+                          className={insideDeliveryStatusColors[insideDeliveryStatus] || 'bg-muted/50 text-muted-foreground'}
+                        >
+                          {insideDeliveryStatusLabels[insideDeliveryStatus] || insideDeliveryStatus}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={paymentStatusColors[order.payment_status || 'COD']}>
@@ -866,7 +903,7 @@ export default function AdminOrders() {
                 })}
                 {filteredOrders.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No orders found'}
                     </TableCell>
                   </TableRow>

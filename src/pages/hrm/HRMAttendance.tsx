@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, CalendarDays, List } from 'lucide-react';
-import { useAttendanceRecords, useCreateAttendance, useUpdateAttendance, AttendanceRecord } from '@/hooks/useAttendance';
+import { Plus, Edit, CalendarDays, List, LogIn, LogOut, Clock } from 'lucide-react';
+import { useAttendanceRecords, useCreateAttendance, useUpdateAttendance, useTodayAttendance, useCheckIn, useCheckOut, AttendanceRecord } from '@/hooks/useAttendance';
 import { useEmployees } from '@/hooks/useHRM';
 import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { FormattedDate } from '@/components/FormattedDate';
@@ -39,6 +39,11 @@ export default function HRMAttendance() {
   const { data: employees } = useEmployees();
   const createAttendance = useCreateAttendance();
   const updateAttendance = useUpdateAttendance();
+  
+  // My own attendance hooks for admin/manager self check-in/out
+  const { data: todayAttendance, isLoading: loadingToday } = useTodayAttendance();
+  const checkIn = useCheckIn();
+  const checkOut = useCheckOut();
 
   const resetForm = () => {
     setForm({
@@ -128,6 +133,55 @@ export default function HRMAttendance() {
 
   return (
     <div className="space-y-6">
+        {/* My Attendance Card - Admin/Manager can check in/out */}
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-lg font-semibold mb-2">My Attendance Today</h2>
+                <p className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+                {todayAttendance ? (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm">
+                      Check In: <strong>{todayAttendance.check_in_time ? format(parseISO(todayAttendance.check_in_time), 'hh:mm a') : '-'}</strong>
+                    </p>
+                    <p className="text-sm">
+                      Check Out: <strong>{todayAttendance.check_out_time ? format(parseISO(todayAttendance.check_out_time), 'hh:mm a') : '-'}</strong>
+                    </p>
+                    {todayAttendance.check_in_time && todayAttendance.check_out_time && (
+                      <p className="text-sm">
+                        Hours: <strong>{calculateHours(todayAttendance.check_in_time, todayAttendance.check_out_time)}</strong>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">Not checked in yet</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {loadingToday ? (
+                  <Button disabled>Loading...</Button>
+                ) : !todayAttendance ? (
+                  <Button onClick={() => checkIn.mutate()} disabled={checkIn.isPending}>
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Check In
+                  </Button>
+                ) : !todayAttendance.check_out_time ? (
+                  <Button onClick={() => checkOut.mutate(todayAttendance.id)} disabled={checkOut.isPending}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Check Out
+                  </Button>
+                ) : (
+                  <Badge className="bg-green-100 text-green-800 px-4 py-2">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Completed
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Time & Attendance</h1>
