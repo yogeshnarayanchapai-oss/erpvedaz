@@ -14,6 +14,9 @@ export interface BulkLeadInput {
   remark?: string;
 }
 
+const BATCH_SIZE = 100; // Insert leads in batches for large imports
+const MAX_DUPLICATE_NOTIFICATIONS = 5; // Limit individual duplicate notifications
+
 export function useBulkCreateLeads() {
   const queryClient = useQueryClient();
   const { currentStore } = useCurrentStore();
@@ -65,43 +68,69 @@ export function useBulkCreateLeads() {
         };
       });
       
-      const { data, error } = await supabase.from('leads').insert(leadsToInsert).select();
-      if (error) throw error;
+      // Batch insert for large imports to prevent timeout
+      let allInsertedLeads: any[] = [];
+      
+      if (leadsToInsert.length <= BATCH_SIZE) {
+        // Small batch - insert all at once
+        const { data, error } = await supabase.from('leads').insert(leadsToInsert).select();
+        if (error) throw error;
+        allInsertedLeads = data || [];
+      } else {
+        // Large batch - split into chunks
+        for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
+          const batch = leadsToInsert.slice(i, i + BATCH_SIZE);
+          const { data, error } = await supabase.from('leads').insert(batch).select();
+          if (error) throw error;
+          allInsertedLeads.push(...(data || []));
+        }
+      }
       
       // Send notification to Admin about new leads
       try {
         await notifyNewLeadsCreated({
-          count: data.length,
+          count: allInsertedLeads.length,
           createdByName: profile?.name || 'Staff',
           createdById: user.id,
           portal: 'LEADS',
           storeId: currentStore?.id,
         });
         
-        // Send duplicate notifications for each duplicate lead
-        const duplicateLeads = data.filter(l => l.is_duplicate);
-        for (const lead of duplicateLeads) {
-          const cleanPhone = lead.contact_number.replace(/\D/g, '');
-          const existingCustomer = customerMap.get(cleanPhone);
-          const existingLead = leadMap.get(cleanPhone);
+        // Batch duplicate notifications - only send first N individually, then summary
+        const duplicateLeads = allInsertedLeads.filter(l => l.is_duplicate);
+        
+        if (duplicateLeads.length > 0) {
+          // Send individual notifications for first few duplicates
+          const individualNotifications = duplicateLeads.slice(0, MAX_DUPLICATE_NOTIFICATIONS);
           
-          await notifyDuplicatePhoneDetected({
-            leadId: lead.id,
-            customerName: lead.client_name,
-            phone: lead.contact_number,
-            existingCustomerName: existingCustomer?.customer_name,
-            existingCustomerOrders: existingCustomer?.total_orders,
-            existingLeadName: existingLead?.client_name,
-            actorId: user.id,
-            actorName: profile?.name || 'Staff',
-            storeId: currentStore?.id,
-          });
+          await Promise.all(individualNotifications.map(async (lead) => {
+            const cleanPhone = lead.contact_number.replace(/\D/g, '');
+            const existingCustomer = customerMap.get(cleanPhone);
+            const existingLead = leadMap.get(cleanPhone);
+            
+            return notifyDuplicatePhoneDetected({
+              leadId: lead.id,
+              customerName: lead.client_name,
+              phone: lead.contact_number,
+              existingCustomerName: existingCustomer?.customer_name,
+              existingCustomerOrders: existingCustomer?.total_orders,
+              existingLeadName: existingLead?.client_name,
+              actorId: user.id,
+              actorName: profile?.name || 'Staff',
+              storeId: currentStore?.id,
+            });
+          }));
+          
+          // If there are more duplicates, log summary (don't spam notifications)
+          if (duplicateLeads.length > MAX_DUPLICATE_NOTIFICATIONS) {
+            console.log(`[Bulk Import] ${duplicateLeads.length - MAX_DUPLICATE_NOTIFICATIONS} additional duplicate notifications suppressed`);
+          }
         }
       } catch (e) {
         console.error('Failed to send notification:', e);
       }
       
-      return data;
+      return allInsertedLeads;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
