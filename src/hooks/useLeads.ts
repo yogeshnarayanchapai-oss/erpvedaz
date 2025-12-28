@@ -12,6 +12,7 @@ type PoolStatus = 'IN_POOL' | 'ASSIGNED';
 export interface Lead {
   id: string;
   created_at: string;
+  updated_at: string | null;
   date: string;
   client_name: string;
   contact_number: string;

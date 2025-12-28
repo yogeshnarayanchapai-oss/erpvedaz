@@ -3091,6 +3091,7 @@ export type Database = {
           status: Database["public"]["Enums"]["lead_status"] | null
           store_id: string | null
           tag: string | null
+          updated_at: string | null
         }
         Insert: {
           ai_followup_text?: string | null
@@ -3139,6 +3140,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"] | null
           store_id?: string | null
           tag?: string | null
+          updated_at?: string | null
         }
         Update: {
           ai_followup_text?: string | null
@@ -3187,6 +3189,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"] | null
           store_id?: string | null
           tag?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
