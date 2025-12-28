@@ -111,6 +111,9 @@ export default function CallingLeads() {
       if (followupParam && ['today', 'upcoming', 'pending', 'overdue'].includes(followupParam)) {
         setFollowupFilter(followupParam as FollowupFilterType);
         setStatusFilter('FOLLOW_UP'); // Auto-set status to Follow Up when filtering by followup
+        // Switch to Total tab to show ALL follow-up leads regardless of creation date
+        setActiveTab('total');
+        setDatePreset('last30');
       }
       // Clear URL params after applying
       setSearchParams({}, { replace: true });
@@ -179,7 +182,12 @@ export default function CallingLeads() {
     const filtered = allLeads.filter(lead => {
       // Date filtering - use assigned_at for "Today Leads" to show recently transferred leads
       let matchesDate = true;
-      if (advancedFilters.fromDate || advancedFilters.toDate) {
+      
+      // IMPORTANT: Skip date filtering entirely when followup filter is active
+      // This ensures dashboard follow-up stats match exactly with leads shown
+      if (followupFilter !== 'ALL') {
+        matchesDate = true; // Show all leads regardless of date for followup filters
+      } else if (advancedFilters.fromDate || advancedFilters.toDate) {
         // Use advanced filters dates based on lead creation date
         if (advancedFilters.fromDate && lead.date < advancedFilters.fromDate) matchesDate = false;
         if (advancedFilters.toDate && lead.date > advancedFilters.toDate) matchesDate = false;
