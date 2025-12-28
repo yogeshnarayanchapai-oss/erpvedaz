@@ -128,12 +128,14 @@ export function useFollowupStats(leads: Lead[], dateRange?: { from: string; to: 
       return followupTime < oneHourAgo;
     });
 
-    // Completed follow-ups today
+    // Completed follow-ups today - only count those completed TODAY
+    // Use last_called_at as proxy for when followup was completed
     const completedFollowupsToday = leads.filter(l => {
-      if (l.status === 'FOLLOW_UP') return false;
       if (!l.followup_completed) return false;
-      // Check if lead was updated today (assuming status change today means completion today)
-      return true; // For simplicity, count all completed ones
+      // Check if lead was last called today (completion happened today)
+      if (!l.last_called_at) return false;
+      const lastCalledDate = l.last_called_at.split('T')[0];
+      return lastCalledDate === today;
     });
 
     // Upcoming follow-ups (scheduled for future)
