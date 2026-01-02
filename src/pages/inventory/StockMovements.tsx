@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useUpdateStockMovement, StockMovement } from '@/hooks/useStockMovements';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
@@ -53,8 +54,9 @@ export default function StockMovements() {
   const [filters, setFilters] = useState({ warehouseId: 'all', productId: 'all', movementType: 'all' as any });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);
+  const [viewingMovement, setViewingMovement] = useState<StockMovement | null>(null);
   const { effectiveRole } = useEffectiveRole();
-  const canEdit = ['ADMIN', 'OWNER', 'MANAGER'].includes(effectiveRole || '');
+  const canEdit = ['ADMIN', 'OWNER', 'MANAGER', 'WAREHOUSE'].includes(effectiveRole || '');
   const [form, setForm] = useState<{
     product_id: string;
     warehouse_id: string;
@@ -598,26 +600,31 @@ export default function StockMovements() {
                     <TableCell>{m.remark || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setViewingMovement(m)}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         {canEdit && (
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(m)}>
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Movement?</AlertDialogTitle>
-                              <AlertDialogDescription>This will also update the inventory. This action cannot be undone.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteMovement.mutate(m.id)}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {canEdit && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Movement?</AlertDialogTitle>
+                                <AlertDialogDescription>This will also update the inventory. This action cannot be undone.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteMovement.mutate(m.id)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -628,6 +635,85 @@ export default function StockMovements() {
           )}
         </CardContent>
       </Card>
+
+      {/* View Movement Sheet */}
+      <Sheet open={!!viewingMovement} onOpenChange={(open) => !open && setViewingMovement(null)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Movement Details</SheetTitle>
+          </SheetHeader>
+          {viewingMovement && (
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Date</Label>
+                  <p className="font-medium">{viewingMovement.movement_date}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Type</Label>
+                  <Badge className={getTypeColor(viewingMovement.movement_type)}>
+                    {viewingMovement.movement_type}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Product</Label>
+                <p className="font-medium">{viewingMovement.products?.name || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Warehouse</Label>
+                <p className="font-medium">
+                  {viewingMovement.movement_type === 'TRANSFER' && viewingMovement.from_warehouse && viewingMovement.to_warehouse
+                    ? `${viewingMovement.from_warehouse.name} → ${viewingMovement.to_warehouse.name}`
+                    : viewingMovement.warehouses?.name || '-'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Quantity</Label>
+                  <p className="font-medium">{viewingMovement.qty}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Ref. Orders</Label>
+                  <p className="font-medium">{viewingMovement.reference_order_count || 0}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Unit Cost</Label>
+                  <p className="font-medium">{formatCurrency(viewingMovement.unit_cost)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Unit Price</Label>
+                  <p className="font-medium">{formatCurrency(viewingMovement.unit_price)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Total Cost</Label>
+                  <p className="font-medium">{formatCurrency(viewingMovement.total_cost)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Total Value</Label>
+                  <p className="font-medium">{formatCurrency(viewingMovement.total_value)}</p>
+                </div>
+              </div>
+              {viewingMovement.party_id && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Party ID</Label>
+                  <p className="font-medium text-sm">{viewingMovement.party_id}</p>
+                </div>
+              )}
+              {viewingMovement.remark && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Remark</Label>
+                  <p className="font-medium">{viewingMovement.remark}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
