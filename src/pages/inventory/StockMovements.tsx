@@ -421,15 +421,11 @@ export default function StockMovements() {
                   <Label>Date *</Label>
                   <Input type="date" value={form.movement_date} onChange={(e) => setForm({ ...form, movement_date: e.target.value })} />
                 </div>
-                {/* Party Selection - shown for IN, OUT, and Wholesale OUT movements */}
-                {(form.movement_type === 'IN' || form.movement_type === 'OUT' || form.movement_type === 'WHOLESALE_OUT') && (
+                {/* Party Selection - shown for IN and Wholesale OUT movements */}
+                {(form.movement_type === 'IN' || form.movement_type === 'WHOLESALE_OUT') && (
                   <div className="space-y-2">
                     <Label>
-                      {form.movement_type === 'IN' 
-                        ? 'Supplier (Optional)' 
-                        : form.movement_type === 'WHOLESALE_OUT'
-                          ? 'Party'
-                          : 'Customer (Optional)'}
+                      {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Party'}
                     </Label>
                     <Select 
                       value={form.party_id || 'none'} 
