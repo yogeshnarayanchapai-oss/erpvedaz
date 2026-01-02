@@ -32,7 +32,7 @@ export default function Parties() {
     email: '',
     address: '',
     opening_balance: '0',
-    opening_balance_type: 'RECEIVABLE' as 'RECEIVABLE' | 'PAYABLE',
+    opening_balance_type: 'RECEIVABLE' as 'RECEIVABLE' | 'PAYABLE' | 'BOTH',
     remarks: '',
   });
 
@@ -204,6 +204,7 @@ export default function Parties() {
                     <SelectContent>
                       <SelectItem value="RECEIVABLE">Receivable (They owe us)</SelectItem>
                       <SelectItem value="PAYABLE">Payable (We owe them)</SelectItem>
+                      <SelectItem value="BOTH">Both</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

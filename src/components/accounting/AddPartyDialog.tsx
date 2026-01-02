@@ -24,7 +24,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
     email: '',
     address: '',
     opening_balance: 0,
-    opening_balance_type: null as 'RECEIVABLE' | 'PAYABLE' | null,
+    opening_balance_type: null as 'RECEIVABLE' | 'PAYABLE' | 'BOTH' | null,
     remarks: '',
   });
 
@@ -155,7 +155,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    opening_balance_type: value === 'none' ? null : (value as 'RECEIVABLE' | 'PAYABLE'),
+                    opening_balance_type: value === 'none' ? null : (value as 'RECEIVABLE' | 'PAYABLE' | 'BOTH'),
                   })
                 }
               >
@@ -166,6 +166,7 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
                   <SelectItem value="none">None</SelectItem>
                   <SelectItem value="RECEIVABLE">Receivable</SelectItem>
                   <SelectItem value="PAYABLE">Payable</SelectItem>
+                  <SelectItem value="BOTH">Both</SelectItem>
                 </SelectContent>
               </Select>
             </div>
