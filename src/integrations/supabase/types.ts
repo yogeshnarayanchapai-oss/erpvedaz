@@ -5882,6 +5882,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          adjustment_direction: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -5911,6 +5912,7 @@ export type Database = {
           warehouse_id: string
         }
         Insert: {
+          adjustment_direction?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -5940,6 +5942,7 @@ export type Database = {
           warehouse_id: string
         }
         Update: {
+          adjustment_direction?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null

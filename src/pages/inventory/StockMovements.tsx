@@ -41,7 +41,14 @@ const getTypeColor = (type: string) => {
 };
 
 const getTypeLabel = (movement: any) => {
+  if (movement.movement_type === 'ADJUSTMENT' && movement.adjustment_direction) {
+    return movement.adjustment_direction === 'PLUS' ? 'ADJUSTMENT (+)' : 'ADJUSTMENT (-)';
+  }
   return movement.movement_type;
+};
+
+const getAdjustmentDirectionColor = (direction: string) => {
+  return direction === 'PLUS' ? 'bg-green-500' : 'bg-red-500';
 };
 
 export default function StockMovements() {
@@ -77,6 +84,7 @@ export default function StockMovements() {
     party_id?: string;
     movement_source?: string;
     reference_order_count: number;
+    adjustment_direction?: 'PLUS' | 'MINUS';
   }>({
     product_id: '',
     warehouse_id: '',
@@ -92,6 +100,7 @@ export default function StockMovements() {
     unit_price: 0,
     remark: '',
     reference_order_count: 0,
+    adjustment_direction: 'PLUS',
   });
 
   const { data: movements, isLoading } = useStockMovements({
@@ -150,6 +159,7 @@ export default function StockMovements() {
       unit_price: 0,
       remark: '',
       reference_order_count: 0,
+      adjustment_direction: 'PLUS',
     });
   };
 
@@ -211,6 +221,8 @@ export default function StockMovements() {
     // For WHOLESALE_OUT, party is optional now
     // (removed party_id requirement for WHOLESALE_OUT)
     
+    const isAdjustment = form.movement_type === 'ADJUSTMENT';
+    
     const movementData: any = {
       ...form,
       movement_reason: isWholesaleOut ? 'WHOLESALE' : (form.movement_reason || null),
@@ -221,6 +233,8 @@ export default function StockMovements() {
       warehouse_id: isTransfer ? form.from_warehouse_id : form.warehouse_id,
       from_warehouse_id: isTransfer ? form.from_warehouse_id : null,
       to_warehouse_id: isTransfer ? form.to_warehouse_id : null,
+      // For adjustments, include the direction
+      adjustment_direction: isAdjustment ? form.adjustment_direction : null,
     };
     
     if (editingMovement) {
@@ -265,6 +279,7 @@ export default function StockMovements() {
       party_id: movement.party_id || undefined,
       movement_source: movement.movement_source || undefined,
       reference_order_count: movement.reference_order_count || 0,
+      adjustment_direction: (movement as any).adjustment_direction || 'PLUS',
     });
     setDialogOpen(true);
   };
@@ -367,6 +382,38 @@ export default function StockMovements() {
                         {warehouses?.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+                
+                {/* Adjustment Direction - shown only for ADJUSTMENT type */}
+                {form.movement_type === 'ADJUSTMENT' && (
+                  <div className="space-y-2">
+                    <Label>Stock Adjustment Type *</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={form.adjustment_direction === 'PLUS' ? 'default' : 'outline'}
+                        className={form.adjustment_direction === 'PLUS' ? 'bg-green-600 hover:bg-green-700 flex-1' : 'flex-1'}
+                        onClick={() => setForm({ ...form, adjustment_direction: 'PLUS' })}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Stock In (+)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={form.adjustment_direction === 'MINUS' ? 'default' : 'outline'}
+                        className={form.adjustment_direction === 'MINUS' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
+                        onClick={() => setForm({ ...form, adjustment_direction: 'MINUS' })}
+                      >
+                        <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                        Stock Out (-)
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {form.adjustment_direction === 'PLUS' 
+                        ? 'This will increase the inventory count' 
+                        : 'This will decrease the inventory count'}
+                    </p>
                   </div>
                 )}
                 
@@ -587,7 +634,11 @@ export default function StockMovements() {
                     <TableCell className="font-medium">{m.products?.name || '-'}</TableCell>
                     <TableCell>{warehouseDisplay}</TableCell>
                     <TableCell>
-                      <Badge className={getTypeColor(m.movement_type)}>
+                      <Badge className={
+                        m.movement_type === 'ADJUSTMENT' && (m as any).adjustment_direction 
+                          ? getAdjustmentDirectionColor((m as any).adjustment_direction)
+                          : getTypeColor(m.movement_type)
+                      }>
                         {getTypeLabel(m)}
                       </Badge>
                     </TableCell>
@@ -651,8 +702,12 @@ export default function StockMovements() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground text-xs">Type</Label>
-                  <Badge className={getTypeColor(viewingMovement.movement_type)}>
-                    {viewingMovement.movement_type}
+                  <Badge className={
+                    viewingMovement.movement_type === 'ADJUSTMENT' && (viewingMovement as any).adjustment_direction 
+                      ? getAdjustmentDirectionColor((viewingMovement as any).adjustment_direction)
+                      : getTypeColor(viewingMovement.movement_type)
+                  }>
+                    {getTypeLabel(viewingMovement)}
                   </Badge>
                 </div>
               </div>
