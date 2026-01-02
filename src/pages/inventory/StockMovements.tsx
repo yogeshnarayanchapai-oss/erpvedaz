@@ -19,26 +19,27 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
-const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT', 'WHOLESALE_OUT'] as const;
+const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT'] as const;
 
 const getTypeColor = (type: string) => {
   switch (type) {
-    case 'IN': return 'bg-green-500';
-    case 'OUT': return 'bg-red-500';
-    case 'TRANSFER_IN': return 'bg-blue-500';
-    case 'TRANSFER_OUT': return 'bg-orange-500';
+    case 'IN': 
+    case 'RTO_IN': 
+      return 'bg-green-500';
+    case 'OUT': 
+    case 'RTO_OUT': 
+      return 'bg-red-500';
+    case 'TRANSFER':
+    case 'TRANSFER_IN': 
+    case 'TRANSFER_OUT': 
+      return 'bg-blue-500';
     case 'ADJUSTMENT': return 'bg-yellow-500';
-    case 'RTO_IN': return 'bg-cyan-500';
-    case 'RTO_OUT': return 'bg-pink-500';
     case 'WHOLESALE_OUT': return 'bg-purple-500';
     default: return 'bg-gray-500';
   }
 };
 
 const getTypeLabel = (movement: any) => {
-  if (movement.movement_type === 'OUT' && movement.sale_category === 'WHOLESALE') {
-    return 'WHOLESALE';
-  }
   return movement.movement_type;
 };
 
@@ -187,7 +188,8 @@ export default function StockMovements() {
 
   const handleSubmit = async () => {
     // Validation based on movement type
-    const isTransfer = form.movement_type === 'TRANSFER_IN' || form.movement_type === 'TRANSFER_OUT';
+    const isTransfer = form.movement_type === 'TRANSFER';
+    const isWholesaleOut = form.movement_type === 'WHOLESALE_OUT';
     
     if (!form.product_id || form.qty <= 0) return;
     
@@ -204,18 +206,18 @@ export default function StockMovements() {
       if (!form.warehouse_id) return;
     }
     
-    // Check if this is a wholesale sale
-    const isWholesale = form.movement_type === 'OUT' && form.sale_category === 'WHOLESALE';
+    // For WHOLESALE_OUT, require party selection
+    if (isWholesaleOut && !form.party_id) {
+      return;
+    }
     
     const movementData: any = {
       ...form,
-      movement_reason: isWholesale ? 'WHOLESALE' : (form.movement_reason || null),
-      is_sale: isWholesale ? true : (form.is_sale || null),
-      sale_category: isWholesale ? 'WHOLESALE' : (form.sale_category || null),
-      // For transfers, set warehouse_id based on movement type
-      warehouse_id: isTransfer 
-        ? (form.movement_type === 'TRANSFER_OUT' ? form.from_warehouse_id : form.to_warehouse_id)
-        : form.warehouse_id,
+      movement_reason: isWholesaleOut ? 'WHOLESALE' : (form.movement_reason || null),
+      is_sale: isWholesaleOut ? true : (form.is_sale || null),
+      sale_category: isWholesaleOut ? 'WHOLESALE' : (form.sale_category || null),
+      // For transfers, use from_warehouse as primary warehouse_id (stock decreases)
+      warehouse_id: isTransfer ? form.from_warehouse_id : form.warehouse_id,
       from_warehouse_id: isTransfer ? form.from_warehouse_id : null,
       to_warehouse_id: isTransfer ? form.to_warehouse_id : null,
     };
@@ -223,23 +225,7 @@ export default function StockMovements() {
     if (editingMovement) {
       await updateMovement.mutateAsync({ id: editingMovement.id, ...movementData });
     } else {
-      // For transfers, create both TRANSFER_OUT and TRANSFER_IN movements
-      if (isTransfer && form.movement_type === 'TRANSFER_OUT') {
-        // Create TRANSFER_OUT from source warehouse
-        await createMovement.mutateAsync({
-          ...movementData,
-          movement_type: 'TRANSFER_OUT',
-          warehouse_id: form.from_warehouse_id,
-        });
-        // Create TRANSFER_IN to destination warehouse
-        await createMovement.mutateAsync({
-          ...movementData,
-          movement_type: 'TRANSFER_IN',
-          warehouse_id: form.to_warehouse_id,
-        });
-      } else {
-        await createMovement.mutateAsync(movementData);
-      }
+      await createMovement.mutateAsync(movementData);
     }
     setDialogOpen(false);
     setEditingMovement(null);
@@ -248,13 +234,23 @@ export default function StockMovements() {
 
   const handleEdit = (movement: StockMovement) => {
     setEditingMovement(movement);
+    // Map old movement types to new simplified types
+    let mappedType: typeof MOVEMENT_TYPES[number] = 'IN';
+    const mt = movement.movement_type;
+    if (mt === 'IN') mappedType = 'IN';
+    else if (mt === 'OUT' || mt === 'RTO_OUT') mappedType = 'OUT';
+    else if (mt === 'TRANSFER_IN' || mt === 'TRANSFER_OUT' || mt === 'TRANSFER') mappedType = 'TRANSFER';
+    else if (mt === 'ADJUSTMENT') mappedType = 'ADJUSTMENT';
+    else if (mt === 'WHOLESALE_OUT') mappedType = 'WHOLESALE_OUT';
+    else if (mt === 'RTO_IN') mappedType = 'IN'; // RTO_IN treated as IN
+    
     setForm({
       product_id: movement.product_id,
       warehouse_id: movement.warehouse_id,
       from_warehouse_id: movement.from_warehouse_id || '',
       to_warehouse_id: movement.to_warehouse_id || '',
       movement_date: movement.movement_date,
-      movement_type: movement.movement_type,
+      movement_type: mappedType,
       source: movement.source || '',
       reference_type: movement.reference_type || '',
       reference_id: movement.reference_id || '',
@@ -272,31 +268,9 @@ export default function StockMovements() {
     setDialogOpen(true);
   };
 
-  const quickAdd = (type: typeof MOVEMENT_TYPES[number], isWholesale = false) => {
-    const selectedProduct = products?.find(p => p.id === form.product_id);
-    const costPrice = selectedProduct?.cost_price || 0;
-    const wholesalePrice = selectedProduct?.wholesale_price || 0;
-    
-    // Find Office Warehouse for wholesale
-    const officeWarehouse = warehouses?.find(w => w.name.toLowerCase().includes('office'));
-    
+  const quickAdd = (type: typeof MOVEMENT_TYPES[number]) => {
     resetForm();
-    
-    if (isWholesale && officeWarehouse) {
-      // Wholesale sale: OUT + WHOLESALE reason + sale_category
-      setForm((f) => ({ 
-        ...f, 
-        movement_type: 'OUT',
-        warehouse_id: officeWarehouse.id,
-        unit_cost: costPrice,
-        unit_price: wholesalePrice,
-        movement_reason: 'WHOLESALE',
-        is_sale: true,
-        sale_category: 'WHOLESALE',
-      }));
-    } else {
-      setForm((f) => ({ ...f, movement_type: type }));
-    }
+    setForm((f) => ({ ...f, movement_type: type }));
     setDialogOpen(true);
   };
 
@@ -318,10 +292,13 @@ export default function StockMovements() {
           <Button variant="outline" onClick={() => quickAdd('IN')} className="text-green-600">
             <ArrowDownToLine className="h-4 w-4 mr-1" />Purchase IN
           </Button>
-          <Button variant="outline" onClick={() => quickAdd('OUT', false)} className="text-red-600">
-            <ArrowUpFromLine className="h-4 w-4 mr-1" />Sale OUT (Retail)
+          <Button variant="outline" onClick={() => quickAdd('OUT')} className="text-red-600">
+            <ArrowUpFromLine className="h-4 w-4 mr-1" />Sale OUT
           </Button>
-          <Button variant="outline" onClick={() => quickAdd('OUT', true)} className="text-purple-600">
+          <Button variant="outline" onClick={() => quickAdd('TRANSFER')} className="text-blue-600">
+            <RefreshCw className="h-4 w-4 mr-1" />Transfer
+          </Button>
+          <Button variant="outline" onClick={() => quickAdd('WHOLESALE_OUT')} className="text-purple-600">
             <ShoppingBag className="h-4 w-4 mr-1" />Wholesale OUT
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { resetForm(); setEditingMovement(null); } }}>
@@ -355,7 +332,7 @@ export default function StockMovements() {
                 </div>
                 
                 {/* Transfer Warehouse Selection */}
-                {(form.movement_type === 'TRANSFER_IN' || form.movement_type === 'TRANSFER_OUT') ? (
+                {form.movement_type === 'TRANSFER' ? (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>From Warehouse *</Label>
@@ -397,12 +374,12 @@ export default function StockMovements() {
                   <Input type="date" value={form.movement_date} onChange={(e) => setForm({ ...form, movement_date: e.target.value })} />
                 </div>
                 {/* Party Selection - shown for IN, OUT, and Wholesale OUT movements */}
-                {(form.movement_type === 'IN' || form.movement_type === 'OUT') && (
+                {(form.movement_type === 'IN' || form.movement_type === 'OUT' || form.movement_type === 'WHOLESALE_OUT') && (
                   <div className="space-y-2">
                     <Label>
                       {form.movement_type === 'IN' 
                         ? 'Supplier (Optional)' 
-                        : form.sale_category === 'WHOLESALE'
+                        : form.movement_type === 'WHOLESALE_OUT'
                           ? 'Party (Wholesaler) *'
                           : 'Customer (Optional)'}
                     </Label>
@@ -420,13 +397,13 @@ export default function StockMovements() {
                         <SelectValue placeholder={
                           form.movement_type === 'IN' 
                             ? 'Select supplier' 
-                            : form.sale_category === 'WHOLESALE'
+                            : form.movement_type === 'WHOLESALE_OUT'
                               ? 'Select party (wholesaler)'
                               : 'Select customer'
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                        {form.movement_type !== 'WHOLESALE_OUT' && <SelectItem value="none">None</SelectItem>}
                         {(form.movement_type === 'IN' ? suppliers : customers)?.map((party) => (
                           <SelectItem key={party.id} value={party.id}>
                             {party.name}
@@ -518,7 +495,12 @@ export default function StockMovements() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); setEditingMovement(null); }}>Cancel</Button>
-                  <Button onClick={handleSubmit} disabled={!form.product_id || !form.warehouse_id || form.qty <= 0}>
+                  <Button onClick={handleSubmit} disabled={
+                    !form.product_id || 
+                    form.qty <= 0 || 
+                    (form.movement_type === 'TRANSFER' ? (!form.from_warehouse_id || !form.to_warehouse_id) : !form.warehouse_id) ||
+                    (form.movement_type === 'WHOLESALE_OUT' && !form.party_id)
+                  }>
                     {editingMovement ? 'Update' : 'Save'}
                   </Button>
                 </div>
@@ -609,7 +591,7 @@ export default function StockMovements() {
                     <TableCell className="font-medium">{m.products?.name || '-'}</TableCell>
                     <TableCell>{m.warehouses?.name || '-'}</TableCell>
                     <TableCell>
-                      <Badge className={m.sale_category === 'WHOLESALE' ? 'bg-purple-500' : getTypeColor(m.movement_type)}>
+                      <Badge className={getTypeColor(m.movement_type)}>
                         {getTypeLabel(m)}
                       </Badge>
                     </TableCell>

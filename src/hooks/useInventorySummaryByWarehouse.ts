@@ -91,8 +91,11 @@ export function useInventorySummaryByWarehouse(
           movementTotals[key] = { total_in: 0, total_out: 0, last_date: null };
         }
 
+        // IN types: stock increases
         const isIn = ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type);
-        const isOut = ['OUT', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_OUT'].includes(m.movement_type);
+        // OUT types: stock decreases (includes TRANSFER which decreases from source, 
+        // WHOLESALE_OUT for wholesale sales)
+        const isOut = ['OUT', 'TRANSFER_OUT', 'TRANSFER', 'ADJUSTMENT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type);
 
         if (isIn) movementTotals[key].total_in += m.qty || 0;
         if (isOut) movementTotals[key].total_out += m.qty || 0;
