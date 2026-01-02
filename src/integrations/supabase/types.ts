@@ -7107,6 +7107,8 @@ export type Database = {
         | "ADJUSTMENT"
         | "RTO_IN"
         | "RTO_OUT"
+        | "TRANSFER"
+        | "WHOLESALE_OUT"
       team_type: "LEADS" | "CALLING" | "FOLLOWUP"
       transaction_type: "INCOME" | "EXPENSE" | "TRANSFER"
     }
@@ -7343,6 +7345,8 @@ export const Constants = {
         "ADJUSTMENT",
         "RTO_IN",
         "RTO_OUT",
+        "TRANSFER",
+        "WHOLESALE_OUT",
       ],
       team_type: ["LEADS", "CALLING", "FOLLOWUP"],
       transaction_type: ["INCOME", "EXPENSE", "TRANSFER"],
