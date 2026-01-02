@@ -698,10 +698,10 @@ export default function StockMovements() {
                   <p className="font-medium">{formatCurrency(viewingMovement.total_value)}</p>
                 </div>
               </div>
-              {viewingMovement.party_id && (
+              {viewingMovement.parties && (
                 <div>
-                  <Label className="text-muted-foreground text-xs">Party ID</Label>
-                  <p className="font-medium text-sm">{viewingMovement.party_id}</p>
+                  <Label className="text-muted-foreground text-xs">Party</Label>
+                  <p className="font-medium">{viewingMovement.parties.name}</p>
                 </div>
               )}
               {viewingMovement.remark && (
