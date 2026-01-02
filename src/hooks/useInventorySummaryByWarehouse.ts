@@ -56,15 +56,12 @@ export function useInventorySummaryByWarehouse(
         return true;
       });
 
-      // Get stock movements grouped by product/warehouse - filter by store via product
+      // Get ALL stock movements for products in the store - we need to analyze transfers properly
       let movementsQuery = supabase
         .from('stock_movements')
-        .select('product_id, warehouse_id, movement_type, qty, movement_date, products!inner(store_id)')
+        .select('product_id, warehouse_id, from_warehouse_id, to_warehouse_id, movement_type, qty, movement_date, products!inner(store_id)')
         .or('is_deleted.is.null,is_deleted.eq.false');
 
-      if (warehouseId && warehouseId !== 'all') {
-        movementsQuery = movementsQuery.eq('warehouse_id', warehouseId);
-      }
       if (startDate) {
         movementsQuery = movementsQuery.gte('movement_date', startDate);
       }
@@ -80,31 +77,57 @@ export function useInventorySummaryByWarehouse(
       if (movErr) throw movErr;
 
       // Calculate In/Out per product+warehouse
+      // IN = regular IN + TRANSFER where this warehouse is destination (to_warehouse_id)
+      // OUT = regular OUT/WHOLESALE_OUT/ADJUSTMENT + TRANSFER where this warehouse is source (from_warehouse_id)
       const movementTotals: Record<
         string,
         { total_in: number; total_out: number; last_date: string | null }
       > = {};
 
       movementsData?.forEach((m: any) => {
-        const key = `${m.product_id}_${m.warehouse_id}`;
-        if (!movementTotals[key]) {
-          movementTotals[key] = { total_in: 0, total_out: 0, last_date: null };
-        }
+        // For TRANSFER movements, handle both source and destination warehouses
+        if (m.movement_type === 'TRANSFER') {
+          // Source warehouse (from_warehouse_id) loses stock = OUT
+          if (m.from_warehouse_id) {
+            const sourceKey = `${m.product_id}_${m.from_warehouse_id}`;
+            if (!movementTotals[sourceKey]) {
+              movementTotals[sourceKey] = { total_in: 0, total_out: 0, last_date: null };
+            }
+            movementTotals[sourceKey].total_out += m.qty || 0;
+            if (!movementTotals[sourceKey].last_date || m.movement_date > movementTotals[sourceKey].last_date) {
+              movementTotals[sourceKey].last_date = m.movement_date;
+            }
+          }
+          
+          // Destination warehouse (to_warehouse_id) gains stock = IN
+          if (m.to_warehouse_id) {
+            const destKey = `${m.product_id}_${m.to_warehouse_id}`;
+            if (!movementTotals[destKey]) {
+              movementTotals[destKey] = { total_in: 0, total_out: 0, last_date: null };
+            }
+            movementTotals[destKey].total_in += m.qty || 0;
+            if (!movementTotals[destKey].last_date || m.movement_date > movementTotals[destKey].last_date) {
+              movementTotals[destKey].last_date = m.movement_date;
+            }
+          }
+        } else {
+          // For non-TRANSFER movements, use warehouse_id
+          const key = `${m.product_id}_${m.warehouse_id}`;
+          if (!movementTotals[key]) {
+            movementTotals[key] = { total_in: 0, total_out: 0, last_date: null };
+          }
 
-        // IN types: stock increases
-        const isIn = ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type);
-        // OUT types: stock decreases (includes TRANSFER which decreases from source, 
-        // WHOLESALE_OUT for wholesale sales)
-        const isOut = ['OUT', 'TRANSFER_OUT', 'TRANSFER', 'ADJUSTMENT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type);
+          // IN types: stock increases
+          const isIn = ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type);
+          // OUT types: stock decreases
+          const isOut = ['OUT', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type);
 
-        if (isIn) movementTotals[key].total_in += m.qty || 0;
-        if (isOut) movementTotals[key].total_out += m.qty || 0;
+          if (isIn) movementTotals[key].total_in += m.qty || 0;
+          if (isOut) movementTotals[key].total_out += m.qty || 0;
 
-        if (
-          !movementTotals[key].last_date ||
-          m.movement_date > movementTotals[key].last_date
-        ) {
-          movementTotals[key].last_date = m.movement_date;
+          if (!movementTotals[key].last_date || m.movement_date > movementTotals[key].last_date) {
+            movementTotals[key].last_date = m.movement_date;
+          }
         }
       });
 
