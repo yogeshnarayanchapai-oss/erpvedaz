@@ -379,7 +379,7 @@ export default function StockMovements() {
                       {form.movement_type === 'IN' 
                         ? 'Supplier (Optional)' 
                         : form.movement_type === 'WHOLESALE_OUT'
-                          ? 'Party (Wholesaler - Optional)'
+                          ? 'Party'
                           : 'Customer (Optional)'}
                     </Label>
                     <Select 
