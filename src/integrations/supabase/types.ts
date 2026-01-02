@@ -5885,6 +5885,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
+          from_warehouse_id: string | null
           id: string
           is_deleted: boolean | null
           is_sale: boolean | null
@@ -5901,6 +5902,7 @@ export type Database = {
           remark: string | null
           sale_category: string | null
           source: string | null
+          to_warehouse_id: string | null
           total_cost: number | null
           total_value: number | null
           unit_cost: number | null
@@ -5912,6 +5914,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          from_warehouse_id?: string | null
           id?: string
           is_deleted?: boolean | null
           is_sale?: boolean | null
@@ -5928,6 +5931,7 @@ export type Database = {
           remark?: string | null
           sale_category?: string | null
           source?: string | null
+          to_warehouse_id?: string | null
           total_cost?: number | null
           total_value?: number | null
           unit_cost?: number | null
@@ -5939,6 +5943,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          from_warehouse_id?: string | null
           id?: string
           is_deleted?: boolean | null
           is_sale?: boolean | null
@@ -5955,6 +5960,7 @@ export type Database = {
           remark?: string | null
           sale_category?: string | null
           source?: string | null
+          to_warehouse_id?: string | null
           total_cost?: number | null
           total_value?: number | null
           unit_cost?: number | null
@@ -5963,6 +5969,13 @@ export type Database = {
           warehouse_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_movements_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_movements_party_id_fkey"
             columns: ["party_id"]
@@ -5975,6 +5988,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
           {
