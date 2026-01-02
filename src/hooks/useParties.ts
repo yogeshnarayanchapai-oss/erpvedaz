@@ -11,7 +11,7 @@ export interface Party {
   email: string | null;
   address: string | null;
   opening_balance: number;
-  opening_balance_type: 'RECEIVABLE' | 'PAYABLE' | null;
+  opening_balance_type: 'RECEIVABLE' | 'PAYABLE' | 'BOTH' | null;
   remarks: string | null;
   store_id: string | null;
   created_at: string;
@@ -184,6 +184,9 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
           current_balance = typedParty.opening_balance + net_receivable - net_payable;
         } else if (typedParty.opening_balance_type === 'PAYABLE') {
           current_balance = -typedParty.opening_balance + net_receivable - net_payable;
+        } else if (typedParty.opening_balance_type === 'BOTH') {
+          // BOTH means the opening balance can be either - treat as neutral starting point
+          current_balance = net_receivable - net_payable;
         } else {
           current_balance = net_receivable - net_payable;
         }
