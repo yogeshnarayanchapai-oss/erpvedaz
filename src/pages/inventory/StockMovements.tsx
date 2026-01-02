@@ -214,6 +214,7 @@ export default function StockMovements() {
     const movementData: any = {
       ...form,
       movement_reason: isWholesaleOut ? 'WHOLESALE' : (form.movement_reason || null),
+      movement_source: isWholesaleOut ? 'WHOLESALE' : (form.movement_source || null),
       is_sale: isWholesaleOut ? true : (form.is_sale || null),
       sale_category: isWholesaleOut ? 'WHOLESALE' : (form.sale_category || null),
       // For transfers, use from_warehouse as primary warehouse_id (stock decreases)
@@ -585,11 +586,17 @@ export default function StockMovements() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.map((m) => (
+                {movements.map((m) => {
+                  // Display warehouse: For TRANSFER show "From → To", otherwise show warehouse name
+                  const warehouseDisplay = m.movement_type === 'TRANSFER' && m.from_warehouse && m.to_warehouse
+                    ? `${m.from_warehouse.name} → ${m.to_warehouse.name}`
+                    : m.warehouses?.name || '-';
+                  
+                  return (
                   <TableRow key={m.id}>
                     <TableCell>{m.movement_date}</TableCell>
                     <TableCell className="font-medium">{m.products?.name || '-'}</TableCell>
-                    <TableCell>{m.warehouses?.name || '-'}</TableCell>
+                    <TableCell>{warehouseDisplay}</TableCell>
                     <TableCell>
                       <Badge className={getTypeColor(m.movement_type)}>
                         {getTypeLabel(m)}
@@ -627,7 +634,8 @@ export default function StockMovements() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
