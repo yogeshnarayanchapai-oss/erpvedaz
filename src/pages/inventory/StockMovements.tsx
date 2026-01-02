@@ -206,10 +206,8 @@ export default function StockMovements() {
       if (!form.warehouse_id) return;
     }
     
-    // For WHOLESALE_OUT, require party selection
-    if (isWholesaleOut && !form.party_id) {
-      return;
-    }
+    // For WHOLESALE_OUT, party is optional now
+    // (removed party_id requirement for WHOLESALE_OUT)
     
     const movementData: any = {
       ...form,
@@ -381,7 +379,7 @@ export default function StockMovements() {
                       {form.movement_type === 'IN' 
                         ? 'Supplier (Optional)' 
                         : form.movement_type === 'WHOLESALE_OUT'
-                          ? 'Party (Wholesaler) *'
+                          ? 'Party (Wholesaler - Optional)'
                           : 'Customer (Optional)'}
                     </Label>
                     <Select 
@@ -390,7 +388,7 @@ export default function StockMovements() {
                         ...form, 
                         party_id: v === 'none' ? undefined : v,
                         movement_source: v === 'none' ? undefined : (
-                          form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER'
+                          form.movement_type === 'IN' ? 'SUPPLIER' : 'WHOLESALE'
                         )
                       })}
                     >
@@ -399,12 +397,12 @@ export default function StockMovements() {
                           form.movement_type === 'IN' 
                             ? 'Select supplier' 
                             : form.movement_type === 'WHOLESALE_OUT'
-                              ? 'Select party (wholesaler)'
+                              ? 'Select party (optional)'
                               : 'Select customer'
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        {form.movement_type !== 'WHOLESALE_OUT' && <SelectItem value="none">None</SelectItem>}
+                        <SelectItem value="none">None</SelectItem>
                         {(form.movement_type === 'IN' ? suppliers : customers)?.map((party) => (
                           <SelectItem key={party.id} value={party.id}>
                             {party.name}
@@ -499,8 +497,7 @@ export default function StockMovements() {
                   <Button onClick={handleSubmit} disabled={
                     !form.product_id || 
                     form.qty <= 0 || 
-                    (form.movement_type === 'TRANSFER' ? (!form.from_warehouse_id || !form.to_warehouse_id) : !form.warehouse_id) ||
-                    (form.movement_type === 'WHOLESALE_OUT' && !form.party_id)
+                    (form.movement_type === 'TRANSFER' ? (!form.from_warehouse_id || !form.to_warehouse_id) : !form.warehouse_id)
                   }>
                     {editingMovement ? 'Update' : 'Save'}
                   </Button>
