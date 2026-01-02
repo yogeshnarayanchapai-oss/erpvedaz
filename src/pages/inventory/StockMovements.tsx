@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
-const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT'] as const;
+const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER_IN', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_IN', 'RTO_OUT', 'WHOLESALE_OUT'] as const;
 
 const getTypeColor = (type: string) => {
   switch (type) {
@@ -30,6 +30,7 @@ const getTypeColor = (type: string) => {
     case 'ADJUSTMENT': return 'bg-yellow-500';
     case 'RTO_IN': return 'bg-cyan-500';
     case 'RTO_OUT': return 'bg-pink-500';
+    case 'WHOLESALE_OUT': return 'bg-purple-500';
     default: return 'bg-gray-500';
   }
 };
