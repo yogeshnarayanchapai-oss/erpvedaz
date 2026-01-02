@@ -120,8 +120,9 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           particulars: 'Opening Balance',
           qty: null,
           rate: null,
-          debit: party.opening_balance_type === 'RECEIVABLE' ? party.opening_balance : 0,
-          credit: party.opening_balance_type === 'PAYABLE' ? party.opening_balance : 0,
+          // Credit = receivable (party owes us), Debit = payable (we owe party)
+          debit: party.opening_balance_type === 'PAYABLE' ? party.opening_balance : 0,
+          credit: party.opening_balance_type === 'RECEIVABLE' ? party.opening_balance : 0,
           balance: 0,
           remarks: 'Opening Balance',
           id: 'opening-balance',
@@ -139,8 +140,9 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           particulars: `${t.source} - ${productName}${warehouseName ? ` (${warehouseName})` : ''}`,
           qty: t.qty,
           rate: t.rate,
-          debit: t.direction === 'RECEIVABLE' ? t.amount : 0,
-          credit: t.direction === 'PAYABLE' ? t.amount : 0,
+          // Credit = receivable (party owes us), Debit = payable (we owe party)
+          debit: t.direction === 'PAYABLE' ? t.amount : 0,
+          credit: t.direction === 'RECEIVABLE' ? t.amount : 0,
           balance: 0,
           remarks: t.remarks,
           id: t.id,
