@@ -56,6 +56,8 @@ export default function StockMovements() {
   const [form, setForm] = useState<{
     product_id: string;
     warehouse_id: string;
+    from_warehouse_id: string;
+    to_warehouse_id: string;
     movement_date: string;
     movement_type: typeof MOVEMENT_TYPES[number];
     source: string;
@@ -74,6 +76,8 @@ export default function StockMovements() {
   }>({
     product_id: '',
     warehouse_id: '',
+    from_warehouse_id: '',
+    to_warehouse_id: '',
     movement_date: format(new Date(), 'yyyy-MM-dd'),
     movement_type: 'IN',
     source: '',
@@ -130,6 +134,8 @@ export default function StockMovements() {
     setForm({
       product_id: '',
       warehouse_id: '',
+      from_warehouse_id: '',
+      to_warehouse_id: '',
       movement_date: format(new Date(), 'yyyy-MM-dd'),
       movement_type: 'IN',
       source: '',
@@ -179,7 +185,23 @@ export default function StockMovements() {
   const computedTotalValue = form.qty * form.unit_price;
 
   const handleSubmit = async () => {
-    if (!form.product_id || !form.warehouse_id || form.qty <= 0) return;
+    // Validation based on movement type
+    const isTransfer = form.movement_type === 'TRANSFER_IN' || form.movement_type === 'TRANSFER_OUT';
+    
+    if (!form.product_id || form.qty <= 0) return;
+    
+    // For transfers, require from_warehouse and to_warehouse
+    if (isTransfer) {
+      if (!form.from_warehouse_id || !form.to_warehouse_id) {
+        return;
+      }
+      if (form.from_warehouse_id === form.to_warehouse_id) {
+        return;
+      }
+    } else {
+      // For non-transfers, require warehouse_id
+      if (!form.warehouse_id) return;
+    }
     
     // Check if this is a wholesale sale
     const isWholesale = form.movement_type === 'OUT' && form.sale_category === 'WHOLESALE';
@@ -189,12 +211,34 @@ export default function StockMovements() {
       movement_reason: isWholesale ? 'WHOLESALE' : (form.movement_reason || null),
       is_sale: isWholesale ? true : (form.is_sale || null),
       sale_category: isWholesale ? 'WHOLESALE' : (form.sale_category || null),
+      // For transfers, set warehouse_id based on movement type
+      warehouse_id: isTransfer 
+        ? (form.movement_type === 'TRANSFER_OUT' ? form.from_warehouse_id : form.to_warehouse_id)
+        : form.warehouse_id,
+      from_warehouse_id: isTransfer ? form.from_warehouse_id : null,
+      to_warehouse_id: isTransfer ? form.to_warehouse_id : null,
     };
     
     if (editingMovement) {
       await updateMovement.mutateAsync({ id: editingMovement.id, ...movementData });
     } else {
-      await createMovement.mutateAsync(movementData);
+      // For transfers, create both TRANSFER_OUT and TRANSFER_IN movements
+      if (isTransfer && form.movement_type === 'TRANSFER_OUT') {
+        // Create TRANSFER_OUT from source warehouse
+        await createMovement.mutateAsync({
+          ...movementData,
+          movement_type: 'TRANSFER_OUT',
+          warehouse_id: form.from_warehouse_id,
+        });
+        // Create TRANSFER_IN to destination warehouse
+        await createMovement.mutateAsync({
+          ...movementData,
+          movement_type: 'TRANSFER_IN',
+          warehouse_id: form.to_warehouse_id,
+        });
+      } else {
+        await createMovement.mutateAsync(movementData);
+      }
     }
     setDialogOpen(false);
     setEditingMovement(null);
@@ -206,6 +250,8 @@ export default function StockMovements() {
     setForm({
       product_id: movement.product_id,
       warehouse_id: movement.warehouse_id,
+      from_warehouse_id: movement.from_warehouse_id || '',
+      to_warehouse_id: movement.to_warehouse_id || '',
       movement_date: movement.movement_date,
       movement_type: movement.movement_type,
       source: movement.source || '',
@@ -297,21 +343,6 @@ export default function StockMovements() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Warehouse *</Label>
-                    <Select value={form.warehouse_id} onValueChange={(v) => setForm({ ...form, warehouse_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
-                      <SelectContent>
-                        {warehouses?.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date *</Label>
-                    <Input type="date" value={form.movement_date} onChange={(e) => setForm({ ...form, movement_date: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Type *</Label>
                     <Select value={form.movement_type} onValueChange={handleTypeChange}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -321,22 +352,77 @@ export default function StockMovements() {
                     </Select>
                   </div>
                 </div>
-                {/* Party Selection - shown for IN and OUT movements */}
+                
+                {/* Transfer Warehouse Selection */}
+                {(form.movement_type === 'TRANSFER_IN' || form.movement_type === 'TRANSFER_OUT') ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>From Warehouse *</Label>
+                      <Select value={form.from_warehouse_id} onValueChange={(v) => setForm({ ...form, from_warehouse_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Source warehouse" /></SelectTrigger>
+                        <SelectContent>
+                          {warehouses?.filter(w => w.id !== form.to_warehouse_id).map((w) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>To Warehouse *</Label>
+                      <Select value={form.to_warehouse_id} onValueChange={(v) => setForm({ ...form, to_warehouse_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Destination warehouse" /></SelectTrigger>
+                        <SelectContent>
+                          {warehouses?.filter(w => w.id !== form.from_warehouse_id).map((w) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Warehouse *</Label>
+                    <Select value={form.warehouse_id} onValueChange={(v) => setForm({ ...form, warehouse_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                      <SelectContent>
+                        {warehouses?.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>Date *</Label>
+                  <Input type="date" value={form.movement_date} onChange={(e) => setForm({ ...form, movement_date: e.target.value })} />
+                </div>
+                {/* Party Selection - shown for IN, OUT, and Wholesale OUT movements */}
                 {(form.movement_type === 'IN' || form.movement_type === 'OUT') && (
                   <div className="space-y-2">
                     <Label>
-                      {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Customer (Optional)'}
+                      {form.movement_type === 'IN' 
+                        ? 'Supplier (Optional)' 
+                        : form.sale_category === 'WHOLESALE'
+                          ? 'Party (Wholesaler) *'
+                          : 'Customer (Optional)'}
                     </Label>
                     <Select 
                       value={form.party_id || 'none'} 
                       onValueChange={(v) => setForm({ 
                         ...form, 
                         party_id: v === 'none' ? undefined : v,
-                        movement_source: v === 'none' ? undefined : (form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER')
+                        movement_source: v === 'none' ? undefined : (
+                          form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER'
+                        )
                       })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={form.movement_type === 'IN' ? 'Select supplier' : 'Select customer'} />
+                        <SelectValue placeholder={
+                          form.movement_type === 'IN' 
+                            ? 'Select supplier' 
+                            : form.sale_category === 'WHOLESALE'
+                              ? 'Select party (wholesaler)'
+                              : 'Select customer'
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>

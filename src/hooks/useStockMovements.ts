@@ -10,6 +10,8 @@ export interface StockMovement {
   id: string;
   product_id: string;
   warehouse_id: string;
+  from_warehouse_id: string | null;
+  to_warehouse_id: string | null;
   movement_date: string;
   movement_type: StockMovementType;
   movement_reason: string | null;
@@ -34,6 +36,8 @@ export interface StockMovement {
   updated_at: string;
   products?: { id: string; name: string; wholesale_price?: number; store_id?: string | null };
   warehouses?: { id: string; name: string; code: string };
+  from_warehouse?: { id: string; name: string; code: string };
+  to_warehouse?: { id: string; name: string; code: string };
   parties?: { id: string; name: string };
 }
 
@@ -61,7 +65,9 @@ export function useStockMovements(filters: MovementFilters = {}) {
         .select(`
           *,
           products:product_id(id, name, wholesale_price, store_id),
-          warehouses:warehouse_id(id, name, code),
+          warehouses!warehouse_id(id, name, code),
+          from_warehouse:warehouses!from_warehouse_id(id, name, code),
+          to_warehouse:warehouses!to_warehouse_id(id, name, code),
           parties:party_id(id, name)
         `)
         .order('movement_date', { ascending: false })
@@ -113,6 +119,8 @@ export function useStockMovements(filters: MovementFilters = {}) {
 interface CreateStockMovementInput {
   product_id: string;
   warehouse_id: string;
+  from_warehouse_id?: string | null;
+  to_warehouse_id?: string | null;
   movement_date: string;
   movement_type: StockMovementType;
   movement_reason?: string | null;
