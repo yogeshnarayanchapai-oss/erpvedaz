@@ -567,7 +567,7 @@ export default function StockMovements() {
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Unit Cost</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Ref. Order</TableHead>
+                  <TableHead className="text-right hidden">Ref. Order</TableHead>
                   <TableHead className="text-right">Total Cost</TableHead>
                   <TableHead className="text-right">Total Value</TableHead>
                   <TableHead>Remark</TableHead>
@@ -594,7 +594,7 @@ export default function StockMovements() {
                     <TableCell className="text-right">{m.qty}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.unit_cost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.unit_price)}</TableCell>
-                    <TableCell className="text-right">{m.reference_order_count || 0}</TableCell>
+                    <TableCell className="text-right hidden">{m.reference_order_count || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_cost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
                     <TableCell>{m.remark || '-'}</TableCell>
