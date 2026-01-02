@@ -59,7 +59,7 @@ export function useInventorySummaryByWarehouse(
       // Get ALL stock movements for products in the store - we need to analyze transfers properly
       let movementsQuery = supabase
         .from('stock_movements')
-        .select('product_id, warehouse_id, from_warehouse_id, to_warehouse_id, movement_type, qty, movement_date, products!inner(store_id)')
+        .select('product_id, warehouse_id, from_warehouse_id, to_warehouse_id, movement_type, qty, movement_date, adjustment_direction, products!inner(store_id)')
         .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (startDate) {
@@ -117,10 +117,12 @@ export function useInventorySummaryByWarehouse(
             movementTotals[key] = { total_in: 0, total_out: 0, last_date: null };
           }
 
-          // IN types: stock increases
-          const isIn = ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type);
-          // OUT types: stock decreases
-          const isOut = ['OUT', 'TRANSFER_OUT', 'ADJUSTMENT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type);
+          // IN types: stock increases (ADJUSTMENT with PLUS direction counts as IN)
+          const isIn = ['IN', 'TRANSFER_IN', 'RTO_IN'].includes(m.movement_type) ||
+                       (m.movement_type === 'ADJUSTMENT' && m.adjustment_direction === 'PLUS');
+          // OUT types: stock decreases (ADJUSTMENT with MINUS direction counts as OUT)
+          const isOut = ['OUT', 'TRANSFER_OUT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type) ||
+                        (m.movement_type === 'ADJUSTMENT' && m.adjustment_direction === 'MINUS');
 
           if (isIn) movementTotals[key].total_in += m.qty || 0;
           if (isOut) movementTotals[key].total_out += m.qty || 0;
