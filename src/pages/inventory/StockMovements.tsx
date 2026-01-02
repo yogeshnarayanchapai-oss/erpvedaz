@@ -494,7 +494,7 @@ export default function StockMovements() {
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-4 gap-4">
+                <div className={`grid gap-4 ${form.movement_type === 'OUT' ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <div className="space-y-2">
                     <Label>Quantity *</Label>
                     <Input type="number" min={0} value={form.qty} onChange={(e) => setForm({ ...form, qty: +e.target.value })} />
@@ -507,10 +507,12 @@ export default function StockMovements() {
                     <Label>Unit Price</Label>
                     <Input type="number" min={0} value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: +e.target.value })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Ref. Order</Label>
-                    <Input type="number" min={0} value={form.reference_order_count} onChange={(e) => setForm({ ...form, reference_order_count: +e.target.value })} />
-                  </div>
+                  {form.movement_type === 'OUT' && (
+                    <div className="space-y-2">
+                      <Label>Ref. Order</Label>
+                      <Input type="number" min={0} value={form.reference_order_count} onChange={(e) => setForm({ ...form, reference_order_count: +e.target.value })} />
+                    </div>
+                  )}
                 </div>
                 {/* Display computed totals */}
                 <div className="grid grid-cols-2 gap-4 text-sm bg-muted/50 p-3 rounded-md">
