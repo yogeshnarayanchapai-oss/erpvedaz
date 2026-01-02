@@ -478,16 +478,6 @@ export default function StockMovements() {
                     <span className="font-medium">Rs {computedTotalValue.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Source</Label>
-                    <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="e.g. Valley Delivery" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Reference Type</Label>
-                    <Input value={form.reference_type} onChange={(e) => setForm({ ...form, reference_type: e.target.value })} placeholder="e.g. Order, Purchase" />
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <Label>Remark</Label>
                   <Textarea value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} />
@@ -578,7 +568,7 @@ export default function StockMovements() {
                   <TableHead className="text-right">Ref. Order</TableHead>
                   <TableHead className="text-right">Total Cost</TableHead>
                   <TableHead className="text-right">Total Value</TableHead>
-                  <TableHead>Source</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -605,7 +595,7 @@ export default function StockMovements() {
                     <TableCell className="text-right">{m.reference_order_count || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_cost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
-                    <TableCell>{m.source || m.remark || '-'}</TableCell>
+                    <TableCell>{m.remark || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         {canEdit && (
