@@ -13,6 +13,9 @@ import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
+import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
+import { NewExpenseDialog } from '@/components/accounting/NewExpenseDialog';
+import { NewTransferDialog } from '@/components/accounting/NewTransferDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
 import { Download, Search, Pencil, Trash2 } from 'lucide-react';
@@ -208,7 +211,14 @@ export default function ViewTransactions() {
           <h1 className="text-2xl font-bold">View Transactions</h1>
           <p className="text-muted-foreground">All accounting transactions</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {canEdit && (
+            <>
+              <NewDepositDialog />
+              <NewExpenseDialog />
+              <NewTransferDialog />
+            </>
+          )}
           {canDelete && selectedIds.length > 0 && (
             <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
               <AlertDialogTrigger asChild>
