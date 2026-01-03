@@ -39,12 +39,6 @@ import AdminBranding from "./pages/admin/AdminBranding";
 import Stores from "./pages/admin/Stores";
 import StoreDetail from "./pages/admin/StoreDetail";
 
-// Admin Messaging pages
-import AdminMessagingChannels from "./pages/admin/messaging/AdminMessagingChannels";
-import AdminMessagingTemplates from "./pages/admin/messaging/AdminMessagingTemplates";
-import AdminMessagingRules from "./pages/admin/messaging/AdminMessagingRules";
-import AdminMessagingLogs from "./pages/admin/messaging/AdminMessagingLogs";
-
 // Admin Logistics pages
 import AdminLogisticsSettings from "./pages/admin/AdminLogisticsSettings";
 import LogisticsDashboardMain from "./pages/logistics/LogisticsDashboardMain";
@@ -237,10 +231,6 @@ const App = () => (
                   <Route path="/admin/data-tools" element={<AdminDataTools />} />
                   <Route path="/admin/stores" element={<Stores />} />
                   <Route path="/admin/stores/:storeId" element={<StoreDetail />} />
-                  <Route path="/admin/messaging/channels" element={<AdminMessagingChannels />} />
-                  <Route path="/admin/messaging/templates" element={<AdminMessagingTemplates />} />
-                  <Route path="/admin/messaging/rules" element={<AdminMessagingRules />} />
-                  <Route path="/admin/messaging/logs" element={<AdminMessagingLogs />} />
                   <Route path="/admin/logistics/control-center" element={<LogisticsControlCenter />} />
                   <Route path="/admin/logistics-settings" element={<AdminLogisticsSettings />} />
                   <Route path="/admin/logistics-dashboard" element={<LogisticsDashboardMain />} />

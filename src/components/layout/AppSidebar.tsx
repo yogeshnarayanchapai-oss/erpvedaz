@@ -89,14 +89,6 @@ const myHRItems: MenuItem[] = [
   { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },
 ];
 
-// Messaging submenu for Admin
-const messagingItems: MenuItem[] = [
-  { title: 'Channels', url: '/admin/messaging/channels', icon: Send },
-  { title: 'Templates', url: '/admin/messaging/templates', icon: FileCode },
-  { title: 'Automation Rules', url: '/admin/messaging/rules', icon: Settings2 },
-  { title: 'Message Logs', url: '/admin/messaging/logs', icon: History },
-];
-
 // Logistics submenu for Admin
 const logisticsItems: MenuItem[] = [
   { title: 'Control Center', url: '/admin/logistics/control-center', icon: Truck },
@@ -239,12 +231,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     { title: 'Branding', url: '/admin/branding', icon: Palette },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
     {
-      title: 'Messaging',
-      url: '/admin/messaging/channels',
-      icon: MessageSquare,
-      children: messagingItems,
-    },
-    {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',
       icon: BookOpen,
@@ -294,12 +280,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
     { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
-    {
-      title: 'Messaging',
-      url: '/admin/messaging/channels',
-      icon: MessageSquare,
-      children: messagingItems,
-    },
     {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',
