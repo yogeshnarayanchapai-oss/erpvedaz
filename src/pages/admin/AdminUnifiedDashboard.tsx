@@ -266,60 +266,61 @@ export default function AdminUnifiedDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header with Date Filter and Quick Actions */}
-      <div className="flex flex-col gap-4">
-        <div>
+      {/* Header with Date Filter and Quick Actions - All in one row */}
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        {/* Title */}
+        <div className="shrink-0">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Overview across all modules
-          </p>
+          <p className="text-sm text-muted-foreground">Overview across all modules</p>
         </div>
         
-        {/* Date Filter + Quick Actions Row */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 rounded-2xl bg-muted/30 border">
+        {/* Date Filter + Quick Actions - Right side */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
           <DashboardDateFilter value={dateRange} onChange={setDateRange} />
           
-          {/* Quick Actions - Right side of date filter */}
+          <div className="h-6 w-px bg-border hidden sm:block" />
+          
+          {/* Quick Actions */}
           <div className="flex flex-wrap gap-2">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); navigate('/admin/sales/dashboard'); }}
-              className="gap-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
             >
-              <TrendingUp className="w-4 h-4" /> Sales
+              <TrendingUp className="w-3.5 h-3.5" /> Sales
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); navigate('/admin/accounting/transactions'); }}
-              className="gap-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
             >
-              <FileText className="w-4 h-4" /> Transactions
+              <FileText className="w-3.5 h-3.5" /> Transactions
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); navigate('/admin/inventory/movements'); }}
-              className="gap-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
             >
-              <Package className="w-4 h-4" /> Stock
+              <Package className="w-3.5 h-3.5" /> Stock
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); navigate('/admin/marketing/ads'); }}
-              className="gap-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
             >
-              <DollarSign className="w-4 h-4" /> Ads
+              <DollarSign className="w-3.5 h-3.5" /> Ads
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); navigate('/hrm/leave'); }}
-              className="gap-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
             >
-              <Calendar className="w-4 h-4" /> Leave
+              <Calendar className="w-3.5 h-3.5" /> Leave
             </Button>
           </div>
         </div>
