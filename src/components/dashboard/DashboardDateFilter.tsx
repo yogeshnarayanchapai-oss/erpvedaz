@@ -84,7 +84,7 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <Popover open={customOpen} onOpenChange={setCustomOpen}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -123,7 +123,10 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
             Last 30 Days
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={() => handlePresetClick('custom')}
+            onClick={() => {
+              setActivePreset('custom');
+              setCustomOpen(true);
+            }}
             className={cn(activePreset === 'custom' && 'bg-accent')}
           >
             Custom Range...
@@ -132,30 +135,27 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
       </DropdownMenu>
 
       {/* Custom date picker popover */}
-      <Popover open={customOpen} onOpenChange={setCustomOpen}>
-        <PopoverTrigger asChild>
-          <span className="hidden" />
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-50" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={value?.from}
-            selected={{ from: value?.from, to: value?.to }}
-            onSelect={(range) => {
-              if (range?.from && range?.to) {
-                onChange({ from: startOfDay(range.from), to: endOfDay(range.to) });
-                setActivePreset('custom');
-                setCustomOpen(false);
-              } else if (range?.from) {
-                onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
-              }
-            }}
-            numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
+      <PopoverTrigger asChild>
+        <span className="hidden" />
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0 z-50" align="start" sideOffset={8}>
+        <Calendar
+          initialFocus
+          mode="range"
+          defaultMonth={value?.from}
+          selected={{ from: value?.from, to: value?.to }}
+          onSelect={(range) => {
+            if (range?.from && range?.to) {
+              onChange({ from: startOfDay(range.from), to: endOfDay(range.to) });
+              setCustomOpen(false);
+            } else if (range?.from) {
+              onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
+            }
+          }}
+          numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
+          className="pointer-events-auto"
+        />
+      </PopoverContent>
+    </Popover>
   );
 }

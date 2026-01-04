@@ -281,6 +281,7 @@ export default function AdminUnifiedDashboard() {
           <div className="h-6 w-px bg-border hidden sm:block" />
           
           {/* Quick Actions */}
+          <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Quick Actions:</span>
           <div className="flex flex-wrap gap-2">
             <Button 
               variant="outline" 
