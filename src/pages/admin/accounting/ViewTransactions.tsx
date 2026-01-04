@@ -166,8 +166,13 @@ export default function ViewTransactions() {
   };
 
   const exportCSV = () => {
+    // Export only selected transactions if any are selected, otherwise export all filtered
+    const transactionsToExport = selectedIds.length > 0 
+      ? filteredTransactions.filter(t => selectedIds.includes(t.id))
+      : filteredTransactions;
+      
     const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
-    const rows = filteredTransactions.map(t => [
+    const rows = transactionsToExport.map(t => [
       t.transaction_code || '',
       t.date,
       t.type,
@@ -219,38 +224,42 @@ export default function ViewTransactions() {
               <NewTransferDialog />
             </>
           )}
-          {canDelete && selectedIds.length > 0 && (
-            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete ({selectedIds.length})
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete the selected transactions. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleBulkDelete}
-                    disabled={isDeleting}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {isDeleting ? 'Deleting...' : 'Delete All'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          {selectedIds.length > 0 && (
+            <>
+              <Button variant="outline" onClick={exportCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Export ({selectedIds.length})
+              </Button>
+              {canDelete && (
+                <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete ({selectedIds.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the selected transactions. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleBulkDelete}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete All'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </>
           )}
-          <Button onClick={exportCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
         </div>
       </div>
 
