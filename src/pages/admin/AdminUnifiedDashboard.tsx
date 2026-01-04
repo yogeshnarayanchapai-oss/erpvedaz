@@ -13,6 +13,7 @@ import { useLogisticsStats } from '@/hooks/useLogisticsStats';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTransactions } from '@/hooks/useTransactions';
+import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
@@ -120,25 +121,8 @@ export default function AdminUnifiedDashboard() {
   // Logistics stats for pending/total work
   const { data: logisticsStats, isLoading: logisticsLoading } = useLogisticsStats();
 
-  // Unsettled party transactions for receivable/payable - store-wise
-  const { data: unsettledPartyTx, isLoading: partyTxLoading } = useQuery({
-    queryKey: ['unsettled-party-transactions', storeId],
-    queryFn: async () => {
-      let query = supabase
-        .from('party_transactions')
-        .select('direction, amount, is_settled, store_id, warehouse_id')
-        .eq('is_settled', false);
-      
-      // Add store filter when storeId is available
-      if (storeId) {
-        query = query.eq('store_id', storeId);
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Parties with balances for receivable/payable - already store-wise filtered
+  const { data: partiesData, isLoading: partyTxLoading } = usePartiesWithBalances();
   
   // Compute metrics
   const salesMetrics = useMemo(() => {
@@ -165,9 +149,9 @@ export default function AdminUnifiedDashboard() {
     const todayExpense = todayTransactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
     const daybook = todayIncome - todayExpense;
 
-    // Receivable/Payable from party_transactions (unsettled) - already filtered
-    const receivables = unsettledPartyTx?.filter(t => t.direction === 'RECEIVABLE').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-    const payables = unsettledPartyTx?.filter(t => t.direction === 'PAYABLE').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    // Receivable/Payable from parties with balances (same as Party Statement)
+    const receivables = partiesData?.reduce((sum, p) => sum + Math.max(0, p.net_receivable + p.pending_receivable_amount), 0) || 0;
+    const payables = partiesData?.reduce((sum, p) => sum + Math.max(0, p.net_payable + p.pending_payable_amount), 0) || 0;
     
     return {
       totalAvailableBalance,
@@ -175,7 +159,7 @@ export default function AdminUnifiedDashboard() {
       receivables,
       payables,
     };
-  }, [accountsData, todayTransactions, unsettledPartyTx]);
+  }, [accountsData, todayTransactions, partiesData]);
 
   const inventoryMetrics = useMemo(() => {
     const items = inventoryData?.items || [];
