@@ -13,9 +13,12 @@ import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
+import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
+import { NewExpenseDialog } from '@/components/accounting/NewExpenseDialog';
+import { NewTransferDialog } from '@/components/accounting/NewTransferDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
-import { Download, Search, Pencil, Trash2 } from 'lucide-react';
+import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, Receipt, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,6 +38,11 @@ export default function ViewTransactions() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Dialog states
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 
   const { data: transactions = [], isLoading } = useTransactions(filters);
   const { data: accounts = [] } = useActiveAccounts();
@@ -163,8 +171,13 @@ export default function ViewTransactions() {
   };
 
   const exportCSV = () => {
+    // Export only selected if there's a selection, otherwise export all filtered
+    const dataToExport = selectedIds.length > 0 
+      ? filteredTransactions.filter(t => selectedIds.includes(t.id))
+      : filteredTransactions;
+      
     const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
-    const rows = filteredTransactions.map(t => [
+    const rows = dataToExport.map(t => [
       t.transaction_code || '',
       t.date,
       t.type,
@@ -208,40 +221,22 @@ export default function ViewTransactions() {
           <h1 className="text-2xl font-bold">View Transactions</h1>
           <p className="text-muted-foreground">All accounting transactions</p>
         </div>
-        <div className="flex items-center gap-2">
-          {canDelete && selectedIds.length > 0 && (
-            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete ({selectedIds.length})
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete the selected transactions. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleBulkDelete}
-                    disabled={isDeleting}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {isDeleting ? 'Deleting...' : 'Delete All'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-          <Button onClick={exportCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDepositDialogOpen(true)} variant="outline">
+              <DollarSign className="w-4 h-4 mr-2" />
+              New Deposit
+            </Button>
+            <Button onClick={() => setExpenseDialogOpen(true)} variant="outline">
+              <Receipt className="w-4 h-4 mr-2" />
+              New Expense
+            </Button>
+            <Button onClick={() => setTransferDialogOpen(true)} variant="outline">
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Transfer
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -353,7 +348,45 @@ export default function ViewTransactions() {
       {/* Transactions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
+            {selectedIds.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={exportCSV}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export ({selectedIds.length})
+                </Button>
+                {canDelete && (
+                  <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete ({selectedIds.length})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the selected transactions. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleBulkDelete}
+                          disabled={isDeleting}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleting ? 'Deleting...' : 'Delete All'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -479,6 +512,19 @@ export default function ViewTransactions() {
         transaction={editingTransaction}
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
+      />
+      
+      <NewDepositDialog 
+        open={depositDialogOpen} 
+        onOpenChange={setDepositDialogOpen} 
+      />
+      <NewExpenseDialog 
+        open={expenseDialogOpen} 
+        onOpenChange={setExpenseDialogOpen} 
+      />
+      <NewTransferDialog 
+        open={transferDialogOpen} 
+        onOpenChange={setTransferDialogOpen} 
       />
     </div>
   );
