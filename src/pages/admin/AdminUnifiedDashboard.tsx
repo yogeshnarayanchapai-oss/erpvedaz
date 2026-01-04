@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { format, startOfDay, endOfDay, startOfMonth } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfMonth, subDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,10 @@ import { useLeadDashboardStats, useOrderDashboardStats } from '@/hooks/useDashbo
 import { useAccountingDashboardMetrics } from '@/hooks/useAccountingDashboardMetrics';
 import { useInventorySummaryByWarehouse } from '@/hooks/useInventorySummaryByWarehouse';
 import { useEmployees, useLeaveRequests } from '@/hooks/useHRM';
-import { useAdsSpend } from '@/hooks/useAdsSpend';
+import { useAdSpendReference } from '@/hooks/useAdSpendReference';
+import { useAttendanceRecords } from '@/hooks/useAttendance';
+import { useDailyPL } from '@/hooks/useDailyPL';
+import { useLogisticsStats } from '@/hooks/useLogisticsStats';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   TrendingUp,
@@ -23,6 +26,7 @@ import {
   CheckCircle,
   DollarSign,
   Package,
+  Truck,
 } from 'lucide-react';
 
 export default function AdminUnifiedDashboard() {
@@ -38,6 +42,8 @@ export default function AdminUnifiedDashboard() {
   const dateTo = format(dateRange.to, 'yyyy-MM-dd');
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const monthEnd = format(new Date(), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
   // Sales data
   const { data: leadStats, isLoading: leadsLoading } = useLeadDashboardStats(dateFrom, dateTo);
@@ -53,25 +59,49 @@ export default function AdminUnifiedDashboard() {
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: leaveRequestsData } = useLeaveRequests();
 
-  // Marketing/Ads data (this month)
-  const { data: adsData } = useAdsSpend();
+  // Today's ad spend reference
+  const { data: todayAdsData } = useAdSpendReference({ startDate: today, endDate: today });
+
+  // Today's attendance
+  const { data: attendanceData } = useAttendanceRecords(undefined, { from: today, to: today });
+
+  // Yesterday's Daily P/L
+  const { data: yesterdayPL, isLoading: plLoading } = useDailyPL(yesterday);
+
+  // Logistics stats for pending/total work
+  const { data: logisticsStats, isLoading: logisticsLoading } = useLogisticsStats();
   
   // Compute metrics
-  const salesMetrics = useMemo(() => ({
-    totalLeads: leadStats?.total || 0,
-    confirmedOrders: orderStats?.confirmed || 0,
-    totalOrders: orderStats?.total || 0,
-    deliveredOrders: orderStats?.delivered || 0,
-    totalSales: orderStats?.totalSales || 0,
-  }), [leadStats, orderStats]);
+  const salesMetrics = useMemo(() => {
+    const totalLeads = leadStats?.total || 0;
+    const confirmedOrders = orderStats?.confirmed || 0;
+    // Conversion rate = Confirmed Orders / Total Leads * 100
+    const conversionRate = totalLeads > 0 ? ((confirmedOrders / totalLeads) * 100).toFixed(1) : '0.0';
+    
+    return {
+      totalLeads,
+      confirmedOrders,
+      conversionRate,
+      totalOrders: orderStats?.total || 0,
+      deliveredOrders: orderStats?.delivered || 0,
+      totalSales: orderStats?.totalSales || 0,
+    };
+  }, [leadStats, orderStats]);
 
-  const accountingMetricsComputed = useMemo(() => ({
-    cashInHand: accountingMetrics?.assetAccounts?.find(a => a.type === 'cash')?.current_balance || 0,
-    bankBalance: accountingMetrics?.assetAccounts?.filter(a => a.type === 'bank').reduce((sum, a) => sum + (a.current_balance || 0), 0) || 0,
-    receivables: accountingMetrics?.receivableOutstanding || 0,
-    payables: accountingMetrics?.payableOutstanding || 0,
-    monthlyProfit: accountingMetrics?.profitLoss || 0,
-  }), [accountingMetrics]);
+  const accountingMetricsComputed = useMemo(() => {
+    const cashInHand = accountingMetrics?.assetAccounts?.find(a => a.type === 'cash')?.current_balance || 0;
+    const bankBalance = accountingMetrics?.assetAccounts?.filter(a => a.type === 'bank').reduce((sum, a) => sum + (a.current_balance || 0), 0) || 0;
+    // Total Available Balance = Cash + Bank
+    const totalAvailableBalance = cashInHand + bankBalance;
+    
+    return {
+      totalAvailableBalance,
+      bankBalance,
+      receivables: accountingMetrics?.receivableOutstanding || 0,
+      payables: accountingMetrics?.payableOutstanding || 0,
+      monthlyProfit: accountingMetrics?.profitLoss || 0,
+    };
+  }, [accountingMetrics]);
 
   const inventoryMetrics = useMemo(() => {
     const items = inventoryData?.items || [];
@@ -79,19 +109,32 @@ export default function AdminUnifiedDashboard() {
     const totalStock = totals?.totalStock || 0;
     const totalValue = totals?.totalValue || 0;
     const lowStock = items.filter(i => i.reorder_required).length;
-    return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size };
-  }, [inventoryData]);
+    // Yesterday's P/L
+    const yesterdayProfit = yesterdayPL?.actual_profit || 0;
+    return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size, yesterdayProfit };
+  }, [inventoryData, yesterdayPL]);
 
-  const hrmMetrics = useMemo(() => ({
-    activeEmployees: employeesData?.filter(e => e.status === 'Active').length || 0,
-    pendingLeave: leaveRequestsData?.filter(l => l.status === 'Pending').length || 0,
-  }), [employeesData, leaveRequestsData]);
+  const hrmMetrics = useMemo(() => {
+    const presentToday = attendanceData?.filter(a => a.status === 'Present').length || 0;
+    return {
+      activeEmployees: employeesData?.filter(e => e.status === 'Active').length || 0,
+      pendingLeave: leaveRequestsData?.filter(l => l.status === 'Pending').length || 0,
+      presentToday,
+    };
+  }, [employeesData, leaveRequestsData, attendanceData]);
 
   const marketingMetrics = useMemo(() => {
-    const monthAds = adsData?.filter(a => a.date >= monthStart) || [];
-    const totalSpend = monthAds.reduce((sum, a) => sum + (a.npr_amount || 0), 0);
-    return { monthlySpend: totalSpend };
-  }, [adsData, monthStart]);
+    // Today's reference ad spend
+    const todayRefSpend = todayAdsData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
+    return { todayRefSpend };
+  }, [todayAdsData]);
+
+  const deliveryMetrics = useMemo(() => {
+    // Pending = in transit + pending pickup, Total = all sent
+    const pendingWork = (logisticsStats?.inTransit || 0) + (logisticsStats?.pendingPickup || 0);
+    const totalWork = logisticsStats?.totalSent || 0;
+    return { pendingWork, totalWork };
+  }, [logisticsStats]);
 
   const ModuleCard = ({ 
     title, 
@@ -166,7 +209,7 @@ export default function AdminUnifiedDashboard() {
           isLoading={leadsLoading || ordersLoading}
           metrics={[
             { label: 'Leads', value: salesMetrics.totalLeads },
-            { label: 'Orders', value: salesMetrics.totalOrders },
+            { label: 'Avg Conversion Rate', value: `${salesMetrics.conversionRate}%` },
             { label: 'Confirmed', value: salesMetrics.confirmedOrders },
             { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
           ]}
@@ -180,7 +223,7 @@ export default function AdminUnifiedDashboard() {
           navigateTo="/admin/accounting/dashboard-new"
           isLoading={accountingLoading}
           metrics={[
-            { label: 'Cash', value: `₹${accountingMetricsComputed.cashInHand.toLocaleString()}` },
+            { label: 'Total Available', value: `₹${accountingMetricsComputed.totalAvailableBalance.toLocaleString()}` },
             { label: 'Bank', value: `₹${accountingMetricsComputed.bankBalance.toLocaleString()}` },
             { label: 'Receivable', value: `₹${accountingMetricsComputed.receivables.toLocaleString()}` },
             { label: 'Payable', value: `₹${accountingMetricsComputed.payables.toLocaleString()}` },
@@ -193,12 +236,12 @@ export default function AdminUnifiedDashboard() {
           icon={Warehouse}
           color="bg-orange-500"
           navigateTo="/admin/inventory/stock-summary"
-          isLoading={inventoryLoading}
+          isLoading={inventoryLoading || plLoading}
           metrics={[
             { label: 'Stock Units', value: inventoryMetrics.totalStock.toLocaleString() },
             { label: 'Stock Value', value: `₹${inventoryMetrics.totalValue.toLocaleString()}` },
             { label: 'Low Stock', value: inventoryMetrics.lowStock },
-            { label: 'Warehouses', value: inventoryMetrics.warehouseCount },
+            { label: "Yesterday's P/L", value: `₹${inventoryMetrics.yesterdayProfit.toLocaleString()}` },
           ]}
         />
 
@@ -210,9 +253,9 @@ export default function AdminUnifiedDashboard() {
           navigateTo="/admin/marketing/ads"
           isLoading={false}
           metrics={[
-            { label: 'Monthly Spend', value: `₹${marketingMetrics.monthlySpend.toLocaleString()}` },
-            { label: 'Confirmed', value: salesMetrics.confirmedOrders },
-            { label: 'Delivered', value: salesMetrics.deliveredOrders },
+            { label: 'Today Ref Ads Spend', value: `₹${marketingMetrics.todayRefSpend.toLocaleString()}` },
+            { label: 'Confirmed Orders', value: salesMetrics.confirmedOrders },
+            { label: 'Pending / Total', value: `${deliveryMetrics.pendingWork} / ${deliveryMetrics.totalWork}` },
             { label: 'Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
           ]}
         />
@@ -227,7 +270,7 @@ export default function AdminUnifiedDashboard() {
           metrics={[
             { label: 'Employees', value: hrmMetrics.activeEmployees },
             { label: 'Pending Leave', value: hrmMetrics.pendingLeave },
-            { label: 'Attendance', value: '-' },
+            { label: 'Present Today', value: hrmMetrics.presentToday },
             { label: 'Notices', value: '-' },
           ]}
         />
