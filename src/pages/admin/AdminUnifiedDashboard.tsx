@@ -6,14 +6,18 @@ import { Button } from '@/components/ui/button';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
 import { DateRange } from '@/hooks/useSalesByDateRange';
 import { useLeadDashboardStats, useOrderDashboardStats } from '@/hooks/useDashboardStats';
-import { useAccountingDashboardMetrics } from '@/hooks/useAccountingDashboardMetrics';
 import { useInventorySummaryByWarehouse } from '@/hooks/useInventorySummaryByWarehouse';
 import { useEmployees, useLeaveRequests } from '@/hooks/useHRM';
-import { useAdSpendReference } from '@/hooks/useAdSpendReference';
+import { useAdsSpend } from '@/hooks/useAdsSpend';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
 import { useDailyPL } from '@/hooks/useDailyPL';
 import { useLogisticsStats } from '@/hooks/useLogisticsStats';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
@@ -34,6 +38,7 @@ import {
 export default function AdminUnifiedDashboard() {
   const navigate = useNavigate();
   const { effectiveRole } = useEffectiveRole();
+  const storeId = useCurrentStoreId();
 
   // Redirect MANAGER to Sales Dashboard
   useEffect(() => {
@@ -60,8 +65,11 @@ export default function AdminUnifiedDashboard() {
   const { data: leadStats, isLoading: leadsLoading } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats, isLoading: ordersLoading } = useOrderDashboardStats(dateFrom, dateTo);
 
-  // Accounting data
-  const { data: accountingMetrics, isLoading: accountingLoading } = useAccountingDashboardMetrics(monthStart, monthEnd);
+  // Accounting data - All accounts for total balance
+  const { data: accountsData, isLoading: accountsLoading } = useAccounts();
+
+  // Today's transactions for daybook calculation
+  const { data: todayTransactions } = useTransactions({ startDate: today, endDate: today });
 
   // Inventory data
   const { data: inventoryData, isLoading: inventoryLoading } = useInventorySummaryByWarehouse();
@@ -70,8 +78,8 @@ export default function AdminUnifiedDashboard() {
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: leaveRequestsData } = useLeaveRequests();
 
-  // Today's ad spend reference
-  const { data: todayAdsData } = useAdSpendReference({ startDate: today, endDate: today });
+  // Today's ad spend from ads_spend table (has USD amount)
+  const { data: todayAdsData } = useAdsSpend({ dateFrom: today, dateTo: today });
 
   // Today's attendance
   const { data: attendanceData } = useAttendanceRecords(undefined, { from: today, to: today });
@@ -81,6 +89,21 @@ export default function AdminUnifiedDashboard() {
 
   // Logistics stats for pending/total work
   const { data: logisticsStats, isLoading: logisticsLoading } = useLogisticsStats();
+
+  // Unsettled party transactions for receivable/payable
+  const { data: unsettledPartyTx } = useQuery({
+    queryKey: ['unsettled-party-transactions', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('party_transactions')
+        .select('direction, amount, is_settled')
+        .eq('is_settled', false);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+  });
   
   // Compute metrics
   const salesMetrics = useMemo(() => {
@@ -100,19 +123,27 @@ export default function AdminUnifiedDashboard() {
   }, [leadStats, orderStats]);
 
   const accountingMetricsComputed = useMemo(() => {
-    const cashInHand = accountingMetrics?.assetAccounts?.find(a => a.type === 'cash')?.current_balance || 0;
-    const bankBalance = accountingMetrics?.assetAccounts?.filter(a => a.type === 'bank').reduce((sum, a) => sum + (a.current_balance || 0), 0) || 0;
-    // Total Available Balance = Cash + Bank
-    const totalAvailableBalance = cashInHand + bankBalance;
+    // Total Available Balance = Sum of all account balances
+    const totalAvailableBalance = accountsData?.reduce((sum, acc) => sum + (acc.current_balance || 0), 0) || 0;
+    const bankBalance = accountsData?.filter(a => a.type === 'bank').reduce((sum, a) => sum + (a.current_balance || 0), 0) || 0;
+    
+    // Daybook = Today's Income - Today's Expense
+    const todayIncome = todayTransactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const todayExpense = todayTransactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const daybook = todayIncome - todayExpense;
+
+    // Receivable/Payable from party_transactions (unsettled)
+    const receivables = unsettledPartyTx?.filter(t => t.direction === 'RECEIVABLE').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const payables = unsettledPartyTx?.filter(t => t.direction === 'PAYABLE').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
     
     return {
       totalAvailableBalance,
       bankBalance,
-      receivables: accountingMetrics?.receivableOutstanding || 0,
-      payables: accountingMetrics?.payableOutstanding || 0,
-      monthlyProfit: accountingMetrics?.profitLoss || 0,
+      daybook,
+      receivables,
+      payables,
     };
-  }, [accountingMetrics]);
+  }, [accountsData, todayTransactions, unsettledPartyTx]);
 
   const inventoryMetrics = useMemo(() => {
     const items = inventoryData?.items || [];
@@ -120,7 +151,7 @@ export default function AdminUnifiedDashboard() {
     const totalStock = totals?.totalStock || 0;
     const totalValue = totals?.totalValue || 0;
     const lowStock = items.filter(i => i.reorder_required).length;
-    // Yesterday's P/L
+    // Yesterday's P/L from daily_pl
     const yesterdayProfit = yesterdayPL?.actual_profit || 0;
     return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size, yesterdayProfit };
   }, [inventoryData, yesterdayPL]);
@@ -135,9 +166,9 @@ export default function AdminUnifiedDashboard() {
   }, [employeesData, leaveRequestsData, attendanceData]);
 
   const marketingMetrics = useMemo(() => {
-    // Today's reference ad spend
-    const todayRefSpend = todayAdsData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
-    return { todayRefSpend };
+    // Today's ads spend in USD from ads_spend table
+    const todayRefSpendUSD = todayAdsData?.reduce((sum, a) => sum + (a.usd_amount || 0), 0) || 0;
+    return { todayRefSpendUSD };
   }, [todayAdsData]);
 
   const deliveryMetrics = useMemo(() => {
@@ -232,10 +263,10 @@ export default function AdminUnifiedDashboard() {
           icon={Calculator}
           color="bg-blue-500"
           navigateTo="/admin/accounting/dashboard-new"
-          isLoading={accountingLoading}
+          isLoading={accountsLoading}
           metrics={[
             { label: 'Total Available', value: `₹${accountingMetricsComputed.totalAvailableBalance.toLocaleString()}` },
-            { label: 'Bank', value: `₹${accountingMetricsComputed.bankBalance.toLocaleString()}` },
+            { label: 'Daybook', value: `₹${accountingMetricsComputed.daybook.toLocaleString()}` },
             { label: 'Receivable', value: `₹${accountingMetricsComputed.receivables.toLocaleString()}` },
             { label: 'Payable', value: `₹${accountingMetricsComputed.payables.toLocaleString()}` },
           ]}
@@ -264,7 +295,7 @@ export default function AdminUnifiedDashboard() {
           navigateTo="/admin/marketing/ads"
           isLoading={false}
           metrics={[
-            { label: 'Today Ref Ads Spend', value: `₹${marketingMetrics.todayRefSpend.toLocaleString()}` },
+            { label: 'Today Ads (USD)', value: `$${marketingMetrics.todayRefSpendUSD.toLocaleString()}` },
             { label: 'Confirmed Orders', value: salesMetrics.confirmedOrders },
             { label: 'Pending / Total', value: `${deliveryMetrics.pendingWork} / ${deliveryMetrics.totalWork}` },
             { label: 'Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
@@ -297,15 +328,15 @@ export default function AdminUnifiedDashboard() {
           <CardContent className="pt-0">
             <div className="grid grid-cols-2 gap-2">
               <div className="text-center p-2 bg-background/50 rounded-lg">
-                <p className="text-xs text-muted-foreground">Net Worth</p>
+                <p className="text-xs text-muted-foreground">Total Balance</p>
                 <p className="text-sm font-semibold text-primary">
-                  ₹{(accountingMetrics?.netWorth || 0).toLocaleString()}
+                  ₹{accountingMetricsComputed.totalAvailableBalance.toLocaleString()}
                 </p>
               </div>
               <div className="text-center p-2 bg-background/50 rounded-lg">
-                <p className="text-xs text-muted-foreground">Monthly P/L</p>
-                <p className={`text-sm font-semibold ${accountingMetricsComputed.monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ₹{accountingMetricsComputed.monthlyProfit.toLocaleString()}
+                <p className="text-xs text-muted-foreground">Yesterday P/L</p>
+                <p className={`text-sm font-semibold ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
                 </p>
               </div>
               <div className="text-center p-2 bg-background/50 rounded-lg">
