@@ -17,7 +17,8 @@ import UpdatePassword from "./pages/UpdatePassword";
 import SetupAdmin from "./pages/SetupAdmin";
 import NotFound from "./pages/NotFound";
 
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUnifiedDashboard from "./pages/admin/AdminUnifiedDashboard";
+import AdminSalesDashboard from "./pages/admin/AdminSalesDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import RolesPermissions from "./pages/admin/RolesPermissions";
 import AdminProducts from "./pages/admin/AdminProducts";
@@ -196,7 +197,8 @@ const App = () => (
 
               {/* Main routes (using DashboardLayout with store_id filtering) */}
               <Route element={<DashboardLayout />}>
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/dashboard" element={<AdminUnifiedDashboard />} />
+                <Route path="/admin/sales/dashboard" element={<AdminSalesDashboard />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/roles-permissions" element={<RolesPermissions />} />
                 <Route path="/admin/products" element={<AdminProducts />} />
@@ -328,7 +330,7 @@ const App = () => (
               <Route element={<DashboardLayout />}>
                 <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
                 <Route path="/marketing/ads" element={<AdminAds />} />
-                <Route path="/marketing/daybook" element={<AdminDashboard />} />
+                <Route path="/marketing/daybook" element={<AdminSalesDashboard />} />
                 <Route path="/marketing/performance" element={<AdminReports />} />
               </Route>
 
