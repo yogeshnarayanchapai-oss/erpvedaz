@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { CalendarIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -40,29 +40,33 @@ const presetLabels: Record<PresetKey, string> = {
 
 export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProps) {
   const [activePreset, setActivePreset] = useState<PresetKey>('today');
-  const [customOpen, setCustomOpen] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const { dateMode } = useDateMode();
 
   const handlePresetClick = (preset: PresetKey) => {
-    setActivePreset(preset);
     const today = new Date();
     const yesterday = subDays(today, 1);
     
     switch (preset) {
       case 'today':
+        setActivePreset('today');
         onChange({ from: startOfDay(today), to: endOfDay(today) });
         break;
       case 'yesterday':
+        setActivePreset('yesterday');
         onChange({ from: startOfDay(yesterday), to: endOfDay(yesterday) });
         break;
       case '7days':
+        setActivePreset('7days');
         onChange({ from: startOfDay(subDays(today, 6)), to: endOfDay(today) });
         break;
       case '30days':
+        setActivePreset('30days');
         onChange({ from: startOfDay(subDays(today, 29)), to: endOfDay(today) });
         break;
       case 'custom':
-        setCustomOpen(true);
+        // Open calendar picker
+        setTimeout(() => setShowCalendar(true), 100);
         break;
     }
   };
@@ -83,79 +87,89 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
     return presetLabels[activePreset];
   };
 
-  return (
-    <Popover open={customOpen} onOpenChange={setCustomOpen}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+  // If calendar is open, show the calendar popover
+  if (showCalendar) {
+    return (
+      <Popover open={showCalendar} onOpenChange={setShowCalendar}>
+        <PopoverTrigger asChild>
           <Button 
             variant="outline" 
             size="sm" 
             className="h-8 gap-2 text-xs font-medium min-w-[120px] justify-between"
           >
             <CalendarIcon className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[150px]">{getDisplayLabel()}</span>
+            <span className="truncate max-w-[180px]">{getDisplayLabel()}</span>
             <ChevronDown className="w-3.5 h-3.5 opacity-50" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48 bg-popover z-50">
-          <DropdownMenuItem 
-            onClick={() => handlePresetClick('today')}
-            className={cn(activePreset === 'today' && 'bg-accent')}
-          >
-            Today
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handlePresetClick('yesterday')}
-            className={cn(activePreset === 'yesterday' && 'bg-accent')}
-          >
-            Yesterday
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handlePresetClick('7days')}
-            className={cn(activePreset === '7days' && 'bg-accent')}
-          >
-            Last 7 Days
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handlePresetClick('30days')}
-            className={cn(activePreset === '30days' && 'bg-accent')}
-          >
-            Last 30 Days
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => {
-              setActivePreset('custom');
-              setCustomOpen(true);
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-[100] bg-popover" align="start" sideOffset={4}>
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={value?.from}
+            selected={{ from: value?.from, to: value?.to }}
+            onSelect={(range) => {
+              if (range?.from && range?.to) {
+                onChange({ from: startOfDay(range.from), to: endOfDay(range.to) });
+                setActivePreset('custom');
+                setShowCalendar(false);
+              } else if (range?.from) {
+                onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
+              }
             }}
-            className={cn(activePreset === 'custom' && 'bg-accent')}
-          >
-            Custom Range...
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
+            className="pointer-events-auto p-3"
+          />
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
-      {/* Custom date picker popover */}
-      <PopoverTrigger asChild>
-        <span className="hidden" />
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-50" align="start" sideOffset={8}>
-        <Calendar
-          initialFocus
-          mode="range"
-          defaultMonth={value?.from}
-          selected={{ from: value?.from, to: value?.to }}
-          onSelect={(range) => {
-            if (range?.from && range?.to) {
-              onChange({ from: startOfDay(range.from), to: endOfDay(range.to) });
-              setCustomOpen(false);
-            } else if (range?.from) {
-              onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
-            }
-          }}
-          numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
-          className="pointer-events-auto"
-        />
-      </PopoverContent>
-    </Popover>
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 gap-2 text-xs font-medium min-w-[120px] justify-between"
+        >
+          <CalendarIcon className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[180px]">{getDisplayLabel()}</span>
+          <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48 bg-popover z-[100]">
+        <DropdownMenuItem 
+          onClick={() => handlePresetClick('today')}
+          className={cn(activePreset === 'today' && 'bg-accent')}
+        >
+          Today
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handlePresetClick('yesterday')}
+          className={cn(activePreset === 'yesterday' && 'bg-accent')}
+        >
+          Yesterday
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handlePresetClick('7days')}
+          className={cn(activePreset === '7days' && 'bg-accent')}
+        >
+          Last 7 Days
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handlePresetClick('30days')}
+          className={cn(activePreset === '30days' && 'bg-accent')}
+        >
+          Last 30 Days
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => handlePresetClick('custom')}
+          className={cn(activePreset === 'custom' && 'bg-accent')}
+        >
+          Custom Range...
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
