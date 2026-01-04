@@ -170,6 +170,7 @@ const accountingItems: MenuItem[] = [
 
 // Sales submenu for Admin/Owner
 const salesItems: MenuItem[] = [
+  { title: 'Sales Dashboard', url: '/admin/sales/dashboard', icon: TrendingUp },
   { title: 'Products', url: '/admin/products', icon: Package },
   { title: 'Branches', url: '/admin/branches', icon: Building2 },
   { title: 'Leads', url: '/admin/leads', icon: Phone },

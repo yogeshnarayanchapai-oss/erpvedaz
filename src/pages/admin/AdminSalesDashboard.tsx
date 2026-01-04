@@ -275,8 +275,8 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-3 md:gap-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-xs md:text-sm text-muted-foreground">Overview of performance and analytics</p>
+            <h1 className="text-xl md:text-2xl font-bold">Sales Dashboard</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Sales performance and analytics</p>
           </div>
         </div>
         <DashboardDateFilter value={dateRange} onChange={setDateRange} />
