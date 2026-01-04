@@ -224,42 +224,6 @@ export default function ViewTransactions() {
               <NewTransferDialog />
             </>
           )}
-          {selectedIds.length > 0 && (
-            <>
-              <Button variant="outline" onClick={exportCSV}>
-                <Download className="w-4 h-4 mr-2" />
-                Export ({selectedIds.length})
-              </Button>
-              {canDelete && (
-                <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete ({selectedIds.length})
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete the selected transactions. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleBulkDelete}
-                        disabled={isDeleting}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {isDeleting ? 'Deleting...' : 'Delete All'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </>
-          )}
         </div>
       </div>
 
@@ -371,8 +335,44 @@ export default function ViewTransactions() {
 
       {/* Transactions Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={exportCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Export ({selectedIds.length})
+              </Button>
+              {canDelete && (
+                <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete ({selectedIds.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the selected transactions. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleBulkDelete}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete All'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Table>
