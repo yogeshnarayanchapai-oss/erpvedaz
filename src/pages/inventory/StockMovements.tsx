@@ -20,13 +20,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
-const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT'] as const;
+const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO_IN'] as const;
 
 const getTypeColor = (type: string) => {
   switch (type) {
     case 'IN': 
-    case 'RTO_IN': 
       return 'bg-green-500';
+    case 'RTO_IN': 
+      return 'bg-orange-500';
     case 'OUT': 
     case 'RTO_OUT': 
       return 'bg-red-500';
@@ -44,7 +45,22 @@ const getTypeLabel = (movement: any) => {
   if (movement.movement_type === 'ADJUSTMENT' && movement.adjustment_direction) {
     return movement.adjustment_direction === 'PLUS' ? 'ADJUSTMENT (+)' : 'ADJUSTMENT (-)';
   }
+  if (movement.movement_type === 'RTO_IN') {
+    return 'RTO (Return)';
+  }
   return movement.movement_type;
+};
+
+const getMovementTypeDisplayLabel = (type: string) => {
+  switch (type) {
+    case 'IN': return 'Purchase IN';
+    case 'OUT': return 'Sale OUT';
+    case 'TRANSFER': return 'Transfer';
+    case 'ADJUSTMENT': return 'Adjustment';
+    case 'WHOLESALE_OUT': return 'Wholesale OUT';
+    case 'RTO_IN': return 'RTO (Return)';
+    default: return type;
+  }
 };
 
 const getAdjustmentDirectionColor = (direction: string) => {
@@ -341,7 +357,7 @@ export default function StockMovements() {
                     <Select value={form.movement_type} onValueChange={handleTypeChange}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {MOVEMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {MOVEMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{getMovementTypeDisplayLabel(t)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
