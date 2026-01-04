@@ -89,6 +89,14 @@ const myHRItems: MenuItem[] = [
   { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },
 ];
 
+// Messaging submenu for Admin
+const messagingItems: MenuItem[] = [
+  { title: 'Channels', url: '/admin/messaging/channels', icon: Send },
+  { title: 'Templates', url: '/admin/messaging/templates', icon: FileCode },
+  { title: 'Automation Rules', url: '/admin/messaging/rules', icon: Settings2 },
+  { title: 'Message Logs', url: '/admin/messaging/logs', icon: History },
+];
+
 // Logistics submenu for Admin
 const logisticsItems: MenuItem[] = [
   { title: 'Control Center', url: '/admin/logistics/control-center', icon: Truck },
@@ -153,6 +161,9 @@ const inventoryItems: MenuItem[] = [
 const accountingItems: MenuItem[] = [
   { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
   { title: 'Assets', url: '/admin/accounting/assets', icon: Box },
+  { title: 'New Deposit', url: '/admin/accounting/new-deposit', icon: DollarSign },
+  { title: 'New Expense', url: '/admin/accounting/new-expense', icon: Receipt },
+  { title: 'Transfer', url: '/admin/accounting/new-transfer', icon: ArrowLeftRight },
   { title: 'View Transactions', url: '/admin/accounting/transactions', icon: FileText },
   { title: 'Activity Log', url: '/admin/accounting/activity-log', icon: History },
   { title: 'Accounts', url: '/admin/accounting/accounts', icon: Wallet },
@@ -228,6 +239,12 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     { title: 'Branding', url: '/admin/branding', icon: Palette },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
     {
+      title: 'Messaging',
+      url: '/admin/messaging/channels',
+      icon: MessageSquare,
+      children: messagingItems,
+    },
+    {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',
       icon: BookOpen,
@@ -277,6 +294,12 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
     { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
+    {
+      title: 'Messaging',
+      url: '/admin/messaging/channels',
+      icon: MessageSquare,
+      children: messagingItems,
+    },
     {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',

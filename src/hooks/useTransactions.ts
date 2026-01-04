@@ -26,7 +26,6 @@ export interface Transaction {
   updated_at: string;
   from_account?: { id: string; name: string } | null;
   to_account?: { id: string; name: string } | null;
-  account?: { id: string; name: string } | null;
   transaction_categories?: { id: string; name: string } | null;
   parties?: { id: string; name: string } | null;
 }
@@ -54,7 +53,6 @@ export function useTransactions(filters?: TransactionFilters) {
           *,
           from_account:from_account_id(id, name),
           to_account:to_account_id(id, name),
-          account:account_id(id, name),
           transaction_categories:category_id(id, name),
           parties:party_id(id, name)
         `)
