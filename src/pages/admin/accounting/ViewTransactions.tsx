@@ -430,8 +430,8 @@ export default function ViewTransactions() {
                   </TableCell>
                   <TableCell>
                     {transaction.type === 'transfer'
-                      ? `${transaction.from_account?.name} → ${transaction.to_account?.name}`
-                      : transaction.from_account?.name || transaction.to_account?.name || 'N/A'}
+                      ? `${transaction.from_account?.name || '-'} → ${transaction.to_account?.name || '-'}`
+                      : transaction.account?.name || transaction.from_account?.name || transaction.to_account?.name || '-'}
                   </TableCell>
                   <TableCell>{transaction.transaction_categories?.name || '-'}</TableCell>
                   <TableCell>{transaction.parties?.name || '-'}</TableCell>
