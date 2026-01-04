@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay, startOfMonth, subDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,9 @@ import { useAdSpendReference } from '@/hooks/useAdSpendReference';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
 import { useDailyPL } from '@/hooks/useDailyPL';
 import { useLogisticsStats } from '@/hooks/useLogisticsStats';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import {
   TrendingUp,
   Calculator,
@@ -31,6 +33,15 @@ import {
 
 export default function AdminUnifiedDashboard() {
   const navigate = useNavigate();
+  const { effectiveRole } = useEffectiveRole();
+
+  // Redirect MANAGER to Sales Dashboard
+  useEffect(() => {
+    if (effectiveRole === 'MANAGER') {
+      toast.error('Access denied');
+      navigate('/admin/sales/dashboard', { replace: true });
+    }
+  }, [effectiveRole, navigate]);
   
   // Date range for today
   const [dateRange, setDateRange] = useState<DateRange>({
