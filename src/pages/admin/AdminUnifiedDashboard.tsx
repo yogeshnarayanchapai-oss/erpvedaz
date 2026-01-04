@@ -77,14 +77,13 @@ export default function AdminUnifiedDashboard() {
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: leaveRequestsData } = useLeaveRequests();
 
-  // Today's ad spend from ad_spend_reference table (USD amount)
-  const { data: todayAdsRefData, isLoading: adsLoading } = useQuery({
-    queryKey: ['today-ads-ref-spend', today, storeId],
+  // Total ad spend from ad_spend_reference table (USD amount) - all dates, store-wise
+  const { data: totalAdsRefData, isLoading: adsLoading } = useQuery({
+    queryKey: ['total-ads-ref-spend', storeId],
     queryFn: async () => {
       let query = supabase
         .from('ad_spend_reference')
-        .select('amount, store_id')
-        .eq('spend_date', today);
+        .select('amount, store_id');
       
       if (storeId) {
         query = query.eq('store_id', storeId);
@@ -130,7 +129,11 @@ export default function AdminUnifiedDashboard() {
         .select('direction, amount, is_settled, store_id, warehouse_id')
         .eq('is_settled', false);
       
-      // Note: party_transactions may not have store_id, so we use warehouse for filtering if needed
+      // Add store filter when storeId is available
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -197,10 +200,10 @@ export default function AdminUnifiedDashboard() {
   }, [employeesData, leaveRequestsData, attendanceData]);
 
   const marketingMetrics = useMemo(() => {
-    // Today's ads spend in USD from ad_spend_reference table
-    const todayRefSpendUSD = todayAdsRefData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
-    return { todayRefSpendUSD };
-  }, [todayAdsRefData]);
+    // Total ads spend in USD from ad_spend_reference table (all dates)
+    const totalRefSpendUSD = totalAdsRefData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
+    return { totalRefSpendUSD };
+  }, [totalAdsRefData]);
 
   const deliveryMetrics = useMemo(() => {
     const pendingWork = (logisticsStats?.inTransit || 0) + (logisticsStats?.pendingPickup || 0);
@@ -449,7 +452,7 @@ export default function AdminUnifiedDashboard() {
           navigateTo="/admin/marketing/ads"
           isLoading={adsLoading}
           metrics={[
-            { label: 'Today Ads (USD)', value: `$${marketingMetrics.todayRefSpendUSD.toLocaleString()}`, color: 'text-purple-600' },
+            { label: 'Total Ads (USD)', value: `$${marketingMetrics.totalRefSpendUSD.toLocaleString()}`, color: 'text-purple-600' },
             { label: 'Confirmed Orders', value: salesMetrics.confirmedOrders },
             { label: 'Delivery Queue', value: `${deliveryMetrics.pendingWork} / ${deliveryMetrics.totalWork}` },
             { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
