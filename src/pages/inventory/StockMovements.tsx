@@ -20,13 +20,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
-const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT'] as const;
+const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO'] as const;
 
 const getTypeColor = (type: string) => {
   switch (type) {
     case 'IN': 
-    case 'RTO_IN': 
       return 'bg-green-500';
+    case 'RTO':
+    case 'RTO_IN': 
+      return 'bg-orange-500';
     case 'OUT': 
     case 'RTO_OUT': 
       return 'bg-red-500';
@@ -43,6 +45,9 @@ const getTypeColor = (type: string) => {
 const getTypeLabel = (movement: any) => {
   if (movement.movement_type === 'ADJUSTMENT' && movement.adjustment_direction) {
     return movement.adjustment_direction === 'PLUS' ? 'ADJUSTMENT (+)' : 'ADJUSTMENT (-)';
+  }
+  if (movement.movement_type === 'RTO_IN') {
+    return 'RTO';
   }
   return movement.movement_type;
 };
@@ -202,6 +207,7 @@ export default function StockMovements() {
     // Validation based on movement type
     const isTransfer = form.movement_type === 'TRANSFER';
     const isWholesaleOut = form.movement_type === 'WHOLESALE_OUT';
+    const isRTO = form.movement_type === 'RTO';
     
     if (!form.product_id || form.qty <= 0) return;
     
@@ -223,8 +229,12 @@ export default function StockMovements() {
     
     const isAdjustment = form.movement_type === 'ADJUSTMENT';
     
+    // Map RTO to RTO_IN for database
+    const dbMovementType = isRTO ? 'RTO_IN' : form.movement_type;
+    
     const movementData: any = {
       ...form,
+      movement_type: dbMovementType,
       movement_reason: isWholesaleOut ? 'WHOLESALE' : (form.movement_reason || null),
       movement_source: isWholesaleOut ? 'WHOLESALE' : (form.movement_source || null),
       is_sale: isWholesaleOut ? true : (form.is_sale || null),
@@ -257,7 +267,7 @@ export default function StockMovements() {
     else if (mt === 'TRANSFER_IN' || mt === 'TRANSFER_OUT' || mt === 'TRANSFER') mappedType = 'TRANSFER';
     else if (mt === 'ADJUSTMENT') mappedType = 'ADJUSTMENT';
     else if (mt === 'WHOLESALE_OUT') mappedType = 'WHOLESALE_OUT';
-    else if (mt === 'RTO_IN') mappedType = 'IN'; // RTO_IN treated as IN
+    else if (mt === 'RTO_IN') mappedType = 'RTO'; // RTO_IN maps to RTO
     
     setForm({
       product_id: movement.product_id,
