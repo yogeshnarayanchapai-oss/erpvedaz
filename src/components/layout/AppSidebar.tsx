@@ -326,7 +326,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
   ],
   MANAGER: [
-    { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+    { title: 'Dashboard', url: '/admin/sales/dashboard', icon: LayoutDashboard },
     {
       title: 'Sales',
       url: '/admin/products',
