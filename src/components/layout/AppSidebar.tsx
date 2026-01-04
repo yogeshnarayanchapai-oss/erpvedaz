@@ -161,12 +161,11 @@ const inventoryItems: MenuItem[] = [
 const accountingItems: MenuItem[] = [
   { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
   { title: 'Assets', url: '/admin/accounting/assets', icon: Box },
-  { title: 'View Transactions', url: '/admin/accounting/transactions', icon: FileText },
+  { title: 'Transactions', url: '/admin/accounting/transactions', icon: FileText },
   { title: 'Activity Log', url: '/admin/accounting/activity-log', icon: History },
   { title: 'Accounts', url: '/admin/accounting/accounts', icon: Wallet },
   { title: 'Categories', url: '/admin/accounting/categories', icon: ClipboardList },
   { title: 'Party Statement', url: '/admin/accounting/party-statement', icon: FileText },
-  { title: 'Audit Dashboard', url: '/admin/accounting/audit', icon: ClipboardList },
 ];
 
 // Sales submenu for Admin/Owner
