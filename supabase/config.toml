@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.restore-backup]
 verify_jwt = false
+
+[functions.factory-reset]
+verify_jwt = true
