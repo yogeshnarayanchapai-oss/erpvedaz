@@ -1,13 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, PhoneOff, XCircle, CheckCircle2, Calendar } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { format, formatDistanceToNow, subMonths, subYears } from 'date-fns';
 import { useBackupLogs, useTriggerBackup, useRestoreBackup } from '@/hooks/useBackupLogs';
-import { useLeadCleanupCounts, useExportAndDeleteLeads } from '@/hooks/useDataCleanup';
+import { 
+  useLeadCleanupPreview, 
+  useExportAndDeleteLeadsFiltered, 
+  LEAD_STATUSES, 
+  LeadStatus,
+  CleanupFilters,
+  getMinCutoffDate,
+  isValidCutoffDate
+} from '@/hooks/useDataCleanup';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,30 +27,83 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { formatStatusLabel } from '@/lib/statusColors';
 
-type CleanupType = 'cnr' | 'cancelled' | 'confirmed' | 'old6Months' | 'old1Year';
+type DatePreset = '3months' | '6months' | '1year' | 'custom';
 
 export default function AdminDataTools() {
   const { profile } = useAuth();
+  const storeId = useCurrentStoreId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Restore dialog state
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [pendingBackupData, setPendingBackupData] = useState<any>(null);
   const [pendingFileName, setPendingFileName] = useState<string>('');
+  
+  // Cleanup filter state
+  const [datePreset, setDatePreset] = useState<DatePreset>('3months');
+  const [customDate, setCustomDate] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
-  const [pendingCleanupType, setPendingCleanupType] = useState<CleanupType | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  // Backup hooks - fetch latest backup (any status)
+  // Backup hooks
   const { data: backupLogs = [] } = useBackupLogs();
   const latestBackup = backupLogs[0] || null;
   const triggerBackup = useTriggerBackup();
   const restoreBackup = useRestoreBackup();
 
-  // Cleanup hooks
-  const { data: cleanupCounts, isLoading: countsLoading } = useLeadCleanupCounts();
-  const exportAndDelete = useExportAndDeleteLeads();
+  // Calculate cutoff date from preset or custom
+  const cutoffDate = useMemo(() => {
+    const now = new Date();
+    switch (datePreset) {
+      case '3months':
+        return subMonths(now, 3);
+      case '6months':
+        return subMonths(now, 6);
+      case '1year':
+        return subYears(now, 1);
+      case 'custom':
+        if (customDate) {
+          const date = new Date(customDate);
+          // Validate custom date is at least 3 months old
+          if (isValidCutoffDate(date)) {
+            return date;
+          }
+        }
+        return null;
+      default:
+        return subMonths(now, 3);
+    }
+  }, [datePreset, customDate]);
 
-  // Handle file upload
+  // Build filters for preview
+  const filters: CleanupFilters | null = useMemo(() => {
+    if (!cutoffDate) return null;
+    return { cutoffDate, status: statusFilter };
+  }, [cutoffDate, statusFilter]);
+
+  // Cleanup hooks
+  const { data: previewCount = 0, isLoading: previewLoading } = useLeadCleanupPreview(filters);
+  const exportAndDelete = useExportAndDeleteLeadsFiltered();
+
+  // Max date for custom picker (3 months ago)
+  const maxCustomDate = useMemo(() => {
+    return format(getMinCutoffDate(), 'yyyy-MM-dd');
+  }, []);
+
+  // Handle file upload for restore
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -72,7 +134,6 @@ export default function AdminDataTools() {
     }
   };
 
-  // Confirm restore
   const handleConfirmRestore = () => {
     if (pendingBackupData) {
       restoreBackup.mutate({ backupData: pendingBackupData, restoreMode: 'merge' });
@@ -82,34 +143,21 @@ export default function AdminDataTools() {
     setPendingFileName('');
   };
 
-  // Cleanup actions
-  const openCleanupDialog = (type: CleanupType) => {
-    setPendingCleanupType(type);
+  const openCleanupDialog = () => {
+    if (!filters || previewCount === 0) {
+      toast.error('No leads to delete', { description: 'Adjust your filters' });
+      return;
+    }
+    setDeleteConfirmText('');
     setCleanupDialogOpen(true);
   };
 
   const handleConfirmCleanup = () => {
-    if (pendingCleanupType) {
-      exportAndDelete.mutate(pendingCleanupType);
+    if (filters && deleteConfirmText === 'DELETE') {
+      exportAndDelete.mutate(filters);
     }
     setCleanupDialogOpen(false);
-    setPendingCleanupType(null);
-  };
-
-  const getCleanupCount = (type: CleanupType) => {
-    if (!cleanupCounts) return 0;
-    return cleanupCounts[type];
-  };
-
-  const getCleanupLabel = (type: CleanupType) => {
-    const labels: Record<CleanupType, string> = {
-      cnr: 'CNR (Call Not Received)',
-      cancelled: 'Cancelled',
-      confirmed: 'Confirmed (with Order)',
-      old6Months: 'Older than 6 months',
-      old1Year: 'Older than 1 year',
-    };
-    return labels[type];
+    setDeleteConfirmText('');
   };
 
   // Only OWNER can access this
@@ -128,6 +176,7 @@ export default function AdminDataTools() {
   }
 
   const isBackupSuccess = latestBackup?.status === 'success';
+  const canCleanup = storeId && filters && previewCount > 0 && !exportAndDelete.isPending;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -149,7 +198,7 @@ export default function AdminDataTools() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Last Backup Status - Shows success/failure */}
+            {/* Last Backup Status */}
             <div className={`p-4 border rounded-lg ${isBackupSuccess ? 'bg-green-500/5 border-green-200' : latestBackup ? 'bg-red-500/5 border-red-200' : 'bg-muted/30'}`}>
               <div className="flex items-center gap-2 mb-2">
                 {isBackupSuccess ? (
@@ -275,124 +324,122 @@ export default function AdminDataTools() {
             Export leads to Excel and delete them to improve system performance
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* CNR Leads */}
-            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <PhoneOff className="w-4 h-4 text-orange-500" />
-                <span className="text-sm font-medium">CNR Leads</span>
-              </div>
-              <p className="text-2xl font-bold text-orange-600 mb-1">
-                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.cnr.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Call Not Received</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => openCleanupDialog('cnr')}
-                disabled={exportAndDelete.isPending || !cleanupCounts?.cnr}
+        <CardContent className="space-y-6">
+          {!storeId && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No Store Selected</AlertTitle>
+              <AlertDescription>
+                Please select a store from the store switcher to use data cleanup.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Date Filter */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Date Filter (leads older than)
+              </Label>
+              <Select 
+                value={datePreset} 
+                onValueChange={(v) => setDatePreset(v as DatePreset)}
+                disabled={!storeId}
               >
-                <FileDown className="w-4 h-4" />
-                Export & Delete
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3months">Older than 3 months</SelectItem>
+                  <SelectItem value="6months">Older than 6 months</SelectItem>
+                  <SelectItem value="1year">Older than 1 year</SelectItem>
+                  <SelectItem value="custom">Custom date</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {datePreset === 'custom' && (
+                <div className="mt-2">
+                  <Input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    max={maxCustomDate}
+                    disabled={!storeId}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Maximum date: {format(getMinCutoffDate(), 'PPP')} (3 months ago)
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Cancelled Leads */}
-            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-medium">Cancelled Leads</span>
-              </div>
-              <p className="text-2xl font-bold text-red-600 mb-1">
-                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.cancelled.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Status: Cancelled</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => openCleanupDialog('cancelled')}
-                disabled={exportAndDelete.isPending || !cleanupCounts?.cancelled}
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <Label>Lead Status</Label>
+              <Select 
+                value={statusFilter} 
+                onValueChange={(v) => setStatusFilter(v as LeadStatus | 'ALL')}
+                disabled={!storeId}
               >
-                <FileDown className="w-4 h-4" />
-                Export & Delete
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Statuses</SelectItem>
+                  {LEAD_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {formatStatusLabel(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
 
-            {/* Confirmed Leads (with Order) */}
-            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium">Confirmed Leads</span>
+          {/* Preview Count */}
+          <div className="p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium">Matched Leads:</span>
+                <p className="text-3xl font-bold text-destructive">
+                  {previewLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin inline" />
+                  ) : (
+                    previewCount.toLocaleString()
+                  )}
+                </p>
+                {cutoffDate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Created before {format(cutoffDate, 'PPP')}
+                    {statusFilter !== 'ALL' && ` • Status: ${formatStatusLabel(statusFilter)}`}
+                  </p>
+                )}
               </div>
-              <p className="text-2xl font-bold text-green-600 mb-1">
-                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.confirmed.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Already has Order</p>
               <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => openCleanupDialog('confirmed')}
-                disabled={exportAndDelete.isPending || !cleanupCounts?.confirmed}
+                variant="destructive"
+                size="lg"
+                className="gap-2"
+                onClick={openCleanupDialog}
+                disabled={!canCleanup}
               >
-                <FileDown className="w-4 h-4" />
-                Export & Delete
-              </Button>
-            </div>
-
-            {/* 6 Months Old */}
-            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-purple-500" />
-                <span className="text-sm font-medium">6+ Months Old</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-600 mb-1">
-                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.old6Months.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Excludes active leads</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => openCleanupDialog('old6Months')}
-                disabled={exportAndDelete.isPending || !cleanupCounts?.old6Months}
-              >
-                <FileDown className="w-4 h-4" />
-                Export & Delete
-              </Button>
-            </div>
-
-            {/* 1 Year Old */}
-            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">1+ Year Old</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-600 mb-1">
-                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.old1Year.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">Excludes active leads</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => openCleanupDialog('old1Year')}
-                disabled={exportAndDelete.isPending || !cleanupCounts?.old1Year}
-              >
-                <FileDown className="w-4 h-4" />
-                Export & Delete
+                {exportAndDelete.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileDown className="w-4 h-4" />
+                )}
+                {exportAndDelete.isPending ? 'Processing...' : 'Export & Delete'}
               </Button>
             </div>
           </div>
 
-          <Alert className="mt-4">
+          <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Before cleanup</AlertTitle>
             <AlertDescription>
-              Always create a backup before deleting data. Deleted leads cannot be recovered.
+              Always create a backup before deleting data. Deleted leads cannot be recovered. 
+              Leads newer than 3 months cannot be deleted for safety.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -423,7 +470,7 @@ export default function AdminDataTools() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmRestore}
               className="bg-orange-600 hover:bg-orange-700"
             >
@@ -437,40 +484,47 @@ export default function AdminDataTools() {
       <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-destructive" />
-              Confirm Export & Delete
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Confirm Delete
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>You are about to export and permanently delete:</p>
-              <p className="text-2xl font-bold text-foreground">
-                {pendingCleanupType && getCleanupCount(pendingCleanupType).toLocaleString()} leads
-              </p>
-              <p className="text-sm">
-                Category: <strong>{pendingCleanupType && getCleanupLabel(pendingCleanupType)}</strong>
-              </p>
-              <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                <p className="text-destructive font-medium text-sm">
-                  ⚠️ This action cannot be undone. The leads will be exported to Excel first, then permanently deleted.
+            <AlertDialogDescription className="space-y-3">
+              <p>You are about to permanently delete:</p>
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                <p className="text-2xl font-bold text-destructive">
+                  {previewCount.toLocaleString()} leads
                 </p>
+                <p className="text-sm">
+                  {cutoffDate && `Created before ${format(cutoffDate, 'PPP')}`}
+                </p>
+                <p className="text-sm">
+                  Status: {statusFilter === 'ALL' ? 'All Statuses' : formatStatusLabel(statusFilter)}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Leads will be exported to Excel before deletion.
+              </p>
+              <div className="mt-4">
+                <Label className="text-foreground">
+                  Type <span className="font-mono font-bold">DELETE</span> to confirm:
+                </Label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                  placeholder="Type DELETE"
+                  className="mt-2"
+                />
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleConfirmCleanup}
+              disabled={deleteConfirmText !== 'DELETE'}
               className="bg-destructive hover:bg-destructive/90"
-              disabled={exportAndDelete.isPending}
             >
-              {exportAndDelete.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
-                </>
-              ) : (
-                'Export & Delete'
-              )}
+              Export & Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,85 +2,135 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { subMonths } from 'date-fns';
+import { useCurrentStoreId } from './useCurrentStoreId';
 
-interface CleanupCounts {
-  cnr: number;
-  cancelled: number;
-  confirmed: number;
-  old6Months: number;
-  old1Year: number;
+// Lead status enum from database
+export const LEAD_STATUSES = [
+  'NEW',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'CONFIRMED',
+  'FOLLOW_UP',
+  'CALL_NOT_RECEIVED',
+  'CANCELLED',
+  'REDIRECT',
+] as const;
+
+export type LeadStatus = typeof LEAD_STATUSES[number];
+
+export interface CleanupFilters {
+  cutoffDate: Date;
+  status: LeadStatus | 'ALL';
 }
 
-export function useLeadCleanupCounts() {
+// Maximum rows we can safely export in browser
+const MAX_EXPORT_ROWS = 50000;
+const BATCH_SIZE = 1000;
+const DELETE_BATCH_SIZE = 500;
+
+// Minimum cutoff date is 3 months ago
+export function getMinCutoffDate(): Date {
+  return subMonths(new Date(), 3);
+}
+
+export function isValidCutoffDate(date: Date): boolean {
+  const minDate = getMinCutoffDate();
+  return date <= minDate;
+}
+
+export function useLeadCleanupPreview(filters: CleanupFilters | null) {
+  const storeId = useCurrentStoreId();
+  
   return useQuery({
-    queryKey: ['lead-cleanup-counts'],
-    queryFn: async (): Promise<CleanupCounts> => {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    queryKey: ['lead-cleanup-preview', storeId, filters?.cutoffDate?.toISOString(), filters?.status],
+    queryFn: async (): Promise<number> => {
+      if (!storeId || !filters) return 0;
       
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      // Validate cutoff date
+      if (!isValidCutoffDate(filters.cutoffDate)) {
+        return 0;
+      }
 
-      // Fetch counts in parallel
-      const [cnrResult, cancelledResult, confirmedResult, old6Result, old1Result] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'CALL_NOT_RECEIVED'),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'CANCELLED'),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'CONFIRMED').not('order_id', 'is', null),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).lt('created_at', sixMonthsAgo.toISOString()).not('status', 'in', '("NEW","ASSIGNED","FOLLOW_UP")'),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).lt('created_at', oneYearAgo.toISOString()).not('status', 'in', '("NEW","ASSIGNED","FOLLOW_UP")'),
-      ]);
+      let query = supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .lt('created_at', filters.cutoffDate.toISOString());
 
-      return {
-        cnr: cnrResult.count || 0,
-        cancelled: cancelledResult.count || 0,
-        confirmed: confirmedResult.count || 0,
-        old6Months: old6Result.count || 0,
-        old1Year: old1Result.count || 0,
-      };
+      if (filters.status !== 'ALL') {
+        query = query.eq('status', filters.status);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      
+      return count || 0;
     },
+    enabled: !!storeId && !!filters && isValidCutoffDate(filters.cutoffDate),
   });
 }
 
-type CleanupType = 'cnr' | 'cancelled' | 'confirmed' | 'old6Months' | 'old1Year';
-
-export function useExportAndDeleteLeads() {
+export function useExportAndDeleteLeadsFiltered() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
-    mutationFn: async (type: CleanupType) => {
-      let query = supabase.from('leads').select('*');
+    mutationFn: async (filters: CleanupFilters) => {
+      if (!storeId) throw new Error('No store selected');
       
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-      // Build query based on type
-      switch (type) {
-        case 'cnr':
-          query = query.eq('status', 'CALL_NOT_RECEIVED');
-          break;
-        case 'cancelled':
-          query = query.eq('status', 'CANCELLED');
-          break;
-        case 'confirmed':
-          query = query.eq('status', 'CONFIRMED').not('order_id', 'is', null);
-          break;
-        case 'old6Months':
-          query = query.lt('created_at', sixMonthsAgo.toISOString()).not('status', 'in', '("NEW","ASSIGNED","FOLLOW_UP")');
-          break;
-        case 'old1Year':
-          query = query.lt('created_at', oneYearAgo.toISOString()).not('status', 'in', '("NEW","ASSIGNED","FOLLOW_UP")');
-          break;
+      // Double-check cutoff date validation
+      if (!isValidCutoffDate(filters.cutoffDate)) {
+        throw new Error('Cannot delete leads newer than 3 months');
       }
 
-      const { data: leads, error: fetchError } = await query;
-      if (fetchError) throw fetchError;
-      if (!leads || leads.length === 0) throw new Error('No leads to export');
+      // First, get total count
+      let countQuery = supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .lt('created_at', filters.cutoffDate.toISOString());
+
+      if (filters.status !== 'ALL') {
+        countQuery = countQuery.eq('status', filters.status);
+      }
+
+      const { count: totalCount, error: countError } = await countQuery;
+      if (countError) throw countError;
+      if (!totalCount || totalCount === 0) throw new Error('No leads to export');
+
+      if (totalCount > MAX_EXPORT_ROWS) {
+        throw new Error(`Too many leads (${totalCount.toLocaleString()}). Maximum is ${MAX_EXPORT_ROWS.toLocaleString()}. Please narrow your filters.`);
+      }
+
+      // Fetch all leads with pagination
+      const allLeads: any[] = [];
+      let from = 0;
+
+      while (from < totalCount) {
+        let query = supabase
+          .from('leads')
+          .select('*')
+          .eq('store_id', storeId)
+          .lt('created_at', filters.cutoffDate.toISOString())
+          .range(from, from + BATCH_SIZE - 1);
+
+        if (filters.status !== 'ALL') {
+          query = query.eq('status', filters.status);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        allLeads.push(...data);
+        from += BATCH_SIZE;
+      }
+
+      if (allLeads.length === 0) throw new Error('No leads to export');
 
       // Export to Excel
-      const exportData = leads.map(lead => ({
+      const exportData = allLeads.map(lead => ({
         'Name': lead.client_name || '',
         'Phone': lead.contact_number || '',
         'Alt Phone': lead.alt_phone || '',
@@ -100,23 +150,15 @@ export function useExportAndDeleteLeads() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads');
       
-      const typeLabels: Record<CleanupType, string> = {
-        cnr: 'CNR',
-        cancelled: 'Cancelled',
-        confirmed: 'Confirmed',
-        old6Months: '6MonthsOld',
-        old1Year: '1YearOld',
-      };
-      
-      const fileName = `leads_${typeLabels[type]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const statusLabel = filters.status === 'ALL' ? 'AllStatuses' : filters.status;
+      const fileName = `leads_cleanup_${statusLabel}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
-      // Delete leads in batches of 500
-      const leadIds = leads.map(l => l.id);
-      const batchSize = 500;
+      // Delete leads in batches
+      const leadIds = allLeads.map(l => l.id);
       
-      for (let i = 0; i < leadIds.length; i += batchSize) {
-        const batch = leadIds.slice(i, i + batchSize);
+      for (let i = 0; i < leadIds.length; i += DELETE_BATCH_SIZE) {
+        const batch = leadIds.slice(i, i + DELETE_BATCH_SIZE);
         const { error: deleteError } = await supabase
           .from('leads')
           .delete()
@@ -125,20 +167,13 @@ export function useExportAndDeleteLeads() {
         if (deleteError) throw deleteError;
       }
 
-      return { exportedCount: leads.length, deletedCount: leadIds.length };
+      return { exportedCount: allLeads.length, deletedCount: leadIds.length };
     },
-    onSuccess: (data, type) => {
-      const typeLabels: Record<CleanupType, string> = {
-        cnr: 'CNR',
-        cancelled: 'Cancelled',
-        confirmed: 'Confirmed',
-        old6Months: '6+ months old',
-        old1Year: '1+ year old',
-      };
-      toast.success(`${typeLabels[type]} leads exported & deleted`, {
+    onSuccess: (data) => {
+      toast.success('Leads exported & deleted', {
         description: `${data.deletedCount.toLocaleString()} leads removed`,
       });
-      queryClient.invalidateQueries({ queryKey: ['lead-cleanup-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-cleanup-preview'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     },
     onError: (error: Error) => {
