@@ -235,8 +235,8 @@ export default function HRMTasks() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
-                    <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
-                    <TableHead>Priority</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead className="hidden sm:table-cell">Priority</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Due Date</TableHead>
                     <TableHead className="hidden lg:table-cell">Created</TableHead>
@@ -247,13 +247,13 @@ export default function HRMTasks() {
                 <TableBody>
                   {tasks?.map((task) => (
                     <TableRow key={task.id}>
-                      <TableCell className="font-medium max-w-[200px] truncate">
+                      <TableCell className="font-medium max-w-[120px] sm:max-w-[200px] truncate">
                         {task.title}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell className="max-w-[80px] sm:max-w-[120px] truncate">
                         {task.assigned_to?.name || 'N/A'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <TaskPriorityBadge priority={task.priority} />
                       </TableCell>
                       <TableCell>
