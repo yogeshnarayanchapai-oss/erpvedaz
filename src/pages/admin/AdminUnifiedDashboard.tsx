@@ -267,33 +267,33 @@ const hrmMetrics = useMemo(() => {
       className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 shadow-md bg-card/80 backdrop-blur-sm" 
       onClick={() => navigate(navigateTo)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="p-3 md:pb-3 md:p-6">
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-3">
-            <div className={`p-3 rounded-xl ${iconBg} shadow-lg`}>
-              <Icon className="w-5 h-5 text-white" />
+          <span className="flex items-center gap-2 md:gap-3">
+            <div className={`p-2 md:p-3 rounded-lg md:rounded-xl ${iconBg} shadow-lg`}>
+              <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
-            <span className="text-lg font-bold">{title}</span>
+            <span className="text-base md:text-lg font-bold">{title}</span>
           </span>
-          <ArrowRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 p-3 md:p-6 md:pt-0">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-3 rounded-xl bg-muted/30">
-                <Skeleton className="h-3 w-16 mb-2" />
-                <Skeleton className="h-6 w-20" />
+              <div key={i} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-muted/30">
+                <Skeleton className="h-2 md:h-3 w-12 md:w-16 mb-1 md:mb-2" />
+                <Skeleton className="h-4 md:h-6 w-16 md:w-20" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
             {metrics.map((m, i) => (
-              <div key={i} className="p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{m.label}</p>
-                <p className={`text-xl font-bold ${m.color || 'text-foreground'}`}>
+              <div key={i} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
+                <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5 md:mb-1 truncate">{m.label}</p>
+                <p className={`text-sm md:text-xl font-bold truncate ${m.color || 'text-foreground'}`}>
                   {m.value}
                 </p>
               </div>
@@ -305,79 +305,76 @@ const hrmMetrics = useMemo(() => {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header with Date Filter and Quick Actions - All in one row */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-        {/* Title */}
-        <div className="shrink-0">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Overview across all modules</p>
+    <div className="space-y-4 md:space-y-6 animate-fade-in px-1 md:px-0">
+      {/* Header with Date Filter and Quick Actions */}
+      <div className="flex flex-col gap-3 md:gap-4">
+        {/* Title Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="shrink-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Overview across all modules</p>
+          </div>
+          <DashboardDateFilter value={dateRange} onChange={setDateRange} />
         </div>
         
-        {/* Date Filter + Quick Actions - Right side */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
-          <DashboardDateFilter value={dateRange} onChange={setDateRange} />
-          
-          <div className="h-6 w-px bg-border hidden sm:block" />
-          
-          {/* Quick Actions */}
-          <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Quick Actions:</span>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate('/admin/sales/dashboard'); }}
-              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
-            >
-              <TrendingUp className="w-3.5 h-3.5" /> Sales
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate('/admin/accounting/transactions'); }}
-              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
-            >
-              <FileText className="w-3.5 h-3.5" /> Transactions
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate('/admin/inventory/movements'); }}
-              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
-            >
-              <Package className="w-3.5 h-3.5" /> Stock
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate('/admin/marketing/ads'); }}
-              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
-            >
-              <DollarSign className="w-3.5 h-3.5" /> Ads
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate('/hrm/leave'); }}
-              className="gap-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs"
-            >
-              <Calendar className="w-3.5 h-3.5" /> Leave
-            </Button>
-          </div>
+        {/* Quick Actions - Scrollable on mobile */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <span className="text-xs text-muted-foreground font-medium whitespace-nowrap hidden sm:inline">Quick:</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); navigate('/admin/sales/dashboard'); }}
+            className="gap-1 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs whitespace-nowrap shrink-0"
+          >
+            <TrendingUp className="w-3.5 h-3.5" /> Sales
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); navigate('/admin/accounting/transactions'); }}
+            className="gap-1 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs whitespace-nowrap shrink-0"
+          >
+            <FileText className="w-3.5 h-3.5" /> Txns
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); navigate('/admin/inventory/movements'); }}
+            className="gap-1 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs whitespace-nowrap shrink-0"
+          >
+            <Package className="w-3.5 h-3.5" /> Stock
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); navigate('/admin/marketing/ads'); }}
+            className="gap-1 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs whitespace-nowrap shrink-0"
+          >
+            <DollarSign className="w-3.5 h-3.5" /> Ads
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); navigate('/hrm/leave'); }}
+            className="gap-1 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors h-8 text-xs whitespace-nowrap shrink-0"
+          >
+            <Calendar className="w-3.5 h-3.5" /> Leave
+          </Button>
         </div>
       </div>
 
-      {/* Quick Summary Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      {/* Quick Summary Stats Bar - Responsive grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+        {/* Total Balance */}
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/20">
-                <DollarSign className="w-5 h-5 text-green-600" />
+          <CardContent className="p-3 md:pt-4 md:pb-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-green-500/20 shrink-0">
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Total Balance</p>
-                <p className="text-xl font-bold text-green-600">
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Total Balance</p>
+                <p className="text-base md:text-xl font-bold text-green-600 truncate">
                   ₹{accountingMetricsComputed.totalAvailableBalance.toLocaleString()}
                 </p>
               </div>
@@ -385,31 +382,33 @@ const hrmMetrics = useMemo(() => {
           </CardContent>
         </Card>
         
-        <Card className={`bg-gradient-to-br ${inventoryMetrics.yesterdayProfit >= 0 ? 'from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${inventoryMetrics.yesterdayProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-                <BarChart3 className={`w-5 h-5 ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+        {/* Ref. P/L - Moved here (was Yesterday P/L position) */}
+        <Card className={`bg-gradient-to-br ${refPLData >= 0 ? 'from-purple-500/10 to-purple-600/5 border-purple-200/50 dark:border-purple-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
+          <CardContent className="p-3 md:pt-4 md:pb-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${refPLData >= 0 ? 'bg-purple-500/20' : 'bg-red-500/20'}`}>
+                <TrendingUp className={`w-4 h-4 md:w-5 md:h-5 ${refPLData >= 0 ? 'text-purple-600' : 'text-red-600'}`} />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Yesterday P/L</p>
-                <p className={`text-xl font-bold ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Ref. P/L</p>
+                <p className={`text-base md:text-xl font-bold truncate ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {refPLLoading ? '...' : `₹${Math.round(refPLData).toLocaleString()}`}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
         
+        {/* Low Stock Items */}
         <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-200/50 dark:border-orange-800/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-500/20">
-                <AlertTriangle className="w-5 h-5 text-orange-600" />
+          <CardContent className="p-3 md:pt-4 md:pb-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-orange-500/20 shrink-0">
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Low Stock Items</p>
-                <p className="text-xl font-bold text-orange-600">
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Low Stock</p>
+                <p className="text-base md:text-xl font-bold text-orange-600">
                   {inventoryMetrics.lowStock}
                 </p>
               </div>
@@ -417,15 +416,16 @@ const hrmMetrics = useMemo(() => {
           </CardContent>
         </Card>
         
+        {/* Pending HRM */}
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200/50 dark:border-blue-800/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <Users className="w-5 h-5 text-blue-600" />
+          <CardContent className="p-3 md:pt-4 md:pb-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg bg-blue-500/20 shrink-0">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Pending HRM</p>
-                <p className="text-xl font-bold text-blue-600">
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Pending HRM</p>
+                <p className="text-base md:text-xl font-bold text-blue-600">
                   {hrmMetrics.pendingHRM}
                 </p>
               </div>
@@ -433,16 +433,17 @@ const hrmMetrics = useMemo(() => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200/50 dark:border-purple-800/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Package className="w-5 h-5 text-purple-600" />
+        {/* Yesterday P/L - Moved to last position */}
+        <Card className={`bg-gradient-to-br ${inventoryMetrics.yesterdayProfit >= 0 ? 'from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
+          <CardContent className="p-3 md:pt-4 md:pb-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${inventoryMetrics.yesterdayProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                <BarChart3 className={`w-4 h-4 md:w-5 md:h-5 ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Ref. P/L</p>
-                <p className={`text-xl font-bold ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {refPLLoading ? '...' : `₹${Math.round(refPLData).toLocaleString()}`}
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Yesterday P/L</p>
+                <p className={`text-base md:text-xl font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -450,8 +451,8 @@ const hrmMetrics = useMemo(() => {
         </Card>
       </div>
 
-      {/* Module Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Module Cards Grid - Responsive */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
         {/* Sales Module */}
         <ModuleCard
           title="Sales"
