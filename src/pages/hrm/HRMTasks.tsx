@@ -34,12 +34,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useTasks, useTaskStats, useDeleteTask, TaskStatus, TaskPriority, Task } from '@/hooks/useTasks';
+import { useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus, TaskStatus, TaskPriority, Task } from '@/hooks/useTasks';
 import { useStaff } from '@/hooks/useStaff';
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { cn } from '@/lib/utils';
 import {
   ClipboardList,
   Clock,
@@ -55,6 +58,11 @@ import {
 } from 'lucide-react';
 
 export default function HRMTasks() {
+  const { user } = useAuth();
+  const { effectiveRole } = useEffectiveRole();
+  const isManager = effectiveRole === 'MANAGER';
+  const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
+  
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -73,6 +81,28 @@ export default function HRMTasks() {
   const { data: stats } = useTaskStats(filters.dateFrom, filters.dateTo);
   const { data: staff } = useStaff();
   const deleteTaskMutation = useDeleteTask();
+  const updateTaskStatus = useUpdateTaskStatus();
+
+  // Check if task is assigned to current user and not completed
+  const isMyPendingTask = (task: Task) => {
+    return task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
+  };
+
+  // Handle status change for manager's own tasks
+  const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    await updateTaskStatus.mutateAsync({ taskId: task.id, newStatus });
+  };
+
+  const getAvailableStatuses = (currentStatus: TaskStatus): TaskStatus[] => {
+    switch (currentStatus) {
+      case 'PENDING':
+        return ['IN_PROGRESS'];
+      case 'IN_PROGRESS':
+        return ['COMPLETED'];
+      default:
+        return [];
+    }
+  };
 
   const handleViewTask = (task: Task) => {
     setSelectedTask(task);
@@ -288,9 +318,21 @@ export default function HRMTasks() {
                 </TableHeader>
                 <TableBody>
                   {tasks?.map((task) => (
-                    <TableRow key={task.id}>
+                    <TableRow 
+                      key={task.id}
+                      className={cn(
+                        isMyPendingTask(task) && 'bg-amber-50 dark:bg-amber-950/30 border-l-4 border-l-amber-500'
+                      )}
+                    >
                       <TableCell className="font-medium max-w-[120px] sm:max-w-[200px] truncate">
-                        {task.title}
+                        <div className="flex items-center gap-2">
+                          {task.title}
+                          {isMyPendingTask(task) && (
+                            <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                              Assigned to you
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-[80px] sm:max-w-[120px] truncate">
                         {task.assigned_to?.name || 'N/A'}
@@ -299,7 +341,29 @@ export default function HRMTasks() {
                         <TaskPriorityBadge priority={task.priority} />
                       </TableCell>
                       <TableCell>
-                        <TaskStatusBadge status={task.status} />
+                        {/* Manager can update status of their own tasks */}
+                        {isManager && isMyPendingTask(task) && getAvailableStatuses(task.status).length > 0 ? (
+                          <Select
+                            value={task.status}
+                            onValueChange={(value) => handleStatusChange(task, value as TaskStatus)}
+                          >
+                            <SelectTrigger className="w-[130px] h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={task.status}>
+                                <TaskStatusBadge status={task.status} />
+                              </SelectItem>
+                              {getAvailableStatuses(task.status).map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  <TaskStatusBadge status={status} />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <TaskStatusBadge status={task.status} />
+                        )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {format(new Date(task.due_date), 'MMM dd')}
