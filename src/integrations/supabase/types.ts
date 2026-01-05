@@ -1268,6 +1268,7 @@ export type Database = {
           id: string
           started_at: string
           status: string
+          store_id: string | null
           tables_backed_up: number | null
           total_rows: number | null
         }
@@ -1284,6 +1285,7 @@ export type Database = {
           id?: string
           started_at?: string
           status?: string
+          store_id?: string | null
           tables_backed_up?: number | null
           total_rows?: number | null
         }
@@ -1300,10 +1302,19 @@ export type Database = {
           id?: string
           started_at?: string
           status?: string
+          store_id?: string | null
           tables_backed_up?: number | null
           total_rows?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       branches: {
         Row: {

@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Tables to backup
+// Tables to backup (filtered by store_id)
 const TABLES_TO_BACKUP = [
   'leads', 'lead_transfers', 'lead_sources', 'call_logs', 'followup_logs',
   'orders', 'order_items', 'order_status_history', 'order_comments',
@@ -16,14 +16,14 @@ const TABLES_TO_BACKUP = [
   'transactions', 'party_payments', 'party_transactions', 'parties',
   'attendance_records', 'leave_requests', 'payroll_records', 'employees',
   'ads', 'ads_spend', 'ad_spend_reference', 'staff_targets',
-  'products', 'branches', 'warehouses', 'profiles', 'stores',
+  'products', 'branches', 'warehouses', 'profiles',
   'accounting_transactions', 'accounting_banks', 'accounts',
   'tasks', 'task_remarks', 'assets', 'asset_assignments',
   'campaigns', 'influencers', 'video_projects',
   'chat_messages', 'chat_rooms', 'notifications'
 ];
 
-// Get Google OAuth token using refresh token (for personal Gmail accounts)
+// Get Google OAuth token using refresh token
 async function getGoogleAccessToken(): Promise<string> {
   const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
   const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
@@ -57,7 +57,65 @@ async function getGoogleAccessToken(): Promise<string> {
   return tokenData.access_token;
 }
 
-// Upload file to Google Drive (to root or My Drive if no folder specified)
+// Search for existing backup file by name
+async function findExistingBackupFile(
+  accessToken: string,
+  folderId: string | null,
+  fileName: string
+): Promise<string | null> {
+  let query = `name='${fileName}' and trashed=false`;
+  if (folderId) {
+    query += ` and '${folderId}' in parents`;
+  }
+
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+  
+  const response = await fetch(searchUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    console.warn("Failed to search for existing file:", await response.text());
+    return null;
+  }
+
+  const data = await response.json();
+  if (data.files && data.files.length > 0) {
+    console.log(`📁 Found existing backup file: ${data.files[0].id}`);
+    return data.files[0].id;
+  }
+
+  return null;
+}
+
+// Update existing file content
+async function updateGoogleDriveFile(
+  accessToken: string,
+  fileId: string,
+  content: string
+): Promise<{ id: string; webViewLink: string }> {
+  const response = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,webViewLink`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: content,
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Drive update error:", errorText);
+    throw new Error(`Failed to update Google Drive file: ${response.status} - ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+// Upload new file to Google Drive
 async function uploadToGoogleDrive(
   accessToken: string,
   folderId: string | null,
@@ -69,7 +127,6 @@ async function uploadToGoogleDrive(
     mimeType: "application/json",
   };
 
-  // Only add parents if folder ID is provided
   if (folderId && folderId.trim() !== "") {
     metadata.parents = [folderId];
   }
@@ -115,7 +172,6 @@ serve(async (req) => {
   console.log("🚀 Starting database backup...");
 
   try {
-    // Get environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || null;
@@ -124,15 +180,35 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body for backup type
+    // Parse request body for backup type and store_id
     let backupType = "scheduled";
     let createdBy = null;
+    let storeId = null;
+    let storeSlug = "vedaz";
+    
     try {
       const body = await req.json();
       backupType = body.trigger || "scheduled";
       createdBy = body.user_id || null;
+      storeId = body.store_id || null;
     } catch {
       // Default to scheduled if no body
+    }
+
+    // Get store info for backup file naming
+    if (storeId) {
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("slug, name")
+        .eq("id", storeId)
+        .single();
+      
+      if (storeData?.slug) {
+        storeSlug = storeData.slug;
+      }
+      console.log(`📦 Backing up store: ${storeData?.name || storeId}`);
+    } else {
+      console.log("⚠️ No store_id provided, backing up default store");
     }
 
     // Create backup log entry
@@ -143,6 +219,7 @@ serve(async (req) => {
         status: "in_progress",
         started_at: new Date().toISOString(),
         created_by: createdBy,
+        store_id: storeId,
       })
       .select()
       .single();
@@ -154,7 +231,7 @@ serve(async (req) => {
     const logId = logEntry?.id;
     console.log("📝 Created backup log:", logId);
 
-    // Export all tables
+    // Export all tables filtered by store_id
     const backupData: Record<string, any[]> = {};
     let totalRows = 0;
     let tablesBackedUp = 0;
@@ -162,10 +239,15 @@ serve(async (req) => {
     for (const tableName of TABLES_TO_BACKUP) {
       try {
         console.log(`📦 Exporting ${tableName}...`);
-        const { data, error } = await supabase
-          .from(tableName)
-          .select("*")
-          .limit(50000); // Limit to prevent memory issues
+        
+        let query = supabase.from(tableName).select("*");
+        
+        // Filter by store_id if provided
+        if (storeId) {
+          query = query.eq("store_id", storeId);
+        }
+        
+        const { data, error } = await query.limit(50000);
 
         if (error) {
           console.warn(`⚠️ Error exporting ${tableName}:`, error.message);
@@ -182,14 +264,14 @@ serve(async (req) => {
       }
     }
 
-    // Create backup JSON with Nepal timezone
-    const nepalTime = new Date(Date.now() + (5.75 * 60 * 60 * 1000)); // UTC+5:45
-    const timestamp = nepalTime.toISOString().replace(/[:.]/g, "-");
-    const fileName = `vedaz_erp_backup_${timestamp}.json`;
+    // Fixed file name for replacement (like WhatsApp)
+    const fileName = `${storeSlug}_erp_backup.json`;
     
     const backupContent = JSON.stringify({
       backup_info: {
         timestamp: new Date().toISOString(),
+        store_id: storeId,
+        store_slug: storeSlug,
         tables_count: tablesBackedUp,
         total_rows: totalRows,
         backup_type: backupType,
@@ -200,20 +282,27 @@ serve(async (req) => {
     const fileSize = new Blob([backupContent]).size;
     console.log(`📊 Backup size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // Get Google access token using OAuth refresh token
+    // Get Google access token
     console.log("🔑 Getting Google access token...");
     const accessToken = await getGoogleAccessToken();
 
-    // Upload to Google Drive
-    console.log("☁️ Uploading to Google Drive...");
-    const driveResult = await uploadToGoogleDrive(
-      accessToken,
-      driveFolderId,
-      fileName,
-      backupContent
-    );
+    // Check if backup file already exists
+    console.log(`🔍 Searching for existing backup file: ${fileName}`);
+    const existingFileId = await findExistingBackupFile(accessToken, driveFolderId, fileName);
 
-    console.log("✅ Uploaded to Drive:", driveResult.id);
+    let driveResult: { id: string; webViewLink: string };
+
+    if (existingFileId) {
+      // Update existing file (replace content)
+      console.log("☁️ Updating existing backup file in Google Drive...");
+      driveResult = await updateGoogleDriveFile(accessToken, existingFileId, backupContent);
+      console.log("✅ Updated existing file:", driveResult.id);
+    } else {
+      // Create new file
+      console.log("☁️ Creating new backup file in Google Drive...");
+      driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
+      console.log("✅ Created new file:", driveResult.id);
+    }
 
     // Update backup log with success
     if (logId) {
@@ -244,7 +333,6 @@ serve(async (req) => {
         tables_backed_up: tablesBackedUp,
         total_rows: totalRows,
         google_drive_id: driveResult.id,
-        google_drive_url: driveResult.webViewLink,
         duration_seconds: parseFloat(duration),
       }),
       { 

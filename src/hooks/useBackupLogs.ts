@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { toast } from 'sonner';
 
 export interface BackupLog {
@@ -18,50 +19,69 @@ export interface BackupLog {
   completed_at: string | null;
   created_by: string | null;
   created_at: string;
+  store_id: string | null;
 }
 
 export function useBackupLogs() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['backup-logs'],
+    queryKey: ['backup-logs', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('backup_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
       
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data, error } = await query;
+      
       if (error) throw error;
       return data as BackupLog[];
     },
+    enabled: !!storeId,
   });
 }
 
 export function useLatestBackup() {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['latest-backup'],
+    queryKey: ['latest-backup', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('backup_logs')
         .select('*')
         .eq('status', 'success')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
+      
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data, error } = await query.single();
       
       if (error && error.code !== 'PGRST116') throw error;
       return data as BackupLog | null;
     },
+    enabled: !!storeId,
   });
 }
 
 export function useTriggerBackup() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('scheduled-backup', {
-        body: { trigger: 'manual', user_id: user?.id },
+        body: { trigger: 'manual', user_id: user?.id, store_id: storeId },
       });
 
       if (error) throw error;
@@ -83,6 +103,7 @@ export function useTriggerBackup() {
 export function useRestoreBackup() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async ({ backupData, restoreMode }: { backupData: any; restoreMode: 'merge' | 'replace' }) => {
@@ -90,7 +111,8 @@ export function useRestoreBackup() {
         body: { 
           backup_data: backupData, 
           restore_mode: restoreMode,
-          user_id: user?.id 
+          user_id: user?.id,
+          store_id: storeId
         },
       });
 
