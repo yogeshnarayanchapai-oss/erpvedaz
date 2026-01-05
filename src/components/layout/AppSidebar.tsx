@@ -264,7 +264,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: hrmItems,
     },
-    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     {
       title: 'Other',
       url: '/admin/branding',
@@ -314,7 +313,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: hrmItems,
     },
-    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     {
       title: 'Other',
       url: '/admin/branding',
@@ -363,7 +361,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Megaphone,
       children: marketingItems,
     },
-    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
     {
       title: 'Knowledge Center',
       url: '/hrm/knowledge-center',

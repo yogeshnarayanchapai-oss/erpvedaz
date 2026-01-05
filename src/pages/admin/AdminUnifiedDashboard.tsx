@@ -36,6 +36,7 @@ import {
   Users,
   AlertTriangle,
   Zap,
+  CheckSquare,
 } from 'lucide-react';
 
 export default function AdminUnifiedDashboard() {
@@ -173,6 +174,50 @@ export default function AdminUnifiedDashboard() {
 
   // Parties with balances for receivable/payable - already store-wise filtered
   const { data: partiesData, isLoading: partyTxLoading } = usePartiesWithBalances();
+
+  // Task stats for Task Management card
+  const { data: taskStats, isLoading: tasksLoading } = useQuery({
+    queryKey: ['admin-task-stats', storeId],
+    queryFn: async () => {
+      if (!storeId) return { pending: 0, issues: 0, pendingReplies: 0, total: 0 };
+      
+      // Pending tasks (status = PENDING or IN_PROGRESS)
+      const { count: pendingCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .in('status', ['PENDING', 'IN_PROGRESS']);
+      
+      // Tasks with issues (has_issue = true and not completed)
+      // @ts-ignore - Supabase deep instantiation issue
+      const { count: issueCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .eq('has_issue', true)
+        .neq('status', 'COMPLETED');
+      
+      // Pending replies - count task_remarks that haven't been replied to
+      const { count: pendingRepliesCount } = await supabase
+        .from('task_remarks')
+        .select('*', { count: 'exact', head: true })
+        .is('parent_id', null);
+      
+      // Total tasks
+      const { count: totalCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId);
+      
+      return {
+        pending: pendingCount || 0,
+        issues: issueCount || 0,
+        pendingReplies: pendingRepliesCount || 0,
+        total: totalCount || 0,
+      };
+    },
+    enabled: !!storeId,
+  });
   
   // Compute metrics
   const salesMetrics = useMemo(() => {
@@ -465,6 +510,21 @@ const hrmMetrics = useMemo(() => {
             { label: 'Conversion', value: `${salesMetrics.conversionRate}%`, color: 'text-green-600' },
             { label: 'Confirmed', value: salesMetrics.confirmedOrders },
             { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
+          ]}
+        />
+
+        {/* Task Management Module - 2nd position after Sales */}
+        <ModuleCard
+          title="Task Management"
+          icon={CheckSquare}
+          iconBg="bg-gradient-to-br from-amber-500 to-amber-600"
+          navigateTo="/hrm/tasks"
+          isLoading={tasksLoading}
+          metrics={[
+            { label: 'Pending', value: taskStats?.pending || 0, color: (taskStats?.pending || 0) > 0 ? 'text-orange-600' : undefined },
+            { label: 'Issues', value: taskStats?.issues || 0, color: (taskStats?.issues || 0) > 0 ? 'text-red-600' : undefined },
+            { label: 'Replies Pending', value: taskStats?.pendingReplies || 0, color: (taskStats?.pendingReplies || 0) > 0 ? 'text-blue-600' : undefined },
+            { label: 'Total Tasks', value: taskStats?.total || 0 },
           ]}
         />
 
