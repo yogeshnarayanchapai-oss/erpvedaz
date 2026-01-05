@@ -587,21 +587,6 @@ const hrmMetrics = useMemo(() => {
             { label: 'Active', value: `${hrmMetrics.activeEmployees} Staff` },
           ]}
         />
-
-        {/* Logistics Module */}
-        <ModuleCard
-          title="Logistics"
-          icon={Truck}
-          iconBg="bg-gradient-to-br from-indigo-500 to-indigo-600"
-          navigateTo="/logistics/orders"
-          isLoading={logisticsLoading}
-          metrics={[
-            { label: 'Pending Work', value: deliveryMetrics.pendingWork, color: deliveryMetrics.pendingWork > 0 ? 'text-orange-600' : 'text-green-600' },
-            { label: 'Total Sent', value: deliveryMetrics.totalWork },
-            { label: 'In Transit', value: logisticsStats?.inTransit || 0 },
-            { label: 'Delivered', value: logisticsStats?.delivered || 0, color: 'text-green-600' },
-          ]}
-        />
       </div>
     </div>
   );
