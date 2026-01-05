@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -21,7 +22,9 @@ import {
   useMyTasks,
   useMyTaskStats,
   useUpdateTaskStatus,
+  useAddTaskAttachment,
   TaskStatus,
+  Task,
 } from '@/hooks/useTasks';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
@@ -32,15 +35,23 @@ import {
   Loader2,
   CheckCircle2,
   MessageSquare,
+  Link2,
+  Plus,
+  X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function MyTasks() {
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [addLinkTaskId, setAddLinkTaskId] = useState<string | null>(null);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkName, setNewLinkName] = useState('');
 
   const { data: tasks, isLoading } = useMyTasks();
   const { data: stats } = useMyTaskStats();
   const updateStatus = useUpdateTaskStatus();
+  const addAttachment = useAddTaskAttachment();
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     await updateStatus.mutateAsync({ taskId, newStatus });
@@ -49,6 +60,27 @@ export default function MyTasks() {
   const handleAddRemark = (taskId: string) => {
     setSelectedTaskId(taskId);
     setRemarkDialogOpen(true);
+  };
+
+  const handleAddLink = async (taskId: string) => {
+    if (!newLinkUrl.trim()) {
+      toast.error('Please enter a URL');
+      return;
+    }
+
+    try {
+      await addAttachment.mutateAsync({
+        taskId,
+        url: newLinkUrl.trim(),
+        fileName: newLinkName.trim() || newLinkUrl.trim(),
+      });
+      setNewLinkUrl('');
+      setNewLinkName('');
+      setAddLinkTaskId(null);
+      toast.success('Link added');
+    } catch (error) {
+      // Error handled by hook
+    }
   };
 
   const getAvailableStatuses = (currentStatus: TaskStatus): TaskStatus[] => {
@@ -159,65 +191,120 @@ export default function MyTasks() {
                     const isCompleted = task.status === 'COMPLETED';
 
                     return (
-                      <TableRow key={task.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium max-w-[200px] truncate">
-                              {task.title}
-                            </p>
-                            {task.description && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {task.description}
+                      <React.Fragment key={task.id}>
+                        <TableRow>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium max-w-[200px] truncate">
+                                {task.title}
                               </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <TaskPriorityBadge priority={task.priority} />
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {format(new Date(task.due_date), 'MMM dd, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          {isCompleted ? (
-                            <TaskStatusBadge status={task.status} />
-                          ) : (
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) =>
-                                handleStatusChange(task.id, value as TaskStatus)
-                              }
-                              disabled={updateStatus.isPending}
-                            >
-                              <SelectTrigger className="w-[130px]">
-                                <SelectValue>
-                                  <TaskStatusBadge status={task.status} />
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={task.status} disabled>
-                                  <TaskStatusBadge status={task.status} />
-                                </SelectItem>
-                                {availableStatuses.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    <TaskStatusBadge status={status} />
+                              {task.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  {task.description}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <TaskPriorityBadge priority={task.priority} />
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {format(new Date(task.due_date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {isCompleted ? (
+                              <TaskStatusBadge status={task.status} />
+                            ) : (
+                              <Select
+                                value={task.status}
+                                onValueChange={(value) =>
+                                  handleStatusChange(task.id, value as TaskStatus)
+                                }
+                                disabled={updateStatus.isPending}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue>
+                                    <TaskStatusBadge status={task.status} />
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={task.status} disabled>
+                                    <TaskStatusBadge status={task.status} />
                                   </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleAddRemark(task.id)}
-                            title="Add remark"
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                                  {availableStatuses.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                      <TaskStatusBadge status={status} />
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (addLinkTaskId === task.id) {
+                                    setAddLinkTaskId(null);
+                                  } else {
+                                    setAddLinkTaskId(task.id);
+                                    setNewLinkUrl('');
+                                    setNewLinkName('');
+                                  }
+                                }}
+                                title="Add link"
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleAddRemark(task.id)}
+                                title="Add remark"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {/* Add Link Row */}
+                        {addLinkTaskId === task.id && (
+                          <TableRow>
+                            <TableCell colSpan={5}>
+                              <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                                <Input
+                                  placeholder="URL (e.g., https://...)"
+                                  value={newLinkUrl}
+                                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Input
+                                  placeholder="Name (optional)"
+                                  value={newLinkName}
+                                  onChange={(e) => setNewLinkName(e.target.value)}
+                                  className="w-32 sm:w-40"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAddLink(task.id)}
+                                  disabled={addAttachment.isPending}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setAddLinkTaskId(null)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
