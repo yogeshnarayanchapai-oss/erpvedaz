@@ -148,6 +148,33 @@ export default function AdminUnifiedDashboard() {
     },
   });
 
+  // Ref. P/L - Product daybook sum (total quantity of confirmed products) - date filtered
+  const { data: refPLData, isLoading: refPLLoading } = useQuery({
+    queryKey: ['ref-pl-product-sum', dateFrom, dateTo, storeId],
+    queryFn: async () => {
+      if (!storeId) return 0;
+
+      // Get sum of product quantities from confirmed orders (CONFIRMED, DISPATCHED, DELIVERED)
+      const { data, error } = await supabase
+        .from('order_items')
+        .select(`
+          quantity,
+          orders!inner (id, order_status, order_date, store_id, delivery_location, inside_delivery_status)
+        `)
+        .gte('orders.order_date', `${dateFrom}T00:00:00`)
+        .lte('orders.order_date', `${dateTo}T23:59:59`)
+        .eq('orders.store_id', storeId)
+        .in('orders.order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED']);
+
+      if (error) throw error;
+      
+      // Sum all quantities
+      const totalQty = data?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+      return totalQty;
+    },
+    enabled: !!storeId,
+  });
+
   // Logistics stats for pending/total work
   const { data: logisticsStats, isLoading: logisticsLoading } = useLogisticsStats();
 
@@ -348,7 +375,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Quick Summary Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-3">
@@ -407,6 +434,22 @@ const hrmMetrics = useMemo(() => {
                 <p className="text-xs text-muted-foreground font-medium">Pending HRM</p>
                 <p className="text-xl font-bold text-blue-600">
                   {hrmMetrics.pendingHRM}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200/50 dark:border-purple-800/50">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/20">
+                <Package className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Ref. P/L</p>
+                <p className="text-xl font-bold text-purple-600">
+                  {refPLLoading ? '...' : refPLData?.toLocaleString() || 0}
                 </p>
               </div>
             </div>
