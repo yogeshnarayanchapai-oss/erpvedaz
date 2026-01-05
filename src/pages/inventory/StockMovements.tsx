@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useUpdateStockMovement, StockMovement } from '@/hooks/useStockMovements';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
@@ -664,33 +665,34 @@ export default function StockMovements() {
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
                     <TableCell>{m.remark || '-'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setViewingMovement(m)}>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        {canEdit && (
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(m)}>
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        )}
-                        {canEdit && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Movement?</AlertDialogTitle>
-                                <AlertDialogDescription>This will also update the inventory. This action cannot be undone.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteMovement.mutate(m.id)}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setViewingMovement(m)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          {canEdit && (
+                            <DropdownMenuItem onClick={() => handleEdit(m)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {canEdit && (
+                            <DropdownMenuItem 
+                              onClick={() => deleteMovement.mutate(m.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                   );
