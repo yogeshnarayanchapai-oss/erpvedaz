@@ -590,6 +590,98 @@ export function useDeleteTask() {
   });
 }
 
+export function useReassignTask() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const storeId = useCurrentStoreId();
+
+  return useMutation({
+    mutationFn: async ({
+      taskId,
+      newAssigneeId,
+    }: {
+      taskId: string;
+      newAssigneeId: string;
+    }) => {
+      // Get current task details
+      const { data: task, error: fetchError } = await supabase
+        .from('tasks')
+        .select('title, assigned_to_user_id')
+        .eq('id', taskId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update task assignee
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({ 
+          assigned_to_user_id: newAssigneeId,
+          assigned_by_user_id: user?.id,
+        })
+        .eq('id', taskId);
+
+      if (updateError) throw updateError;
+
+      // Log status history for reassignment
+      await supabase.from('task_status_history').insert({
+        task_id: taskId,
+        old_status: null,
+        new_status: 'PENDING',
+        changed_by_user_id: user?.id,
+        notes: 'Task reassigned to new staff member',
+      });
+
+      // Notify new assignee
+      if (newAssigneeId && user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        await supabase.from('notifications').insert({
+          target_user_id: newAssigneeId,
+          title: 'Task Assigned to You',
+          message: `"${task.title}" has been assigned to you by ${profile?.name || 'Manager'}`,
+          type: 'TASK_ASSIGNED',
+          store_id: storeId,
+          actor_id: user.id,
+        });
+      }
+
+      // Notify previous assignee if different
+      if (task.assigned_to_user_id && task.assigned_to_user_id !== newAssigneeId && user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        await supabase.from('notifications').insert({
+          target_user_id: task.assigned_to_user_id,
+          title: 'Task Reassigned',
+          message: `"${task.title}" has been reassigned to another staff by ${profile?.name || 'Manager'}`,
+          type: 'TASK_REASSIGNED',
+          store_id: storeId,
+          actor_id: user.id,
+        });
+      }
+
+      return { taskId, newAssigneeId };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-stats'] });
+      toast.success('Task reassigned successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to reassign task: ' + error.message);
+    },
+  });
+}
+
 export function useTaskBadgeCount() {
   const { user } = useAuth();
 

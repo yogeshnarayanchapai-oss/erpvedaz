@@ -11,7 +11,15 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Task, useTaskRemarks, useTaskStatusHistory, useTaskAttachments, useAddTaskAttachment, useAddTaskRemark } from '@/hooks/useTasks';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Task, useTaskRemarks, useTaskStatusHistory, useTaskAttachments, useAddTaskAttachment, useAddTaskRemark, useReassignTask } from '@/hooks/useTasks';
+import { useStaff } from '@/hooks/useStaff';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -26,6 +34,7 @@ import {
   Plus,
   Reply,
   ExternalLink,
+  UserCog,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,8 +48,10 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const { data: remarks } = useTaskRemarks(task?.id || '');
   const { data: statusHistory } = useTaskStatusHistory(task?.id || '');
   const { data: attachments } = useTaskAttachments(task?.id || '');
+  const { data: staff } = useStaff();
   const addAttachment = useAddTaskAttachment();
   const addRemark = useAddTaskRemark();
+  const reassignTask = useReassignTask();
   const { effectiveRole } = useEffectiveRole();
 
   const [newLinkUrl, setNewLinkUrl] = useState('');
@@ -48,8 +59,23 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const [showAddLink, setShowAddLink] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [showReassign, setShowReassign] = useState(false);
 
   const canReply = ['ADMIN', 'MANAGER', 'HR', 'OWNER'].includes(effectiveRole);
+  const canReassign = ['ADMIN', 'MANAGER', 'HR', 'OWNER'].includes(effectiveRole);
+
+  const handleReassign = async (newAssigneeId: string) => {
+    if (!task) return;
+    try {
+      await reassignTask.mutateAsync({
+        taskId: task.id,
+        newAssigneeId,
+      });
+      setShowReassign(false);
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
 
   if (!task) return null;
 
@@ -130,7 +156,20 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground text-xs">Assigned To</p>
-                  <p className="font-medium">{task.assigned_to?.name || 'N/A'}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{task.assigned_to?.name || 'N/A'}</p>
+                    {canReassign && task.status !== 'COMPLETED' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => setShowReassign(!showReassign)}
+                        title="Reassign task"
+                      >
+                        <UserCog className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -162,6 +201,39 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                 </div>
               </div>
             </div>
+
+            {/* Reassign Section */}
+            {showReassign && canReassign && (
+              <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <UserCog className="h-4 w-4" />
+                  Reassign Task
+                </p>
+                <Select
+                  onValueChange={handleReassign}
+                  disabled={reassignTask.isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff?.filter(s => s.id !== task.assigned_to_user_id).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowReassign(false)}
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
 
             <Separator />
 
