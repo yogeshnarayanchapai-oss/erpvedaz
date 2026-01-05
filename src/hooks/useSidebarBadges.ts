@@ -181,13 +181,13 @@ export function useSidebarBadges() {
       }
 
       if (role === 'CALLING' && storeId) {
-        // Only count NEW leads assigned to this user
+        // Count leads with ASSIGNED or NEW status assigned to this user
         const { count: leadsCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
           .eq('store_id', storeId)
           .eq('assigned_to_user_id', profile.id)
-          .eq('status', 'NEW');
+          .in('status', ['ASSIGNED', 'NEW']);
         badges.leads = leadsCount || 0;
 
         // No badge for My Orders for staff
