@@ -63,6 +63,7 @@ import {
   Truck,
   Store,
   Brain,
+  HardDrive,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocation } from 'react-router-dom';
@@ -134,10 +135,35 @@ const hrmItems: MenuItem[] = [
   { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
 ];
 
-// Other submenu for Admin (Branding, Data Tools, Messaging, Knowledge Center)
+// Other submenu for Admin (Branding, Messaging, Knowledge Center) - NO Backup here, it's OWNER only
 const otherItems: MenuItem[] = [
   { title: 'Branding', url: '/admin/branding', icon: Palette },
-  { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
+  {
+    title: 'Messaging',
+    url: '/admin/messaging/channels',
+    icon: MessageSquare,
+    children: [
+      { title: 'Channels', url: '/admin/messaging/channels', icon: Send },
+      { title: 'Templates', url: '/admin/messaging/templates', icon: FileCode },
+      { title: 'Automation Rules', url: '/admin/messaging/rules', icon: Settings2 },
+      { title: 'Message Logs', url: '/admin/messaging/logs', icon: History },
+    ],
+  },
+  {
+    title: 'Knowledge Center',
+    url: '/hrm/knowledge-center',
+    icon: BookOpen,
+    children: [
+      { title: 'Courses', url: '/hrm/knowledge-center', icon: BookOpen },
+      { title: 'Reports', url: '/hrm/knowledge-center/reports', icon: BarChart3 },
+    ],
+  },
+];
+
+// Other submenu for OWNER only (includes Backup)
+const ownerOtherItems: MenuItem[] = [
+  { title: 'Branding', url: '/admin/branding', icon: Palette },
+  { title: 'Backup', url: '/admin/data-tools', icon: HardDrive },
   {
     title: 'Messaging',
     url: '/admin/messaging/channels',
@@ -269,7 +295,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       title: 'Other',
       url: '/admin/branding',
       icon: Settings2,
-      children: otherItems,
+      children: ownerOtherItems,
     },
   ],
   ADMIN: [

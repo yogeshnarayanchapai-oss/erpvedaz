@@ -161,7 +161,25 @@ serve(async (req) => {
       throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_FOLDER_ID");
     }
 
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    console.log("📋 Parsing service account JSON...");
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (parseError) {
+      console.error("Failed to parse service account JSON:", parseError);
+      throw new Error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON format - must be valid JSON");
+    }
+
+    if (!serviceAccount.private_key) {
+      console.error("Service account structure:", Object.keys(serviceAccount));
+      throw new Error("Service account JSON missing private_key field");
+    }
+
+    if (!serviceAccount.client_email) {
+      throw new Error("Service account JSON missing client_email field");
+    }
+
+    console.log("✅ Service account parsed - client_email:", serviceAccount.client_email);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body for backup type
