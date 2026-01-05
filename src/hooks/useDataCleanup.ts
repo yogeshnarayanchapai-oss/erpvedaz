@@ -109,14 +109,14 @@ export function useExportAndDeleteLeadsFiltered() {
         throw new Error(`Too many leads (${totalCount.toLocaleString()}). Maximum is ${MAX_EXPORT_ROWS.toLocaleString()}. Please narrow your filters.`);
       }
 
-      // Fetch all leads with pagination
+      // Fetch all leads with pagination (including product name)
       const allLeads: any[] = [];
       let from = 0;
 
       while (from < totalCount) {
         let query = supabase
           .from('leads')
-          .select('*')
+          .select('*, products:product_id(name)')
           .eq('store_id', storeId)
           .lt('date', cutoffDateStr)
           .range(from, from + BATCH_SIZE - 1);
@@ -135,18 +135,19 @@ export function useExportAndDeleteLeadsFiltered() {
 
       if (allLeads.length === 0) throw new Error('No leads to export');
 
-      // Export to Excel
+      // Export to Excel with product name
       const exportData = allLeads.map(lead => ({
         'Name': lead.client_name || '',
         'Phone': lead.contact_number || '',
         'Alt Phone': lead.alt_phone || '',
         'Address': lead.full_address || '',
         'Branch': lead.destination_branch || '',
-        'Product ID': lead.product_id || '',
+        'Product': lead.products?.name || '',
         'Status': lead.status || '',
         'Source': lead.source || '',
         'Remark': lead.remark || '',
         'Tag': lead.tag || '',
+        'Date': lead.date || '',
         'Created At': lead.created_at ? new Date(lead.created_at).toLocaleString() : '',
         'Order ID': lead.order_id || '',
         'Reference ID': lead.reference_id || '',
@@ -160,11 +161,21 @@ export function useExportAndDeleteLeadsFiltered() {
       const fileName = `leads_cleanup_${statusLabel}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
-      // Delete leads in batches
+      // First, nullify lead_id in orders table to avoid FK constraint
       const leadIds = allLeads.map(l => l.id);
       
       for (let i = 0; i < leadIds.length; i += DELETE_BATCH_SIZE) {
         const batch = leadIds.slice(i, i + DELETE_BATCH_SIZE);
+        
+        // Nullify lead_id in orders first
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ lead_id: null })
+          .in('lead_id', batch);
+        
+        if (updateError) throw updateError;
+        
+        // Then delete leads
         const { error: deleteError } = await supabase
           .from('leads')
           .delete()
