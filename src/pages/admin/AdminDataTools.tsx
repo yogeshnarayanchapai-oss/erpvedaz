@@ -3,11 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Loader2, Cloud, ExternalLink, Clock, HardDrive, Upload, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, PhoneOff, XCircle, CheckCircle2, Calendar } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useBackupLogs, useLatestBackup, useTriggerBackup, useRestoreBackup } from '@/hooks/useBackupLogs';
+import { useBackupLogs, useTriggerBackup, useRestoreBackup } from '@/hooks/useBackupLogs';
+import { useLeadCleanupCounts, useExportAndDeleteLeads } from '@/hooks/useDataCleanup';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,18 +20,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 
+type CleanupType = 'cnr' | 'cancelled' | 'confirmed' | 'old6Months' | 'old1Year';
+
 export default function AdminDataTools() {
   const { profile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [pendingBackupData, setPendingBackupData] = useState<any>(null);
   const [pendingFileName, setPendingFileName] = useState<string>('');
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
+  const [pendingCleanupType, setPendingCleanupType] = useState<CleanupType | null>(null);
 
-  // Backup hooks
-  const { data: backupLogs = [], isLoading: logsLoading } = useBackupLogs();
-  const { data: latestBackup } = useLatestBackup();
+  // Backup hooks - fetch latest backup (any status)
+  const { data: backupLogs = [] } = useBackupLogs();
+  const latestBackup = backupLogs[0] || null;
   const triggerBackup = useTriggerBackup();
   const restoreBackup = useRestoreBackup();
+
+  // Cleanup hooks
+  const { data: cleanupCounts, isLoading: countsLoading } = useLeadCleanupCounts();
+  const exportAndDelete = useExportAndDeleteLeads();
 
   // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,7 +67,6 @@ export default function AdminDataTools() {
       toast.error('Failed to read file', { description: 'Could not parse the backup file' });
     }
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -73,6 +80,36 @@ export default function AdminDataTools() {
     setRestoreDialogOpen(false);
     setPendingBackupData(null);
     setPendingFileName('');
+  };
+
+  // Cleanup actions
+  const openCleanupDialog = (type: CleanupType) => {
+    setPendingCleanupType(type);
+    setCleanupDialogOpen(true);
+  };
+
+  const handleConfirmCleanup = () => {
+    if (pendingCleanupType) {
+      exportAndDelete.mutate(pendingCleanupType);
+    }
+    setCleanupDialogOpen(false);
+    setPendingCleanupType(null);
+  };
+
+  const getCleanupCount = (type: CleanupType) => {
+    if (!cleanupCounts) return 0;
+    return cleanupCounts[type];
+  };
+
+  const getCleanupLabel = (type: CleanupType) => {
+    const labels: Record<CleanupType, string> = {
+      cnr: 'CNR (Call Not Received)',
+      cancelled: 'Cancelled',
+      confirmed: 'Confirmed (with Order)',
+      old6Months: 'Older than 6 months',
+      old1Year: 'Older than 1 year',
+    };
+    return labels[type];
   };
 
   // Only OWNER can access this
@@ -90,14 +127,16 @@ export default function AdminDataTools() {
     );
   }
 
+  const isBackupSuccess = latestBackup?.status === 'success';
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Backup & Restore</h1>
-        <p className="text-muted-foreground">Daily automatic backup • Google Drive</p>
+        <h1 className="text-2xl font-bold">Backup & Data Tools</h1>
+        <p className="text-muted-foreground">Backup, restore, and cleanup your data</p>
       </div>
 
-      {/* Google Drive Auto Backup Section */}
+      {/* Backup Section */}
       <Card className="border-primary/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -105,47 +144,77 @@ export default function AdminDataTools() {
             Google Drive Backup
           </CardTitle>
           <CardDescription>
-            Automatic daily backup at midnight Nepal time. Each backup creates a new file.
+            Automatic daily backup at midnight Nepal time
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Status and Actions */}
+        <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Last Backup Status */}
-            <div className="p-4 border rounded-lg bg-muted/30">
+            {/* Last Backup Status - Shows success/failure */}
+            <div className={`p-4 border rounded-lg ${isBackupSuccess ? 'bg-green-500/5 border-green-200' : latestBackup ? 'bg-red-500/5 border-red-200' : 'bg-muted/30'}`}>
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Last Successful Backup</span>
+                {isBackupSuccess ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                ) : latestBackup ? (
+                  <XCircle className="w-4 h-4 text-red-600" />
+                ) : (
+                  <Cloud className="w-4 h-4 text-muted-foreground" />
+                )}
+                <span className="text-sm font-medium">Last Backup Status</span>
               </div>
               {latestBackup ? (
                 <div className="space-y-1">
-                  <p className="text-lg font-bold text-green-600">
-                    {formatDistanceToNow(new Date(latestBackup.created_at), { addSuffix: true })}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant="outline" 
+                      className={isBackupSuccess ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}
+                    >
+                      {latestBackup.status.toUpperCase()}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(latestBackup.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(latestBackup.created_at), 'PPpp')}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{latestBackup.tables_backed_up} tables</span>
-                    <span>•</span>
-                    <span>{latestBackup.total_rows?.toLocaleString()} rows</span>
-                    <span>•</span>
-                    <span>{((latestBackup.file_size || 0) / 1024 / 1024).toFixed(2)} MB</span>
-                  </div>
+                  {isBackupSuccess ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <span>{latestBackup.tables_backed_up} tables</span>
+                      <span>•</span>
+                      <span>{latestBackup.total_rows?.toLocaleString()} rows</span>
+                      <span>•</span>
+                      <span>{((latestBackup.file_size || 0) / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red-600 mt-1">
+                      {latestBackup.error_message || 'Backup failed'}
+                    </p>
+                  )}
+                  {latestBackup.google_drive_url && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => window.open(latestBackup.google_drive_url!, '_blank')}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View in Drive
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No backups yet</p>
+                <p className="text-muted-foreground text-sm">No backups yet</p>
               )}
             </div>
 
-            {/* Manual Backup Button */}
+            {/* Manual Backup */}
             <div className="p-4 border rounded-lg bg-primary/5 flex flex-col justify-center">
               <div className="flex items-center gap-2 mb-2">
                 <HardDrive className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium">Manual Backup</span>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Create immediate backup to Google Drive
+                Create immediate backup
               </p>
               <Button 
                 onClick={() => triggerBackup.mutate()} 
@@ -161,14 +230,14 @@ export default function AdminDataTools() {
               </Button>
             </div>
 
-            {/* Restore Section */}
+            {/* Restore */}
             <div className="p-4 border rounded-lg bg-orange-500/5 flex flex-col justify-center">
               <div className="flex items-center gap-2 mb-2">
                 <RotateCcw className="w-4 h-4 text-orange-600" />
                 <span className="text-sm font-medium">Restore from Backup</span>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Upload a backup file to restore data
+                Upload a backup file
               </p>
               <input
                 ref={fileInputRef}
@@ -192,83 +261,140 @@ export default function AdminDataTools() {
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Backup History Table */}
-          <div>
-            <h4 className="text-sm font-medium mb-2">Backup History</h4>
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Rows</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : backupLogs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                        No backups recorded yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    backupLogs.slice(0, 10).map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-sm">
-                          {format(new Date(log.created_at), 'MMM d, HH:mm')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {log.backup_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              log.status === 'success' ? 'bg-green-500/10 text-green-600' :
-                              log.status === 'failed' ? 'bg-red-500/10 text-red-600' :
-                              'bg-yellow-500/10 text-yellow-600'
-                            }
-                          >
-                            {log.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.file_size ? `${(log.file_size / 1024 / 1024).toFixed(2)} MB` : '-'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.total_rows?.toLocaleString() || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {log.google_drive_url && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => window.open(log.google_drive_url!, '_blank')}
-                              title="View in Google Drive"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+      {/* Data Cleanup Section */}
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-destructive" />
+            Data Cleanup
+          </CardTitle>
+          <CardDescription>
+            Export leads to Excel and delete them to improve system performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* CNR Leads */}
+            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <PhoneOff className="w-4 h-4 text-orange-500" />
+                <span className="text-sm font-medium">CNR Leads</span>
+              </div>
+              <p className="text-2xl font-bold text-orange-600 mb-1">
+                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.cnr.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">Call Not Received</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => openCleanupDialog('cnr')}
+                disabled={exportAndDelete.isPending || !cleanupCounts?.cnr}
+              >
+                <FileDown className="w-4 h-4" />
+                Export & Delete
+              </Button>
+            </div>
+
+            {/* Cancelled Leads */}
+            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle className="w-4 h-4 text-red-500" />
+                <span className="text-sm font-medium">Cancelled Leads</span>
+              </div>
+              <p className="text-2xl font-bold text-red-600 mb-1">
+                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.cancelled.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">Status: Cancelled</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => openCleanupDialog('cancelled')}
+                disabled={exportAndDelete.isPending || !cleanupCounts?.cancelled}
+              >
+                <FileDown className="w-4 h-4" />
+                Export & Delete
+              </Button>
+            </div>
+
+            {/* Confirmed Leads (with Order) */}
+            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm font-medium">Confirmed Leads</span>
+              </div>
+              <p className="text-2xl font-bold text-green-600 mb-1">
+                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.confirmed.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">Already has Order</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => openCleanupDialog('confirmed')}
+                disabled={exportAndDelete.isPending || !cleanupCounts?.confirmed}
+              >
+                <FileDown className="w-4 h-4" />
+                Export & Delete
+              </Button>
+            </div>
+
+            {/* 6 Months Old */}
+            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-purple-500" />
+                <span className="text-sm font-medium">6+ Months Old</span>
+              </div>
+              <p className="text-2xl font-bold text-purple-600 mb-1">
+                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.old6Months.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">Excludes active leads</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => openCleanupDialog('old6Months')}
+                disabled={exportAndDelete.isPending || !cleanupCounts?.old6Months}
+              >
+                <FileDown className="w-4 h-4" />
+                Export & Delete
+              </Button>
+            </div>
+
+            {/* 1 Year Old */}
+            <div className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium">1+ Year Old</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-600 mb-1">
+                {countsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : cleanupCounts?.old1Year.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">Excludes active leads</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => openCleanupDialog('old1Year')}
+                disabled={exportAndDelete.isPending || !cleanupCounts?.old1Year}
+              >
+                <FileDown className="w-4 h-4" />
+                Export & Delete
+              </Button>
             </div>
           </div>
+
+          <Alert className="mt-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Before cleanup</AlertTitle>
+            <AlertDescription>
+              Always create a backup before deleting data. Deleted leads cannot be recovered.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 
@@ -291,7 +417,7 @@ export default function AdminDataTools() {
                 </div>
               )}
               <p className="text-orange-600 font-medium mt-4">
-                This will merge backup data with existing data. Existing records with same IDs will be updated.
+                This will merge backup data with existing data.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -302,6 +428,49 @@ export default function AdminDataTools() {
               className="bg-orange-600 hover:bg-orange-700"
             >
               Restore Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cleanup Confirmation Dialog */}
+      <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Confirm Export & Delete
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You are about to export and permanently delete:</p>
+              <p className="text-2xl font-bold text-foreground">
+                {pendingCleanupType && getCleanupCount(pendingCleanupType).toLocaleString()} leads
+              </p>
+              <p className="text-sm">
+                Category: <strong>{pendingCleanupType && getCleanupLabel(pendingCleanupType)}</strong>
+              </p>
+              <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                <p className="text-destructive font-medium text-sm">
+                  ⚠️ This action cannot be undone. The leads will be exported to Excel first, then permanently deleted.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmCleanup}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={exportAndDelete.isPending}
+            >
+              {exportAndDelete.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                'Export & Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
