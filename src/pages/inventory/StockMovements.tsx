@@ -186,12 +186,15 @@ export default function StockMovements() {
     const selectedProduct = products?.find(p => p.id === productId);
     const costPrice = selectedProduct?.cost_price || 0;
     const sellPrice = selectedProduct?.sell_price || 0;
+    const wholesalePrice = selectedProduct?.wholesale_price || 0;
     
     // Different price defaults based on movement type
     if (form.movement_type === 'IN') {
       setForm(f => ({ ...f, product_id: productId, unit_cost: costPrice, unit_price: 0 }));
     } else if (form.movement_type === 'OUT') {
       setForm(f => ({ ...f, product_id: productId, unit_cost: costPrice, unit_price: sellPrice }));
+    } else if (form.movement_type === 'WHOLESALE_OUT') {
+      setForm(f => ({ ...f, product_id: productId, unit_cost: costPrice, unit_price: wholesalePrice }));
     } else {
       setForm(f => ({ ...f, product_id: productId, unit_cost: costPrice, unit_price: sellPrice }));
     }
@@ -202,11 +205,14 @@ export default function StockMovements() {
     const selectedProduct = products?.find(p => p.id === form.product_id);
     const costPrice = selectedProduct?.cost_price || 0;
     const sellPrice = selectedProduct?.sell_price || 0;
+    const wholesalePrice = selectedProduct?.wholesale_price || 0;
     
     if (type === 'IN') {
       setForm(f => ({ ...f, movement_type: type, unit_cost: costPrice, unit_price: 0 }));
     } else if (type === 'OUT') {
       setForm(f => ({ ...f, movement_type: type, unit_cost: costPrice, unit_price: sellPrice }));
+    } else if (type === 'WHOLESALE_OUT') {
+      setForm(f => ({ ...f, movement_type: type, unit_cost: costPrice, unit_price: wholesalePrice }));
     } else {
       setForm(f => ({ ...f, movement_type: type }));
     }
