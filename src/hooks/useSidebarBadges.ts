@@ -14,6 +14,22 @@ export interface SidebarBadges {
   pendingDocuments: number;
   todayAttendance: number;
   myTasks: number;
+  myHR: number; // Staff-specific: admin actions requiring their attention
+}
+
+// Helper function to fetch HR notifications count - extracted to avoid TS deep instantiation
+async function fetchHRNotificationsCount(userId: string): Promise<number> {
+  const hrTypes = ['DOCUMENT', 'LEAVE', 'PAYROLL', 'ASSET'];
+  
+  // @ts-ignore - Workaround for TS2589 deep type instantiation with supabase
+  const { data } = await supabase
+    .from('notifications')
+    .select('type')
+    .eq('to_user_id', userId)
+    .eq('is_read', false);
+  
+  if (!data) return 0;
+  return (data as Array<{ type: string | null }>).filter(n => hrTypes.includes(n.type || '')).length;
 }
 
 export function useSidebarBadges() {
@@ -82,9 +98,9 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
     queryFn: async (): Promise<SidebarBadges> => {
-      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0 };
+      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0 };
 
-      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0 };
+      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0 };
       const role = profile.role;
 
       // Fetch user view state for "unseen" calculations
@@ -165,22 +181,17 @@ export function useSidebarBadges() {
       }
 
       if (role === 'CALLING' && storeId) {
+        // Only count NEW leads assigned to this user
         const { count: leadsCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
           .eq('store_id', storeId)
           .eq('assigned_to_user_id', profile.id)
-          .in('status', ['ASSIGNED', 'IN_PROGRESS', 'FOLLOW_UP']);
+          .eq('status', 'NEW');
         badges.leads = leadsCount || 0;
 
-        const { count: ordersCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('store_id', storeId)
-          .eq('sales_person_id', profile.id)
-          .eq('delivery_location', 'INSIDE_VALLEY')
-          .eq('inside_delivery_status', 'PENDING');
-        badges.orders = ordersCount || 0;
+        // No badge for My Orders for staff
+        badges.orders = 0;
       }
 
       if (role === 'FOLLOWUP' && storeId) {
@@ -213,13 +224,20 @@ export function useSidebarBadges() {
         badges.pendingDocuments = docCount || 0;
       }
 
-      // My Tasks badge for all users
+      // My Tasks badge for all users (Pending + In Progress only)
       const { count: taskCount } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('assigned_to_user_id', user.id)
         .in('status', ['PENDING', 'IN_PROGRESS']);
       badges.myTasks = taskCount || 0;
+
+      // My HR badge for staff: count unread notifications from admin actions
+      // Only counts notifications where action was performed by admin (document/leave approvals/rejections)
+      const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
+      if (isStaffRole) {
+        badges.myHR = await fetchHRNotificationsCount(user.id);
+      }
 
       return badges;
     },
