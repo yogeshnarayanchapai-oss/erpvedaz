@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, CheckCircle2, XCircle, Calendar, Bomb, Mail } from 'lucide-react';
+import { useSendFactoryResetCode, useVerifyAndReset } from '@/hooks/useFactoryReset';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { format, formatDistanceToNow, subMonths, subYears } from 'date-fns';
 import { useBackupLogs, useTriggerBackup, useRestoreBackup } from '@/hooks/useBackupLogs';
 import { 
@@ -58,11 +60,20 @@ export default function AdminDataTools() {
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
+  // Factory reset state
+  const [factoryResetStep, setFactoryResetStep] = useState<'idle' | 'code-sent' | 'verifying'>('idle');
+  const [resetCode, setResetCode] = useState('');
+  const [factoryResetDialogOpen, setFactoryResetDialogOpen] = useState(false);
+
   // Backup hooks
   const { data: backupLogs = [] } = useBackupLogs();
   const latestBackup = backupLogs[0] || null;
   const triggerBackup = useTriggerBackup();
   const restoreBackup = useRestoreBackup();
+
+  // Factory reset hooks
+  const sendResetCode = useSendFactoryResetCode();
+  const verifyAndReset = useVerifyAndReset();
 
   // Calculate cutoff date from preset or custom
   const cutoffDate = useMemo(() => {
@@ -158,6 +169,33 @@ export default function AdminDataTools() {
     }
     setCleanupDialogOpen(false);
     setDeleteConfirmText('');
+  };
+
+  const openFactoryResetDialog = () => {
+    setFactoryResetStep('idle');
+    setResetCode('');
+    setFactoryResetDialogOpen(true);
+  };
+
+  const handleSendResetCode = async () => {
+    await sendResetCode.mutateAsync();
+    setFactoryResetStep('code-sent');
+  };
+
+  const handleVerifyAndReset = async () => {
+    if (resetCode.length !== 6) {
+      toast.error('Please enter the 6-digit code');
+      return;
+    }
+    setFactoryResetStep('verifying');
+    try {
+      await verifyAndReset.mutateAsync(resetCode);
+      setFactoryResetDialogOpen(false);
+      setFactoryResetStep('idle');
+      setResetCode('');
+    } catch {
+      setFactoryResetStep('code-sent');
+    }
   };
 
   // Only OWNER can access this
@@ -445,6 +483,39 @@ export default function AdminDataTools() {
         </CardContent>
       </Card>
 
+      {/* Factory Reset Section */}
+      <Card className="border-red-500/50 bg-red-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <Bomb className="w-5 h-5" />
+            Factory Reset
+          </CardTitle>
+          <CardDescription>
+            Permanently delete ALL data from the system. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Danger Zone</AlertTitle>
+            <AlertDescription>
+              Factory reset will permanently delete ALL data including orders, leads, customers, products, 
+              employees, transactions, and backups. Only the system structure will remain.
+            </AlertDescription>
+          </Alert>
+          
+          <Button
+            variant="destructive"
+            size="lg"
+            className="gap-2"
+            onClick={openFactoryResetDialog}
+          >
+            <Bomb className="w-4 h-4" />
+            Factory Reset
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Restore Confirmation Dialog */}
       <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <AlertDialogContent>
@@ -526,6 +597,117 @@ export default function AdminDataTools() {
             >
               Export & Delete
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Factory Reset Dialog */}
+      <AlertDialog open={factoryResetDialogOpen} onOpenChange={setFactoryResetDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Bomb className="w-5 h-5" />
+              Factory Reset
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              {factoryResetStep === 'idle' && (
+                <>
+                  <p className="text-red-600 font-semibold">
+                    ⚠️ This will permanently delete ALL data from the system!
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm space-y-1">
+                    <p>• All orders and leads</p>
+                    <p>• All customers</p>
+                    <p>• All products and inventory</p>
+                    <p>• All employees and HR data</p>
+                    <p>• All transactions and accounting</p>
+                    <p>• All backups</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    A verification code will be sent to your email. You must enter the code to proceed.
+                  </p>
+                </>
+              )}
+
+              {factoryResetStep === 'code-sent' && (
+                <>
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Mail className="w-4 h-4" />
+                    <span className="font-medium">Verification code sent to your email</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Enter the 6-digit code from your email to proceed with factory reset.
+                  </p>
+                  <div className="flex justify-center py-4">
+                    <InputOTP
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(value) => setResetCode(value)}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </>
+              )}
+
+              {factoryResetStep === 'verifying' && (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                  <p className="text-sm font-medium">Resetting system...</p>
+                  <p className="text-xs text-muted-foreground">This may take a few minutes</p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {factoryResetStep === 'idle' && (
+              <>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  onClick={handleSendResetCode}
+                  disabled={sendResetCode.isPending}
+                  className="gap-2"
+                >
+                  {sendResetCode.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4" />
+                  )}
+                  Send Verification Code
+                </Button>
+              </>
+            )}
+            {factoryResetStep === 'code-sent' && (
+              <>
+                <AlertDialogCancel onClick={() => {
+                  setFactoryResetStep('idle');
+                  setResetCode('');
+                }}>
+                  Cancel
+                </AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  onClick={handleVerifyAndReset}
+                  disabled={resetCode.length !== 6 || verifyAndReset.isPending}
+                  className="gap-2"
+                >
+                  {verifyAndReset.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Bomb className="w-4 h-4" />
+                  )}
+                  Confirm Reset
+                </Button>
+              </>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
