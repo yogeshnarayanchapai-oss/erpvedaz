@@ -409,7 +409,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Quick Summary Stats Bar - Responsive grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 md:gap-1.5 mb-1.5 md:mb-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 md:gap-1.5 mb-1.5 md:mb-2">
         {/* Total Balance */}
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
           <CardContent className="p-2 md:p-3">
@@ -478,7 +478,7 @@ const hrmMetrics = useMemo(() => {
           </CardContent>
         </Card>
         
-        {/* Yesterday P/L - Moved to last position */}
+        {/* Yesterday P/L */}
         <Card className={`bg-gradient-to-br ${inventoryMetrics.yesterdayProfit >= 0 ? 'from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
           <CardContent className="p-2 md:p-3">
             <div className="flex items-center gap-2">
@@ -489,6 +489,26 @@ const hrmMetrics = useMemo(() => {
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Yesterday P/L</p>
                 <p className={`text-sm md:text-base font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Pending Tasks - Store-wise */}
+        <Card 
+          className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200/50 dark:border-amber-800/50 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate('/hrm/tasks')}
+        >
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/20 shrink-0">
+                <CheckSquare className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Pending Tasks</p>
+                <p className="text-sm md:text-base font-bold text-amber-600">
+                  {tasksLoading ? '...' : taskStats?.pending || 0}
                 </p>
               </div>
             </div>
