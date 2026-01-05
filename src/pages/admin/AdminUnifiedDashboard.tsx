@@ -148,29 +148,24 @@ export default function AdminUnifiedDashboard() {
     },
   });
 
-  // Ref. P/L - Product daybook sum (total quantity of confirmed products) - date filtered
+  // Ref. P/L - Sum of profit_loss from daily_records table - date filtered
   const { data: refPLData, isLoading: refPLLoading } = useQuery({
-    queryKey: ['ref-pl-product-sum', dateFrom, dateTo, storeId],
+    queryKey: ['ref-pl-daily-records-sum', dateFrom, dateTo, storeId],
     queryFn: async () => {
       if (!storeId) return 0;
 
-      // Get sum of product quantities from confirmed orders (CONFIRMED, DISPATCHED, DELIVERED)
       const { data, error } = await supabase
-        .from('order_items')
-        .select(`
-          quantity,
-          orders!inner (id, order_status, order_date, store_id, delivery_location, inside_delivery_status)
-        `)
-        .gte('orders.order_date', `${dateFrom}T00:00:00`)
-        .lte('orders.order_date', `${dateTo}T23:59:59`)
-        .eq('orders.store_id', storeId)
-        .in('orders.order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED']);
+        .from('daily_records')
+        .select('profit_loss')
+        .eq('store_id', storeId)
+        .gte('record_date', dateFrom)
+        .lte('record_date', dateTo);
 
       if (error) throw error;
       
-      // Sum all quantities
-      const totalQty = data?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
-      return totalQty;
+      // Sum all profit_loss values
+      const totalPL = data?.reduce((sum, item) => sum + (item.profit_loss || 0), 0) || 0;
+      return totalPL;
     },
     enabled: !!storeId,
   });
