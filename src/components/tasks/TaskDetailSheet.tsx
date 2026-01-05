@@ -140,13 +140,13 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               )}
             </div>
 
-            {/* Description */}
+            {/* Description - Highlighted */}
             {task.description && (
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                  📋 Task Details
                 </h4>
-                <p className="text-sm">{task.description}</p>
+                <p className="text-sm whitespace-pre-wrap">{task.description}</p>
               </div>
             )}
 
