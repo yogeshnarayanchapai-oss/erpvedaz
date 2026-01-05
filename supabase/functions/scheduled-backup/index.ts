@@ -162,11 +162,25 @@ serve(async (req) => {
     }
 
     console.log("📋 Parsing service account JSON...");
+    console.log("Raw JSON length:", serviceAccountJson.length);
+    console.log("First 50 chars:", serviceAccountJson.substring(0, 50));
+    
     let serviceAccount;
     try {
-      serviceAccount = JSON.parse(serviceAccountJson);
+      // Try to handle potential double-encoding
+      let jsonToParse = serviceAccountJson;
+      if (serviceAccountJson.startsWith('"') && serviceAccountJson.endsWith('"')) {
+        // If it's double-quoted, try parsing first to unescape
+        try {
+          jsonToParse = JSON.parse(serviceAccountJson);
+        } catch {
+          // Not double-encoded, use as-is
+        }
+      }
+      serviceAccount = typeof jsonToParse === 'string' ? JSON.parse(jsonToParse) : jsonToParse;
     } catch (parseError) {
       console.error("Failed to parse service account JSON:", parseError);
+      console.error("JSON content preview:", serviceAccountJson.substring(0, 200));
       throw new Error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON format - must be valid JSON");
     }
 
