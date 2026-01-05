@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useUpdateStockMovement, StockMovement } from '@/hooks/useStockMovements';
@@ -75,7 +75,7 @@ export default function StockMovements() {
     endDate: today,
     label: 'Last 7 Days',
   });
-  const [filters, setFilters] = useState({ warehouseId: 'all', productId: 'all', movementType: 'all' as any });
+  const [filters, setFilters] = useState({ warehouseId: 'all', productId: 'all', movementType: 'all' as any, remarkSearch: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);
   const [viewingMovement, setViewingMovement] = useState<StockMovement | null>(null);
@@ -126,6 +126,7 @@ export default function StockMovements() {
     warehouseId: filters.warehouseId,
     productId: filters.productId,
     movementType: filters.movementType !== 'all' ? filters.movementType : undefined,
+    remarkSearch: filters.remarkSearch || undefined,
   });
   const { data: warehouses } = useActiveWarehouses();
   const { data: products } = useProducts();
@@ -246,6 +247,8 @@ export default function StockMovements() {
       movement_source: isWholesaleOut ? 'WHOLESALE' : (form.movement_source || null),
       is_sale: isWholesaleOut ? true : (form.is_sale || null),
       sale_category: isWholesaleOut ? 'WHOLESALE' : (form.sale_category || null),
+      // Explicitly set party_id to null when undefined (fixes "none" selection not saving)
+      party_id: form.party_id || null,
       // For transfers, use from_warehouse as primary warehouse_id (stock decreases)
       warehouse_id: isTransfer ? form.from_warehouse_id : form.warehouse_id,
       from_warehouse_id: isTransfer ? form.from_warehouse_id : null,
@@ -308,7 +311,7 @@ export default function StockMovements() {
   };
 
   const clearFilters = () => {
-    setFilters({ warehouseId: 'all', productId: 'all', movementType: 'all' });
+    setFilters({ warehouseId: 'all', productId: 'all', movementType: 'all', remarkSearch: '' });
     setDateRange({ startDate: format(subDays(new Date(), 6), 'yyyy-MM-dd'), endDate: today, label: 'Last 7 Days' });
   };
 
@@ -600,6 +603,17 @@ export default function StockMovements() {
                   {MOVEMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Search Remark</Label>
+              <div className="flex gap-1">
+                <Input 
+                  placeholder="Search in remark..." 
+                  value={filters.remarkSearch} 
+                  onChange={(e) => setFilters({ ...filters, remarkSearch: e.target.value })}
+                  className="w-[180px]"
+                />
+              </div>
             </div>
             <Button variant="ghost" onClick={clearFilters}>
               <RefreshCw className="h-4 w-4 mr-1" />Clear
