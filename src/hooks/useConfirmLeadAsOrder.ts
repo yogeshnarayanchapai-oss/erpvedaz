@@ -173,7 +173,7 @@ export function useConfirmLeadAsOrder() {
         console.error('Failed to create order items:', itemsError);
       }
 
-      // Update lead status
+      // Update lead status and clear followup fields
       const { error: leadError } = await supabase
         .from('leads')
         .update({
@@ -181,6 +181,10 @@ export function useConfirmLeadAsOrder() {
           order_id: order.id,
           confirmed_by_user_id: user.id,
           confirmed_at: new Date().toISOString(),
+          // Clear followup fields when confirmed
+          followup_completed: true,
+          next_followup_at: null,
+          followup_reason: null,
         })
         .eq('id', input.leadId);
 
