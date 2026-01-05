@@ -35,6 +35,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminStaffTargets from "./pages/admin/AdminStaffTargets";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminDataTools from "./pages/admin/AdminDataTools";
+import SalesSettings from "./pages/admin/SalesSettings";
 import AdminBranding from "./pages/admin/AdminBranding";
 import Stores from "./pages/admin/Stores";
 import StoreDetail from "./pages/admin/StoreDetail";
@@ -229,6 +230,7 @@ const App = () => (
                 <Route path="/admin/accounting/assets" element={<AccountingAssets />} />
                 <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
                 <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
+                <Route path="/admin/sales-settings" element={<SalesSettings />} />
                 <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
                 <Route path="/admin/notifications" element={<AdminNotifications />} />
                 <Route path="/admin/branding" element={<AdminBranding />} />
