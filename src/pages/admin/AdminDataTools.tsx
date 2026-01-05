@@ -1,20 +1,79 @@
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Loader2, Cloud, ExternalLink, Clock, HardDrive } from 'lucide-react';
+import { Shield, Loader2, Cloud, ExternalLink, Clock, HardDrive, Upload, RotateCcw, AlertTriangle } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useBackupLogs, useLatestBackup, useTriggerBackup } from '@/hooks/useBackupLogs';
+import { useBackupLogs, useLatestBackup, useTriggerBackup, useRestoreBackup } from '@/hooks/useBackupLogs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 
 export default function AdminDataTools() {
   const { profile } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [pendingBackupData, setPendingBackupData] = useState<any>(null);
+  const [pendingFileName, setPendingFileName] = useState<string>('');
 
   // Backup hooks
   const { data: backupLogs = [], isLoading: logsLoading } = useBackupLogs();
   const { data: latestBackup } = useLatestBackup();
   const triggerBackup = useTriggerBackup();
+  const restoreBackup = useRestoreBackup();
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      toast.error('Invalid file', { description: 'Please upload a JSON backup file' });
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      const backupData = JSON.parse(content);
+
+      if (!backupData.backup_info || !backupData.tables) {
+        toast.error('Invalid backup file', { description: 'This file is not a valid Vedaz ERP backup' });
+        return;
+      }
+
+      setPendingBackupData(backupData);
+      setPendingFileName(file.name);
+      setRestoreDialogOpen(true);
+    } catch (error) {
+      toast.error('Failed to read file', { description: 'Could not parse the backup file' });
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Confirm restore
+  const handleConfirmRestore = () => {
+    if (pendingBackupData) {
+      restoreBackup.mutate({ backupData: pendingBackupData, restoreMode: 'merge' });
+    }
+    setRestoreDialogOpen(false);
+    setPendingBackupData(null);
+    setPendingFileName('');
+  };
 
   // Only OWNER can access this
   if (profile?.role !== 'OWNER') {
@@ -34,8 +93,8 @@ export default function AdminDataTools() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Backup</h1>
-        <p className="text-muted-foreground">Google Drive backup management</p>
+        <h1 className="text-2xl font-bold">Backup & Restore</h1>
+        <p className="text-muted-foreground">Daily automatic backup • Google Drive</p>
       </div>
 
       {/* Google Drive Auto Backup Section */}
@@ -46,12 +105,12 @@ export default function AdminDataTools() {
             Google Drive Backup
           </CardTitle>
           <CardDescription>
-            Automatic daily backup to Google Drive. Manual backup also available.
+            Automatic daily backup at midnight Nepal time. Each backup creates a new file.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Status and Manual Backup */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Status and Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Last Backup Status */}
             <div className="p-4 border rounded-lg bg-muted/30">
               <div className="flex items-center gap-2 mb-2">
@@ -86,7 +145,7 @@ export default function AdminDataTools() {
                 <span className="text-sm font-medium">Manual Backup</span>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Trigger an immediate backup to Google Drive
+                Create immediate backup to Google Drive
               </p>
               <Button 
                 onClick={() => triggerBackup.mutate()} 
@@ -99,6 +158,37 @@ export default function AdminDataTools() {
                   <Cloud className="w-4 h-4" />
                 )}
                 {triggerBackup.isPending ? 'Backing up...' : 'Backup Now'}
+              </Button>
+            </div>
+
+            {/* Restore Section */}
+            <div className="p-4 border rounded-lg bg-orange-500/5 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-2">
+                <RotateCcw className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-medium">Restore from Backup</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Upload a backup file to restore data
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button 
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={restoreBackup.isPending}
+                className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                {restoreBackup.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {restoreBackup.isPending ? 'Restoring...' : 'Upload & Restore'}
               </Button>
             </div>
           </div>
@@ -181,6 +271,41 @@ export default function AdminDataTools() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              Confirm Restore
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You are about to restore data from:</p>
+              <p className="font-mono text-sm bg-muted p-2 rounded">{pendingFileName}</p>
+              {pendingBackupData?.backup_info && (
+                <div className="text-sm space-y-1 mt-2">
+                  <p>• Backup date: {new Date(pendingBackupData.backup_info.timestamp).toLocaleString()}</p>
+                  <p>• Tables: {pendingBackupData.backup_info.tables_count}</p>
+                  <p>• Total rows: {pendingBackupData.backup_info.total_rows?.toLocaleString()}</p>
+                </div>
+              )}
+              <p className="text-orange-600 font-medium mt-4">
+                This will merge backup data with existing data. Existing records with same IDs will be updated.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmRestore}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Restore Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -182,9 +182,10 @@ serve(async (req) => {
       }
     }
 
-    // Create backup JSON
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const fileName = `vakari_backup_${timestamp}.json`;
+    // Create backup JSON with Nepal timezone
+    const nepalTime = new Date(Date.now() + (5.75 * 60 * 60 * 1000)); // UTC+5:45
+    const timestamp = nepalTime.toISOString().replace(/[:.]/g, "-");
+    const fileName = `vedaz_erp_backup_${timestamp}.json`;
     
     const backupContent = JSON.stringify({
       backup_info: {

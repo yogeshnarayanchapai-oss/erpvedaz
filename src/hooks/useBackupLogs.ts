@@ -79,3 +79,33 @@ export function useTriggerBackup() {
     },
   });
 }
+
+export function useRestoreBackup() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ backupData, restoreMode }: { backupData: any; restoreMode: 'merge' | 'replace' }) => {
+      const { data, error } = await supabase.functions.invoke('restore-backup', {
+        body: { 
+          backup_data: backupData, 
+          restore_mode: restoreMode,
+          user_id: user?.id 
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success('Restore completed successfully!', {
+        description: `${data.tables_restored} tables, ${data.total_rows?.toLocaleString()} rows restored`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
+    },
+    onError: (error: Error) => {
+      toast.error('Restore failed', { description: error.message });
+    },
+  });
+}
