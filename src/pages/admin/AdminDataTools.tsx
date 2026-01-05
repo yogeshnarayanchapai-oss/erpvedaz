@@ -12,8 +12,6 @@ import { toast } from 'sonner';
 import { Trash2, AlertTriangle, Shield, Download, FileSpreadsheet, Loader2, RotateCcw, CheckCircle2, Cloud, ExternalLink, Clock, HardDrive } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format, formatDistanceToNow } from 'date-fns';
-import { LeadSourcesManagement } from '@/components/admin/LeadSourcesManagement';
-import { OrderCopyFormatEditor } from '@/components/admin/OrderCopyFormatEditor';
 import { useBackupLogs, useLatestBackup, useTriggerBackup } from '@/hooks/useBackupLogs';
 
 interface ResetResult {
@@ -239,12 +237,6 @@ export default function AdminDataTools() {
         <h1 className="text-2xl font-bold">Data Tools</h1>
         <p className="text-muted-foreground">Administrative data management utilities</p>
       </div>
-
-      {/* Order Copy Format Editor */}
-      <OrderCopyFormatEditor />
-
-      {/* Lead Sources Management */}
-      <LeadSourcesManagement />
 
       {/* Google Drive Auto Backup Section */}
       <Card className="border-primary/30">

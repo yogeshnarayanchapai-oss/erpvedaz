@@ -212,6 +212,7 @@ const salesItems: MenuItem[] = [
     ]
   },
   { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
+  { title: 'Sales Settings', url: '/admin/sales-settings', icon: Settings2 },
   {
     title: 'Courier Integration',
     url: '/admin/logistics-dashboard',
