@@ -18,7 +18,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useTasks, useTaskStats, TaskStatus, TaskPriority, Task } from '@/hooks/useTasks';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useTasks, useTaskStats, useDeleteTask, TaskStatus, TaskPriority, Task } from '@/hooks/useTasks';
 import { useStaff } from '@/hooks/useStaff';
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
@@ -33,11 +49,18 @@ import {
   Eye,
   Calendar,
   Filter,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 
 export default function HRMTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: 'ALL' as TaskStatus | 'ALL',
     priority: 'ALL' as TaskPriority | 'ALL',
@@ -49,10 +72,29 @@ export default function HRMTasks() {
   const { data: tasks, isLoading } = useTasks(filters);
   const { data: stats } = useTaskStats(filters.dateFrom, filters.dateTo);
   const { data: staff } = useStaff();
+  const deleteTaskMutation = useDeleteTask();
 
   const handleViewTask = (task: Task) => {
     setSelectedTask(task);
     setSheetOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditTask(task);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteTask = (task: Task) => {
+    setDeleteTask(task);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTask) {
+      await deleteTaskMutation.mutateAsync(deleteTask.id);
+      setDeleteDialogOpen(false);
+      setDeleteTask(null);
+    }
   };
 
   const statCards = [
@@ -271,13 +313,30 @@ export default function HRMTasks() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewTask(task)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewTask(task)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditTask(task)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteTask(task)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -293,6 +352,37 @@ export default function HRMTasks() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />
+
+      {/* Edit Task Dialog */}
+      <CreateTaskDialog
+        editTask={editTask}
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) setEditTask(null);
+        }}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteTask?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

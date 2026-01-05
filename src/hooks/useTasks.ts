@@ -287,6 +287,45 @@ export function useCreateTask() {
   });
 }
 
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      taskId,
+      updates,
+    }: {
+      taskId: string;
+      updates: {
+        title?: string;
+        description?: string;
+        priority?: TaskPriority;
+        due_date?: string;
+        assigned_to_user_id?: string;
+      };
+    }) => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-stats'] });
+      toast.success('Task updated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to update task: ' + error.message);
+    },
+  });
+}
+
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
