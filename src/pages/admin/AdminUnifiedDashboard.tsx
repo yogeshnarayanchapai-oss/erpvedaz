@@ -312,33 +312,33 @@ const hrmMetrics = useMemo(() => {
       className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-0 shadow-sm bg-card/80 backdrop-blur-sm" 
       onClick={() => navigate(navigateTo)}
     >
-      <CardHeader className="p-2 pb-1 md:p-3 md:pb-1.5">
+      <CardHeader className="p-2 pb-1 md:p-4 md:pb-2">
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <div className={`p-1 md:p-1.5 rounded-md ${iconBg} shadow-md`}>
-              <Icon className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
+          <span className="flex items-center gap-2">
+            <div className={`p-1.5 md:p-2 rounded-lg ${iconBg} shadow-md`}>
+              <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
-            <span className="text-sm md:text-sm font-bold">{title}</span>
+            <span className="text-sm md:text-base font-bold">{title}</span>
           </span>
-          <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 p-2 md:p-3 md:pt-0">
+      <CardContent className="pt-0 p-2 md:p-4 md:pt-0">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-1 md:gap-1.5">
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-1 md:p-1.5 rounded-md bg-muted/30">
-                <Skeleton className="h-2 w-10 mb-0.5" />
-                <Skeleton className="h-3.5 w-14" />
+              <div key={i} className="p-2 md:p-3 rounded-lg bg-muted/30">
+                <Skeleton className="h-3 w-12 mb-1" />
+                <Skeleton className="h-5 w-16" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-1 md:gap-1.5">
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
             {metrics.map((m, i) => (
-              <div key={i} className="p-1 md:p-1.5 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors">
-                <p className="text-[8px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 truncate">{m.label}</p>
-                <p className={`text-[11px] md:text-sm font-bold truncate ${m.color || 'text-foreground'}`}>
+              <div key={i} className="p-2 md:p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">{m.label}</p>
+                <p className={`text-sm md:text-lg font-bold truncate ${m.color || 'text-foreground'}`}>
                   {m.value}
                 </p>
               </div>
