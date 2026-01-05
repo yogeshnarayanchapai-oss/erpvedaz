@@ -1,0 +1,238 @@
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  useMyTasks,
+  useMyTaskStats,
+  useUpdateTaskStatus,
+  TaskStatus,
+} from '@/hooks/useTasks';
+import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
+import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
+import { AddRemarkDialog } from '@/components/tasks/AddRemarkDialog';
+import {
+  ClipboardList,
+  Clock,
+  Loader2,
+  CheckCircle2,
+  MessageSquare,
+} from 'lucide-react';
+
+export default function MyTasks() {
+  const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+
+  const { data: tasks, isLoading } = useMyTasks();
+  const { data: stats } = useMyTaskStats();
+  const updateStatus = useUpdateTaskStatus();
+
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    await updateStatus.mutateAsync({ taskId, newStatus });
+  };
+
+  const handleAddRemark = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setRemarkDialogOpen(true);
+  };
+
+  const getAvailableStatuses = (currentStatus: TaskStatus): TaskStatus[] => {
+    switch (currentStatus) {
+      case 'PENDING':
+        return ['IN_PROGRESS'];
+      case 'IN_PROGRESS':
+        return ['COMPLETED'];
+      case 'COMPLETED':
+        return [];
+      default:
+        return [];
+    }
+  };
+
+  const statCards = [
+    {
+      title: 'Total Tasks',
+      value: stats?.total || 0,
+      icon: ClipboardList,
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      title: 'Pending',
+      value: stats?.pending || 0,
+      icon: Clock,
+      color: 'text-amber-600',
+      bg: 'bg-amber-500/10',
+    },
+    {
+      title: 'In Progress',
+      value: stats?.inProgress || 0,
+      icon: Loader2,
+      color: 'text-blue-600',
+      bg: 'bg-blue-500/10',
+    },
+    {
+      title: 'Completed',
+      value: stats?.completed || 0,
+      icon: CheckCircle2,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-500/10',
+    },
+  ];
+
+  return (
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold">My Tasks</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage and update your assigned tasks
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {statCards.map((stat) => (
+          <Card key={stat.title}>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 sm:p-3 rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {stat.title}
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Task Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your Tasks</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : tasks?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+              <ClipboardList className="h-10 w-10 mb-2" />
+              <p>No tasks assigned to you</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead className="hidden sm:table-cell">Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tasks?.map((task) => {
+                    const availableStatuses = getAvailableStatuses(task.status);
+                    const isCompleted = task.status === 'COMPLETED';
+
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium max-w-[200px] truncate">
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <TaskPriorityBadge priority={task.priority} />
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {format(new Date(task.due_date), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {isCompleted ? (
+                            <TaskStatusBadge status={task.status} />
+                          ) : (
+                            <Select
+                              value={task.status}
+                              onValueChange={(value) =>
+                                handleStatusChange(task.id, value as TaskStatus)
+                              }
+                              disabled={updateStatus.isPending}
+                            >
+                              <SelectTrigger className="w-[130px]">
+                                <SelectValue>
+                                  <TaskStatusBadge status={task.status} />
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={task.status} disabled>
+                                  <TaskStatusBadge status={task.status} />
+                                </SelectItem>
+                                {availableStatuses.map((status) => (
+                                  <SelectItem key={status} value={status}>
+                                    <TaskStatusBadge status={status} />
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddRemark(task.id)}
+                            disabled={isCompleted}
+                            title={isCompleted ? 'Cannot add remarks to completed tasks' : 'Add remark'}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AddRemarkDialog
+        taskId={selectedTaskId}
+        open={remarkDialogOpen}
+        onOpenChange={setRemarkDialogOpen}
+      />
+    </div>
+  );
+}

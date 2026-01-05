@@ -78,6 +78,7 @@ type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] }
 // My HR menu items for all staff
 const myHRItems: MenuItem[] = [
   { title: 'My HR', url: '/my-hr', icon: Briefcase },
+  { title: 'My Tasks', url: '/my-hr/tasks', icon: CheckSquare },
   { title: 'My Documents', url: '/my-hr/documents', icon: FileText },
   { title: 'My Attendance', url: '/my-hr/attendance', icon: Clock },
   { title: 'Leave Requests', url: '/my-hr/leave', icon: Calendar },
@@ -120,6 +121,7 @@ const marketingItems: MenuItem[] = [
 // HRM submenu for HR role
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
+  { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
   { title: 'Staff Documents', url: '/hrm/staff-documents', icon: FileText },
   { title: 'Payroll', url: '/hrm/payroll', icon: DollarSign },
   { title: 'HR Policies', url: '/hrm/policies', icon: ScrollText },
@@ -544,6 +546,8 @@ export function AppSidebar() {
     if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower.includes('inventory') || titleLower.includes('stock summary')) return badges.lowStock;
+    if (titleLower === 'my tasks') return badges.myTasks;
+    if (titleLower === 'my hr') return badges.myTasks;
     return 0;
   };
 
