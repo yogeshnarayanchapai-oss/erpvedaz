@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
-import { DateRange } from '@/hooks/useSalesByDateRange';
+import { DateRange, useProductDaybookByDateRange } from '@/hooks/useSalesByDateRange';
+import { useProducts } from '@/hooks/useProducts';
 import { useLeadDashboardStats, useOrderDashboardStats } from '@/hooks/useDashboardStats';
 import { useInventorySummaryByWarehouse } from '@/hooks/useInventorySummaryByWarehouse';
 import { useEmployees, useLeaveRequests } from '@/hooks/useHRM';
@@ -61,6 +62,9 @@ export default function AdminUnifiedDashboard() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
+  // Products data for daybook
+  const { data: products = [] } = useProducts();
+  
   // Sales data
   const { data: leadStats, isLoading: leadsLoading } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats, isLoading: ordersLoading } = useOrderDashboardStats(dateFrom, dateTo);
@@ -148,27 +152,21 @@ export default function AdminUnifiedDashboard() {
     },
   });
 
-  // Ref. P/L - Sum of profit_loss from daily_records table - date filtered
-  const { data: refPLData, isLoading: refPLLoading } = useQuery({
-    queryKey: ['ref-pl-daily-records-sum', dateFrom, dateTo, storeId],
-    queryFn: async () => {
-      if (!storeId) return 0;
-
-      const { data, error } = await supabase
-        .from('daily_records')
-        .select('profit_loss')
-        .eq('store_id', storeId)
-        .gte('record_date', dateFrom)
-        .lte('record_date', dateTo);
-
-      if (error) throw error;
-      
-      // Sum all profit_loss values
-      const totalPL = data?.reduce((sum, item) => sum + (item.profit_loss || 0), 0) || 0;
-      return totalPL;
-    },
-    enabled: !!storeId,
-  });
+  // Ref. P/L - Sum of P/L from Product Daybook (useProductDaybookByDateRange)
+  const productList = useMemo(() => products.map(p => ({
+    id: p.id,
+    name: p.name,
+    target_per_day: p.target_per_day,
+    cost_price: p.cost_price,
+    sell_price: p.sell_price,
+  })), [products]);
+  
+  const { data: productDaybook = [], isLoading: refPLLoading } = useProductDaybookByDateRange(dateRange, productList);
+  
+  // Sum all P/L values from product daybook
+  const refPLData = useMemo(() => {
+    return productDaybook.reduce((sum, item) => sum + (item.pl || 0), 0);
+  }, [productDaybook]);
 
   // Logistics stats for pending/total work
   const { data: logisticsStats, isLoading: logisticsLoading } = useLogisticsStats();
@@ -443,8 +441,8 @@ const hrmMetrics = useMemo(() => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Ref. P/L</p>
-                <p className="text-xl font-bold text-purple-600">
-                  {refPLLoading ? '...' : refPLData?.toLocaleString() || 0}
+                <p className={`text-xl font-bold ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {refPLLoading ? '...' : `₹${Math.round(refPLData).toLocaleString()}`}
                 </p>
               </div>
             </div>
