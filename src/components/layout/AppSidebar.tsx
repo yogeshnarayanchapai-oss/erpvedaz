@@ -370,6 +370,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',

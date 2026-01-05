@@ -30,6 +30,7 @@ import {
 import { useCreateTask, useUpdateTask, TaskPriority, Task } from '@/hooks/useTasks';
 import { useStaff } from '@/hooks/useStaff';
 import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -51,7 +52,20 @@ export function CreateTaskDialog({ editTask, open: controlledOpen, onOpenChange 
   const [internalOpen, setInternalOpen] = useState(false);
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const { data: staff } = useStaff();
+  const { data: allStaff } = useStaff();
+  const { data: managerStaff } = useStaff('MANAGER');
+
+  // Combine all staff with managers for assignment
+  const staff = useMemo(() => {
+    const allUsers = [...(allStaff || [])];
+    // Add managers who might not be in allStaff
+    managerStaff?.forEach(manager => {
+      if (!allUsers.find(u => u.id === manager.id)) {
+        allUsers.push(manager);
+      }
+    });
+    return allUsers.sort((a, b) => a.name.localeCompare(b.name));
+  }, [allStaff, managerStaff]);
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
