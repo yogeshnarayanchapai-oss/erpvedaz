@@ -74,9 +74,25 @@ export default function AdminUnifiedDashboard() {
   // Inventory data
   const { data: inventoryData, isLoading: inventoryLoading } = useInventorySummaryByWarehouse();
 
-  // HRM data
+// HRM data
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: leaveRequestsData } = useLeaveRequests();
+  
+  // Pending documents count for HRM
+  const { data: pendingDocsData } = useQuery({
+    queryKey: ['pending-hrm-documents', storeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('employee_documents')
+        .select('id, employees!employee_documents_employee_id_fkey(store_id)', { count: 'exact', head: true })
+        .eq('status', 'PENDING');
+      
+      // If store filter, we need to filter by employees.store_id
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+  });
 
   // Total ad spend from ad_spend_reference table (USD amount) - all dates, store-wise
   const { data: totalAdsRefData, isLoading: adsLoading } = useQuery({
@@ -174,14 +190,17 @@ export default function AdminUnifiedDashboard() {
     return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size, yesterdayProfit };
   }, [inventoryData, yesterdayPLData]);
 
-  const hrmMetrics = useMemo(() => {
+const hrmMetrics = useMemo(() => {
     const presentToday = attendanceData?.filter(a => a.status === 'Present').length || 0;
+    const pendingLeaveCount = leaveRequestsData?.filter(l => l.status === 'Pending').length || 0;
+    const pendingDocsCount = pendingDocsData || 0;
     return {
       activeEmployees: employeesData?.filter(e => e.status === 'Active').length || 0,
-      pendingLeave: leaveRequestsData?.filter(l => l.status === 'Pending').length || 0,
+      pendingLeave: pendingLeaveCount,
+      pendingHRM: pendingLeaveCount + pendingDocsCount,
       presentToday,
     };
-  }, [employeesData, leaveRequestsData, attendanceData]);
+  }, [employeesData, leaveRequestsData, attendanceData, pendingDocsData]);
 
   const marketingMetrics = useMemo(() => {
     // Total ads spend in USD from ad_spend_reference table (all dates)
@@ -371,9 +390,9 @@ export default function AdminUnifiedDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Pending Leave</p>
+                <p className="text-xs text-muted-foreground font-medium">Pending HRM</p>
                 <p className="text-xl font-bold text-blue-600">
-                  {hrmMetrics.pendingLeave}
+                  {hrmMetrics.pendingHRM}
                 </p>
               </div>
             </div>
@@ -452,7 +471,7 @@ export default function AdminUnifiedDashboard() {
           isLoading={employeesLoading}
           metrics={[
             { label: 'Employees', value: hrmMetrics.activeEmployees },
-            { label: 'Pending Leave', value: hrmMetrics.pendingLeave, color: hrmMetrics.pendingLeave > 0 ? 'text-orange-600' : undefined },
+            { label: 'Pending HRM', value: hrmMetrics.pendingHRM, color: hrmMetrics.pendingHRM > 0 ? 'text-orange-600' : undefined },
             { label: 'Present Today', value: hrmMetrics.presentToday, color: 'text-green-600' },
             { label: 'Active', value: `${hrmMetrics.activeEmployees} Staff` },
           ]}
