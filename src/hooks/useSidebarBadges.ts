@@ -13,6 +13,7 @@ export interface SidebarBadges {
   lowStock: number;
   pendingDocuments: number;
   todayAttendance: number;
+  myTasks: number;
 }
 
 export function useSidebarBadges() {
@@ -62,6 +63,15 @@ export function useSidebarBadges() {
           queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+          queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -72,9 +82,9 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
     queryFn: async (): Promise<SidebarBadges> => {
-      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0 };
+      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0 };
 
-      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0 };
+      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0 };
       const role = profile.role;
 
       // Fetch user view state for "unseen" calculations
@@ -202,6 +212,14 @@ export function useSidebarBadges() {
           .eq('status', 'PENDING');
         badges.pendingDocuments = docCount || 0;
       }
+
+      // My Tasks badge for all users
+      const { count: taskCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to_user_id', user.id)
+        .in('status', ['PENDING', 'IN_PROGRESS']);
+      badges.myTasks = taskCount || 0;
 
       return badges;
     },

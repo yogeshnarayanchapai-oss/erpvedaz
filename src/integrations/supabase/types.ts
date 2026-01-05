@@ -6241,6 +6241,160 @@ export type Database = {
         }
         Relationships: []
       }
+      task_remarks: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string | null
+          id: string
+          is_issue: boolean | null
+          remark: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          id?: string
+          is_issue?: boolean | null
+          remark: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          id?: string
+          is_issue?: boolean | null
+          remark?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_remarks_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_remarks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_status_history: {
+        Row: {
+          changed_at: string | null
+          changed_by_user_id: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["task_status"]
+          notes: string | null
+          old_status: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by_user_id?: string | null
+          id?: string
+          new_status: Database["public"]["Enums"]["task_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by_user_id?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["task_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_status_history_changed_by_user_id_fkey"
+            columns: ["changed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_status_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_by_user_id: string | null
+          assigned_to_user_id: string | null
+          attachment_url: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          store_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by_user_id?: string | null
+          assigned_to_user_id?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          store_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by_user_id?: string | null
+          assigned_to_user_id?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          store_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_by_user_id_fkey"
+            columns: ["assigned_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_certificates: {
         Row: {
           certificate_code: string
@@ -7112,6 +7266,8 @@ export type Database = {
         | "RTO_OUT"
         | "TRANSFER"
         | "WHOLESALE_OUT"
+      task_priority: "LOW" | "MEDIUM" | "HIGH"
+      task_status: "PENDING" | "IN_PROGRESS" | "COMPLETED"
       team_type: "LEADS" | "CALLING" | "FOLLOWUP"
       transaction_type: "INCOME" | "EXPENSE" | "TRANSFER"
     }
@@ -7351,6 +7507,8 @@ export const Constants = {
         "TRANSFER",
         "WHOLESALE_OUT",
       ],
+      task_priority: ["LOW", "MEDIUM", "HIGH"],
+      task_status: ["PENDING", "IN_PROGRESS", "COMPLETED"],
       team_type: ["LEADS", "CALLING", "FOLLOWUP"],
       transaction_type: ["INCOME", "EXPENSE", "TRANSFER"],
     },
