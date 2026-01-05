@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Calendar, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
@@ -22,6 +22,7 @@ export default function HRMLeave() {
   const updateRequest = useUpdateLeaveRequest();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [viewRequest, setViewRequest] = useState<typeof requests[0] | null>(null);
   const [form, setForm] = useState({
     employee_id: '',
     leave_type_id: '',
@@ -134,6 +135,9 @@ export default function HRMLeave() {
                   <TableCell>{r.total_days}</TableCell>
                   <TableCell><Badge variant="outline" className={statusColors[r.status]}>{r.status}</Badge></TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setViewRequest(r)} title="View Details">
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                     {r.status === 'Pending' && (
                       <>
                         <Button variant="ghost" size="icon" onClick={() => handleApprove(r.id)} title="Approve"><CheckCircle className="w-4 h-4 text-success" /></Button>
@@ -148,6 +152,73 @@ export default function HRMLeave() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* View Leave Request Dialog */}
+      <Dialog open={!!viewRequest} onOpenChange={(open) => !open && setViewRequest(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave Request Details</DialogTitle>
+          </DialogHeader>
+          {viewRequest && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Employee</Label>
+                  <p className="font-medium">{viewRequest.employees?.full_name || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Leave Type</Label>
+                  <p className="font-medium">{viewRequest.leave_types?.name || '-'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">From</Label>
+                  <p className="font-medium"><FormattedDate date={viewRequest.from_date} /></p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">To</Label>
+                  <p className="font-medium"><FormattedDate date={viewRequest.to_date} /></p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Total Days</Label>
+                  <p className="font-medium">{viewRequest.total_days}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
+                  <Badge variant="outline" className={statusColors[viewRequest.status]}>{viewRequest.status}</Badge>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Reason</Label>
+                <div className="mt-1 p-3 rounded-lg bg-muted/50 min-h-[60px]">
+                  <p className="text-sm whitespace-pre-wrap">{viewRequest.reason || 'No reason provided'}</p>
+                </div>
+              </div>
+              {viewRequest.status === 'Pending' && (
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    className="flex-1" 
+                    variant="outline" 
+                    onClick={() => { handleApprove(viewRequest.id); setViewRequest(null); }}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2 text-success" /> Approve
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    variant="outline" 
+                    onClick={() => { handleReject(viewRequest.id); setViewRequest(null); }}
+                  >
+                    <XCircle className="w-4 h-4 mr-2 text-destructive" /> Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
