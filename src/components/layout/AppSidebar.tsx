@@ -110,7 +110,6 @@ const logisticsItems: MenuItem[] = [
 // Marketing submenu for Admin
 const marketingItems: MenuItem[] = [
   { title: 'Ads Spend', url: '/admin/marketing/ads', icon: DollarSign },
-  { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
   { title: 'Influencer List', url: '/admin/marketing/influencers', icon: Users },
   { title: 'Campaigns', url: '/admin/marketing/campaigns', icon: Megaphone },
   { title: 'Video Production', url: '/admin/marketing/video-projects', icon: FileText },
@@ -118,10 +117,9 @@ const marketingItems: MenuItem[] = [
   { title: 'Marketing Reports', url: '/admin/marketing/reports', icon: BarChart3 },
 ];
 
-// HRM submenu for HR role (includes moved items: Notifications, Branding, Data Tools, Messaging, Knowledge Center)
+// HRM submenu for HR role (core HRM features only)
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
-  { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
   { title: 'Staff Documents', url: '/hrm/staff-documents', icon: FileText },
   { title: 'Payroll', url: '/hrm/payroll', icon: DollarSign },
   { title: 'HR Policies', url: '/hrm/policies', icon: ScrollText },
@@ -134,7 +132,10 @@ const hrmItems: MenuItem[] = [
   { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
   { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
-  { title: 'Notifications', url: '/admin/notifications', icon: Bell },
+];
+
+// Other submenu for Admin (Branding, Data Tools, Messaging, Knowledge Center)
+const otherItems: MenuItem[] = [
   { title: 'Branding', url: '/admin/branding', icon: Palette },
   { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
   {
@@ -238,6 +239,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -261,6 +263,13 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       url: '/hrm/employees',
       icon: Briefcase,
       children: hrmItems,
+    },
+    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
+    {
+      title: 'Other',
+      url: '/admin/branding',
+      icon: Settings2,
+      children: otherItems,
     },
   ],
   ADMIN: [
@@ -280,6 +289,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -303,6 +313,13 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       url: '/hrm/employees',
       icon: Briefcase,
       children: hrmItems,
+    },
+    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
+    {
+      title: 'Other',
+      url: '/admin/branding',
+      icon: Settings2,
+      children: otherItems,
     },
   ],
   HR: [
