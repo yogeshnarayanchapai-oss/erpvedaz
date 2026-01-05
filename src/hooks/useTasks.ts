@@ -32,7 +32,20 @@ export interface TaskRemark {
   remark: string;
   is_issue: boolean;
   created_at: string;
+  parent_remark_id: string | null;
   created_by?: { id: string; name: string } | null;
+  replies?: TaskRemark[];
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  url: string;
+  file_name: string;
+  uploaded_by_user_id: string | null;
+  store_id: string | null;
+  created_at: string;
+  uploaded_by?: { id: string; name: string } | null;
 }
 
 export interface TaskStatusHistory {
@@ -146,7 +159,7 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
   return useQuery({
     queryKey: ['task-stats', storeId, dateFrom, dateTo],
     queryFn: async () => {
-      let query = supabase.from('tasks').select('status');
+      let query = supabase.from('tasks').select('id, status');
 
       if (storeId) {
         query = query.eq('store_id', storeId);
@@ -164,11 +177,24 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
 
       if (error) throw error;
 
+      // Count tasks with issues
+      const taskIds = data?.map(t => t.id) || [];
+      let issueCount = 0;
+      if (taskIds.length > 0) {
+        const { count } = await supabase
+          .from('task_remarks')
+          .select('task_id', { count: 'exact', head: true })
+          .in('task_id', taskIds)
+          .eq('is_issue', true);
+        issueCount = count || 0;
+      }
+
       const stats = {
         total: data?.length || 0,
         pending: data?.filter((t) => t.status === 'PENDING').length || 0,
         inProgress: data?.filter((t) => t.status === 'IN_PROGRESS').length || 0,
         completed: data?.filter((t) => t.status === 'COMPLETED').length || 0,
+        issueCount,
       };
 
       return stats;
@@ -343,10 +369,12 @@ export function useAddTaskRemark() {
       taskId,
       remark,
       isIssue,
+      parentRemarkId,
     }: {
       taskId: string;
       remark: string;
       isIssue: boolean;
+      parentRemarkId?: string;
     }) => {
       const { data, error } = await supabase
         .from('task_remarks')
@@ -355,6 +383,7 @@ export function useAddTaskRemark() {
           remark,
           is_issue: isIssue,
           created_by_user_id: user?.id,
+          parent_remark_id: parentRemarkId || null,
         })
         .select()
         .single();
@@ -387,6 +416,38 @@ export function useAddTaskRemark() {
         }
       }
 
+      // If reply, notify the original remark author
+      if (parentRemarkId) {
+        const { data: parentRemark } = await supabase
+          .from('task_remarks')
+          .select('created_by_user_id')
+          .eq('id', parentRemarkId)
+          .single();
+
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('title, store_id')
+          .eq('id', taskId)
+          .single();
+
+        if (parentRemark?.created_by_user_id && parentRemark.created_by_user_id !== user?.id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', user?.id || '')
+            .single();
+
+          await supabase.from('notifications').insert({
+            target_user_id: parentRemark.created_by_user_id,
+            title: 'Reply to Your Remark',
+            message: `${profile?.name || 'Someone'} replied to your remark on "${task?.title || 'a task'}"`,
+            type: 'TASK_REMARK_REPLY',
+            store_id: task?.store_id,
+            actor_id: user?.id,
+          });
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -411,12 +472,82 @@ export function useTaskRemarks(taskId: string) {
           created_by:profiles!task_remarks_created_by_user_id_fkey(id, name)
         `)
         .eq('task_id', taskId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Organize into parent remarks and replies
+      const parentRemarks = (data || []).filter(r => !r.parent_remark_id);
+      const replies = (data || []).filter(r => r.parent_remark_id);
+
+      const remarksWithReplies = parentRemarks.map(parent => ({
+        ...parent,
+        replies: replies.filter(r => r.parent_remark_id === parent.id),
+      }));
+
+      return remarksWithReplies as TaskRemark[];
+    },
+    enabled: !!taskId,
+  });
+}
+
+export function useTaskAttachments(taskId: string) {
+  return useQuery({
+    queryKey: ['task-attachments', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_attachments')
+        .select(`
+          *,
+          uploaded_by:profiles!task_attachments_uploaded_by_user_id_fkey(id, name)
+        `)
+        .eq('task_id', taskId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as TaskRemark[];
+      return data as TaskAttachment[];
     },
     enabled: !!taskId,
+  });
+}
+
+export function useAddTaskAttachment() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const storeId = useCurrentStoreId();
+
+  return useMutation({
+    mutationFn: async ({
+      taskId,
+      url,
+      fileName,
+    }: {
+      taskId: string;
+      url: string;
+      fileName: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('task_attachments')
+        .insert({
+          task_id: taskId,
+          url,
+          file_name: fileName,
+          uploaded_by_user_id: user?.id,
+          store_id: storeId,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-attachments'] });
+      toast.success('Attachment added');
+    },
+    onError: (error) => {
+      toast.error('Failed to add attachment: ' + error.message);
+    },
   });
 }
 

@@ -16,9 +16,17 @@ interface AddRemarkDialogProps {
   taskId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  parentRemarkId?: string;
+  isReply?: boolean;
 }
 
-export function AddRemarkDialog({ taskId, open, onOpenChange }: AddRemarkDialogProps) {
+export function AddRemarkDialog({ 
+  taskId, 
+  open, 
+  onOpenChange, 
+  parentRemarkId,
+  isReply = false,
+}: AddRemarkDialogProps) {
   const [remark, setRemark] = useState('');
   const [isIssue, setIsIssue] = useState(false);
   const addRemark = useAddTaskRemark();
@@ -29,7 +37,8 @@ export function AddRemarkDialog({ taskId, open, onOpenChange }: AddRemarkDialogP
     await addRemark.mutateAsync({
       taskId,
       remark: remark.trim(),
-      isIssue,
+      isIssue: isReply ? false : isIssue,
+      parentRemarkId,
     });
 
     setRemark('');
@@ -41,37 +50,41 @@ export function AddRemarkDialog({ taskId, open, onOpenChange }: AddRemarkDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Remark</DialogTitle>
+          <DialogTitle>{isReply ? 'Reply to Remark' : 'Add Remark'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
             <Textarea
-              placeholder="Enter your remark or issue..."
+              placeholder={isReply ? "Enter your reply..." : "Enter your remark or issue..."}
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               rows={4}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isIssue"
-              checked={isIssue}
-              onCheckedChange={(checked) => setIsIssue(checked as boolean)}
-            />
-            <Label
-              htmlFor="isIssue"
-              className="flex items-center gap-2 text-sm cursor-pointer"
-            >
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              Mark as Issue
-            </Label>
-          </div>
+          {!isReply && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isIssue"
+                checked={isIssue}
+                onCheckedChange={(checked) => setIsIssue(checked as boolean)}
+              />
+              <Label
+                htmlFor="isIssue"
+                className="flex items-center gap-2 text-sm cursor-pointer"
+              >
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                Mark as Issue
+              </Label>
+            </div>
+          )}
 
-          <p className="text-xs text-muted-foreground">
-            Issues will be highlighted and notify the manager immediately.
-          </p>
+          {!isReply && (
+            <p className="text-xs text-muted-foreground">
+              Issues will be highlighted and notify the manager immediately.
+            </p>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -81,7 +94,7 @@ export function AddRemarkDialog({ taskId, open, onOpenChange }: AddRemarkDialogP
               onClick={handleSubmit}
               disabled={!remark.trim() || addRemark.isPending}
             >
-              {addRemark.isPending ? 'Adding...' : 'Add Remark'}
+              {addRemark.isPending ? (isReply ? 'Sending...' : 'Adding...') : (isReply ? 'Send Reply' : 'Add Remark')}
             </Button>
           </div>
         </div>

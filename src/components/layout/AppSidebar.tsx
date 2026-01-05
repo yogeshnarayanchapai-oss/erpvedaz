@@ -75,10 +75,9 @@ type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
-// My HR menu items for all staff
+// My HR menu items for all staff (without My Tasks - moved to main sidebar)
 const myHRItems: MenuItem[] = [
   { title: 'My HR', url: '/my-hr', icon: Briefcase },
-  { title: 'My Tasks', url: '/my-hr/tasks', icon: CheckSquare },
   { title: 'My Documents', url: '/my-hr/documents', icon: FileText },
   { title: 'My Attendance', url: '/my-hr/attendance', icon: Clock },
   { title: 'Leave Requests', url: '/my-hr/leave', icon: Calendar },
@@ -86,7 +85,6 @@ const myHRItems: MenuItem[] = [
   { title: 'Holidays', url: '/my-hr/holidays', icon: Calendar },
   { title: 'HR Policies', url: '/my-hr/policies', icon: ScrollText },
   { title: 'Notices', url: '/my-hr/notices', icon: Bell },
-  { title: 'Team Chat', url: '/my-hr/chat', icon: MessageSquare },
   { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },
 ];
 
@@ -118,7 +116,7 @@ const marketingItems: MenuItem[] = [
   { title: 'Marketing Reports', url: '/admin/marketing/reports', icon: BarChart3 },
 ];
 
-// HRM submenu for HR role
+// HRM submenu for HR role (removed Assets, Company & Bank, Team Chat)
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
   { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
@@ -130,11 +128,8 @@ const hrmItems: MenuItem[] = [
   { title: 'Leave Quota', url: '/hrm/leave-quota', icon: ClipboardList },
   { title: 'Notice Board', url: '/hrm/notices', icon: Bell },
   { title: 'Team Structure', url: '/hrm/team-structure', icon: Network },
-  { title: 'Company & Bank', url: '/hrm/company-info', icon: Building },
   { title: 'Salary Slips', url: '/hrm/salary-slips', icon: Receipt },
-  { title: 'Assets', url: '/hrm/assets', icon: Box },
   { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
-  { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
   { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
 ];
 
@@ -382,6 +377,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   MARKETING: [
     { title: 'Dashboard', url: '/marketing/dashboard', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Ads Spend', url: '/marketing/ads', icon: Megaphone },
     { title: 'Product Daybook', url: '/marketing/daybook', icon: BarChart3 },
     { title: 'Performance', url: '/marketing/performance', icon: TrendingUp },
@@ -400,6 +396,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   LEADS: [
     { title: 'Dashboard', url: '/leads/dashboard', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Leads', url: '/leads/all', icon: Phone },
     { title: 'Follow-up Queue', url: '/leads/followup', icon: UserCheck },
     { title: 'Reports', url: '/leads/reports', icon: FileText },
@@ -418,6 +415,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   CALLING: [
     { title: 'Dashboard', url: '/calling/dashboard', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'My Leads', url: '/calling/leads', icon: Phone },
     { title: 'My Orders', url: '/calling/orders', icon: ShoppingCart },
     { title: 'Reports', url: '/calling/reports', icon: FileText },
@@ -437,6 +435,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   // FOLLOWUP role now uses LOGISTICS portal menu
   FOLLOWUP: [
     { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
@@ -453,6 +452,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   LOGISTICS: [
     { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
@@ -469,6 +469,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   ACCOUNTANT: [
     { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'Accounting',
       url: '/admin/accounting/dashboard-new',
@@ -491,6 +492,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   WAREHOUSE: [
     { title: 'Dashboard', url: '/admin/inventory/stock-summary', icon: LayoutDashboard },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',

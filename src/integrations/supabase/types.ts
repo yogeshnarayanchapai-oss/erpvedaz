@@ -6241,12 +6241,65 @@ export type Database = {
         }
         Relationships: []
       }
+      task_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          id: string
+          store_id: string | null
+          task_id: string
+          uploaded_by_user_id: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          id?: string
+          store_id?: string | null
+          task_id: string
+          uploaded_by_user_id?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          id?: string
+          store_id?: string | null
+          task_id?: string
+          uploaded_by_user_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_remarks: {
         Row: {
           created_at: string | null
           created_by_user_id: string | null
           id: string
           is_issue: boolean | null
+          parent_remark_id: string | null
           remark: string
           task_id: string
         }
@@ -6255,6 +6308,7 @@ export type Database = {
           created_by_user_id?: string | null
           id?: string
           is_issue?: boolean | null
+          parent_remark_id?: string | null
           remark: string
           task_id: string
         }
@@ -6263,6 +6317,7 @@ export type Database = {
           created_by_user_id?: string | null
           id?: string
           is_issue?: boolean | null
+          parent_remark_id?: string | null
           remark?: string
           task_id?: string
         }
@@ -6272,6 +6327,13 @@ export type Database = {
             columns: ["created_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_remarks_parent_remark_id_fkey"
+            columns: ["parent_remark_id"]
+            isOneToOne: false
+            referencedRelation: "task_remarks"
             referencedColumns: ["id"]
           },
           {
