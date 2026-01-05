@@ -110,6 +110,7 @@ const logisticsItems: MenuItem[] = [
 // Marketing submenu for Admin
 const marketingItems: MenuItem[] = [
   { title: 'Ads Spend', url: '/admin/marketing/ads', icon: DollarSign },
+  { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
   { title: 'Influencer List', url: '/admin/marketing/influencers', icon: Users },
   { title: 'Campaigns', url: '/admin/marketing/campaigns', icon: Megaphone },
   { title: 'Video Production', url: '/admin/marketing/video-projects', icon: FileText },
@@ -117,7 +118,7 @@ const marketingItems: MenuItem[] = [
   { title: 'Marketing Reports', url: '/admin/marketing/reports', icon: BarChart3 },
 ];
 
-// HRM submenu for HR role (removed Assets, Company & Bank)
+// HRM submenu for HR role (includes moved items: Notifications, Branding, Data Tools, Messaging, Knowledge Center)
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
   { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
@@ -133,6 +134,29 @@ const hrmItems: MenuItem[] = [
   { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
   { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
+  { title: 'Notifications', url: '/admin/notifications', icon: Bell },
+  { title: 'Branding', url: '/admin/branding', icon: Palette },
+  { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
+  {
+    title: 'Messaging',
+    url: '/admin/messaging/channels',
+    icon: MessageSquare,
+    children: [
+      { title: 'Channels', url: '/admin/messaging/channels', icon: Send },
+      { title: 'Templates', url: '/admin/messaging/templates', icon: FileCode },
+      { title: 'Automation Rules', url: '/admin/messaging/rules', icon: Settings2 },
+      { title: 'Message Logs', url: '/admin/messaging/logs', icon: History },
+    ],
+  },
+  {
+    title: 'Knowledge Center',
+    url: '/hrm/knowledge-center',
+    icon: BookOpen,
+    children: [
+      { title: 'Courses', url: '/hrm/knowledge-center', icon: BookOpen },
+      { title: 'Reports', url: '/hrm/knowledge-center/reports', icon: BarChart3 },
+    ],
+  },
 ];
 
 // Knowledge Center submenu for Admin
@@ -232,21 +256,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Megaphone,
       children: marketingItems,
     },
-    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
-    { title: 'Branding', url: '/admin/branding', icon: Palette },
-    { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
-    {
-      title: 'Messaging',
-      url: '/admin/messaging/channels',
-      icon: MessageSquare,
-      children: messagingItems,
-    },
-    {
-      title: 'Knowledge Center',
-      url: '/hrm/knowledge-center',
-      icon: BookOpen,
-      children: knowledgeCenterItems,
-    },
     {
       title: 'HRM',
       url: '/hrm/employees',
@@ -288,20 +297,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       url: '/admin/marketing/ads',
       icon: Megaphone,
       children: marketingItems,
-    },
-    { title: 'Notifications', url: '/admin/notifications', icon: Bell },
-    { title: 'Data Tools', url: '/admin/data-tools', icon: Database },
-    {
-      title: 'Messaging',
-      url: '/admin/messaging/channels',
-      icon: MessageSquare,
-      children: messagingItems,
-    },
-    {
-      title: 'Knowledge Center',
-      url: '/hrm/knowledge-center',
-      icon: BookOpen,
-      children: knowledgeCenterItems,
     },
     {
       title: 'HRM',
@@ -379,7 +374,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   ],
   MARKETING: [
     { title: 'Dashboard', url: '/marketing/dashboard', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Ads Spend', url: '/marketing/ads', icon: Megaphone },
     { title: 'Product Daybook', url: '/marketing/daybook', icon: BarChart3 },
     { title: 'Performance', url: '/marketing/performance', icon: TrendingUp },
@@ -395,10 +389,10 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   LEADS: [
     { title: 'Dashboard', url: '/leads/dashboard', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Leads', url: '/leads/all', icon: Phone },
     { title: 'Follow-up Queue', url: '/leads/followup', icon: UserCheck },
     { title: 'Reports', url: '/leads/reports', icon: FileText },
@@ -414,10 +408,10 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   CALLING: [
     { title: 'Dashboard', url: '/calling/dashboard', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'My Leads', url: '/calling/leads', icon: Phone },
     { title: 'My Orders', url: '/calling/orders', icon: ShoppingCart },
     { title: 'Reports', url: '/calling/reports', icon: FileText },
@@ -433,11 +427,11 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   // FOLLOWUP role now uses LOGISTICS portal menu
   FOLLOWUP: [
     { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
@@ -451,10 +445,10 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   LOGISTICS: [
     { title: 'Dashboard', url: '/logistics/dashboard', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     { title: 'Orders', url: '/logistics/orders', icon: Truck },
     {
       title: 'My Training',
@@ -468,10 +462,10 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   ACCOUNTANT: [
     { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'Accounting',
       url: '/admin/accounting/dashboard-new',
@@ -491,10 +485,10 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   WAREHOUSE: [
     { title: 'Dashboard', url: '/admin/inventory/stock-summary', icon: LayoutDashboard },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -514,6 +508,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: myHRItems,
     },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
 };
 

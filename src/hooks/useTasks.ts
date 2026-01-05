@@ -177,14 +177,14 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
 
       if (error) throw error;
 
-      // Count tasks with issues
-      const taskIds = data?.map(t => t.id) || [];
+      // Count tasks with issues (only non-completed tasks)
+      const nonCompletedTaskIds = data?.filter(t => t.status !== 'COMPLETED').map(t => t.id) || [];
       let issueCount = 0;
-      if (taskIds.length > 0) {
+      if (nonCompletedTaskIds.length > 0) {
         const { count } = await supabase
           .from('task_remarks')
           .select('task_id', { count: 'exact', head: true })
-          .in('task_id', taskIds)
+          .in('task_id', nonCompletedTaskIds)
           .eq('is_issue', true);
         issueCount = count || 0;
       }
