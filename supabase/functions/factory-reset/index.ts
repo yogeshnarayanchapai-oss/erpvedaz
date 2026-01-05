@@ -32,7 +32,20 @@ serve(async (req: Request) => {
       throw new Error("Unauthorized");
     }
     
-    const { action, code } = await req.json();
+    const { action, code, store_id } = await req.json();
+    
+    // Get store info for display
+    let storeName = "the system";
+    if (store_id) {
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("name")
+        .eq("id", store_id)
+        .single();
+      if (storeData?.name) {
+        storeName = storeData.name;
+      }
+    }
     
     if (action === "send-code") {
       // Verify user is OWNER
@@ -65,7 +78,6 @@ serve(async (req: Request) => {
       }
       
       // Send email with code using Resend API
-      const resendApiKey = RESEND_API_KEY;
       if (!resendApiKey) {
         console.error("RESEND_API_KEY not configured");
         throw new Error("Email service not configured");
@@ -74,8 +86,8 @@ serve(async (req: Request) => {
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #dc2626;">⚠️ Factory Reset Request</h1>
-          <p>You have requested a <strong>FACTORY RESET</strong> for Vedaz ERP.</p>
-          <p><strong>This will permanently delete ALL data from the system including:</strong></p>
+          <p>You have requested a <strong>FACTORY RESET</strong> for <strong>${storeName}</strong> in Vedaz ERP.</p>
+          <p><strong>This will permanently delete ALL data from this store including:</strong></p>
           <ul>
             <li>All orders</li>
             <li>All leads</li>
@@ -106,7 +118,7 @@ serve(async (req: Request) => {
         body: JSON.stringify({
           from: "Vedaz ERP <noreply@vedaz.com.np>",
           to: [user.email!],
-          subject: "⚠️ Factory Reset Verification Code - Vedaz ERP",
+          subject: `⚠️ Factory Reset Verification Code - ${storeName} - Vedaz ERP`,
           html: emailHtml,
         }),
       });
@@ -127,6 +139,10 @@ serve(async (req: Request) => {
     } else if (action === "verify-and-reset") {
       if (!code) {
         throw new Error("Verification code is required");
+      }
+      
+      if (!store_id) {
+        throw new Error("Store ID is required for factory reset");
       }
       
       // Verify user is OWNER
@@ -162,9 +178,9 @@ serve(async (req: Request) => {
         .update({ used: true })
         .eq("id", codeData.id);
       
-      console.log("Starting factory reset for user:", user.id);
+      console.log(`Starting factory reset for store: ${store_id}`);
       
-      // Delete all data in correct order (respecting foreign keys)
+      // Delete all data in correct order (respecting foreign keys) - ONLY for this store
       const tablesToDelete = [
         // Dependent tables first
         "courier_updates",
@@ -176,6 +192,7 @@ serve(async (req: Request) => {
         "orders",
         "call_logs",
         "followup_logs",
+        "lead_transfers",
         "leads",
         "customer_notes",
         "customer_activity_log",
@@ -244,16 +261,17 @@ serve(async (req: Request) => {
       
       for (const table of tablesToDelete) {
         try {
+          // Delete only data for this specific store
           const { error } = await supabase
             .from(table)
             .delete()
-            .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all (workaround)
+            .eq("store_id", store_id);
           
           if (error) {
             console.error(`Failed to delete from ${table}:`, error.message);
             errors.push(`${table}: ${error.message}`);
           } else {
-            console.log(`Deleted all from ${table}`);
+            console.log(`Deleted all from ${table} for store ${store_id}`);
             deletedTables++;
           }
         } catch (e) {
@@ -262,7 +280,7 @@ serve(async (req: Request) => {
         }
       }
       
-      console.log(`Factory reset complete. Deleted from ${deletedTables} tables.`);
+      console.log(`Factory reset complete for store ${store_id}. Deleted from ${deletedTables} tables.`);
       if (errors.length > 0) {
         console.log("Some errors occurred:", errors);
       }
@@ -270,7 +288,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Factory reset completed",
+          message: `Factory reset completed for ${storeName}`,
           deletedTables,
           errors: errors.length > 0 ? errors : undefined
         }),
@@ -288,4 +306,3 @@ serve(async (req: Request) => {
     );
   }
 });
-

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Loader2, Cloud, ExternalLink, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, CheckCircle2, XCircle, Calendar, Bomb, Mail } from 'lucide-react';
+import { Shield, Loader2, Cloud, HardDrive, Upload, RotateCcw, AlertTriangle, Trash2, FileDown, CheckCircle2, XCircle, Calendar, Bomb, Mail } from 'lucide-react';
 import { useSendFactoryResetCode, useVerifyAndReset } from '@/hooks/useFactoryReset';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { format, formatDistanceToNow, subMonths, subYears } from 'date-fns';
@@ -276,17 +276,6 @@ export default function AdminDataTools() {
                     <p className="text-xs text-red-600 mt-1">
                       {latestBackup.error_message || 'Backup failed'}
                     </p>
-                  )}
-                  {latestBackup.google_drive_url && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                      onClick={() => window.open(latestBackup.google_drive_url!, '_blank')}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      View in Drive
-                    </Button>
                   )}
                 </div>
               ) : (

@@ -1,12 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { toast } from 'sonner';
 
 export function useSendFactoryResetCode() {
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('factory-reset', {
-        body: { action: 'send-code' }
+        body: { action: 'send-code', store_id: storeId }
       });
       
       if (error) throw new Error(error.message);
@@ -26,10 +29,12 @@ export function useSendFactoryResetCode() {
 }
 
 export function useVerifyAndReset() {
+  const storeId = useCurrentStoreId();
+
   return useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('factory-reset', {
-        body: { action: 'verify-and-reset', code }
+        body: { action: 'verify-and-reset', code, store_id: storeId }
       });
       
       if (error) throw new Error(error.message);
@@ -39,7 +44,7 @@ export function useVerifyAndReset() {
     },
     onSuccess: (data) => {
       toast.success('Factory reset completed', {
-        description: `System has been reset. ${data.deletedTables} tables cleared.`
+        description: `Store has been reset. ${data.deletedTables} tables cleared.`
       });
     },
     onError: (error: Error) => {
