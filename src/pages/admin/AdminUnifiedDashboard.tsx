@@ -312,33 +312,33 @@ const hrmMetrics = useMemo(() => {
       className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 shadow-md bg-card/80 backdrop-blur-sm" 
       onClick={() => navigate(navigateTo)}
     >
-      <CardHeader className="p-3 md:pb-3 md:p-6">
+      <CardHeader className="p-2 pb-1 md:p-4 md:pb-2">
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2 md:gap-3">
-            <div className={`p-2 md:p-3 rounded-lg md:rounded-xl ${iconBg} shadow-lg`}>
-              <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+          <span className="flex items-center gap-2">
+            <div className={`p-1.5 md:p-2 rounded-lg ${iconBg} shadow-lg`}>
+              <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
             </div>
-            <span className="text-base md:text-lg font-bold">{title}</span>
+            <span className="text-sm md:text-base font-bold">{title}</span>
           </span>
-          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+          <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 p-3 md:p-6 md:pt-0">
+      <CardContent className="pt-0 p-2 md:p-4 md:pt-0">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-muted/30">
-                <Skeleton className="h-2 md:h-3 w-12 md:w-16 mb-1 md:mb-2" />
-                <Skeleton className="h-4 md:h-6 w-16 md:w-20" />
+              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-muted/30">
+                <Skeleton className="h-2 w-10 mb-1" />
+                <Skeleton className="h-4 w-14" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
             {metrics.map((m, i) => (
-              <div key={i} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
-                <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5 md:mb-1 truncate">{m.label}</p>
-                <p className={`text-sm md:text-xl font-bold truncate ${m.color || 'text-foreground'}`}>
+              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                <p className="text-[9px] md:text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 truncate">{m.label}</p>
+                <p className={`text-xs md:text-base font-bold truncate ${m.color || 'text-foreground'}`}>
                   {m.value}
                 </p>
               </div>
@@ -350,14 +350,14 @@ const hrmMetrics = useMemo(() => {
   );
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-fade-in px-1 md:px-0">
+    <div className="space-y-3 md:space-y-4 animate-fade-in px-1 md:px-0">
       {/* Header with Date Filter and Quick Actions */}
-      <div className="flex flex-col gap-3 md:gap-4">
+      <div className="flex flex-col gap-2 md:gap-3">
         {/* Title Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="shrink-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Overview across all modules</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Overview across all modules</p>
           </div>
           <DashboardDateFilter value={dateRange} onChange={setDateRange} />
         </div>
@@ -409,17 +409,17 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Quick Summary Stats Bar - Responsive grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {/* Total Balance */}
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
-          <CardContent className="p-3 md:pt-4 md:pb-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 rounded-lg bg-green-500/20 shrink-0">
-                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-green-500/20 shrink-0">
+                <DollarSign className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Total Balance</p>
-                <p className="text-base md:text-xl font-bold text-green-600 truncate">
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Total Balance</p>
+                <p className="text-sm md:text-base font-bold text-green-600 truncate">
                   ₹{accountingMetricsComputed.totalAvailableBalance.toLocaleString()}
                 </p>
               </div>
@@ -429,14 +429,14 @@ const hrmMetrics = useMemo(() => {
         
         {/* Ref. P/L - Moved here (was Yesterday P/L position) */}
         <Card className={`bg-gradient-to-br ${refPLData >= 0 ? 'from-purple-500/10 to-purple-600/5 border-purple-200/50 dark:border-purple-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
-          <CardContent className="p-3 md:pt-4 md:pb-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${refPLData >= 0 ? 'bg-purple-500/20' : 'bg-red-500/20'}`}>
-                <TrendingUp className={`w-4 h-4 md:w-5 md:h-5 ${refPLData >= 0 ? 'text-purple-600' : 'text-red-600'}`} />
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg shrink-0 ${refPLData >= 0 ? 'bg-purple-500/20' : 'bg-red-500/20'}`}>
+                <TrendingUp className={`w-3.5 h-3.5 md:w-4 md:h-4 ${refPLData >= 0 ? 'text-purple-600' : 'text-red-600'}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Ref. P/L</p>
-                <p className={`text-base md:text-xl font-bold truncate ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Ref. P/L</p>
+                <p className={`text-sm md:text-base font-bold truncate ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {refPLLoading ? '...' : `₹${Math.round(refPLData).toLocaleString()}`}
                 </p>
               </div>
@@ -446,14 +446,14 @@ const hrmMetrics = useMemo(() => {
         
         {/* Low Stock Items */}
         <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-200/50 dark:border-orange-800/50">
-          <CardContent className="p-3 md:pt-4 md:pb-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 rounded-lg bg-orange-500/20 shrink-0">
-                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-orange-500/20 shrink-0">
+                <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Low Stock</p>
-                <p className="text-base md:text-xl font-bold text-orange-600">
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Low Stock</p>
+                <p className="text-sm md:text-base font-bold text-orange-600">
                   {inventoryMetrics.lowStock}
                 </p>
               </div>
@@ -463,14 +463,14 @@ const hrmMetrics = useMemo(() => {
         
         {/* Pending HRM */}
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200/50 dark:border-blue-800/50">
-          <CardContent className="p-3 md:pt-4 md:pb-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 rounded-lg bg-blue-500/20 shrink-0">
-                <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/20 shrink-0">
+                <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Pending HRM</p>
-                <p className="text-base md:text-xl font-bold text-blue-600">
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Pending HRM</p>
+                <p className="text-sm md:text-base font-bold text-blue-600">
                   {hrmMetrics.pendingHRM}
                 </p>
               </div>
@@ -480,14 +480,14 @@ const hrmMetrics = useMemo(() => {
         
         {/* Yesterday P/L - Moved to last position */}
         <Card className={`bg-gradient-to-br ${inventoryMetrics.yesterdayProfit >= 0 ? 'from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50' : 'from-red-500/10 to-red-600/5 border-red-200/50 dark:border-red-800/50'}`}>
-          <CardContent className="p-3 md:pt-4 md:pb-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${inventoryMetrics.yesterdayProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-                <BarChart3 className={`w-4 h-4 md:w-5 md:h-5 ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+          <CardContent className="p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg shrink-0 ${inventoryMetrics.yesterdayProfit >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                <BarChart3 className={`w-3.5 h-3.5 md:w-4 md:h-4 ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">Yesterday P/L</p>
-                <p className={`text-base md:text-xl font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Yesterday P/L</p>
+                <p className={`text-sm md:text-base font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
                 </p>
               </div>
@@ -497,7 +497,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Module Cards Grid - Responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 md:gap-3">
         {/* Sales Module */}
         <ModuleCard
           title="Sales"
