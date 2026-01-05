@@ -231,76 +231,55 @@ export default function AdminDataTools() {
             Google Drive Backup
           </CardTitle>
           <CardDescription>
-            Automatic daily backup at midnight Nepal time. Each backup replaces the previous one.
+            Automatic daily backup at midnight Nepal time
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Last Backup Status - Enhanced */}
+            {/* Last Backup Status */}
             <div className={`p-4 border rounded-lg ${isBackupSuccess ? 'bg-green-500/5 border-green-200' : latestBackup ? 'bg-red-500/5 border-red-200' : 'bg-muted/30'}`}>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 {isBackupSuccess ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
                 ) : latestBackup ? (
-                  <XCircle className="w-5 h-5 text-red-600" />
+                  <XCircle className="w-4 h-4 text-red-600" />
                 ) : (
-                  <Cloud className="w-5 h-5 text-muted-foreground" />
+                  <Cloud className="w-4 h-4 text-muted-foreground" />
                 )}
-                <span className="font-medium">Last Backup</span>
+                <span className="text-sm font-medium">Last Backup Status</span>
               </div>
               {latestBackup ? (
-                <div className="space-y-2">
-                  <Badge 
-                    variant="outline" 
-                    className={isBackupSuccess ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}
-                  >
-                    {latestBackup.status.toUpperCase()}
-                  </Badge>
-                  
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Date:</span>
-                      <span className="font-medium">{format(new Date(latestBackup.created_at), 'PPP')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Time:</span>
-                      <span>{format(new Date(latestBackup.created_at), 'p')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ago:</span>
-                      <span>{formatDistanceToNow(new Date(latestBackup.created_at), { addSuffix: true })}</span>
-                    </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant="outline" 
+                      className={isBackupSuccess ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}
+                    >
+                      {latestBackup.status.toUpperCase()}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(latestBackup.created_at), { addSuffix: true })}
+                    </span>
                   </div>
-
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(latestBackup.created_at), 'PPpp')}
+                  </p>
                   {isBackupSuccess ? (
-                    <div className="pt-2 border-t space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">File:</span>
-                        <span className="font-mono text-xs truncate max-w-[150px]" title={latestBackup.file_name || ''}>
-                          {latestBackup.file_name || 'N/A'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tables:</span>
-                        <span>{latestBackup.tables_backed_up}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Rows:</span>
-                        <span>{latestBackup.total_rows?.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Size:</span>
-                        <span>{((latestBackup.file_size || 0) / 1024 / 1024).toFixed(2)} MB</span>
-                      </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <span>{latestBackup.tables_backed_up} tables</span>
+                      <span>•</span>
+                      <span>{latestBackup.total_rows?.toLocaleString()} rows</span>
+                      <span>•</span>
+                      <span>{((latestBackup.file_size || 0) / 1024 / 1024).toFixed(2)} MB</span>
                     </div>
                   ) : (
-                    <p className="text-xs text-red-600 pt-2 border-t">
+                    <p className="text-xs text-red-600 mt-1">
                       {latestBackup.error_message || 'Backup failed'}
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-sm">No backups yet for this store</p>
+                <p className="text-muted-foreground text-sm">No backups yet</p>
               )}
             </div>
 
