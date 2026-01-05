@@ -117,6 +117,16 @@ export function useSidebarBadges() {
       // Notifications badge count - use unified notification hook for consistent logic
       badges.notifications = unreadCount || 0;
 
+      // Manager's pending tasks badge (show in Task Management)
+      if (role === 'MANAGER') {
+        const { count: managerTaskCount } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('assigned_to_user_id', user.id)
+          .in('status', ['PENDING', 'IN_PROGRESS']);
+        badges.myTasks = managerTaskCount || 0;
+      }
+
       if (role === 'ADMIN' || role === 'MANAGER') {
         // Unseen leads (created after last_seen_at) - filter by store_id
         const leadsLastSeen = viewState['all_leads'];

@@ -370,6 +370,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -584,6 +585,9 @@ export function AppSidebar() {
     
     // My Tasks: show Pending + In Progress count
     if (titleLower === 'my tasks') return badges.myTasks;
+    
+    // Task Management for MANAGER: show their pending tasks
+    if (titleLower === 'task management' && role === 'MANAGER') return badges.myTasks;
     
     // My HR for staff: show only admin action notifications
     const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);

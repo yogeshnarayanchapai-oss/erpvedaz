@@ -77,7 +77,16 @@ export default function HRMTasks() {
     dateTo: '',
   });
 
-  const { data: tasks, isLoading } = useTasks(filters);
+  const { data: tasksRaw, isLoading } = useTasks(filters);
+  
+  // Sort tasks: Manager's pending tasks first, then others
+  const tasks = tasksRaw ? [...tasksRaw].sort((a, b) => {
+    const aIsMyPending = a.assigned_to?.id === user?.id && a.status !== 'COMPLETED';
+    const bIsMyPending = b.assigned_to?.id === user?.id && b.status !== 'COMPLETED';
+    if (aIsMyPending && !bIsMyPending) return -1;
+    if (!aIsMyPending && bIsMyPending) return 1;
+    return 0;
+  }) : [];
   const { data: stats } = useTaskStats(filters.dateFrom, filters.dateTo);
   const { data: staff } = useStaff();
   const deleteTaskMutation = useDeleteTask();
@@ -342,23 +351,25 @@ export default function HRMTasks() {
                       </TableCell>
                       <TableCell>
                         {/* Manager can update status of their own tasks */}
-                        {isManager && isMyPendingTask(task) && getAvailableStatuses(task.status).length > 0 ? (
+                        {isManager && isMyPendingTask(task) ? (
                           <Select
                             value={task.status}
                             onValueChange={(value) => handleStatusChange(task, value as TaskStatus)}
+                            disabled={updateTaskStatus.isPending}
                           >
                             <SelectTrigger className="w-[130px] h-8">
-                              <SelectValue />
+                              <TaskStatusBadge status={task.status} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value={task.status}>
-                                <TaskStatusBadge status={task.status} />
+                              <SelectItem value="PENDING">
+                                <TaskStatusBadge status="PENDING" />
                               </SelectItem>
-                              {getAvailableStatuses(task.status).map((status) => (
-                                <SelectItem key={status} value={status}>
-                                  <TaskStatusBadge status={status} />
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="IN_PROGRESS">
+                                <TaskStatusBadge status="IN_PROGRESS" />
+                              </SelectItem>
+                              <SelectItem value="COMPLETED">
+                                <TaskStatusBadge status="COMPLETED" />
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
