@@ -25,7 +25,8 @@ import { SubmitToCourierModal } from '@/components/orders/SubmitToCourierModal';
 import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
-import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2 } from 'lucide-react';
+import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
@@ -851,52 +852,38 @@ export default function AdminOrders() {
                       })()}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/orders/${order.id}`)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
                             setEditingOrder(order);
                             setEditSheetOpen(true);
-                          }}
-                          className="h-8 w-8 p-0"
-                          title="Edit Order"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        {isAdmin && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                disabled={deletingOrderId === order.id}
-                                title="Delete Order"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Order?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will delete the order for {order.leads?.client_name || 'this customer'}. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteOrder(order.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
+                          }}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setDeletingOrderId(order.id);
+                                setDeleteConfirmOpen(true);
+                              }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                   );
@@ -944,18 +931,31 @@ export default function AdminOrders() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
+        setDeleteConfirmOpen(open);
+        if (!open) setDeletingOrderId(null);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Orders</AlertDialogTitle>
+            <AlertDialogTitle>Delete {deletingOrderId ? 'Order' : 'Orders'}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedOrders.size} order(s)? This action cannot be undone.
+              {deletingOrderId 
+                ? 'This will delete this order. This action cannot be undone.'
+                : `Are you sure you want to delete ${selectedOrders.size} order(s)? This action cannot be undone.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmBulkDelete}
+              onClick={() => {
+                if (deletingOrderId) {
+                  handleDeleteOrder(deletingOrderId);
+                  setDeleteConfirmOpen(false);
+                } else {
+                  confirmBulkDelete();
+                }
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={bulkDeleteOrders.isPending}
             >
