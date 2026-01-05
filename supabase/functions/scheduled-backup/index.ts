@@ -23,92 +23,56 @@ const TABLES_TO_BACKUP = [
   'chat_messages', 'chat_rooms', 'notifications'
 ];
 
-// Get Google OAuth token using service account
-async function getGoogleAccessToken(serviceAccount: any): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + 3600;
+// Get Google OAuth token using refresh token (for personal Gmail accounts)
+async function getGoogleAccessToken(): Promise<string> {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  const refreshToken = Deno.env.get("GOOGLE_REFRESH_TOKEN");
 
-  // Create JWT header and payload
-  const header = { alg: "RS256", typ: "JWT" };
-  const payload = {
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/drive.file",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: exp,
-    iat: now,
-  };
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Missing Google OAuth credentials (CLIENT_ID, CLIENT_SECRET, or REFRESH_TOKEN)");
+  }
 
-  // Base64URL encode
-  const encode = (obj: any) => {
-    const str = JSON.stringify(obj);
-    const bytes = new TextEncoder().encode(str);
-    return btoa(String.fromCharCode(...bytes))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-  };
+  console.log("🔑 Exchanging refresh token for access token...");
 
-  const headerB64 = encode(header);
-  const payloadB64 = encode(payload);
-  const unsignedToken = `${headerB64}.${payloadB64}`;
-
-  // Import the private key and sign
-  const pemContents = serviceAccount.private_key
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\n/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    new TextEncoder().encode(unsignedToken)
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  const jwt = `${unsignedToken}.${signatureB64}`;
-
-  // Exchange JWT for access token
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
   });
 
   const tokenData = await tokenResponse.json();
+  
   if (!tokenData.access_token) {
-    console.error("Token response:", tokenData);
+    console.error("Token response error:", tokenData);
     throw new Error(`Failed to get access token: ${tokenData.error_description || tokenData.error}`);
   }
 
+  console.log("✅ Access token obtained successfully");
   return tokenData.access_token;
 }
 
-// Upload file to Google Drive
+// Upload file to Google Drive (to root or My Drive if no folder specified)
 async function uploadToGoogleDrive(
   accessToken: string,
-  folderId: string,
+  folderId: string | null,
   fileName: string,
   content: string
 ): Promise<{ id: string; webViewLink: string }> {
-  const metadata = {
+  const metadata: { name: string; mimeType: string; parents?: string[] } = {
     name: fileName,
-    parents: [folderId],
     mimeType: "application/json",
   };
+
+  // Only add parents if folder ID is provided
+  if (folderId && folderId.trim() !== "") {
+    metadata.parents = [folderId];
+  }
 
   const boundary = "backup_boundary_" + Date.now();
   const body = 
@@ -135,7 +99,7 @@ async function uploadToGoogleDrive(
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Drive upload error:", errorText);
-    throw new Error(`Failed to upload to Google Drive: ${response.status}`);
+    throw new Error(`Failed to upload to Google Drive: ${response.status} - ${errorText}`);
   }
 
   return await response.json();
@@ -154,46 +118,10 @@ serve(async (req) => {
     // Get environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
-    const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
+    const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || null;
 
-    if (!serviceAccountJson || !driveFolderId) {
-      throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_FOLDER_ID");
-    }
+    console.log("📁 Drive folder ID:", driveFolderId || "(root/My Drive)");
 
-    console.log("📋 Parsing service account JSON...");
-    console.log("Raw JSON length:", serviceAccountJson.length);
-    console.log("First 50 chars:", serviceAccountJson.substring(0, 50));
-    
-    let serviceAccount;
-    try {
-      // Try to handle potential double-encoding
-      let jsonToParse = serviceAccountJson;
-      if (serviceAccountJson.startsWith('"') && serviceAccountJson.endsWith('"')) {
-        // If it's double-quoted, try parsing first to unescape
-        try {
-          jsonToParse = JSON.parse(serviceAccountJson);
-        } catch {
-          // Not double-encoded, use as-is
-        }
-      }
-      serviceAccount = typeof jsonToParse === 'string' ? JSON.parse(jsonToParse) : jsonToParse;
-    } catch (parseError) {
-      console.error("Failed to parse service account JSON:", parseError);
-      console.error("JSON content preview:", serviceAccountJson.substring(0, 200));
-      throw new Error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON format - must be valid JSON");
-    }
-
-    if (!serviceAccount.private_key) {
-      console.error("Service account structure:", Object.keys(serviceAccount));
-      throw new Error("Service account JSON missing private_key field");
-    }
-
-    if (!serviceAccount.client_email) {
-      throw new Error("Service account JSON missing client_email field");
-    }
-
-    console.log("✅ Service account parsed - client_email:", serviceAccount.client_email);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body for backup type
@@ -271,9 +199,9 @@ serve(async (req) => {
     const fileSize = new Blob([backupContent]).size;
     console.log(`📊 Backup size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
-    // Get Google access token
+    // Get Google access token using OAuth refresh token
     console.log("🔑 Getting Google access token...");
-    const accessToken = await getGoogleAccessToken(serviceAccount);
+    const accessToken = await getGoogleAccessToken();
 
     // Upload to Google Drive
     console.log("☁️ Uploading to Google Drive...");
