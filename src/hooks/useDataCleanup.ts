@@ -52,11 +52,14 @@ export function useLeadCleanupPreview(filters: CleanupFilters | null) {
         return 0;
       }
 
+      // Use 'date' field (lead date) instead of 'created_at' (row insertion time)
+      const cutoffDateStr = filters.cutoffDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
       let query = supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
         .eq('store_id', storeId)
-        .lt('created_at', filters.cutoffDate.toISOString());
+        .lt('date', cutoffDateStr);
 
       if (filters.status !== 'ALL') {
         query = query.eq('status', filters.status);
@@ -85,11 +88,14 @@ export function useExportAndDeleteLeadsFiltered() {
       }
 
       // First, get total count
+      // Use 'date' field (lead date) instead of 'created_at'
+      const cutoffDateStr = filters.cutoffDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
       let countQuery = supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
         .eq('store_id', storeId)
-        .lt('created_at', filters.cutoffDate.toISOString());
+        .lt('date', cutoffDateStr);
 
       if (filters.status !== 'ALL') {
         countQuery = countQuery.eq('status', filters.status);
@@ -112,7 +118,7 @@ export function useExportAndDeleteLeadsFiltered() {
           .from('leads')
           .select('*')
           .eq('store_id', storeId)
-          .lt('created_at', filters.cutoffDate.toISOString())
+          .lt('date', cutoffDateStr)
           .range(from, from + BATCH_SIZE - 1);
 
         if (filters.status !== 'ALL') {
