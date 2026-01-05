@@ -350,9 +350,9 @@ const hrmMetrics = useMemo(() => {
   );
 
   return (
-    <div className="space-y-2 md:space-y-3 animate-fade-in px-1 md:px-0">
+    <div className="min-h-full flex flex-col animate-fade-in px-1 md:px-0">
       {/* Header with Date Filter and Quick Actions */}
-      <div className="flex flex-col gap-2 md:gap-3">
+      <div className="flex flex-col gap-1.5 md:gap-2 mb-1.5 md:mb-2">
         {/* Title Row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="shrink-0">
@@ -409,7 +409,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Quick Summary Stats Bar - Responsive grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 md:gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 md:gap-1.5 mb-1.5 md:mb-2">
         {/* Total Balance */}
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
           <CardContent className="p-2 md:p-3">
@@ -496,8 +496,8 @@ const hrmMetrics = useMemo(() => {
         </Card>
       </div>
 
-      {/* Module Cards Grid - Responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 md:gap-2">
+      {/* Module Cards Grid - Responsive, flex-1 to fill remaining space */}
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1 md:gap-1.5 auto-rows-fr">
         {/* Sales Module */}
         <ModuleCard
           title="Sales"

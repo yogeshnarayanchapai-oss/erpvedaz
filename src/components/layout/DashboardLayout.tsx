@@ -263,8 +263,8 @@ function DashboardLayoutInner() {
             <h1 className="text-sm font-medium text-foreground truncate">{pageName}</h1>
           </div>
           
-          {/* Main content - responsive padding */}
-          <main className="flex-1 p-3 md:p-6 overflow-auto">
+          {/* Main content - responsive padding, full height */}
+          <main className="flex-1 p-2 md:p-4 overflow-auto flex flex-col">
             <Outlet />
           </main>
         </SidebarInset>
