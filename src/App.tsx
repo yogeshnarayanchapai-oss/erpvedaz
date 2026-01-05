@@ -286,6 +286,7 @@ const App = () => (
                 <Route path="/training/certificates" element={<MyCertificates />} />
                 <Route path="/my-hr" element={<MyHRDashboard />} />
                 <Route path="/my-hr/tasks" element={<MyTasks />} />
+                <Route path="/my-tasks" element={<MyTasks />} />
                 <Route path="/my-hr/documents" element={<MyHRDocuments />} />
                 <Route path="/my-hr/attendance" element={<MyHRAttendance />} />
                 <Route path="/my-hr/leave" element={<MyHRLeave />} />

@@ -84,6 +84,13 @@ export default function HRMTasks() {
       color: 'text-emerald-600',
       bg: 'bg-emerald-500/10',
     },
+    {
+      title: 'Issues',
+      value: stats?.issueCount || 0,
+      icon: AlertCircle,
+      color: 'text-red-600',
+      bg: 'bg-red-500/10',
+    },
   ];
 
   return (
@@ -100,7 +107,7 @@ export default function HRMTasks() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-4 sm:p-6">

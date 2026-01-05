@@ -212,8 +212,7 @@ export default function MyTasks() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleAddRemark(task.id)}
-                            disabled={isCompleted}
-                            title={isCompleted ? 'Cannot add remarks to completed tasks' : 'Add remark'}
+                            title="Add remark"
                           >
                             <MessageSquare className="h-4 w-4" />
                           </Button>
