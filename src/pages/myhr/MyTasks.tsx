@@ -29,6 +29,7 @@ import {
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { AddRemarkDialog } from '@/components/tasks/AddRemarkDialog';
+import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import {
   ClipboardList,
   Clock,
@@ -38,6 +39,7 @@ import {
   Link2,
   Plus,
   X,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,6 +49,8 @@ export default function MyTasks() {
   const [addLinkTaskId, setAddLinkTaskId] = useState<string | null>(null);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkName, setNewLinkName] = useState('');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   const { data: tasks, isLoading } = useMyTasks();
   const { data: stats } = useMyTaskStats();
@@ -60,6 +64,11 @@ export default function MyTasks() {
   const handleAddRemark = (taskId: string) => {
     setSelectedTaskId(taskId);
     setRemarkDialogOpen(true);
+  };
+
+  const handleViewTask = (task: Task) => {
+    setSelectedTask(task);
+    setDetailSheetOpen(true);
   };
 
   const handleAddLink = async (taskId: string) => {
@@ -245,6 +254,14 @@ export default function MyTasks() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleViewTask(task)}
+                                title="View details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => {
                                   if (addLinkTaskId === task.id) {
                                     setAddLinkTaskId(null);
@@ -318,6 +335,12 @@ export default function MyTasks() {
         taskId={selectedTaskId}
         open={remarkDialogOpen}
         onOpenChange={setRemarkDialogOpen}
+      />
+
+      <TaskDetailSheet
+        task={selectedTask}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
       />
     </div>
   );
