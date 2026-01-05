@@ -85,6 +85,7 @@ const myHRItems: MenuItem[] = [
   { title: 'Holidays', url: '/my-hr/holidays', icon: Calendar },
   { title: 'HR Policies', url: '/my-hr/policies', icon: ScrollText },
   { title: 'Notices', url: '/my-hr/notices', icon: Bell },
+  { title: 'Team Chat', url: '/my-hr/chat', icon: MessageSquare },
   { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },
 ];
 
@@ -116,7 +117,7 @@ const marketingItems: MenuItem[] = [
   { title: 'Marketing Reports', url: '/admin/marketing/reports', icon: BarChart3 },
 ];
 
-// HRM submenu for HR role (removed Assets, Company & Bank, Team Chat)
+// HRM submenu for HR role (removed Assets, Company & Bank)
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
   { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
@@ -130,6 +131,7 @@ const hrmItems: MenuItem[] = [
   { title: 'Team Structure', url: '/hrm/team-structure', icon: Network },
   { title: 'Salary Slips', url: '/hrm/salary-slips', icon: Receipt },
   { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
+  { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
   { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
 ];
 
