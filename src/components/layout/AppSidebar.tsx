@@ -540,14 +540,27 @@ export function AppSidebar() {
   const getBadgeCount = (title: string): number => {
     if (!badges) return 0;
     const titleLower = title.toLowerCase();
-    if (titleLower.includes('order')) return badges.orders;
+    
+    // My Tasks: show Pending + In Progress count
+    if (titleLower === 'my tasks') return badges.myTasks;
+    
+    // My HR for staff: show only admin action notifications
+    const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
+    if (titleLower === 'my hr' && isStaffRole) return badges.myHR;
+    
+    // My Orders for staff: NO badge
+    if (titleLower === 'my orders' && isStaffRole) return 0;
+    
+    // My Leads for CALLING: only NEW leads (handled in useSidebarBadges)
     if (titleLower.includes('lead') && !titleLower.includes('followup')) return badges.leads;
+    
+    // Admin/Manager badges
+    if (titleLower.includes('order')) return badges.orders;
     if (titleLower.includes('notification')) return badges.notifications;
     if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower.includes('inventory') || titleLower.includes('stock summary')) return badges.lowStock;
-    if (titleLower === 'my tasks') return badges.myTasks;
-    if (titleLower === 'my hr') return badges.myTasks;
+    
     return 0;
   };
 
