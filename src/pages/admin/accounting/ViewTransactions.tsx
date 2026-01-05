@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTransactions, Transaction, useDeleteTransaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
@@ -546,6 +547,88 @@ export default function ViewTransactions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Transaction Dialog */}
+      <Dialog open={!!viewingTransaction} onOpenChange={(open) => !open && setViewingTransaction(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+          </DialogHeader>
+          {viewingTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Transaction Code</Label>
+                  <p className="font-mono font-medium">{viewingTransaction.transaction_code || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Date</Label>
+                  <p className="font-medium">{format(new Date(viewingTransaction.date), 'dd/MM/yyyy')}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Type</Label>
+                  <div className="mt-1">
+                    <Badge className={getTypeColor(viewingTransaction.type)}>
+                      {viewingTransaction.type.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
+                  <div className="mt-1">
+                    <Badge variant={viewingTransaction.is_cleared ? 'default' : 'secondary'}>
+                      {viewingTransaction.is_cleared ? 'Cleared' : 'Pending'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-muted-foreground text-xs">Account</Label>
+                <p className="font-medium">
+                  {viewingTransaction.type === 'transfer'
+                    ? `${viewingTransaction.from_account?.name || 'N/A'} → ${viewingTransaction.to_account?.name || 'N/A'}`
+                    : viewingTransaction.account?.name || viewingTransaction.from_account?.name || viewingTransaction.to_account?.name || 'N/A'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Category</Label>
+                  <p className="font-medium">{viewingTransaction.transaction_categories?.name || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Party</Label>
+                  <p className="font-medium">{viewingTransaction.parties?.name || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Amount</Label>
+                  <p className="font-bold text-lg">NPR {viewingTransaction.amount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Reference No</Label>
+                  <p className="font-medium">{viewingTransaction.reference_no || '-'}</p>
+                </div>
+              </div>
+
+              {viewingTransaction.note && (
+                <div>
+                  <Label className="text-muted-foreground text-xs">Note</Label>
+                  <div className="mt-1 p-3 bg-muted/50 rounded-md">
+                    <p className="text-sm">{viewingTransaction.note}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
