@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-hrm-email]
 verify_jwt = false
+
+[functions.scheduled-backup]
+verify_jwt = false
