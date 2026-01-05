@@ -1254,6 +1254,57 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_logs: {
+        Row: {
+          backup_type: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          file_name: string | null
+          file_size: number | null
+          google_drive_id: string | null
+          google_drive_url: string | null
+          id: string
+          started_at: string
+          status: string
+          tables_backed_up: number | null
+          total_rows: number | null
+        }
+        Insert: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          google_drive_id?: string | null
+          google_drive_url?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          tables_backed_up?: number | null
+          total_rows?: number | null
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          google_drive_id?: string | null
+          google_drive_url?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          tables_backed_up?: number | null
+          total_rows?: number | null
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           area_covered: string | null
