@@ -57,18 +57,19 @@ async function getGoogleAccessToken(): Promise<string> {
   return tokenData.access_token;
 }
 
-// Search for existing backup file by name
+// Search for existing backup file by name pattern (store_name prefix)
 async function findExistingBackupFile(
   accessToken: string,
   folderId: string | null,
-  fileName: string
-): Promise<string | null> {
-  let query = `name='${fileName}' and trashed=false`;
+  storeName: string
+): Promise<{ id: string; name: string } | null> {
+  // Search for files starting with store name and ending with _backup.json
+  let query = `name contains '${storeName}_' and name contains '_backup.json' and trashed=false`;
   if (folderId) {
     query += ` and '${folderId}' in parents`;
   }
 
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)&orderBy=modifiedTime desc`;
   
   const response = await fetch(searchUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -81,8 +82,8 @@ async function findExistingBackupFile(
 
   const data = await response.json();
   if (data.files && data.files.length > 0) {
-    console.log(`📁 Found existing backup file: ${data.files[0].id}`);
-    return data.files[0].id;
+    console.log(`📁 Found existing backup file: ${data.files[0].name} (${data.files[0].id})`);
+    return { id: data.files[0].id, name: data.files[0].name };
   }
 
   return null;
@@ -184,6 +185,7 @@ serve(async (req) => {
     let backupType = "scheduled";
     let createdBy = null;
     let storeId = null;
+    let storeName = "Vedaz";
     let storeSlug = "vedaz";
     
     try {
@@ -203,10 +205,11 @@ serve(async (req) => {
         .eq("id", storeId)
         .single();
       
-      if (storeData?.slug) {
-        storeSlug = storeData.slug;
+      if (storeData) {
+        storeName = storeData.name || "Store";
+        storeSlug = storeData.slug || "store";
       }
-      console.log(`📦 Backing up store: ${storeData?.name || storeId}`);
+      console.log(`📦 Backing up store: ${storeName} (${storeId})`);
     } else {
       console.log("⚠️ No store_id provided, backing up default store");
     }
@@ -264,14 +267,18 @@ serve(async (req) => {
       }
     }
 
-    // Fixed file name for replacement (like WhatsApp)
-    const fileName = `${storeSlug}_erp_backup.json`;
+    // Format: StoreName_YYYY-MM-DD_backup.json
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const fileName = `${storeName}_${dateStr}_backup.json`;
     
     const backupContent = JSON.stringify({
       backup_info: {
         timestamp: new Date().toISOString(),
         store_id: storeId,
+        store_name: storeName,
         store_slug: storeSlug,
+        backup_date: dateStr,
         tables_count: tablesBackedUp,
         total_rows: totalRows,
         backup_type: backupType,
@@ -286,20 +293,27 @@ serve(async (req) => {
     console.log("🔑 Getting Google access token...");
     const accessToken = await getGoogleAccessToken();
 
-    // Check if backup file already exists
-    console.log(`🔍 Searching for existing backup file: ${fileName}`);
-    const existingFileId = await findExistingBackupFile(accessToken, driveFolderId, fileName);
+    // Check if backup file already exists for this store (will be replaced daily)
+    console.log(`🔍 Searching for existing backup file for store: ${storeName}`);
+    const existingFile = await findExistingBackupFile(accessToken, driveFolderId, storeName);
 
     let driveResult: { id: string; webViewLink: string };
 
-    if (existingFileId) {
-      // Update existing file (replace content)
-      console.log("☁️ Updating existing backup file in Google Drive...");
-      driveResult = await updateGoogleDriveFile(accessToken, existingFileId, backupContent);
-      console.log("✅ Updated existing file:", driveResult.id);
+    if (existingFile) {
+      // Delete old file first, then create new one with today's date
+      console.log(`🗑️ Deleting old backup file: ${existingFile.name}`);
+      await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      // Create new file with today's date
+      console.log(`☁️ Creating new backup file: ${fileName}`);
+      driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
+      console.log("✅ Created new file:", driveResult.id);
     } else {
       // Create new file
-      console.log("☁️ Creating new backup file in Google Drive...");
+      console.log(`☁️ Creating new backup file: ${fileName}`);
       driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
       console.log("✅ Created new file:", driveResult.id);
     }
