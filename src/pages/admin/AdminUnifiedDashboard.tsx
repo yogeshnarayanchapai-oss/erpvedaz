@@ -78,20 +78,34 @@ export default function AdminUnifiedDashboard() {
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: leaveRequestsData } = useLeaveRequests();
   
-  // Pending documents count for HRM
+  // Pending documents count for HRM - filter by store via employees table
   const { data: pendingDocsData } = useQuery({
     queryKey: ['pending-hrm-documents', storeId],
     queryFn: async () => {
-      let query = supabase
-        .from('employee_documents')
-        .select('id, employees!employee_documents_employee_id_fkey(store_id)', { count: 'exact', head: true })
-        .eq('status', 'PENDING');
+      if (!storeId) return 0;
       
-      // If store filter, we need to filter by employees.store_id
-      const { count, error } = await query;
+      // First get employee IDs for this store
+      const { data: storeEmployees, error: empError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('store_id', storeId);
+      
+      if (empError) throw empError;
+      if (!storeEmployees || storeEmployees.length === 0) return 0;
+      
+      const employeeIds = storeEmployees.map(e => e.id);
+      
+      // Then count pending documents for those employees
+      const { count, error } = await supabase
+        .from('employee_documents')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'PENDING')
+        .in('employee_id', employeeIds);
+      
       if (error) throw error;
       return count || 0;
     },
+    enabled: !!storeId,
   });
 
   // Total ad spend from ad_spend_reference table (USD amount) - all dates, store-wise
