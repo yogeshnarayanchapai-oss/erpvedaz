@@ -42,7 +42,7 @@ export interface StockMovement {
   parties?: { id: string; name: string };
 }
 
-interface MovementFilters {
+export interface MovementFilters {
   startDate?: string;
   endDate?: string;
   warehouseId?: string;
@@ -52,6 +52,7 @@ interface MovementFilters {
   saleCategory?: 'RETAIL' | 'WHOLESALE';
   storeId?: string;
   includeDeleted?: boolean; // For activity log - show all including deleted
+  remarkSearch?: string; // Search by remark text
 }
 
 export function useStockMovements(filters: MovementFilters = {}) {
@@ -99,6 +100,9 @@ export function useStockMovements(filters: MovementFilters = {}) {
       }
       if (filters.saleCategory) {
         query = query.eq('sale_category', filters.saleCategory);
+      }
+      if (filters.remarkSearch) {
+        query = query.ilike('remark', `%${filters.remarkSearch}%`);
       }
 
       const { data, error } = await query;
