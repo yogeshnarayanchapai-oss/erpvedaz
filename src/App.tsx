@@ -106,6 +106,7 @@ import HRMLeaveQuota from "./pages/hrm/HRMLeaveQuota";
 import HRMEmployeeDetail from "./pages/hrm/HRMEmployeeDetail";
 import HRMStaffDocuments from "./pages/hrm/HRMStaffDocuments";
 import HRMTasks from "./pages/hrm/HRMTasks";
+import HRMSettings from "./pages/hrm/HRMSettings";
 
 // Knowledge Center pages (HRM)
 import KnowledgeCenterCourses from "./pages/hrm/KnowledgeCenterCourses";
@@ -275,6 +276,7 @@ const App = () => (
                 <Route path="/hrm/attendance" element={<HRMAttendance />} />
                 <Route path="/hrm/chat" element={<HRMChat />} />
                 <Route path="/hrm/tasks" element={<HRMTasks />} />
+                <Route path="/hrm/settings" element={<HRMSettings />} />
                 <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
                 <Route path="/hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
                 <Route path="/hrm/knowledge-center/reports" element={<KnowledgeCenterReports />} />

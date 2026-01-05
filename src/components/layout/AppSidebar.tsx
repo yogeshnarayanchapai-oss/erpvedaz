@@ -135,6 +135,7 @@ const hrmItems: MenuItem[] = [
   { title: 'Assets', url: '/hrm/assets', icon: Box },
   { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
+  { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
 ];
 
 // Knowledge Center submenu for Admin
