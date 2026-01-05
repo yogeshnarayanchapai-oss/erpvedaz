@@ -586,8 +586,8 @@ export function AppSidebar() {
     // My Tasks: show Pending + In Progress count
     if (titleLower === 'my tasks') return badges.myTasks;
     
-    // Task Management for MANAGER: show their pending tasks
-    if (titleLower === 'task management' && role === 'MANAGER') return badges.myTasks;
+    // Task Management for ADMIN/MANAGER: show their pending tasks
+    if (titleLower === 'task management' && (role === 'ADMIN' || role === 'MANAGER')) return badges.myTasks;
     
     // My HR for staff: show only admin action notifications
     const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
