@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useDepartments, useBankAccounts } from '@/hooks/useHRM';
 import { useStaff } from '@/hooks/useStaff';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,10 @@ export default function HRMEmployees() {
   const deleteEmployee = useDeleteEmployee();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { effectiveRole } = useEffectiveRole();
+  
+  // Only OWNER, ADMIN, MANAGER can delete employees
+  const canDeleteEmployee = ['OWNER', 'ADMIN', 'MANAGER'].includes(effectiveRole);
 
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('all');
@@ -333,9 +338,11 @@ export default function HRMEmployees() {
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(e)}>
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(e.id)}>
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
+                  {canDeleteEmployee && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(e.id)}>
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
@@ -386,7 +393,9 @@ export default function HRMEmployees() {
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => navigate(`/hrm/employees/${e.id}`)} title="View Details"><Eye className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      {canDeleteEmployee && (
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
