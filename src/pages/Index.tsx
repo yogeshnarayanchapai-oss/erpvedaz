@@ -51,10 +51,9 @@ const Index = () => {
     }
 
     // Role-based route mapping (no store slug - context handles store)
-    // OWNER → Unified Dashboard, ADMIN → Sales Dashboard
     const routes: Record<AppRole, string> = {
       OWNER: '/admin/dashboard',
-      ADMIN: '/admin/sales/dashboard',
+      ADMIN: '/admin/dashboard',
       LEADS: '/leads/dashboard',
       CALLING: '/calling/dashboard',
       FOLLOWUP: '/followup/dashboard',
