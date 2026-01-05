@@ -309,36 +309,36 @@ const hrmMetrics = useMemo(() => {
     isLoading?: boolean;
   }) => (
     <Card 
-      className="hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 shadow-md bg-card/80 backdrop-blur-sm" 
+      className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-0 shadow-sm bg-card/80 backdrop-blur-sm" 
       onClick={() => navigate(navigateTo)}
     >
-      <CardHeader className="p-2 pb-1 md:p-4 md:pb-2">
+      <CardHeader className="p-2 pb-1 md:p-3 md:pb-1.5">
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <div className={`p-1.5 md:p-2 rounded-lg ${iconBg} shadow-lg`}>
-              <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
+          <span className="flex items-center gap-1.5">
+            <div className={`p-1 md:p-1.5 rounded-md ${iconBg} shadow-md`}>
+              <Icon className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
             </div>
-            <span className="text-sm md:text-base font-bold">{title}</span>
+            <span className="text-sm md:text-sm font-bold">{title}</span>
           </span>
-          <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+          <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 p-2 md:p-4 md:pt-0">
+      <CardContent className="pt-0 p-2 md:p-3 md:pt-0">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-2 gap-1 md:gap-1.5">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-muted/30">
-                <Skeleton className="h-2 w-10 mb-1" />
-                <Skeleton className="h-4 w-14" />
+              <div key={i} className="p-1 md:p-1.5 rounded-md bg-muted/30">
+                <Skeleton className="h-2 w-10 mb-0.5" />
+                <Skeleton className="h-3.5 w-14" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-2 gap-1 md:gap-1.5">
             {metrics.map((m, i) => (
-              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
-                <p className="text-[9px] md:text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 truncate">{m.label}</p>
-                <p className={`text-xs md:text-base font-bold truncate ${m.color || 'text-foreground'}`}>
+              <div key={i} className="p-1 md:p-1.5 rounded-md bg-muted/40 hover:bg-muted/60 transition-colors">
+                <p className="text-[8px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 truncate">{m.label}</p>
+                <p className={`text-[11px] md:text-sm font-bold truncate ${m.color || 'text-foreground'}`}>
                   {m.value}
                 </p>
               </div>
@@ -350,7 +350,7 @@ const hrmMetrics = useMemo(() => {
   );
 
   return (
-    <div className="space-y-3 md:space-y-4 animate-fade-in px-1 md:px-0">
+    <div className="space-y-2 md:space-y-3 animate-fade-in px-1 md:px-0">
       {/* Header with Date Filter and Quick Actions */}
       <div className="flex flex-col gap-2 md:gap-3">
         {/* Title Row */}
@@ -409,7 +409,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Quick Summary Stats Bar - Responsive grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 md:gap-2">
         {/* Total Balance */}
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200/50 dark:border-green-800/50">
           <CardContent className="p-2 md:p-3">
@@ -497,7 +497,7 @@ const hrmMetrics = useMemo(() => {
       </div>
 
       {/* Module Cards Grid - Responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 md:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 md:gap-2">
         {/* Sales Module */}
         <ModuleCard
           title="Sales"
