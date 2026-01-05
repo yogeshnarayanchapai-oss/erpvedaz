@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 import { sendHRMEmail, getAdminTeamEmails, getEmployeeEmail } from '@/lib/hrmEmailService';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 export type EmployeeDocType = 'PROFILE_PHOTO' | 'CITIZENSHIP_FRONT' | 'CITIZENSHIP_BACK' | 'PAN_CARD' | 'COMPANY_REQUIREMENT_DOC' | 'OTHER';
 export type EmployeeDocStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
@@ -58,14 +59,29 @@ export function useEmployeeDocuments(employeeId?: string) {
   });
 }
 
-// Hook to get all documents (for Admin/HR)
+// Hook to get all documents (for Admin/HR) - filtered by store
 export function useAllEmployeeDocuments(filters?: {
   status?: EmployeeDocStatus;
   docType?: EmployeeDocType;
 }) {
+  const storeId = useCurrentStoreId();
+
   return useQuery({
-    queryKey: ['all-employee-documents', filters],
+    queryKey: ['all-employee-documents', filters, storeId],
     queryFn: async () => {
+      if (!storeId) return [];
+
+      // First get employee IDs for this store
+      const { data: storeEmployees, error: empError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('store_id', storeId);
+
+      if (empError) throw empError;
+      if (!storeEmployees || storeEmployees.length === 0) return [];
+
+      const employeeIds = storeEmployees.map(e => e.id);
+
       let query = supabase
         .from('employee_documents')
         .select(`
@@ -74,6 +90,7 @@ export function useAllEmployeeDocuments(filters?: {
           verifier:profiles!employee_documents_verified_by_fkey(name),
           employee:employees!employee_documents_employee_id_fkey(full_name, position)
         `)
+        .in('employee_id', employeeIds)
         .order('uploaded_at', { ascending: false });
 
       if (filters?.status) {
@@ -87,6 +104,7 @@ export function useAllEmployeeDocuments(filters?: {
       if (error) throw error;
       return data as unknown as EmployeeDocument[];
     },
+    enabled: !!storeId,
   });
 }
 
