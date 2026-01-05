@@ -674,6 +674,78 @@ export function useLeaveTypes() {
   });
 }
 
+export function useCreateLeaveType() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
+  return useMutation({
+    mutationFn: async (input: { name: string; default_days_per_year: number }) => {
+      const { data, error } = await supabase.from('leave_types').insert({ ...input, store_id: storeId }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave_types'] });
+      toast.success('Leave type created');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
+export function useUpdateLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; default_days_per_year?: number }) => {
+      const { data, error } = await supabase.from('leave_types').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave_types'] });
+      toast.success('Leave type updated');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
+export function useDeleteLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('leave_types').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave_types'] });
+      toast.success('Leave type deleted');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
+export function useSeedDefaultLeaveTypes() {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+
+  return useMutation({
+    mutationFn: async () => {
+      const defaultTypes = [
+        { name: 'Sick Leave', default_days_per_year: 12, store_id: storeId },
+        { name: 'Casual Leave', default_days_per_year: 12, store_id: storeId },
+        { name: 'Unpaid Leave', default_days_per_year: 0, store_id: storeId },
+        { name: 'Others', default_days_per_year: 0, store_id: storeId },
+      ];
+      const { error } = await supabase.from('leave_types').insert(defaultTypes);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave_types'] });
+      toast.success('Default leave types added');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
 // Leave Requests
 export function useLeaveRequests(filters?: { status?: string; employeeId?: string }) {
   const storeId = useCurrentStoreId();
