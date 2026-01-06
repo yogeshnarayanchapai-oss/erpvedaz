@@ -89,33 +89,6 @@ async function findExistingBackupFile(
   return null;
 }
 
-// Update existing file content
-async function updateGoogleDriveFile(
-  accessToken: string,
-  fileId: string,
-  content: string
-): Promise<{ id: string; webViewLink: string }> {
-  const response = await fetch(
-    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,webViewLink`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: content,
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Drive update error:", errorText);
-    throw new Error(`Failed to update Google Drive file: ${response.status} - ${errorText}`);
-  }
-
-  return await response.json();
-}
-
 // Upload new file to Google Drive
 async function uploadToGoogleDrive(
   accessToken: string,
@@ -163,77 +136,40 @@ async function uploadToGoogleDrive(
   return await response.json();
 }
 
-serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+// Backup a single store
+async function backupStore(
+  supabase: any,
+  accessToken: string,
+  driveFolderId: string | null,
+  storeId: string,
+  storeName: string,
+  storeSlug: string,
+  backupType: string,
+  createdBy: string | null
+): Promise<{ success: boolean; error?: string; fileName?: string; totalRows?: number }> {
+  console.log(`\n📦 ===== Backing up store: ${storeName} (${storeId}) =====`);
+  
+  // Create backup log entry
+  const { data: logEntry, error: logError } = await supabase
+    .from("backup_logs")
+    .insert({
+      backup_type: backupType,
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      created_by: createdBy,
+      store_id: storeId,
+    })
+    .select()
+    .single();
+
+  if (logError) {
+    console.error("Failed to create log entry:", logError);
   }
 
-  const startTime = Date.now();
-  console.log("🚀 Starting database backup...");
+  const logId = logEntry?.id;
+  console.log("📝 Created backup log:", logId);
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || null;
-
-    console.log("📁 Drive folder ID:", driveFolderId || "(root/My Drive)");
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse request body for backup type and store_id
-    let backupType = "scheduled";
-    let createdBy = null;
-    let storeId = null;
-    let storeName = "Vedaz";
-    let storeSlug = "vedaz";
-    
-    try {
-      const body = await req.json();
-      backupType = body.trigger || "scheduled";
-      createdBy = body.user_id || null;
-      storeId = body.store_id || null;
-    } catch {
-      // Default to scheduled if no body
-    }
-
-    // Get store info for backup file naming
-    if (storeId) {
-      const { data: storeData } = await supabase
-        .from("stores")
-        .select("slug, name")
-        .eq("id", storeId)
-        .single();
-      
-      if (storeData) {
-        storeName = storeData.name || "Store";
-        storeSlug = storeData.slug || "store";
-      }
-      console.log(`📦 Backing up store: ${storeName} (${storeId})`);
-    } else {
-      console.log("⚠️ No store_id provided, backing up default store");
-    }
-
-    // Create backup log entry
-    const { data: logEntry, error: logError } = await supabase
-      .from("backup_logs")
-      .insert({
-        backup_type: backupType,
-        status: "in_progress",
-        started_at: new Date().toISOString(),
-        created_by: createdBy,
-        store_id: storeId,
-      })
-      .select()
-      .single();
-
-    if (logError) {
-      console.error("Failed to create log entry:", logError);
-    }
-
-    const logId = logEntry?.id;
-    console.log("📝 Created backup log:", logId);
-
     // Export all tables filtered by store_id
     const backupData: Record<string, any[]> = {};
     let totalRows = 0;
@@ -241,15 +177,7 @@ serve(async (req) => {
 
     for (const tableName of TABLES_TO_BACKUP) {
       try {
-        console.log(`📦 Exporting ${tableName}...`);
-        
-        let query = supabase.from(tableName).select("*");
-        
-        // Filter by store_id if provided
-        if (storeId) {
-          query = query.eq("store_id", storeId);
-        }
-        
+        let query = supabase.from(tableName).select("*").eq("store_id", storeId);
         const { data, error } = await query.limit(50000);
 
         if (error) {
@@ -259,7 +187,9 @@ serve(async (req) => {
           backupData[tableName] = data || [];
           totalRows += (data?.length || 0);
           tablesBackedUp++;
-          console.log(`✅ ${tableName}: ${data?.length || 0} rows`);
+          if (data && data.length > 0) {
+            console.log(`✅ ${tableName}: ${data.length} rows`);
+          }
         }
       } catch (err) {
         console.warn(`⚠️ Failed to export ${tableName}:`, err);
@@ -288,10 +218,6 @@ serve(async (req) => {
 
     const fileSize = new Blob([backupContent]).size;
     console.log(`📊 Backup size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
-
-    // Get Google access token
-    console.log("🔑 Getting Google access token...");
-    const accessToken = await getGoogleAccessToken();
 
     // Check if backup file already exists for this store (will be replaced daily)
     console.log(`🔍 Searching for existing backup file for store: ${storeName}`);
@@ -335,18 +261,163 @@ serve(async (req) => {
         .eq("id", logId);
     }
 
+    console.log(`✅ Store ${storeName} backup completed: ${totalRows} rows`);
+    return { success: true, fileName, totalRows };
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`❌ Store ${storeName} backup failed:`, errorMessage);
+
+    // Update log with failure
+    if (logId) {
+      await supabase
+        .from("backup_logs")
+        .update({
+          status: "failed",
+          error_message: errorMessage,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", logId);
+    }
+
+    return { success: false, error: errorMessage };
+  }
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+  console.log("🚀 Starting database backup...");
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || null;
+
+    console.log("📁 Drive folder ID:", driveFolderId || "(root/My Drive)");
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Parse request body for backup type and store_id
+    let backupType = "scheduled";
+    let createdBy = null;
+    let storeId = null;
+    
+    try {
+      const body = await req.json();
+      backupType = body.trigger || "scheduled";
+      createdBy = body.user_id || null;
+      storeId = body.store_id || null;
+    } catch {
+      // Default to scheduled if no body
+    }
+
+    // Get Google access token
+    console.log("🔑 Getting Google access token...");
+    const accessToken = await getGoogleAccessToken();
+
+    // If store_id provided, backup only that store (manual backup)
+    if (storeId) {
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("id, slug, name")
+        .eq("id", storeId)
+        .single();
+      
+      if (!storeData) {
+        throw new Error(`Store not found: ${storeId}`);
+      }
+
+      const result = await backupStore(
+        supabase,
+        accessToken,
+        driveFolderId,
+        storeData.id,
+        storeData.name || "Store",
+        storeData.slug || "store",
+        backupType === "scheduled" ? "manual" : backupType,
+        createdBy
+      );
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      
+      if (result.success) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Backup completed successfully",
+            file_name: result.fileName,
+            total_rows: result.totalRows,
+            duration_seconds: parseFloat(duration),
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200 
+          }
+        );
+      } else {
+        throw new Error(result.error);
+      }
+    }
+
+    // SCHEDULED BACKUP: Backup ALL stores
+    console.log("📦 Scheduled backup - backing up ALL stores...");
+    
+    const { data: stores, error: storesError } = await supabase
+      .from("stores")
+      .select("id, slug, name")
+      .order("name");
+
+    if (storesError) {
+      throw new Error(`Failed to fetch stores: ${storesError.message}`);
+    }
+
+    if (!stores || stores.length === 0) {
+      throw new Error("No stores found to backup");
+    }
+
+    console.log(`📋 Found ${stores.length} stores to backup`);
+
+    const results: { storeName: string; success: boolean; error?: string }[] = [];
+
+    for (const store of stores) {
+      const result = await backupStore(
+        supabase,
+        accessToken,
+        driveFolderId,
+        store.id,
+        store.name || "Store",
+        store.slug || "store",
+        "scheduled",
+        null
+      );
+      
+      results.push({
+        storeName: store.name,
+        success: result.success,
+        error: result.error,
+      });
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`🎉 Backup completed in ${duration}s`);
+
+    console.log(`\n🎉 Scheduled backup completed in ${duration}s`);
+    console.log(`✅ Success: ${successCount}/${stores.length} stores`);
+    if (failedCount > 0) {
+      console.log(`❌ Failed: ${failedCount} stores`);
+    }
 
     return new Response(
       JSON.stringify({
-        success: true,
-        message: "Backup completed successfully",
-        file_name: fileName,
-        file_size: fileSize,
-        tables_backed_up: tablesBackedUp,
-        total_rows: totalRows,
-        google_drive_id: driveResult.id,
+        success: failedCount === 0,
+        message: `Backed up ${successCount}/${stores.length} stores`,
+        results: results,
         duration_seconds: parseFloat(duration),
       }),
       { 
@@ -358,26 +429,6 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error("❌ Backup failed:", errorMessage);
-
-    // Try to update log with failure
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      await supabase
-        .from("backup_logs")
-        .update({
-          status: "failed",
-          error_message: errorMessage,
-          completed_at: new Date().toISOString(),
-        })
-        .eq("status", "in_progress")
-        .order("created_at", { ascending: false })
-        .limit(1);
-    } catch (e) {
-      console.error("Failed to update log:", e);
-    }
 
     return new Response(
       JSON.stringify({
