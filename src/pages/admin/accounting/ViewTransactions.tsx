@@ -181,18 +181,30 @@ export default function ViewTransactions() {
       : filteredTransactions;
       
     const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
-    const rows = dataToExport.map(t => [
-      t.transaction_code || '',
-      t.date,
-      t.type,
-      t.from_account?.name || t.to_account?.name || 'N/A',
-      t.transaction_categories?.name || 'N/A',
-      t.parties?.name || 'N/A',
-      t.amount.toString(),
-      t.reference_no || '',
-      t.is_cleared ? 'Yes' : 'No',
-      t.note || '',
-    ]);
+    const rows = dataToExport.map(t => {
+      // For transfers show both accounts, for income/expense use account field
+      let accountName = 'N/A';
+      if (t.type === 'transfer') {
+        const fromName = t.from_account?.name || '';
+        const toName = t.to_account?.name || '';
+        accountName = fromName && toName ? `${fromName} → ${toName}` : fromName || toName || 'N/A';
+      } else {
+        accountName = t.account?.name || t.from_account?.name || t.to_account?.name || 'N/A';
+      }
+      
+      return [
+        t.transaction_code || '',
+        t.date,
+        t.type,
+        accountName,
+        t.transaction_categories?.name || 'N/A',
+        t.parties?.name || 'N/A',
+        t.amount.toString(),
+        t.reference_no || '',
+        t.is_cleared ? 'Yes' : 'No',
+        t.note || '',
+      ];
+    });
 
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
