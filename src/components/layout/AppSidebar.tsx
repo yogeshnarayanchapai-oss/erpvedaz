@@ -568,15 +568,21 @@ export function AppSidebar() {
     return item.children.some(child => location.pathname === child.url);
   };
   
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    items.forEach(item => {
+  // Single-open accordion state: only one parent menu expanded at a time
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(() => {
+    // Initialize with the menu that has an active child
+    for (const item of items) {
       if (item.children && isChildActive(item)) {
-        initial[item.title] = true;
+        return item.title;
       }
-    });
-    return initial;
+    }
+    return null;
   });
+
+  // Handle accordion toggle - close others when opening a new one
+  const handleMenuToggle = (menuTitle: string, isOpen: boolean) => {
+    setExpandedMenu(isOpen ? menuTitle : null);
+  };
 
   // Get badge count for a menu item
   const getBadgeCount = (title: string): number => {
@@ -648,8 +654,8 @@ export function AppSidebar() {
                 return item.children ? (
                   <Collapsible
                     key={item.title}
-                    open={openMenus[item.title]}
-                    onOpenChange={(open) => setOpenMenus(prev => ({ ...prev, [item.title]: open }))}
+                    open={expandedMenu === item.title}
+                    onOpenChange={(open) => handleMenuToggle(item.title, open)}
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
@@ -661,7 +667,7 @@ export function AppSidebar() {
                           <item.icon className="w-4 h-4" />
                           <span className="text-sm flex-1 text-left">{item.title}</span>
                           <SidebarBadge count={badgeCount} />
-                          <ChevronDown className={`w-4 h-4 transition-transform ${openMenus[item.title] ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`w-4 h-4 transition-transform ${expandedMenu === item.title ? 'rotate-180' : ''}`} />
                         </button>
                       </CollapsibleTrigger>
                     </SidebarMenuItem>
