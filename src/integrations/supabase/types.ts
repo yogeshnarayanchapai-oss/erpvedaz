@@ -4944,6 +4944,69 @@ export type Database = {
           },
         ]
       }
+      party_transaction_changes: {
+        Row: {
+          change_reason: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_amount: number
+          new_qty: number | null
+          new_rate: number | null
+          party_transaction_id: string | null
+          previous_amount: number
+          previous_qty: number | null
+          previous_rate: number | null
+          stock_movement_id: string | null
+          store_id: string | null
+        }
+        Insert: {
+          change_reason: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_amount: number
+          new_qty?: number | null
+          new_rate?: number | null
+          party_transaction_id?: string | null
+          previous_amount: number
+          previous_qty?: number | null
+          previous_rate?: number | null
+          stock_movement_id?: string | null
+          store_id?: string | null
+        }
+        Update: {
+          change_reason?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_amount?: number
+          new_qty?: number | null
+          new_rate?: number | null
+          party_transaction_id?: string | null
+          previous_amount?: number
+          previous_qty?: number | null
+          previous_rate?: number | null
+          stock_movement_id?: string | null
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_transaction_changes_party_transaction_id_fkey"
+            columns: ["party_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "party_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_transaction_changes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_transactions: {
         Row: {
           amount: number

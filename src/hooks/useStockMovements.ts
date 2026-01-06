@@ -196,9 +196,20 @@ export function useUpdateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['daily_pl'] });
+      // Sync party ledger after stock edit
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       toast.success('Movement updated');
     },
-    onError: (error) => toast.error(`Failed: ${error.message}`),
+    onError: (error) => {
+      // Show specific error message for cleared transactions
+      if (error.message.includes('already cleared')) {
+        toast.error(error.message);
+      } else {
+        toast.error(`Failed: ${error.message}`);
+      }
+    },
   });
 }
 
@@ -221,8 +232,19 @@ export function useDeleteStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventory_summary_warehouse'] });
       queryClient.invalidateQueries({ queryKey: ['daily_pl'] });
+      // Sync party ledger after stock delete
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       toast.success('Movement deleted');
     },
-    onError: (error) => toast.error(`Failed: ${error.message}`),
+    onError: (error) => {
+      // Show specific error message for cleared transactions
+      if (error.message.includes('already cleared')) {
+        toast.error(error.message);
+      } else {
+        toast.error(`Failed: ${error.message}`);
+      }
+    },
   });
 }
