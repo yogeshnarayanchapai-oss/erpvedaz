@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -313,7 +313,7 @@ async function backupStore(
           backupData[tableName] = [];
         } else if (data && data.length > 0) {
           // Enrich each row with human-readable names
-          const enrichedData = data.map(row => enrichRow(row, lookupMaps));
+          const enrichedData = data.map((row: Record<string, unknown>) => enrichRow(row, lookupMaps));
           backupData[tableName] = enrichedData;
           totalRows += data.length;
           tablesBackedUp++;
