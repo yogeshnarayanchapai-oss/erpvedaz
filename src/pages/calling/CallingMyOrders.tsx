@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useOrders, Order } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
@@ -46,8 +46,7 @@ export default function CallingMyOrders() {
   // Read status filter from URL
   const urlStatus = searchParams.get('status');
 
-  // Date range state - show all orders when coming from dashboard with status filter
-  const [activeTab, setActiveTab] = useState<'today' | 'yesterday' | 'all'>(urlStatus ? 'all' : 'today');
+  // Date range state
   const [dateRange, setDateRange] = useState<DateRange>({
     from: urlStatus ? startOfDay(subDays(today, 30)) : startOfDay(today),
     to: endOfDay(today),
@@ -55,46 +54,30 @@ export default function CallingMyOrders() {
 
   // Filter states - initialize from URL if present
   const [search, setSearch] = useState('');
-  const [logisticIdSearch, setLogisticIdSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>(urlStatus || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
-  const [selectedPayment, setSelectedPayment] = useState<string>('all');
+  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<string>('all');
 
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  // Fetch products for filter
+  const { data: products = [] } = useProducts();
 
   // Sync status filter with URL params when URL changes
   useEffect(() => {
     const status = searchParams.get('status');
     if (status) {
       setSelectedStatus(status);
-      setActiveTab('all');
     }
   }, [searchParams]);
 
-  // Update date range when tab changes (only if not from URL)
-  useEffect(() => {
-    if (activeTab === 'today') {
-      setDateRange({
-        from: startOfDay(new Date()),
-        to: endOfDay(new Date()),
-      });
-    } else if (activeTab === 'yesterday') {
-      const yesterday = subDays(new Date(), 1);
-      setDateRange({
-        from: startOfDay(yesterday),
-        to: endOfDay(yesterday),
-      });
-    } else if (!urlStatus) {
-      setDateRange({
-        from: startOfDay(subDays(new Date(), 30)),
-        to: endOfDay(new Date()),
-      });
-    }
-  }, [activeTab, urlStatus]);
+  // Determine if search is active (global search mode)
+  const isSearchActive = search.trim().length > 0;
 
-  const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
-  const dateTo = format(dateRange.to, 'yyyy-MM-dd');
+  const dateFrom = isSearchActive ? '2020-01-01' : format(dateRange.from, 'yyyy-MM-dd');
+  const dateTo = isSearchActive ? format(new Date(), 'yyyy-MM-dd') : format(dateRange.to, 'yyyy-MM-dd');
 
   const { data: orders = [], isLoading } = useOrders({
     salesPersonId: profile?.id,
@@ -102,27 +85,21 @@ export default function CallingMyOrders() {
     dateTo,
   });
 
-  // Global search for logistic_order_id across all orders
-  const { data: globalSearchOrders = [] } = useOrders({
-    dateFrom: '2020-01-01',
-    dateTo: format(new Date(), 'yyyy-MM-dd'),
-  });
-
   const filteredOrders = useMemo(() => {
-    // If logistic ID search is active, search globally
-    if (logisticIdSearch && logisticIdSearch.trim().length > 0) {
-      const searchLower = logisticIdSearch.toLowerCase();
-      return globalSearchOrders.filter((order) =>
-        order.logistic_order_id?.toLowerCase().includes(searchLower)
-      ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }
-
     return orders.filter((order) => {
       const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
-      const matchesPayment = selectedPayment === 'all' || 
-        (selectedPayment === 'COD' && order.is_cod) || 
-        (selectedPayment === 'ONLINE' && !order.is_cod);
+      
+      // Delivery status filter (only applies for Inside Valley)
+      const matchesDeliveryStatus = selectedDeliveryStatus === 'all' || 
+        (selectedDelivery === 'INSIDE_VALLEY' && order.inside_delivery_status === selectedDeliveryStatus);
+      
+      // Product filter
+      const orderItems = (order as any).order_items || [];
+      const orderProductIds = orderItems.length > 0 
+        ? orderItems.map((item: any) => item.product_id)
+        : [order.product_id];
+      const matchesProduct = selectedProduct === 'all' || orderProductIds.includes(selectedProduct);
       
       // Check for reference ID search
       const matchesRefId = isReferenceIdSearch(search) && matchesReferenceId(order.leads?.reference_id, search);
@@ -134,9 +111,10 @@ export default function CallingMyOrders() {
         order.leads?.contact_number?.includes(search) ||
         order.id.toLowerCase().includes(search.toLowerCase()) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
-      return matchesStatus && matchesDelivery && matchesPayment && matchesSearch;
+      
+      return matchesStatus && matchesDelivery && matchesDeliveryStatus && matchesProduct && matchesSearch;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, globalSearchOrders, selectedStatus, selectedDelivery, selectedPayment, search, logisticIdSearch]);
+  }, [orders, selectedStatus, selectedDelivery, selectedDeliveryStatus, selectedProduct, search]);
 
   // Helper to calculate order total from order_items or fallback
   const getOrderTotal = (order: any) => {
@@ -169,11 +147,14 @@ export default function CallingMyOrders() {
 
   const handleReset = () => {
     setSearch('');
-    setLogisticIdSearch('');
     setSelectedStatus('all');
     setSelectedDelivery('all');
-    setSelectedPayment('all');
-    setActiveTab('today');
+    setSelectedDeliveryStatus('all');
+    setSelectedProduct('all');
+    setDateRange({
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date()),
+    });
   };
 
   const handleInsideValleyClick = () => {
@@ -281,19 +262,10 @@ export default function CallingMyOrders() {
           <h1 className="text-2xl font-bold">My Orders</h1>
           <p className="text-muted-foreground">Orders you have confirmed</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="yesterday">Yesterday</TabsTrigger>
-              <TabsTrigger value="all">All Orders</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button onClick={exportCSV} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
+        <Button onClick={exportCSV} variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -329,89 +301,91 @@ export default function CallingMyOrders() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="space-y-4">
-            {/* Search and Date Range */}
-            <div className="flex flex-wrap items-center gap-4">
-              {activeTab === 'all' && (
-                <DateRangeFilter value={dateRange} onChange={setDateRange} />
-              )}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search order, phone, name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Logistic Order ID"
-                  value={logisticIdSearch}
-                  onChange={(e) => setLogisticIdSearch(e.target.value)}
-                  className="w-[180px]"
-                />
-                <Button 
-                  variant={logisticIdSearch ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => {}}
-                >
-                  Search
-                </Button>
-              </div>
-              <Button variant="outline" onClick={handleReset}>
-                Reset
-              </Button>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, phone, reference, order ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
-
-            {/* Additional Filters */}
-            <div className="flex flex-wrap items-center gap-4">
-              <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Delivery Type" />
+            
+            {/* Date Range Filter */}
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+            
+            {/* Location Filter */}
+            <Select value={selectedDelivery} onValueChange={(value) => {
+              setSelectedDelivery(value);
+              // Reset delivery status when changing location
+              if (value !== 'INSIDE_VALLEY') {
+                setSelectedDeliveryStatus('all');
+              }
+            }}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
+                <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Order Status Filter */}
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Order Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="PACKED">Packed</SelectItem>
+                <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                <SelectItem value="REDIRECT">Redirect</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                <SelectItem value="RETURNED">RTO</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Delivery Status Filter - Only shown when Inside Valley is selected */}
+            {selectedDelivery === 'INSIDE_VALLEY' && (
+              <Select value={selectedDeliveryStatus} onValueChange={setSelectedDeliveryStatus}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Delivery Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Deliveries</SelectItem>
-                  <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                  <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedPayment} onValueChange={setSelectedPayment}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payments</SelectItem>
-                  <SelectItem value="COD">COD</SelectItem>
-                  <SelectItem value="ONLINE">Online</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="PACKED">Packed</SelectItem>
-                  <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                  <SelectItem value="all">All Delivery Status</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="DELIVERED">Delivered</SelectItem>
-                  <SelectItem value="REDIRECT">Redirect</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  <SelectItem value="RETURNED">RTO</SelectItem>
+                  <SelectItem value="REACHED_CNR">Reached CNR</SelectItem>
+                  <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Quick Link */}
-            <div className="text-sm">
-              <button
-                onClick={handleInsideValleyClick}
-                className="text-primary hover:underline"
-              >
-                View delivered vs pending for Inside Valley →
-              </button>
-            </div>
+            )}
+            
+            {/* Product Filter */}
+            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Product" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Clear Button */}
+            <Button variant="outline" onClick={handleReset}>
+              Clear
+            </Button>
           </div>
         </CardContent>
       </Card>
