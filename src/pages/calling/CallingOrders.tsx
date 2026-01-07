@@ -16,7 +16,6 @@ import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Co
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays } from 'date-fns';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
-import { InsideValleyStatsModal } from '@/components/calling/InsideValleyStatsModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
@@ -104,7 +103,6 @@ export default function CallingOrders() {
   const [productFilter, setProductFilter] = useState<string>('all');
   
   // Modal state
-  const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   
@@ -206,10 +204,6 @@ export default function CallingOrders() {
   // Show Inside Valley delivery column
   const showInsideDeliveryColumn = deliveryFilter === 'INSIDE_VALLEY';
 
-  const totalAmount = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-  const insideValleyCount = allOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY').length;
-  const outsideValleyCount = allOrders.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length;
-
   const handleInsideDeliveryUpdate = async (orderId: string, status: InsideDeliveryStatus, remark?: string) => {
     await updateInsideDelivery.mutateAsync({ orderId, insideDeliveryStatus: status, insideDeliveryRemark: remark });
   };
@@ -296,58 +290,6 @@ export default function CallingOrders() {
     });
   };
 
-  // Inside Valley delivery stats
-  const insideValleyOrders = allOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY');
-  const ivDelivered = insideValleyOrders.filter(o => o.inside_delivery_status === 'DELIVERED').length;
-  const ivPending = insideValleyOrders.filter(o => !o.inside_delivery_status || o.inside_delivery_status === 'PENDING').length;
-  const ivReachedCNR = insideValleyOrders.filter(o => o.inside_delivery_status === 'REACHED_CNR').length;
-  const ivCustomerCancelled = insideValleyOrders.filter(o => o.inside_delivery_status === 'CUSTOMER_CANCELLED').length;
-  
-  // Confirmed orders count
-  const confirmedCount = allOrders.filter(o => o.order_status === 'CONFIRMED').length;
-
-  // Handle clickable summary cards
-  const handleInsideValleyClick = () => {
-    setDeliveryFilter('INSIDE_VALLEY');
-    setStatusFilter('ALL');
-    setInsideDeliveryStatusFilter('ALL');
-  };
-
-  const handleOutsideValleyClick = () => {
-    setDeliveryFilter('OUTSIDE_VALLEY');
-    setStatusFilter('ALL');
-  };
-  
-  const handleConfirmedClick = () => {
-    setStatusFilter('CONFIRMED');
-    setDeliveryFilter('ALL');
-    setInsideDeliveryStatusFilter('ALL');
-  };
-  
-  const handleIVDeliveredClick = () => {
-    setDeliveryFilter('INSIDE_VALLEY');
-    setInsideDeliveryStatusFilter('DELIVERED');
-    setStatusFilter('ALL');
-  };
-  
-  const handleIVPendingClick = () => {
-    setDeliveryFilter('INSIDE_VALLEY');
-    setInsideDeliveryStatusFilter('PENDING');
-    setStatusFilter('ALL');
-  };
-  
-  const handleIVReachedCNRClick = () => {
-    setDeliveryFilter('INSIDE_VALLEY');
-    setInsideDeliveryStatusFilter('REACHED_CNR');
-    setStatusFilter('ALL');
-  };
-  
-  const handleIVCustomerCancelledClick = () => {
-    setDeliveryFilter('INSIDE_VALLEY');
-    setInsideDeliveryStatusFilter('CUSTOMER_CANCELLED');
-    setStatusFilter('ALL');
-  };
-
   // Clear all filters
   const handleReset = () => {
     setSearchQuery('');
@@ -392,97 +334,6 @@ export default function CallingOrders() {
         onOpenChange={setImportDialogOpen}
         portalType="CALLING"
       />
-
-      {/* Summary Cards - Clickable */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <Card 
-          className="cursor-pointer hover:border-primary transition-colors"
-          onClick={handleConfirmedClick}
-        >
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Confirmed</div>
-            <div className="text-2xl font-bold text-primary">{confirmedCount}</div>
-          </CardContent>
-        </Card>
-        <Card 
-          className="cursor-pointer hover:border-blue-400 transition-colors"
-          onClick={handleInsideValleyClick}
-        >
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              Inside Valley
-            </div>
-            <div className="text-2xl font-bold text-blue-600">{insideValleyCount}</div>
-          </CardContent>
-        </Card>
-        <Card 
-          className="cursor-pointer hover:border-orange-400 transition-colors"
-          onClick={handleOutsideValleyClick}
-        >
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              Outside Valley
-            </div>
-            <div className="text-2xl font-bold text-orange-600">{outsideValleyCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-default">
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Total Orders</div>
-            <div className="text-2xl font-bold">{allOrders.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-default">
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Total Amount</div>
-            <div className="text-2xl font-bold text-success">₹{totalAmount.toFixed(0)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Inside Valley Delivery Status Cards */}
-      {insideValleyCount > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card 
-            className="cursor-pointer hover:border-amber-400 transition-colors"
-            onClick={handleIVPendingClick}
-          >
-            <CardContent className="pt-4">
-              <div className="text-sm text-muted-foreground">IV - Pending</div>
-              <div className="text-2xl font-bold text-amber-600">{ivPending}</div>
-            </CardContent>
-          </Card>
-          <Card 
-            className="cursor-pointer hover:border-green-400 transition-colors"
-            onClick={handleIVDeliveredClick}
-          >
-            <CardContent className="pt-4">
-              <div className="text-sm text-muted-foreground">IV - Delivered</div>
-              <div className="text-2xl font-bold text-green-600">{ivDelivered}</div>
-            </CardContent>
-          </Card>
-          <Card 
-            className="cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={handleIVReachedCNRClick}
-          >
-            <CardContent className="pt-4">
-              <div className="text-sm text-muted-foreground">IV - Reached CNR</div>
-              <div className="text-2xl font-bold text-yellow-600">{ivReachedCNR}</div>
-            </CardContent>
-          </Card>
-          <Card 
-            className="cursor-pointer hover:border-red-400 transition-colors"
-            onClick={handleIVCustomerCancelledClick}
-          >
-            <CardContent className="pt-4">
-              <div className="text-sm text-muted-foreground">IV - Customer Cancelled</div>
-              <div className="text-2xl font-bold text-red-600">{ivCustomerCancelled}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Filters */}
       <Card>
@@ -793,16 +644,6 @@ export default function CallingOrders() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Inside Valley Stats Modal */}
-      <InsideValleyStatsModal
-        open={statsModalOpen}
-        onOpenChange={setStatsModalOpen}
-        delivered={ivDelivered}
-        pending={ivPending}
-        dateRange={dateRange}
-      />
-
       {/* Edit Order Sheet */}
       <AdminEditOrderSheet
         order={editingOrder}
