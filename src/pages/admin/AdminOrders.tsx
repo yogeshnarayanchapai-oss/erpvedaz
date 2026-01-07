@@ -147,6 +147,7 @@ export default function AdminOrders() {
   const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
   const [selectedInsideDeliveryStatus, setSelectedInsideDeliveryStatus] = useState<string>('all');
+  const [selectedOrderDate, setSelectedOrderDate] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -193,12 +194,21 @@ export default function AdminOrders() {
   // Duplicate filter state
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
 
+  // Get unique order dates from fetched orders for the filter
+  const uniqueOrderDates = useMemo(() => {
+    const dates = [...new Set(orders.map(o => o.order_date ? format(new Date(o.order_date), 'yyyy-MM-dd') : null).filter(Boolean))];
+    return dates.sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime());
+  }, [orders]);
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
+      // Order date filter
+      const orderDateStr = order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : null;
+      const matchesOrderDate = selectedOrderDate === 'all' || orderDateStr === selectedOrderDate;
       // Inside Valley delivery status filter
       const insideDeliveryStatusVal = (order as any).inside_delivery_status || 'PENDING';
       const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'all' || 
@@ -215,9 +225,9 @@ export default function AdminOrders() {
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
-      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch && matchesInsideDeliveryStatus;
+      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch && matchesInsideDeliveryStatus && matchesOrderDate;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
+  }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedOrderDate, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
 
   // Count duplicates - check both order and linked lead is_duplicate
   const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
@@ -515,6 +525,19 @@ export default function AdminOrders() {
             
             {/* Second row: Status filters - Scrollable on mobile */}
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              <Select value={selectedOrderDate} onValueChange={setSelectedOrderDate}>
+                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Order Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dates</SelectItem>
+                  {uniqueOrderDates.map((date) => (
+                    <SelectItem key={date} value={date!}>
+                      {format(new Date(date!), 'MMM dd, yyyy')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
                   <SelectValue placeholder="Status" />
