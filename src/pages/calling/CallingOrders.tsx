@@ -12,20 +12,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy, FileDown } from 'lucide-react';
+import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy, FileDown, Search, X } from 'lucide-react';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
-import { WhatsAppButton } from '@/components/messaging/WhatsAppButton';
-import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
 import { InsideValleyStatsModal } from '@/components/calling/InsideValleyStatsModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 
-type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
+type DatePreset = 'today' | 'yesterday' | 'last30' | 'custom';
 type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
 type OrderStatusFilter = 'ALL' | 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'REDIRECT' | 'CANCELLED';
 type InsideDeliveryStatusFilter = 'ALL' | 'PENDING' | 'DELIVERED' | 'REACHED_CNR' | 'CUSTOMER_CANCELLED';
@@ -75,8 +72,8 @@ export default function CallingOrders() {
   // Get URL params
   const deliveryParam = searchParams.get('delivery');
   
-  // Tab state: 'today' or 'all'
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  // Unified search query (global search)
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Date filter state
   const [datePreset, setDatePreset] = useState<DatePreset>('today');
@@ -90,9 +87,6 @@ export default function CallingOrders() {
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('ALL');
   const [insideDeliveryStatusFilter, setInsideDeliveryStatusFilter] = useState<InsideDeliveryStatusFilter>('ALL');
   const [productFilter, setProductFilter] = useState<string>('all');
-  
-  // Advanced search filters
-  const [advancedFilters, setAdvancedFilters] = useState<SearchFilters>({});
   
   // Modal state
   const [statsModalOpen, setStatsModalOpen] = useState(false);
@@ -109,24 +103,23 @@ export default function CallingOrders() {
   const updateOrderStatus = useUpdateOrderStatus();
   const updateInsideDelivery = useUpdateInsideDeliveryStatus();
   
+  // Check if search is active - for global search behavior
+  const isSearchActive = searchQuery.trim().length > 0;
+  
   const dateRange = useMemo(() => {
-    // For Today tab, use today's date
-    if (activeTab === 'today') {
-      return { from: todayStr, to: todayStr };
+    // When search is active, fetch ALL orders (global search)
+    if (isSearchActive) {
+      return { from: '2020-01-01', to: todayStr };
     }
     
-    // If advanced filters have dates, use those
-    if (advancedFilters.fromDate || advancedFilters.toDate) {
-      return {
-        from: advancedFilters.fromDate || '2020-01-01',
-        to: advancedFilters.toDate || todayStr,
-      };
-    }
     if (datePreset === 'today') return { from: todayStr, to: todayStr };
-    if (datePreset === 'last7') return { from: format(subDays(new Date(), 7), 'yyyy-MM-dd'), to: todayStr };
+    if (datePreset === 'yesterday') {
+      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+      return { from: yesterday, to: yesterday };
+    }
     if (datePreset === 'last30') return { from: format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: todayStr };
     return { from: customDateFrom, to: customDateTo };
-  }, [activeTab, datePreset, todayStr, customDateFrom, customDateTo, advancedFilters]);
+  }, [datePreset, todayStr, customDateFrom, customDateTo, isSearchActive]);
 
   const { data: products = [] } = useProducts();
 
@@ -159,11 +152,9 @@ export default function CallingOrders() {
       });
     }
     
-    // Advanced search - text search
-    if (advancedFilters.searchText) {
-      const search = advancedFilters.searchText.toLowerCase();
-      
-      // Check for reference ID search
+    // Text search (global)
+    if (searchQuery.trim()) {
+      const search = searchQuery.toLowerCase();
       const isRefIdSearch = isReferenceIdSearch(search);
       
       filtered = filtered.filter(o => {
@@ -174,18 +165,14 @@ export default function CallingOrders() {
           (o.leads?.client_name?.toLowerCase().includes(search)) ||
           (o.leads?.contact_number?.includes(search)) ||
           (o.id.toLowerCase().includes(search)) ||
-          (o.products?.name?.toLowerCase().includes(search))
+          (o.products?.name?.toLowerCase().includes(search)) ||
+          (o.leads?.reference_id?.toLowerCase().includes(search))
         );
       });
     }
     
-    // Advanced search - reference ID from dedicated field
-    if (advancedFilters.referenceId) {
-      filtered = filtered.filter(o => matchesReferenceId(o.leads?.reference_id, advancedFilters.referenceId));
-    }
-    
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, advancedFilters]);
+  }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, searchQuery]);
   
   // Real-time subscription
   useEffect(() => {
@@ -310,18 +297,9 @@ export default function CallingOrders() {
     setStatusFilter('ALL');
   };
 
-  // Advanced search handlers
-  const handleAdvancedSearch = (filters: SearchFilters) => {
-    setAdvancedFilters(filters);
-    if (filters.fromDate || filters.toDate) {
-      setDatePreset('custom');
-      if (filters.fromDate) setCustomDateFrom(filters.fromDate);
-      if (filters.toDate) setCustomDateTo(filters.toDate);
-    }
-  };
-
-  const handleAdvancedReset = () => {
-    setAdvancedFilters({});
+  // Clear all filters
+  const handleReset = () => {
+    setSearchQuery('');
     setDatePreset('today');
     setCustomDateFrom(todayStr);
     setCustomDateTo(todayStr);
@@ -329,7 +307,6 @@ export default function CallingOrders() {
     setStatusFilter('ALL');
     setInsideDeliveryStatusFilter('ALL');
     setProductFilter('all');
-    setActiveTab('today');
   };
 
   return (
@@ -340,12 +317,6 @@ export default function CallingOrders() {
           <p className="text-muted-foreground">Orders you have confirmed</p>
         </div>
         <div className="flex items-center gap-3">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="all">All Orders</TabsTrigger>
-            </TabsList>
-          </Tabs>
           <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
             <Upload className="w-4 h-4 mr-2" />
             Import
@@ -422,53 +393,62 @@ export default function CallingOrders() {
         </button>
       )}
 
-      {/* Advanced Search Bar */}
-      <AdvancedSearchBar
-        onApply={handleAdvancedSearch}
-        onReset={handleAdvancedReset}
-        onExport={exportCSV}
-        searchPlaceholder="Search Order, Phone, Name"
-        referencePlaceholder="Search Reference Id"
-      />
-
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <p className="text-xs text-muted-foreground mb-3">Additional filters</p>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-                <SelectTrigger className="w-[140px]">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="last7">Last 7 days</SelectItem>
-                  <SelectItem value="last30">Last 30 days</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {datePreset === 'custom' && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="date"
-                    value={customDateFrom}
-                    onChange={(e) => setCustomDateFrom(e.target.value)}
-                    className="w-36"
-                  />
-                  <span className="text-muted-foreground">to</span>
-                  <Input
-                    type="date"
-                    value={customDateTo}
-                    onChange={(e) => setCustomDateTo(e.target.value)}
-                    className="w-36"
-                  />
-                </div>
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search Name / Phone / Reference / Order ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               )}
             </div>
             
+            {/* Date Preset */}
+            <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
+              <SelectTrigger className="w-[140px]">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="last30">Last 30 days</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {datePreset === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="w-36"
+                />
+                <span className="text-muted-foreground">to</span>
+                <Input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-36"
+                />
+              </div>
+            )}
+            
+            {/* Location Filter */}
             <Select value={deliveryFilter} onValueChange={(v) => {
               setDeliveryFilter(v as DeliveryFilter);
               if (v !== 'INSIDE_VALLEY') {
@@ -476,7 +456,8 @@ export default function CallingOrders() {
               }
             }}>
               <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Delivery Location" />
+                <MapPin className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Location" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Locations</SelectItem>
@@ -485,6 +466,7 @@ export default function CallingOrders() {
               </SelectContent>
             </Select>
             
+            {/* Order Status Filter */}
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatusFilter)}>
               <SelectTrigger className="w-[160px]">
                 <Filter className="w-4 h-4 mr-2" />
@@ -497,7 +479,7 @@ export default function CallingOrders() {
               </SelectContent>
             </Select>
 
-            {/* Inside Valley Delivery Status Filter - only show when Inside Valley is selected */}
+            {/* Delivery Status Filter - only show when Inside Valley is selected */}
             {deliveryFilter === 'INSIDE_VALLEY' && (
               <Select value={insideDeliveryStatusFilter} onValueChange={(v) => setInsideDeliveryStatusFilter(v as InsideDeliveryStatusFilter)}>
                 <SelectTrigger className="w-[180px]">
@@ -525,6 +507,12 @@ export default function CallingOrders() {
                 ))}
               </SelectContent>
             </Select>
+            
+            {/* Clear Button */}
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
           </div>
         </CardContent>
       </Card>
