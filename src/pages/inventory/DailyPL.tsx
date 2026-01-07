@@ -140,8 +140,11 @@ export default function DailyPL() {
   // Total Expense = Office Management Expense (from transactions)
   const totalExpense = officeManagementExpense;
   
-  // Actual Profit = Actual Sales - Total Expense
-  const actualProfit = actualSales - totalExpense;
+  // Actual Profit = Sum of profit_loss from daily records (date filtered)
+  const actualProfit = useMemo(() => {
+    if (!dailyRecords?.length) return 0;
+    return dailyRecords.reduce((sum, record) => sum + (record.profit_loss || 0), 0);
+  }, [dailyRecords]);
   
   // Avg Profit/Order = Actual Profit / U (if U > 0)
   const avgProfitPerOrder = U > 0 ? Math.round(actualProfit / U) : 0;
