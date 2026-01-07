@@ -26,7 +26,6 @@ import { AddLeadDialog } from '@/components/leads/AddLeadDialog';
 import { ImportLeadsDialog } from '@/components/leads/ImportLeadsDialog';
 import { FormattedDate } from '@/components/FormattedDate';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
-import { AdvancedSearchBar, SearchFilters } from '@/components/calling/AdvancedSearchBar';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 
@@ -51,9 +50,7 @@ const FOLLOWUP_FILTER_OPTIONS = [
   { value: 'overdue', label: 'Overdue Follow-Ups' },
 ];
 
-type DatePreset = 'today' | 'yesterday' | 'last7' | 'last30' | 'custom';
-
-type LeadTab = 'today' | 'total';
+type DatePreset = 'today' | 'yesterday' | 'last30' | 'custom';
 
 type FollowupFilterType = 'ALL' | 'today' | 'upcoming' | 'pending' | 'overdue';
 
@@ -72,10 +69,7 @@ export default function CallingLeads() {
   const followupParam = searchParams.get('followup');
   const leadIdParam = searchParams.get('leadId');
   
-  // Tab state: Today Leads vs Total Leads
-  const [activeTab, setActiveTab] = useState<LeadTab>('today');
-  
-  // Filter states - initialize based to show all leads when leadId is provided
+// Filter states - initialize based to show all leads when leadId is provided
   const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [customDateFrom, setCustomDateFrom] = useState(today);
   const [customDateTo, setCustomDateTo] = useState(today);
@@ -94,8 +88,6 @@ export default function CallingLeads() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Advanced search filters
-  const [advancedFilters, setAdvancedFilters] = useState<SearchFilters>({});
   
   // Track if leadId param has been processed
   const [leadIdProcessed, setLeadIdProcessed] = useState(false);
@@ -111,8 +103,6 @@ export default function CallingLeads() {
       if (followupParam && ['today', 'upcoming', 'pending', 'overdue'].includes(followupParam)) {
         setFollowupFilter(followupParam as FollowupFilterType);
         setStatusFilter('FOLLOW_UP'); // Auto-set status to Follow Up when filtering by followup
-        // Switch to Total tab to show ALL follow-up leads regardless of creation date
-        setActiveTab('total');
         setDatePreset('last30');
       }
       // Clear URL params after applying
@@ -120,38 +110,15 @@ export default function CallingLeads() {
     }
   }, [statusParam, filterParam, followupParam, setSearchParams]);
   
-  // Handle tab change - adjust date preset accordingly
-  const handleTabChange = (tab: LeadTab) => {
-    setActiveTab(tab);
-    if (tab === 'today') {
-      setDatePreset('today');
-    } else {
-      setDatePreset('last30'); // Default to last 30 days for Total tab
-    }
-  };
-  
   const dateRange = useMemo(() => {
-    // If advanced filters have dates, use those
-    if (advancedFilters.fromDate || advancedFilters.toDate) {
-      return {
-        from: advancedFilters.fromDate || '2020-01-01',
-        to: advancedFilters.toDate || today,
-      };
-    }
-    if (activeTab === 'today') {
-      // For Today tab, always use today's date regardless of datePreset
-      return { from: today, to: today };
-    }
-    // For Total tab, use selected date preset
     if (datePreset === 'today') return { from: today, to: today };
     if (datePreset === 'yesterday') {
       const yesterday = subDays(new Date(), 1).toISOString().split('T')[0];
       return { from: yesterday, to: yesterday };
     }
-    if (datePreset === 'last7') return { from: subDays(new Date(), 7).toISOString().split('T')[0], to: today };
     if (datePreset === 'last30') return { from: subDays(new Date(), 30).toISOString().split('T')[0], to: today };
     return { from: customDateFrom, to: customDateTo };
-  }, [activeTab, datePreset, today, customDateFrom, customDateTo, advancedFilters]);
+  }, [datePreset, today, customDateFrom, customDateTo]);
   
   // Fetch leads for current user - fetch ALL leads (no date filter at query level for Total tab)
   const { data: allLeads = [], isLoading } = useLeads({ 
@@ -177,25 +144,21 @@ export default function CallingLeads() {
     return lead.products?.name || '-';
   }, [orderItemsMap]);
   
-  // Filter leads based on tab and filters
+  // Determine if search is active (global search mode)
+  const isSearchActive = searchQuery.trim().length > 0;
+
+  // Filter leads based on filters
   const leads = useMemo(() => {
     const filtered = allLeads.filter(lead => {
-      // Date filtering - use assigned_at for "Today Leads" to show recently transferred leads
+      // Date filtering - SKIP if search is active (global search) or followup filter is active
       let matchesDate = true;
       
-      // IMPORTANT: Skip date filtering entirely when followup filter is active
-      // This ensures dashboard follow-up stats match exactly with leads shown
-      if (followupFilter !== 'ALL') {
-        matchesDate = true; // Show all leads regardless of date for followup filters
-      } else if (advancedFilters.fromDate || advancedFilters.toDate) {
-        // Use advanced filters dates based on lead creation date
-        if (advancedFilters.fromDate && lead.date < advancedFilters.fromDate) matchesDate = false;
-        if (advancedFilters.toDate && lead.date > advancedFilters.toDate) matchesDate = false;
-      } else if (activeTab === 'today') {
-        // For "Today Leads", show leads assigned/transferred today OR created today
-        // Handle both ISO format (T separator) and database format (space separator)
-        const assignedDate = lead.assigned_at ? lead.assigned_at.substring(0, 10) : null;
-        matchesDate = assignedDate === today || lead.date === today;
+      if (isSearchActive) {
+        // Global search: bypass date filtering
+        matchesDate = true;
+      } else if (followupFilter !== 'ALL') {
+        // Skip date filtering for followup filters
+        matchesDate = true;
       } else if (!(datePreset === 'custom' && !customDateFrom && !customDateTo)) {
         matchesDate = lead.date >= dateRange.from && lead.date <= dateRange.to;
       }
@@ -207,7 +170,6 @@ export default function CallingLeads() {
       if (statusFilter === 'ALL') {
         matchesStatus = true;
       } else if (statusFilter === 'REMAINING') {
-        // Remaining = leads that are NEW or ASSIGNED and current_team is still CALLING
         matchesStatus = (lead.status === 'NEW' || lead.status === 'ASSIGNED') && 
                        lead.current_team === 'CALLING';
       } else if (statusFilter === 'DUPLICATE') {
@@ -216,24 +178,19 @@ export default function CallingLeads() {
         matchesStatus = lead.status === statusFilter;
       }
       
-      // Combined search filter - from both searchQuery and advancedFilters.searchText
-      const combinedSearch = (advancedFilters.searchText || searchQuery || '').toLowerCase().trim();
+      // Search filter
+      const searchTerm = searchQuery.toLowerCase().trim();
+      const isRefIdSearch = isReferenceIdSearch(searchTerm);
+      const matchesRefId = isRefIdSearch && matchesReferenceId(lead.reference_id, searchTerm);
       
-      // Check if search is a reference ID format
-      const isRefIdSearch = isReferenceIdSearch(combinedSearch);
-      const matchesRefId = isRefIdSearch && matchesReferenceId(lead.reference_id, combinedSearch);
-      
-      const matchesSearch = !combinedSearch || 
+      const matchesSearch = !searchTerm || 
         matchesRefId ||
-        lead.client_name.toLowerCase().includes(combinedSearch) ||
-        lead.contact_number.includes(combinedSearch) ||
-        (lead.alt_phone && lead.alt_phone.includes(combinedSearch)) ||
-        (lead.products?.name && lead.products.name.toLowerCase().includes(combinedSearch)) ||
-        (lead.full_address && lead.full_address.toLowerCase().includes(combinedSearch));
-      
-      // Reference ID search from advanced filter
-      const matchesReference = !advancedFilters.referenceId || 
-        matchesReferenceId(lead.reference_id, advancedFilters.referenceId);
+        lead.client_name.toLowerCase().includes(searchTerm) ||
+        lead.contact_number.includes(searchTerm) ||
+        (lead.alt_phone && lead.alt_phone.includes(searchTerm)) ||
+        (lead.products?.name && lead.products.name.toLowerCase().includes(searchTerm)) ||
+        (lead.full_address && lead.full_address.toLowerCase().includes(searchTerm)) ||
+        (lead.reference_id && lead.reference_id.toLowerCase().includes(searchTerm));
       
       // Follow-up filtering
       let matchesFollowup = true;
@@ -261,27 +218,24 @@ export default function CallingLeads() {
         matchesFollowup = false;
       }
       
-      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesReference && matchesFollowup;
+      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesFollowup;
     });
     
     // Sort: bring due/overdue follow-ups to top, then by created_at descending
     return filtered.sort((a, b) => {
       const now = new Date();
       
-      // Check if leads are due for follow-up
       const aDue = a.status === 'FOLLOW_UP' && a.next_followup_at && new Date(a.next_followup_at) <= now && !a.followup_completed;
       const bDue = b.status === 'FOLLOW_UP' && b.next_followup_at && new Date(b.next_followup_at) <= now && !b.followup_completed;
       
-      // Due follow-ups come first
       if (aDue && !bDue) return -1;
       if (!aDue && bDue) return 1;
       
-      // Then sort by created_at descending
       const dateA = new Date(a.created_at || a.date).getTime();
       const dateB = new Date(b.created_at || b.date).getTime();
       return dateB - dateA;
     });
-  }, [allLeads, activeTab, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter]);
+  }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive]);
   
   // Pending calls count
   const pendingCallsCount = useMemo(() => {
@@ -415,8 +369,7 @@ export default function CallingLeads() {
     if (leadIdParam && allLeads.length > 0 && !leadIdProcessed && !isLoading) {
       const leadToEdit = allLeads.find(l => l.id === leadIdParam);
       if (leadToEdit) {
-        // Switch to total tab to show the lead regardless of date
-        setActiveTab('total');
+        // Set date preset to last30 to show the lead regardless of date
         setDatePreset('last30');
         openEditSheet(leadToEdit);
         setLeadIdProcessed(true);
@@ -772,30 +725,13 @@ Order By: ${profile?.name || 'N/A'}`;
     a.click();
   };
 
-  // Advanced search handlers
-  const handleAdvancedSearch = (filters: SearchFilters) => {
-    setAdvancedFilters(filters);
-    if (filters.searchText) {
-      setSearchQuery(filters.searchText);
-    }
-    if (filters.fromDate || filters.toDate) {
-      setDatePreset('custom');
-      if (filters.fromDate) setCustomDateFrom(filters.fromDate);
-      if (filters.toDate) setCustomDateTo(filters.toDate);
-    }
-  };
-
-  const handleAdvancedReset = () => {
-    setAdvancedFilters({});
+  // Reset all filters
+  const handleReset = () => {
     setSearchQuery('');
     setProductFilter('ALL');
     setStatusFilter('ALL');
     setFollowupFilter('ALL');
-    if (activeTab === 'today') {
-      setDatePreset('today');
-    } else {
-      setDatePreset('last30');
-    }
+    setDatePreset('today');
     setCustomDateFrom(today);
     setCustomDateTo(today);
   };
@@ -828,29 +764,9 @@ Order By: ${profile?.name || 'N/A'}`;
           </Badge>
           <Badge variant="outline" className="text-sm">
             <Users className="w-4 h-4 mr-1" />
-            {leads.length} {activeTab === 'today' ? 'Today' : 'Total'}
+            {leads.length} Leads
           </Badge>
         </div>
-      </div>
-
-      {/* Today / Total Tabs */}
-      <div className="flex gap-2">
-        <Button
-          variant={activeTab === 'today' ? 'default' : 'outline'}
-          onClick={() => handleTabChange('today')}
-          className="flex items-center gap-2"
-        >
-          <Calendar className="w-4 h-4" />
-          Today Leads
-        </Button>
-        <Button
-          variant={activeTab === 'total' ? 'default' : 'outline'}
-          onClick={() => handleTabChange('total')}
-          className="flex items-center gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Total Leads
-        </Button>
       </div>
 
       {/* Add Lead Dialog */}
@@ -859,69 +775,60 @@ Order By: ${profile?.name || 'N/A'}`;
       {/* Import Leads Dialog */}
       <ImportLeadsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} portalType="CALLING" />
 
-      {/* Advanced Search Bar */}
-      <AdvancedSearchBar
-        onApply={handleAdvancedSearch}
-        onReset={handleAdvancedReset}
-        onExport={exportLeadsCSV}
-        searchPlaceholder="Search Lead, Phone, Name"
-        referencePlaceholder="Search Reference Id"
-      />
-
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <p className="text-xs text-muted-foreground mb-3">Additional filters</p>
           <div className="flex flex-wrap items-center gap-4">
-            {/* Date Filter - only show for Total tab */}
-            {activeTab === 'total' && (
-              <div className="flex items-center gap-2">
-                <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-                  <SelectTrigger className="w-[140px]">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="yesterday">Yesterday</SelectItem>
-                    <SelectItem value="last7">Last 7 days</SelectItem>
-                    <SelectItem value="last30">Last 30 days</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                {datePreset === 'custom' && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="date"
-                      value={customDateFrom}
-                      onChange={(e) => setCustomDateFrom(e.target.value)}
-                      className="w-36"
-                    />
-                    <span className="text-muted-foreground">to</span>
-                    <Input
-                      type="date"
-                      value={customDateTo}
-                      onChange={(e) => setCustomDateTo(e.target.value)}
-                      className="w-36"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search name, phone, reference..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
 
-            {/* Today indicator for Today tab */}
-            {activeTab === 'today' && (
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                <Calendar className="w-3 h-3 mr-1" />
-                Showing Today's Leads
-              </Badge>
-            )}
+            {/* Date Filter with Presets */}
+            <div className="flex items-center gap-2">
+              <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
+                <SelectTrigger className="w-[140px]">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="last30">Last 30 Days</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {datePreset === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={customDateFrom}
+                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                    className="w-36"
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <Input
+                    type="date"
+                    value={customDateTo}
+                    onChange={(e) => setCustomDateTo(e.target.value)}
+                    className="w-36"
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Product Filter */}
             <Select value={productFilter} onValueChange={setProductFilter}>
               <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Product" />
+                <SelectValue placeholder="All Products" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Products</SelectItem>
@@ -934,8 +841,7 @@ Order By: ${profile?.name || 'N/A'}`;
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_FILTER_OPTIONS.map(opt => (
@@ -944,35 +850,27 @@ Order By: ${profile?.name || 'N/A'}`;
               </SelectContent>
             </Select>
 
-            {/* Follow-Up Filter - only show when Status is FOLLOW_UP or ALL */}
-            {(statusFilter === 'FOLLOW_UP' || statusFilter === 'ALL') && (
-              <Select value={followupFilter} onValueChange={(v) => setFollowupFilter(v as FollowupFilterType)}>
-                <SelectTrigger className="w-[180px]">
-                  <Clock className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Follow-Up" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FOLLOWUP_FILTER_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Follow-Up Filter */}
+            <Select value={followupFilter} onValueChange={(v) => setFollowupFilter(v as FollowupFilterType)}>
+              <SelectTrigger className="w-[180px]">
+                <Clock className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Follow-Ups" />
+              </SelectTrigger>
+              <SelectContent>
+                {FOLLOWUP_FILTER_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Search by client name or phone */}
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search name or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            {/* Clear Button */}
+            <Button variant="outline" onClick={handleReset}>
+              Clear
+            </Button>
           </div>
         </CardContent>
       </Card>
+
 
       {/* Leads Table */}
       <Card>
