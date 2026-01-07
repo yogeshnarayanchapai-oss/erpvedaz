@@ -146,6 +146,7 @@ export default function AdminOrders() {
   
   const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
+  const [selectedInsideDeliveryStatus, setSelectedInsideDeliveryStatus] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -198,6 +199,10 @@ export default function AdminOrders() {
       const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
+      // Inside Valley delivery status filter
+      const insideDeliveryStatusVal = (order as any).inside_delivery_status || 'PENDING';
+      const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'all' || 
+        (selectedDelivery === 'INSIDE_VALLEY' && insideDeliveryStatusVal === selectedInsideDeliveryStatus);
       // Check for duplicate - either order is_duplicate or linked lead is_duplicate
       const orderIsDuplicate = (order as any).is_duplicate === true || (order.leads as any)?.is_duplicate === true;
       const matchesDuplicate = !showDuplicatesOnly || orderIsDuplicate;
@@ -210,9 +215,9 @@ export default function AdminOrders() {
         order.leads?.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         order.leads?.contact_number?.includes(search) ||
         order.logistic_order_id?.toLowerCase().includes(search.toLowerCase());
-      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch;
+      return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch && matchesInsideDeliveryStatus;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, selectedStatus, selectedDelivery, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
+  }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
 
   // Count duplicates - check both order and linked lead is_duplicate
   const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
@@ -525,7 +530,10 @@ export default function AdminOrders() {
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
+              <Select value={selectedDelivery} onValueChange={(val) => {
+                setSelectedDelivery(val);
+                if (val !== 'INSIDE_VALLEY') setSelectedInsideDeliveryStatus('all');
+              }}>
                 <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
                   <SelectValue placeholder="Delivery" />
                 </SelectTrigger>
@@ -535,6 +543,20 @@ export default function AdminOrders() {
                   <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
                 </SelectContent>
               </Select>
+              {selectedDelivery === 'INSIDE_VALLEY' && (
+                <Select value={selectedInsideDeliveryStatus} onValueChange={setSelectedInsideDeliveryStatus}>
+                  <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
+                    <SelectValue placeholder="Delivery Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                    <SelectItem value="REACHED_CNR">Reached - CNR</SelectItem>
+                    <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                 <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
                   <SelectValue placeholder="Product" />
@@ -821,14 +843,43 @@ export default function AdminOrders() {
                         {order.order_status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {order.delivery_location === 'INSIDE_VALLEY' ? (
-                        <Badge 
-                          variant="outline" 
-                          className={insideDeliveryStatusColors[insideDeliveryStatus] || 'bg-muted/50 text-muted-foreground'}
-                        >
-                          {insideDeliveryStatusLabels[insideDeliveryStatus] || insideDeliveryStatus}
-                        </Badge>
+                        (effectiveRole === 'ADMIN' || effectiveRole === 'OWNER') ? (
+                          <Select 
+                            value={insideDeliveryStatus} 
+                            onValueChange={async (val) => {
+                              try {
+                                const { error } = await supabase
+                                  .from('orders')
+                                  .update({ inside_delivery_status: val })
+                                  .eq('id', order.id);
+                                if (error) throw error;
+                                toast.success('Delivery status updated');
+                                queryClient.invalidateQueries({ queryKey: ['orders'] });
+                              } catch (error: any) {
+                                toast.error(`Failed to update: ${error.message}`);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className={`w-[140px] h-8 text-xs ${insideDeliveryStatusColors[insideDeliveryStatus] || ''}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDING">Pending</SelectItem>
+                              <SelectItem value="DELIVERED">Delivered</SelectItem>
+                              <SelectItem value="REACHED_CNR">Reached - CNR</SelectItem>
+                              <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className={insideDeliveryStatusColors[insideDeliveryStatus] || 'bg-muted/50 text-muted-foreground'}
+                          >
+                            {insideDeliveryStatusLabels[insideDeliveryStatus] || insideDeliveryStatus}
+                          </Badge>
+                        )
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
