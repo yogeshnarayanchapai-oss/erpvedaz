@@ -84,6 +84,15 @@ export function OrderFiltersCard({
   onStaffFilterChange,
   staff = [],
 }: OrderFiltersCardProps) {
+  // Check if any filter is active (not at default value)
+  const hasActiveFilters = 
+    searchQuery.trim() !== '' ||
+    datePreset !== 'today' ||
+    deliveryFilter !== 'ALL' ||
+    statusFilter !== 'ALL' ||
+    insideDeliveryStatusFilter !== 'ALL' ||
+    productFilter !== 'all' ||
+    (showStaffFilter && staffFilter && staffFilter !== 'all');
   return (
     <Card>
       <CardContent className="pt-6">
@@ -216,11 +225,13 @@ export function OrderFiltersCard({
             </Select>
           )}
           
-          {/* Clear Button */}
-          <Button variant="outline" size="sm" onClick={onReset}>
-            <X className="w-4 h-4 mr-1" />
-            Clear
-          </Button>
+          {/* Clear Button - Only show when filters are active */}
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={onReset}>
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
