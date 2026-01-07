@@ -287,7 +287,7 @@ export default function CallingDashboard() {
           value={confirmedCount}
           icon={<CheckCircle className="w-5 h-5" />}
           variant="success"
-          onClick={() => navigate('/calling/my-orders?status=CONFIRMED')}
+          onClick={() => navigate('/calling/orders?status=CONFIRMED')}
           className="cursor-pointer hover:ring-2 hover:ring-success/50 transition-all"
         />
         <StatCard
@@ -382,24 +382,32 @@ export default function CallingDashboard() {
                 value={ivDelivered}
                 icon={<CheckCircle className="w-5 h-5" />}
                 variant="success"
+                onClick={() => navigate('/calling/orders?location=INSIDE_VALLEY&ivStatus=DELIVERED')}
+                className="cursor-pointer hover:ring-2 hover:ring-success/50 transition-all"
               />
               <StatCard
                 title="IV Pending"
                 value={ivPending}
                 icon={<Clock className="w-5 h-5" />}
                 variant="warning"
+                onClick={() => navigate('/calling/orders?location=INSIDE_VALLEY&ivStatus=PENDING')}
+                className="cursor-pointer hover:ring-2 hover:ring-warning/50 transition-all"
               />
               <StatCard
                 title="IV Reached CNR"
                 value={ivReachedCNR}
                 icon={<PhoneOff className="w-5 h-5" />}
                 variant="info"
+                onClick={() => navigate('/calling/orders?location=INSIDE_VALLEY&ivStatus=REACHED_CNR')}
+                className="cursor-pointer hover:ring-2 hover:ring-info/50 transition-all"
               />
               <StatCard
                 title="IV Customer Cancel"
                 value={ivCustomerCancelled}
                 icon={<XCircle className="w-5 h-5" />}
                 variant="destructive"
+                onClick={() => navigate('/calling/orders?location=INSIDE_VALLEY&ivStatus=CUSTOMER_CANCELLED')}
+                className="cursor-pointer hover:ring-2 hover:ring-destructive/50 transition-all"
               />
             </div>
           </CardContent>

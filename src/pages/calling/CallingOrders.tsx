@@ -71,6 +71,9 @@ export default function CallingOrders() {
   
   // Get URL params
   const deliveryParam = searchParams.get('delivery');
+  const locationParam = searchParams.get('location');
+  const statusParam = searchParams.get('status');
+  const ivStatusParam = searchParams.get('ivStatus');
   
   // Unified search query (global search)
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,12 +83,24 @@ export default function CallingOrders() {
   const [customDateFrom, setCustomDateFrom] = useState(todayStr);
   const [customDateTo, setCustomDateTo] = useState(todayStr);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>(() => {
+    if (locationParam === 'INSIDE_VALLEY') return 'INSIDE_VALLEY';
+    if (locationParam === 'OUTSIDE_VALLEY') return 'OUTSIDE_VALLEY';
     if (deliveryParam === 'inside-valley') return 'INSIDE_VALLEY';
     if (deliveryParam === 'outside-valley') return 'OUTSIDE_VALLEY';
     return 'ALL';
   });
-  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('ALL');
-  const [insideDeliveryStatusFilter, setInsideDeliveryStatusFilter] = useState<InsideDeliveryStatusFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>(() => {
+    if (statusParam && ['CONFIRMED', 'PACKED', 'DISPATCHED', 'DELIVERED', 'RETURNED', 'REDIRECT', 'CANCELLED'].includes(statusParam)) {
+      return statusParam as OrderStatusFilter;
+    }
+    return 'ALL';
+  });
+  const [insideDeliveryStatusFilter, setInsideDeliveryStatusFilter] = useState<InsideDeliveryStatusFilter>(() => {
+    if (ivStatusParam && ['PENDING', 'DELIVERED', 'REACHED_CNR', 'CUSTOMER_CANCELLED'].includes(ivStatusParam)) {
+      return ivStatusParam as InsideDeliveryStatusFilter;
+    }
+    return 'ALL';
+  });
   const [productFilter, setProductFilter] = useState<string>('all');
   
   // Modal state
@@ -95,7 +110,7 @@ export default function CallingOrders() {
   
   // Clear URL params after applying
   useEffect(() => {
-    if (deliveryParam) {
+    if (deliveryParam || locationParam || statusParam || ivStatusParam) {
       setSearchParams({}, { replace: true });
     }
   }, [deliveryParam, setSearchParams]);
