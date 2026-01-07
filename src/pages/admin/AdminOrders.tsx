@@ -584,19 +584,6 @@ export default function AdminOrders() {
             
             {/* Second row: Status filters - Scrollable on mobile */}
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              <Select value={selectedOrderDate} onValueChange={setSelectedOrderDate}>
-                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Order Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Dates</SelectItem>
-                  {uniqueOrderDates.map((date) => (
-                    <SelectItem key={date} value={date!}>
-                      {format(new Date(date!), 'MMM dd, yyyy')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
                   <SelectValue placeholder="Status" />
