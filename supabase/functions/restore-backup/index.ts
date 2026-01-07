@@ -6,30 +6,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Tables to restore in order (respecting foreign key dependencies)
-const TABLES_RESTORE_ORDER = [
-  // Base tables first (no dependencies)
-  'stores', 'profiles', 'branches', 'warehouses', 'products',
-  'lead_sources', 'employees', 'accounts', 'accounting_banks',
+// Tables that should be restored first (no dependencies)
+const PRIORITY_TABLES = [
+  'stores', 'profiles', 'departments', 'branches', 'warehouses', 'products',
+  'lead_sources', 'employees', 'accounts', 'accounting_banks', 'accounting_expense_categories',
+  'accounting_suppliers', 'accounting_wholesalers',
   'parties', 'chat_rooms', 'campaigns', 'influencers', 'video_projects',
-  'assets',
-  
-  // Tables with dependencies
-  'leads', 'lead_transfers', 'call_logs', 'followup_logs',
-  'customers', 'customer_notes', 'customer_activity_log',
-  'orders', 'order_items', 'order_status_history', 'order_comments',
-  'logistics_orders', 'courier_updates', 'cod_settlements',
-  'stock_movements', 'product_inventory', 'sales_records', 'daily_records',
-  'transactions', 'party_payments', 'party_transactions',
-  'attendance_records', 'leave_requests', 'payroll_records',
-  'ads', 'ads_spend', 'ad_spend_reference', 'staff_targets',
-  'accounting_transactions',
-  'tasks', 'task_remarks', 'asset_assignments',
-  'chat_messages', 'chat_room_members', 'notifications'
+  'assets', 'couriers', 'categories', 'shifts', 'leave_types',
+  'training_courses', 'training_quizzes', 'message_channels', 'message_templates',
+  'social_channels', 'hr_policies', 'notices', 'office_holidays'
 ];
 
+// Tables that should be restored last (have dependencies)
+const DEPENDENT_TABLES = [
+  'leads', 'lead_transfers', 'lead_history', 'call_logs', 'followup_logs',
+  'customers', 'customer_notes', 'customer_activity_log',
+  'orders', 'order_items', 'order_status_history', 'order_comments', 'order_events', 'order_history',
+  'logistics_orders', 'courier_updates', 'cod_settlements',
+  'stock_movements', 'product_inventory', 'sales_records', 'daily_records',
+  'transactions', 'party_payments', 'party_transactions', 'party_ledger',
+  'accounting_transactions', 'accounting_bills', 'accounting_invoices', 
+  'accounting_payments', 'accounting_invoice_items', 'accounting_cash_ledger',
+  'attendance_records', 'leave_requests', 'payroll_records', 'leave_quota',
+  'ads', 'ads_spend', 'ad_spend_reference', 'staff_targets',
+  'tasks', 'task_remarks', 'asset_assignments',
+  'chat_messages', 'chat_room_members', 'notifications',
+  'training_lessons', 'training_enrollments', 'training_lesson_completions',
+  'training_questions', 'training_quiz_attempts', 'training_certificates',
+  'social_posts', 'social_post_channels', 'message_automation_rules', 'message_logs',
+  'employee_documents', 'hr_bank_accounts', 'notice_dismissals',
+  'audit_logs', 'audit_manual_entries', 'inventory_activity_logs', 'accounting_activity_logs'
+];
+
+// Clean row by removing enriched fields (those starting with underscore)
+function cleanRowForRestore(row: any): any {
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(row)) {
+    // Skip enriched fields (start with underscore)
+    if (!key.startsWith('_')) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -42,7 +63,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body
     const body = await req.json();
     const { backup_data, restore_mode = "merge", user_id } = body;
 
@@ -50,18 +70,49 @@ serve(async (req) => {
       throw new Error("Invalid backup data format - missing tables");
     }
 
-    console.log("📋 Backup info:", backup_data.backup_info);
-    console.log("🔧 Restore mode:", restore_mode);
+    const backupVersion = backup_data.backup_info?.version || "1.0";
+    console.log(`📋 Backup version: ${backupVersion}`);
+    console.log(`📋 Backup info:`, backup_data.backup_info);
+    console.log(`🔧 Restore mode: ${restore_mode}`);
 
     const results: Record<string, { success: boolean; rows: number; error?: string }> = {};
     let totalRestored = 0;
     let tablesRestored = 0;
 
-    for (const tableName of TABLES_RESTORE_ORDER) {
+    // Get all table names from backup
+    const backupTableNames = Object.keys(backup_data.tables);
+    console.log(`📦 Found ${backupTableNames.length} tables in backup`);
+
+    // Build restore order: priority tables first, then others, then dependent tables
+    const restoreOrder: string[] = [];
+    
+    // Add priority tables first (that exist in backup)
+    for (const table of PRIORITY_TABLES) {
+      if (backupTableNames.includes(table)) {
+        restoreOrder.push(table);
+      }
+    }
+    
+    // Add tables not in priority or dependent lists (middle)
+    for (const table of backupTableNames) {
+      if (!PRIORITY_TABLES.includes(table) && !DEPENDENT_TABLES.includes(table)) {
+        restoreOrder.push(table);
+      }
+    }
+    
+    // Add dependent tables last (that exist in backup)
+    for (const table of DEPENDENT_TABLES) {
+      if (backupTableNames.includes(table)) {
+        restoreOrder.push(table);
+      }
+    }
+
+    console.log(`📝 Restore order: ${restoreOrder.length} tables`);
+
+    for (const tableName of restoreOrder) {
       const tableData = backup_data.tables[tableName];
       
       if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
-        console.log(`⏭️ Skipping ${tableName} (no data)`);
         results[tableName] = { success: true, rows: 0 };
         continue;
       }
@@ -69,12 +120,15 @@ serve(async (req) => {
       try {
         console.log(`📥 Restoring ${tableName} (${tableData.length} rows)...`);
 
+        // Clean data - remove enriched fields before restore
+        const cleanedData = tableData.map(cleanRowForRestore);
+
         if (restore_mode === "replace") {
           // Delete existing data first
           const { error: deleteError } = await supabase
             .from(tableName)
             .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+            .neq('id', '00000000-0000-0000-0000-000000000000');
 
           if (deleteError) {
             console.warn(`⚠️ Delete warning for ${tableName}:`, deleteError.message);
@@ -85,8 +139,8 @@ serve(async (req) => {
         const batchSize = 100;
         let insertedCount = 0;
 
-        for (let i = 0; i < tableData.length; i += batchSize) {
-          const batch = tableData.slice(i, i + batchSize);
+        for (let i = 0; i < cleanedData.length; i += batchSize) {
+          const batch = cleanedData.slice(i, i + batchSize);
           
           const { error: insertError } = await supabase
             .from(tableName)
@@ -126,6 +180,7 @@ serve(async (req) => {
       tables_backed_up: tablesRestored,
       total_rows: totalRestored,
       created_by: user_id,
+      store_id: backup_data.backup_info?.store_id || null,
     });
 
     return new Response(
@@ -137,10 +192,7 @@ serve(async (req) => {
         duration_seconds: parseFloat(duration),
         results,
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200 
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
 
   } catch (error: unknown) {
@@ -148,14 +200,8 @@ serve(async (req) => {
     console.error("❌ Restore failed:", errorMessage);
 
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500 
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

@@ -7316,6 +7316,13 @@ export type Database = {
     Functions: {
       create_verification_otp: { Args: { p_user_id: string }; Returns: string }
       generate_otp: { Args: never; Returns: string }
+      get_all_public_tables: {
+        Args: never
+        Returns: {
+          has_store_id: boolean
+          table_name: string
+        }[]
+      }
       get_customer_insight: { Args: { p_phone: string }; Returns: Json }
       get_user_accessible_stores: {
         Args: { p_user_id: string }
@@ -7369,6 +7376,10 @@ export type Database = {
       reset_order_number_sequence: {
         Args: { start_value?: number }
         Returns: undefined
+      }
+      table_has_column: {
+        Args: { p_column_name: string; p_table_name: string }
+        Returns: boolean
       }
       user_has_store_access: {
         Args: { p_store_id: string; p_user_id: string }

@@ -6,21 +6,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Tables to backup (filtered by store_id)
-const TABLES_TO_BACKUP = [
-  'leads', 'lead_transfers', 'lead_sources', 'call_logs', 'followup_logs',
-  'orders', 'order_items', 'order_status_history', 'order_comments',
-  'customers', 'customer_notes', 'customer_activity_log',
-  'logistics_orders', 'courier_updates', 'cod_settlements',
-  'stock_movements', 'product_inventory', 'sales_records', 'daily_records',
-  'transactions', 'party_payments', 'party_transactions', 'parties',
-  'attendance_records', 'leave_requests', 'payroll_records', 'employees',
-  'ads', 'ads_spend', 'ad_spend_reference', 'staff_targets',
-  'products', 'branches', 'warehouses', 'profiles',
-  'accounting_transactions', 'accounting_banks', 'accounts',
-  'tasks', 'task_remarks', 'assets', 'asset_assignments',
-  'campaigns', 'influencers', 'video_projects',
-  'chat_messages', 'chat_rooms', 'notifications'
+// Tables to completely skip (system/security sensitive)
+const SKIP_TABLES = [
+  'backup_logs',           // Don't backup backup logs
+  'email_verifications',   // Security sensitive
+  'failed_login_attempts', // Security sensitive
+  'factory_reset_codes',   // Security sensitive
+];
+
+// Tables that should be backed up entirely (no store_id filter)
+const GLOBAL_TABLES = [
+  'stores', 'couriers', 'system_branding', 'system_modules', 
+  'system_roles', 'role_permissions', 'company_info'
+];
+
+// ID field to lookup table mapping for enrichment
+const ID_LOOKUPS: Record<string, { table: string; nameField: string }> = {
+  'product_id': { table: 'products', nameField: 'name' },
+  'warehouse_id': { table: 'warehouses', nameField: 'name' },
+  'party_id': { table: 'parties', nameField: 'name' },
+  'employee_id': { table: 'employees', nameField: 'full_name' },
+  'customer_id': { table: 'customers', nameField: 'customer_name' },
+  'account_id': { table: 'accounts', nameField: 'name' },
+  'branch_id': { table: 'branches', nameField: 'branch_name' },
+  'category_id': { table: 'categories', nameField: 'name' },
+  'department_id': { table: 'departments', nameField: 'name' },
+  'lead_id': { table: 'leads', nameField: 'client_name' },
+  'order_id': { table: 'orders', nameField: 'order_number' },
+  'courier_id': { table: 'couriers', nameField: 'name' },
+  'task_id': { table: 'tasks', nameField: 'title' },
+  'campaign_id': { table: 'campaigns', nameField: 'name' },
+  'asset_id': { table: 'assets', nameField: 'name' },
+  'store_id': { table: 'stores', nameField: 'name' },
+  'from_warehouse_id': { table: 'warehouses', nameField: 'name' },
+  'to_warehouse_id': { table: 'warehouses', nameField: 'name' },
+  'supplier_id': { table: 'accounting_suppliers', nameField: 'name' },
+  'wholesaler_id': { table: 'accounting_wholesalers', nameField: 'name' },
+  'bank_id': { table: 'accounting_banks', nameField: 'bank_name' },
+  'bank_account_id': { table: 'accounts', nameField: 'name' },
+  'room_id': { table: 'chat_rooms', nameField: 'name' },
+};
+
+// User ID fields - all resolve to profiles.name
+const USER_ID_FIELDS = [
+  'user_id', 'created_by', 'updated_by', 'assigned_to_user_id', 
+  'first_assigned_to_user_id', 'created_by_user_id', 'created_by_staff_id',
+  'transferred_by_user_id', 'from_user_id', 'to_user_id', 'target_user_id',
+  'sender_id', 'performed_by', 'changed_by', 'staff_id', 'actor_id',
+  'handled_by', 'manager_id', 'approved_by', 'assigned_by'
 ];
 
 // Get Google OAuth token using refresh token
@@ -30,10 +63,8 @@ async function getGoogleAccessToken(): Promise<string> {
   const refreshToken = Deno.env.get("GOOGLE_REFRESH_TOKEN");
 
   if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error("Missing Google OAuth credentials (CLIENT_ID, CLIENT_SECRET, or REFRESH_TOKEN)");
+    throw new Error("Missing Google OAuth credentials");
   }
-
-  console.log("🔑 Exchanging refresh token for access token...");
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -49,47 +80,35 @@ async function getGoogleAccessToken(): Promise<string> {
   const tokenData = await tokenResponse.json();
   
   if (!tokenData.access_token) {
-    console.error("Token response error:", tokenData);
     throw new Error(`Failed to get access token: ${tokenData.error_description || tokenData.error}`);
   }
 
-  console.log("✅ Access token obtained successfully");
   return tokenData.access_token;
 }
 
-// Search for existing backup file by name pattern (store_name prefix)
+// Search for existing backup file
 async function findExistingBackupFile(
   accessToken: string,
   folderId: string | null,
   storeName: string
 ): Promise<{ id: string; name: string } | null> {
-  // Search for files starting with store name and ending with _backup.json
   let query = `name contains '${storeName}_' and name contains '_backup.json' and trashed=false`;
   if (folderId) {
     query += ` and '${folderId}' in parents`;
   }
 
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)&orderBy=modifiedTime desc`;
-  
-  const response = await fetch(searchUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)&orderBy=modifiedTime desc`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
 
-  if (!response.ok) {
-    console.warn("Failed to search for existing file:", await response.text());
-    return null;
-  }
+  if (!response.ok) return null;
 
   const data = await response.json();
-  if (data.files && data.files.length > 0) {
-    console.log(`📁 Found existing backup file: ${data.files[0].name} (${data.files[0].id})`);
-    return { id: data.files[0].id, name: data.files[0].name };
-  }
-
-  return null;
+  return data.files?.[0] || null;
 }
 
-// Upload new file to Google Drive
+// Upload to Google Drive
 async function uploadToGoogleDrive(
   accessToken: string,
   folderId: string | null,
@@ -101,19 +120,15 @@ async function uploadToGoogleDrive(
     mimeType: "application/json",
   };
 
-  if (folderId && folderId.trim() !== "") {
+  if (folderId?.trim()) {
     metadata.parents = [folderId];
   }
 
   const boundary = "backup_boundary_" + Date.now();
   const body = 
-    `--${boundary}\r\n` +
-    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-    JSON.stringify(metadata) + `\r\n` +
-    `--${boundary}\r\n` +
-    `Content-Type: application/json\r\n\r\n` +
-    content + `\r\n` +
-    `--${boundary}--`;
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+    JSON.stringify(metadata) + `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+    content + `\r\n--${boundary}--`;
 
   const response = await fetch(
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
@@ -123,20 +138,104 @@ async function uploadToGoogleDrive(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-      body: body,
+      body,
     }
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Drive upload error:", errorText);
-    throw new Error(`Failed to upload to Google Drive: ${response.status} - ${errorText}`);
+    throw new Error(`Drive upload failed: ${response.status}`);
   }
 
   return await response.json();
 }
 
-// Backup a single store
+// Load all lookup maps for ID to name resolution
+async function loadLookupMaps(supabase: any, storeId: string): Promise<Record<string, Record<string, string>>> {
+  const maps: Record<string, Record<string, string>> = {};
+  
+  // Load profiles (global - all users)
+  const { data: profiles } = await supabase.from('profiles').select('id, name');
+  maps['user_id'] = {};
+  for (const p of profiles || []) {
+    maps['user_id'][p.id] = p.name || 'Unknown';
+  }
+  
+  // Load store-specific lookups
+  const lookupConfigs = [
+    { key: 'product_id', table: 'products', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'warehouse_id', table: 'warehouses', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'party_id', table: 'parties', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'employee_id', table: 'employees', idField: 'id', nameField: 'full_name', filterStore: true },
+    { key: 'customer_id', table: 'customers', idField: 'id', nameField: 'customer_name', filterStore: true },
+    { key: 'account_id', table: 'accounts', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'branch_id', table: 'branches', idField: 'id', nameField: 'branch_name', filterStore: true },
+    { key: 'category_id', table: 'categories', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'department_id', table: 'departments', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'lead_id', table: 'leads', idField: 'id', nameField: 'client_name', filterStore: true },
+    { key: 'order_id', table: 'orders', idField: 'id', nameField: 'order_number', filterStore: true },
+    { key: 'task_id', table: 'tasks', idField: 'id', nameField: 'title', filterStore: true },
+    { key: 'campaign_id', table: 'campaigns', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'asset_id', table: 'assets', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'room_id', table: 'chat_rooms', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'supplier_id', table: 'accounting_suppliers', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'wholesaler_id', table: 'accounting_wholesalers', idField: 'id', nameField: 'name', filterStore: true },
+    { key: 'bank_id', table: 'accounting_banks', idField: 'id', nameField: 'bank_name', filterStore: true },
+    // Global lookups
+    { key: 'courier_id', table: 'couriers', idField: 'id', nameField: 'name', filterStore: false },
+    { key: 'store_id', table: 'stores', idField: 'id', nameField: 'name', filterStore: false },
+  ];
+  
+  for (const config of lookupConfigs) {
+    try {
+      let query = supabase.from(config.table).select(`${config.idField}, ${config.nameField}`);
+      if (config.filterStore) {
+        query = query.eq('store_id', storeId);
+      }
+      const { data } = await query.limit(10000);
+      
+      maps[config.key] = {};
+      for (const row of data || []) {
+        maps[config.key][row[config.idField]] = row[config.nameField] || 'Unknown';
+      }
+    } catch {
+      maps[config.key] = {};
+    }
+  }
+  
+  // Copy user_id map to all user fields
+  for (const field of USER_ID_FIELDS) {
+    if (field !== 'user_id') {
+      maps[field] = maps['user_id'];
+    }
+  }
+  
+  // Copy warehouse map for from/to warehouse
+  maps['from_warehouse_id'] = maps['warehouse_id'];
+  maps['to_warehouse_id'] = maps['warehouse_id'];
+  maps['bank_account_id'] = maps['account_id'];
+  
+  return maps;
+}
+
+// Enrich a single row with human-readable names
+function enrichRow(row: any, lookupMaps: Record<string, Record<string, string>>): any {
+  const enriched = { ...row };
+  
+  for (const [key, value] of Object.entries(row)) {
+    if (value && typeof value === 'string' && lookupMaps[key]) {
+      const name = lookupMaps[key][value];
+      if (name) {
+        // Add enriched name field with underscore prefix
+        const nameKey = key.replace('_id', '_name').replace('_by', '_by_name');
+        enriched[`_${nameKey}`] = name;
+      }
+    }
+  }
+  
+  return enriched;
+}
+
+// Backup a single store with dynamic table discovery
 async function backupStore(
   supabase: any,
   accessToken: string,
@@ -147,10 +246,10 @@ async function backupStore(
   backupType: string,
   createdBy: string | null
 ): Promise<{ success: boolean; error?: string; fileName?: string; totalRows?: number }> {
-  console.log(`\n📦 ===== Backing up store: ${storeName} (${storeId}) =====`);
+  console.log(`\n📦 ===== Backing up store: ${storeName} =====`);
   
   // Create backup log entry
-  const { data: logEntry, error: logError } = await supabase
+  const { data: logEntry } = await supabase
     .from("backup_logs")
     .insert({
       backup_type: backupType,
@@ -162,34 +261,65 @@ async function backupStore(
     .select()
     .single();
 
-  if (logError) {
-    console.error("Failed to create log entry:", logError);
-  }
-
   const logId = logEntry?.id;
-  console.log("📝 Created backup log:", logId);
 
   try {
-    // Export all tables filtered by store_id
+    // DYNAMIC TABLE DISCOVERY - fetch all tables from database
+    console.log("🔍 Discovering all tables dynamically...");
+    const { data: allTables, error: tablesError } = await supabase.rpc('get_all_public_tables');
+    
+    if (tablesError) {
+      throw new Error(`Failed to discover tables: ${tablesError.message}`);
+    }
+    
+    console.log(`📋 Found ${allTables.length} tables in database`);
+    
+    // Load lookup maps for data enrichment
+    console.log("📚 Loading lookup maps for data enrichment...");
+    const lookupMaps = await loadLookupMaps(supabase, storeId);
+    
     const backupData: Record<string, any[]> = {};
     let totalRows = 0;
     let tablesBackedUp = 0;
 
-    for (const tableName of TABLES_TO_BACKUP) {
+    for (const tableInfo of allTables) {
+      const tableName = tableInfo.table_name;
+      const hasStoreId = tableInfo.has_store_id;
+      
+      // Skip system/sensitive tables
+      if (SKIP_TABLES.includes(tableName)) {
+        continue;
+      }
+      
       try {
-        let query = supabase.from(tableName).select("*").eq("store_id", storeId);
+        let query;
+        
+        if (GLOBAL_TABLES.includes(tableName)) {
+          // Backup entire table (no filter)
+          query = supabase.from(tableName).select("*");
+        } else if (hasStoreId) {
+          // Filter by store_id
+          query = supabase.from(tableName).select("*").eq("store_id", storeId);
+        } else {
+          // Table without store_id - skip unless it's a known global table
+          // These are typically junction tables or tables related to auth
+          continue;
+        }
+        
         const { data, error } = await query.limit(50000);
 
         if (error) {
           console.warn(`⚠️ Error exporting ${tableName}:`, error.message);
           backupData[tableName] = [];
-        } else {
-          backupData[tableName] = data || [];
-          totalRows += (data?.length || 0);
+        } else if (data && data.length > 0) {
+          // Enrich each row with human-readable names
+          const enrichedData = data.map(row => enrichRow(row, lookupMaps));
+          backupData[tableName] = enrichedData;
+          totalRows += data.length;
           tablesBackedUp++;
-          if (data && data.length > 0) {
-            console.log(`✅ ${tableName}: ${data.length} rows`);
-          }
+          console.log(`✅ ${tableName}: ${data.length} rows`);
+        } else {
+          backupData[tableName] = [];
         }
       } catch (err) {
         console.warn(`⚠️ Failed to export ${tableName}:`, err);
@@ -197,13 +327,14 @@ async function backupStore(
       }
     }
 
-    // Format: StoreName_YYYY-MM-DD_backup.json
+    // Create backup file
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const dateStr = today.toISOString().split('T')[0];
     const fileName = `${storeName}_${dateStr}_backup.json`;
     
     const backupContent = JSON.stringify({
       backup_info: {
+        version: "2.0",  // New version with enriched data
         timestamp: new Date().toISOString(),
         store_id: storeId,
         store_name: storeName,
@@ -212,37 +343,28 @@ async function backupStore(
         tables_count: tablesBackedUp,
         total_rows: totalRows,
         backup_type: backupType,
+        dynamic_discovery: true,
+        enriched_data: true,
       },
       tables: backupData,
     }, null, 2);
 
     const fileSize = new Blob([backupContent]).size;
-    console.log(`📊 Backup size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`📊 Backup size: ${(fileSize / 1024 / 1024).toFixed(2)} MB, Tables: ${tablesBackedUp}`);
 
-    // Check if backup file already exists for this store (will be replaced daily)
-    console.log(`🔍 Searching for existing backup file for store: ${storeName}`);
+    // Delete existing backup file and upload new one
     const existingFile = await findExistingBackupFile(accessToken, driveFolderId, storeName);
-
-    let driveResult: { id: string; webViewLink: string };
-
+    
     if (existingFile) {
-      // Delete old file first, then create new one with today's date
-      console.log(`🗑️ Deleting old backup file: ${existingFile.name}`);
+      console.log(`🗑️ Deleting old backup: ${existingFile.name}`);
       await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      
-      // Create new file with today's date
-      console.log(`☁️ Creating new backup file: ${fileName}`);
-      driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
-      console.log("✅ Created new file:", driveResult.id);
-    } else {
-      // Create new file
-      console.log(`☁️ Creating new backup file: ${fileName}`);
-      driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
-      console.log("✅ Created new file:", driveResult.id);
     }
+
+    console.log(`☁️ Uploading: ${fileName}`);
+    const driveResult = await uploadToGoogleDrive(accessToken, driveFolderId, fileName, backupContent);
 
     // Update backup log with success
     if (logId) {
@@ -261,14 +383,13 @@ async function backupStore(
         .eq("id", logId);
     }
 
-    console.log(`✅ Store ${storeName} backup completed: ${totalRows} rows`);
+    console.log(`✅ ${storeName}: ${totalRows} rows in ${tablesBackedUp} tables`);
     return { success: true, fileName, totalRows };
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`❌ Store ${storeName} backup failed:`, errorMessage);
+    console.error(`❌ ${storeName} backup failed:`, errorMessage);
 
-    // Update log with failure
     if (logId) {
       await supabase
         .from("backup_logs")
@@ -285,24 +406,20 @@ async function backupStore(
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   const startTime = Date.now();
-  console.log("🚀 Starting database backup...");
+  console.log("🚀 Starting dynamic database backup...");
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || null;
 
-    console.log("📁 Drive folder ID:", driveFolderId || "(root/My Drive)");
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body for backup type and store_id
     let backupType = "scheduled";
     let createdBy = null;
     let storeId = null;
@@ -313,14 +430,12 @@ serve(async (req) => {
       createdBy = body.user_id || null;
       storeId = body.store_id || null;
     } catch {
-      // Default to scheduled if no body
+      // Default to scheduled
     }
 
-    // Get Google access token
-    console.log("🔑 Getting Google access token...");
     const accessToken = await getGoogleAccessToken();
 
-    // If store_id provided, backup only that store (manual backup)
+    // Manual backup for specific store
     if (storeId) {
       const { data: storeData } = await supabase
         .from("stores")
@@ -333,67 +448,46 @@ serve(async (req) => {
       }
 
       const result = await backupStore(
-        supabase,
-        accessToken,
-        driveFolderId,
-        storeData.id,
-        storeData.name || "Store",
-        storeData.slug || "store",
-        backupType === "scheduled" ? "manual" : backupType,
-        createdBy
+        supabase, accessToken, driveFolderId,
+        storeData.id, storeData.name || "Store", storeData.slug || "store",
+        backupType === "scheduled" ? "manual" : backupType, createdBy
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       
-      if (result.success) {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Backup completed successfully",
-            file_name: result.fileName,
-            total_rows: result.totalRows,
-            duration_seconds: parseFloat(duration),
-          }),
-          { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200 
-          }
-        );
-      } else {
-        throw new Error(result.error);
-      }
+      return new Response(
+        JSON.stringify({
+          success: result.success,
+          message: result.success ? "Backup completed" : result.error,
+          file_name: result.fileName,
+          total_rows: result.totalRows,
+          duration_seconds: parseFloat(duration),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: result.success ? 200 : 500 }
+      );
     }
 
-    // SCHEDULED BACKUP: Backup ALL stores
-    console.log("📦 Scheduled backup - backing up ALL stores...");
+    // Scheduled backup: ALL stores
+    console.log("📦 Scheduled backup - all stores...");
     
     const { data: stores, error: storesError } = await supabase
       .from("stores")
       .select("id, slug, name")
       .order("name");
 
-    if (storesError) {
-      throw new Error(`Failed to fetch stores: ${storesError.message}`);
+    if (storesError || !stores?.length) {
+      throw new Error(storesError?.message || "No stores found");
     }
 
-    if (!stores || stores.length === 0) {
-      throw new Error("No stores found to backup");
-    }
-
-    console.log(`📋 Found ${stores.length} stores to backup`);
+    console.log(`📋 Found ${stores.length} stores`);
 
     const results: { storeName: string; success: boolean; error?: string }[] = [];
 
     for (const store of stores) {
       const result = await backupStore(
-        supabase,
-        accessToken,
-        driveFolderId,
-        store.id,
-        store.name || "Store",
-        store.slug || "store",
-        "scheduled",
-        null
+        supabase, accessToken, driveFolderId,
+        store.id, store.name || "Store", store.slug || "store",
+        "scheduled", null
       );
       
       results.push({
@@ -404,26 +498,16 @@ serve(async (req) => {
     }
 
     const successCount = results.filter(r => r.success).length;
-    const failedCount = results.filter(r => !r.success).length;
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-
-    console.log(`\n🎉 Scheduled backup completed in ${duration}s`);
-    console.log(`✅ Success: ${successCount}/${stores.length} stores`);
-    if (failedCount > 0) {
-      console.log(`❌ Failed: ${failedCount} stores`);
-    }
 
     return new Response(
       JSON.stringify({
-        success: failedCount === 0,
+        success: successCount === stores.length,
         message: `Backed up ${successCount}/${stores.length} stores`,
-        results: results,
+        results,
         duration_seconds: parseFloat(duration),
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200 
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
 
   } catch (error: unknown) {
@@ -431,14 +515,8 @@ serve(async (req) => {
     console.error("❌ Backup failed:", errorMessage);
 
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500 
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
