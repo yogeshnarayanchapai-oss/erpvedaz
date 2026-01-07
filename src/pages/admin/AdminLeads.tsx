@@ -154,7 +154,12 @@ export default function AdminLeads() {
   const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
   const dateTo = format(dateRange.to, 'yyyy-MM-dd');
 
-  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom, dateTo });
+  // When searching, fetch all leads (ignore date filter)
+  const isSearching = search.trim().length > 0;
+  const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
+  const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
+
+  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo });
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();

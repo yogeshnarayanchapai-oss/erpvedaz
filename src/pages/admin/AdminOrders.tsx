@@ -174,7 +174,12 @@ export default function AdminOrders() {
   const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
   const dateTo = format(dateRange.to, 'yyyy-MM-dd');
 
-  const { data: orders = [], isLoading, isFetched } = useOrders({ dateFrom, dateTo });
+  // When searching, fetch all orders (ignore date filter)
+  const isSearching = search.trim().length > 0;
+  const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
+  const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
+
+  const { data: orders = [], isLoading, isFetched } = useOrders({ dateFrom: queryDateFrom, dateTo: queryDateTo });
   const { data: products = [] } = useProducts();
   const { data: staff = [] } = useStaff();
 
