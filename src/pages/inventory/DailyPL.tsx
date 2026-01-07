@@ -46,7 +46,7 @@ export default function DailyPL() {
     startDate: dateRange.startDate, 
     endDate: dateRange.endDate, 
     warehouseId: selectedWarehouse,
-    limit: 50 
+    limit: 500 // Increased to ensure all records are included in profit sum
   });
   const savePL = useSaveDailyPL();
   
