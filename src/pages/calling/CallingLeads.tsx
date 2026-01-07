@@ -12,13 +12,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, MessageSquare, PhoneOff, Clock, XCircle, Edit, ArrowRightLeft, Calendar, Timer, Filter, Users, CornerDownLeft, Plus, Copy, Search, FileSpreadsheet } from 'lucide-react';
+import { Phone, MessageSquare, PhoneOff, Clock, XCircle, Edit, ArrowRightLeft, Timer, Users, CornerDownLeft, Copy } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 import { toast } from 'sonner';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -28,31 +27,8 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
-
-const STATUS_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'All Statuses' },
-  { value: 'REMAINING', label: 'Remaining to Call' },
-  { value: 'DUPLICATE', label: 'Duplicate' },
-  { value: 'NEW', label: 'Pending' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'FOLLOW_UP', label: 'Follow Up' },
-  { value: 'CALL_NOT_RECEIVED', label: 'Call Not Received' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'REDIRECT', label: 'Redirect' },
-];
-
-const FOLLOWUP_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'All Follow-Ups' },
-  { value: 'today', label: 'Today Follow-Ups' },
-  { value: 'upcoming', label: 'Upcoming Follow-Ups' },
-  { value: 'pending', label: 'Pending Follow-Ups' },
-  { value: 'overdue', label: 'Overdue Follow-Ups' },
-];
-
-type DatePreset = 'today' | 'yesterday' | 'last30' | 'custom';
-
-type FollowupFilterType = 'ALL' | 'today' | 'upcoming' | 'pending' | 'overdue';
+import { LeadFiltersCard, DatePreset, FollowupFilterType } from '@/components/filters/LeadFiltersCard';
+import { AddLeadDropdown } from '@/components/filters/AddLeadDropdown';
 
 export default function CallingLeads() {
   const { profile } = useAuth();
@@ -744,20 +720,10 @@ Order By: ${profile?.name || 'N/A'}`;
           <p className="text-muted-foreground">Manage your assigned leads</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline"
-            onClick={() => setImportDialogOpen(true)}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Import
-          </Button>
-          <Button 
-            onClick={() => setAddLeadDialogOpen(true)}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Lead
-          </Button>
+          <AddLeadDropdown
+            onAddLead={() => setAddLeadDialogOpen(true)}
+            onImport={() => setImportDialogOpen(true)}
+          />
           <Badge variant="outline" className="text-sm bg-[hsl(25,95%,53%)]/10 text-[hsl(25,95%,53%)] border-[hsl(25,95%,53%)]/20">
             <Phone className="w-4 h-4 mr-1" />
             {pendingCallsCount} Pending Calls
@@ -776,100 +742,25 @@ Order By: ${profile?.name || 'N/A'}`;
       <ImportLeadsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} portalType="CALLING" />
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search name, phone, reference..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Date Filter with Presets */}
-            <div className="flex items-center gap-2">
-              <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-                <SelectTrigger className="w-[140px]">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="yesterday">Yesterday</SelectItem>
-                  <SelectItem value="last30">Last 30 Days</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {datePreset === 'custom' && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="date"
-                    value={customDateFrom}
-                    onChange={(e) => setCustomDateFrom(e.target.value)}
-                    className="w-36"
-                  />
-                  <span className="text-muted-foreground">to</span>
-                  <Input
-                    type="date"
-                    value={customDateTo}
-                    onChange={(e) => setCustomDateTo(e.target.value)}
-                    className="w-36"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Product Filter */}
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Products" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Products</SelectItem>
-                {products.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTER_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Follow-Up Filter */}
-            <Select value={followupFilter} onValueChange={(v) => setFollowupFilter(v as FollowupFilterType)}>
-              <SelectTrigger className="w-[180px]">
-                <Clock className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All Follow-Ups" />
-              </SelectTrigger>
-              <SelectContent>
-                {FOLLOWUP_FILTER_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Clear Button */}
-            <Button variant="outline" onClick={handleReset}>
-              Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <LeadFiltersCard
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        customDateFrom={customDateFrom}
+        onCustomDateFromChange={setCustomDateFrom}
+        customDateTo={customDateTo}
+        onCustomDateToChange={setCustomDateTo}
+        productFilter={productFilter}
+        onProductFilterChange={setProductFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        products={products}
+        onReset={handleReset}
+        showFollowupFilter={true}
+        followupFilter={followupFilter}
+        onFollowupFilterChange={setFollowupFilter}
+      />
 
 
       {/* Leads Table */}

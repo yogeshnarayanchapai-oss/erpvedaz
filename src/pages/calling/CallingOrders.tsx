@@ -12,45 +12,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Edit, Copy, FileDown, Search, X, ChevronDown } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingCart, Eye, Edit, Copy, MapPin } from 'lucide-react';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays } from 'date-fns';
 
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
+import { ExportDropdown } from '@/components/filters/ExportDropdown';
+import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, InsideDeliveryStatusFilter } from '@/components/filters/OrderFiltersCard';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
-
-type DatePreset = 'today' | 'yesterday' | 'last30' | 'custom';
-type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
-type OrderStatusFilter = 'ALL' | 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'REDIRECT' | 'CANCELLED';
-type InsideDeliveryStatusFilter = 'ALL' | 'PENDING' | 'DELIVERED' | 'REACHED_CNR' | 'CUSTOMER_CANCELLED';
-
-const ORDER_STATUS_OPTIONS = [
-  { value: 'ALL', label: 'All Statuses' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'DISPATCHED', label: 'Dispatched' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'RETURNED', label: 'Returned' },
-  { value: 'REDIRECT', label: 'Redirect' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
 
 const INSIDE_DELIVERY_STATUS_OPTIONS: { value: InsideDeliveryStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pending' },
   { value: 'DELIVERED', label: 'Delivered' },
   { value: 'REACHED_CNR', label: 'Reached - CNR' },
   { value: 'CUSTOMER_CANCELLED', label: 'Customer Cancelled' },
-];
-
-const INSIDE_DELIVERY_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'All Delivery Status' },
-  { value: 'PENDING', label: 'Pending Delivery' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'REACHED_CNR', label: 'Location Not Reached' },
-  { value: 'CUSTOMER_CANCELLED', label: 'Customer Not Available' },
 ];
 
 const insideDeliveryStatusColors: Record<string, string> = {
@@ -309,151 +286,33 @@ export default function CallingOrders() {
           <h1 className="text-2xl font-bold">My Orders</h1>
           <p className="text-muted-foreground">Orders you have confirmed</p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={exportCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Courier Excel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ExportDropdown
+          onExportCSV={exportCSV}
+          onExportCourier={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)}
+        />
       </div>
 
-
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search Name / Phone / Reference / Order ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-8"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            
-            {/* Date Preset */}
-            <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-              <SelectTrigger className="w-[140px]">
-                <Calendar className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="last30">Last 30 days</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {datePreset === 'custom' && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                  className="w-36"
-                />
-                <span className="text-muted-foreground">to</span>
-                <Input
-                  type="date"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                  className="w-36"
-                />
-              </div>
-            )}
-            
-            {/* Location Filter */}
-            <Select value={deliveryFilter} onValueChange={(v) => {
-              setDeliveryFilter(v as DeliveryFilter);
-              if (v !== 'INSIDE_VALLEY') {
-                setInsideDeliveryStatusFilter('ALL');
-              }
-            }}>
-              <SelectTrigger className="w-[160px]">
-                <MapPin className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Locations</SelectItem>
-                <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Order Status Filter */}
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatusFilter)}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Order Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORDER_STATUS_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Delivery Status Filter - only show when Inside Valley is selected */}
-            {deliveryFilter === 'INSIDE_VALLEY' && (
-              <Select value={insideDeliveryStatusFilter} onValueChange={(v) => setInsideDeliveryStatusFilter(v as InsideDeliveryStatusFilter)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Delivery Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INSIDE_DELIVERY_FILTER_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            
-            {/* Product Filter */}
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Product" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Products</SelectItem>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Clear Button */}
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <X className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <OrderFiltersCard
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        customDateFrom={customDateFrom}
+        onCustomDateFromChange={setCustomDateFrom}
+        customDateTo={customDateTo}
+        onCustomDateToChange={setCustomDateTo}
+        deliveryFilter={deliveryFilter}
+        onDeliveryFilterChange={setDeliveryFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        insideDeliveryStatusFilter={insideDeliveryStatusFilter}
+        onInsideDeliveryStatusFilterChange={setInsideDeliveryStatusFilter}
+        productFilter={productFilter}
+        onProductFilterChange={setProductFilter}
+        products={products}
+        onReset={handleReset}
+      />
 
       {/* Orders Table */}
       <Card>
