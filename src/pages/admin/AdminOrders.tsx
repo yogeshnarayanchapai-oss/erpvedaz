@@ -119,14 +119,16 @@ export default function AdminOrders() {
   const initialToParam = searchParams.get('to');
   const initialStatusParam = searchParams.get('status');
   
-  // Tab state: 'today' or 'all'
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>(() => {
-    // If URL params have a date range that's not today, show 'all'
+  // Date preset state: 'today', '7days', '30days', 'custom'
+  const [datePreset, setDatePreset] = useState<'today' | '7days' | '30days' | 'custom'>(() => {
     if (initialFromParam || initialToParam) {
       const todayStr = format(today, 'yyyy-MM-dd');
-      if (initialFromParam !== todayStr || initialToParam !== todayStr) {
-        return 'all';
-      }
+      const sevenDaysAgo = format(subDays(today, 7), 'yyyy-MM-dd');
+      const thirtyDaysAgo = format(subDays(today, 30), 'yyyy-MM-dd');
+      if (initialFromParam === todayStr && initialToParam === todayStr) return 'today';
+      if (initialFromParam === sevenDaysAgo && initialToParam === todayStr) return '7days';
+      if (initialFromParam === thirtyDaysAgo && initialToParam === todayStr) return '30days';
+      return 'custom';
     }
     return 'today';
   });
@@ -143,6 +145,19 @@ export default function AdminOrders() {
       to: endOfDay(today),
     };
   });
+
+  // Update date range when preset changes
+  const handleDatePresetChange = (preset: 'today' | '7days' | '30days' | 'custom') => {
+    setDatePreset(preset);
+    if (preset === 'today') {
+      setDateRange({ from: startOfDay(today), to: endOfDay(today) });
+    } else if (preset === '7days') {
+      setDateRange({ from: startOfDay(subDays(today, 7)), to: endOfDay(today) });
+    } else if (preset === '30days') {
+      setDateRange({ from: startOfDay(subDays(today, 30)), to: endOfDay(today) });
+    }
+    // 'custom' keeps the current dateRange and shows the DateRangeFilter
+  };
   
   const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
@@ -151,26 +166,6 @@ export default function AdminOrders() {
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
   const [search, setSearch] = useState('');
-
-  // Update date range when tab changes
-  useEffect(() => {
-    if (activeTab === 'today') {
-      setDateRange({
-        from: startOfDay(today),
-        to: endOfDay(today),
-      });
-    } else {
-      // For 'all' tab, show last 30 days by default if not set from URL
-      if (!initialFromParam && !initialToParam) {
-        setDateRange({
-          from: startOfDay(subDays(today, 30)),
-          to: endOfDay(today),
-        });
-      }
-    }
-  }, [activeTab]);
-
-  // Clear URL params after reading
   useEffect(() => {
     if (searchParams.toString()) {
       // Clear after a short delay to let state initialize
@@ -490,12 +485,17 @@ export default function AdminOrders() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList className="h-8">
-              <TabsTrigger value="today" className="text-xs px-3">Today</TabsTrigger>
-              <TabsTrigger value="all" className="text-xs px-3">All</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | '7days' | '30days' | 'custom')}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="custom">Custom Date</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={exportCSV} variant="outline" size="sm" className="hidden sm:flex">
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -509,7 +509,7 @@ export default function AdminOrders() {
           <div className="flex flex-col gap-3">
             {/* First row: Date + Search */}
             <div className="flex flex-col sm:flex-row gap-3">
-              {activeTab === 'all' && (
+              {datePreset === 'custom' && (
                 <DateRangeFilter value={dateRange} onChange={setDateRange} />
               )}
               <div className="relative flex-1 min-w-0">
@@ -685,7 +685,7 @@ export default function AdminOrders() {
         <CardHeader className="pb-2 md:pb-4">
           <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            {activeTab === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
+            {datePreset === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 sm:p-6 sm:pt-0">
