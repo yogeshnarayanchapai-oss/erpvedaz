@@ -116,6 +116,22 @@ export function LeadFiltersCard({
   const statusOptions = isAdmin ? ADMIN_STATUS_FILTER_OPTIONS : STATUS_FILTER_OPTIONS;
   const datePresets = isAdmin ? ADMIN_DATE_PRESETS : CALLING_DATE_PRESETS;
   
+  // Default values for each filter type
+  const defaultDatePreset = isAdmin ? 'today' : 'today';
+  const defaultStatus = isAdmin ? 'all' : 'ALL';
+  const defaultProduct = 'ALL';
+  const defaultFollowup = 'ALL';
+  const defaultAssignedTo = 'all';
+  
+  // Check if any filter is active (not at default value)
+  const hasActiveFilters = 
+    searchQuery.trim() !== '' ||
+    datePreset !== defaultDatePreset ||
+    productFilter !== defaultProduct ||
+    statusFilter !== defaultStatus ||
+    (showFollowupFilter && followupFilter !== defaultFollowup) ||
+    (showAssignedToFilter && assignedToFilter !== defaultAssignedTo);
+  
   return (
     <Card>
       <CardContent className="pt-6">
@@ -228,11 +244,13 @@ export function LeadFiltersCard({
             </Select>
           )}
 
-          {/* Clear Button */}
-          <Button variant="outline" onClick={onReset}>
-            <X className="w-4 h-4 mr-1" />
-            Clear
-          </Button>
+          {/* Clear Button - Only show when filters are active */}
+          {hasActiveFilters && (
+            <Button variant="outline" onClick={onReset}>
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown } from 'lucide-react';
+import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -754,6 +754,25 @@ export default function AdminLeads() {
   // Count duplicates
   const duplicateCount = leads.filter(l => l.is_duplicate).length;
 
+  // Check if any filter is active (not at default value)
+  const hasActiveFilters = 
+    search.trim() !== '' ||
+    datePreset !== 'today' ||
+    selectedProduct !== 'all' ||
+    selectedStatus !== 'all' ||
+    assignedToFilter !== 'all';
+
+  // Reset all filters to default
+  const handleResetFilters = () => {
+    setSearch('');
+    setDatePreset('today');
+    setDateRange({ from: startOfDay(today), to: endOfDay(today) });
+    setSelectedProduct('all');
+    setSelectedStatus('all');
+    setAssignedToFilter('all');
+    setSelectedLeads([]);
+  };
+
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in p-2 md:p-0">
       {/* Header */}
@@ -1016,9 +1035,24 @@ export default function AdminLeads() {
                   placeholder="Search by name or phone..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 pr-8"
                 />
+                {search && (
+                  <button 
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
+              {/* Clear Button - Only show when filters are active */}
+              {hasActiveFilters && (
+                <Button variant="outline" size="sm" onClick={handleResetFilters} className="flex-shrink-0">
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
