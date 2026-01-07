@@ -12,10 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Upload, Edit, Copy, FileDown, Search, X } from 'lucide-react';
+import { ShoppingCart, Calendar, Filter, MapPin, Eye, Download, Edit, Copy, FileDown, Search, X, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays } from 'date-fns';
-import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
+
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
@@ -103,7 +104,6 @@ export default function CallingOrders() {
   const [productFilter, setProductFilter] = useState<string>('all');
   
   // Modal state
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   
   // Clear URL params after applying
@@ -309,31 +309,27 @@ export default function CallingOrders() {
           <h1 className="text-2xl font-bold">My Orders</h1>
           <p className="text-muted-foreground">Orders you have confirmed</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
-          <Button onClick={exportCSV} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button 
-            onClick={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)} 
-            variant="outline" 
-            size="sm"
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Courier Excel
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={exportCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Courier Excel
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <ImportOrdersDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        portalType="CALLING"
-      />
 
       {/* Filters */}
       <Card>
