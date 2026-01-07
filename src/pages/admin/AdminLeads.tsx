@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -783,14 +783,25 @@ export default function AdminLeads() {
                 <ArrowRightLeft className="w-3 h-3 md:w-4 md:h-4" />
                 <span className="hidden sm:inline">Transfer</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)} className="gap-1 text-xs md:text-sm">
-                <FileSpreadsheet className="w-3 h-3 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">Import</span>
-              </Button>
-              <Button size="sm" onClick={() => setShowAddLeadDialog(true)} className="gap-1 text-xs md:text-sm">
-                <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">Add</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1 text-xs md:text-sm">
+                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                    Add
+                    <ChevronDown className="w-3 h-3 md:w-4 md:h-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowAddLeadDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Leads
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Import Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
         </div>
