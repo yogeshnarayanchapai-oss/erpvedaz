@@ -285,15 +285,51 @@ export default function CallingOrders() {
   const insideValleyOrders = allOrders.filter(o => o.delivery_location === 'INSIDE_VALLEY');
   const ivDelivered = insideValleyOrders.filter(o => o.inside_delivery_status === 'DELIVERED').length;
   const ivPending = insideValleyOrders.filter(o => !o.inside_delivery_status || o.inside_delivery_status === 'PENDING').length;
+  const ivReachedCNR = insideValleyOrders.filter(o => o.inside_delivery_status === 'REACHED_CNR').length;
+  const ivCustomerCancelled = insideValleyOrders.filter(o => o.inside_delivery_status === 'CUSTOMER_CANCELLED').length;
+  
+  // Confirmed orders count
+  const confirmedCount = allOrders.filter(o => o.order_status === 'CONFIRMED').length;
 
   // Handle clickable summary cards
   const handleInsideValleyClick = () => {
     setDeliveryFilter('INSIDE_VALLEY');
     setStatusFilter('ALL');
+    setInsideDeliveryStatusFilter('ALL');
   };
 
   const handleOutsideValleyClick = () => {
     setDeliveryFilter('OUTSIDE_VALLEY');
+    setStatusFilter('ALL');
+  };
+  
+  const handleConfirmedClick = () => {
+    setStatusFilter('CONFIRMED');
+    setDeliveryFilter('ALL');
+    setInsideDeliveryStatusFilter('ALL');
+  };
+  
+  const handleIVDeliveredClick = () => {
+    setDeliveryFilter('INSIDE_VALLEY');
+    setInsideDeliveryStatusFilter('DELIVERED');
+    setStatusFilter('ALL');
+  };
+  
+  const handleIVPendingClick = () => {
+    setDeliveryFilter('INSIDE_VALLEY');
+    setInsideDeliveryStatusFilter('PENDING');
+    setStatusFilter('ALL');
+  };
+  
+  const handleIVReachedCNRClick = () => {
+    setDeliveryFilter('INSIDE_VALLEY');
+    setInsideDeliveryStatusFilter('REACHED_CNR');
+    setStatusFilter('ALL');
+  };
+  
+  const handleIVCustomerCancelledClick = () => {
+    setDeliveryFilter('INSIDE_VALLEY');
+    setInsideDeliveryStatusFilter('CUSTOMER_CANCELLED');
     setStatusFilter('ALL');
   };
 
@@ -343,11 +379,14 @@ export default function CallingOrders() {
       />
 
       {/* Summary Cards - Clickable */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="cursor-default">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <Card 
+          className="cursor-pointer hover:border-primary transition-colors"
+          onClick={handleConfirmedClick}
+        >
           <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Total Orders</div>
-            <div className="text-2xl font-bold">{allOrders.length}</div>
+            <div className="text-sm text-muted-foreground">Confirmed</div>
+            <div className="text-2xl font-bold text-primary">{confirmedCount}</div>
           </CardContent>
         </Card>
         <Card 
@@ -376,21 +415,58 @@ export default function CallingOrders() {
         </Card>
         <Card className="cursor-default">
           <CardContent className="pt-4">
+            <div className="text-sm text-muted-foreground">Total Orders</div>
+            <div className="text-2xl font-bold">{allOrders.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-default">
+          <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Total Amount</div>
             <div className="text-2xl font-bold text-success">₹{totalAmount.toFixed(0)}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* View Inside Valley Stats Link */}
+      {/* Inside Valley Delivery Status Cards */}
       {insideValleyCount > 0 && (
-        <button 
-          onClick={() => setStatsModalOpen(true)}
-          className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-        >
-          <Eye className="w-4 h-4" />
-          View delivered vs pending for Inside Valley
-        </button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card 
+            className="cursor-pointer hover:border-amber-400 transition-colors"
+            onClick={handleIVPendingClick}
+          >
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">IV - Pending</div>
+              <div className="text-2xl font-bold text-amber-600">{ivPending}</div>
+            </CardContent>
+          </Card>
+          <Card 
+            className="cursor-pointer hover:border-green-400 transition-colors"
+            onClick={handleIVDeliveredClick}
+          >
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">IV - Delivered</div>
+              <div className="text-2xl font-bold text-green-600">{ivDelivered}</div>
+            </CardContent>
+          </Card>
+          <Card 
+            className="cursor-pointer hover:border-yellow-400 transition-colors"
+            onClick={handleIVReachedCNRClick}
+          >
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">IV - Reached CNR</div>
+              <div className="text-2xl font-bold text-yellow-600">{ivReachedCNR}</div>
+            </CardContent>
+          </Card>
+          <Card 
+            className="cursor-pointer hover:border-red-400 transition-colors"
+            onClick={handleIVCustomerCancelledClick}
+          >
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">IV - Customer Cancelled</div>
+              <div className="text-2xl font-bold text-red-600">{ivCustomerCancelled}</div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Filters */}
