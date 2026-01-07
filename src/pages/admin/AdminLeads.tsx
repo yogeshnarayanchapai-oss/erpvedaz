@@ -55,14 +55,16 @@ export default function AdminLeads() {
   const initialToParam = searchParams.get('to');
   const initialStatusParam = searchParams.get('status');
   
-  // Tab state: 'today' or 'all'
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>(() => {
-    // If URL params have a date range that's not today, show 'all'
+  // Date preset state: 'today', '7days', '30days', 'custom'
+  const [datePreset, setDatePreset] = useState<'today' | '7days' | '30days' | 'custom'>(() => {
     if (initialFromParam || initialToParam) {
       const todayStr = format(today, 'yyyy-MM-dd');
-      if (initialFromParam !== todayStr || initialToParam !== todayStr) {
-        return 'all';
-      }
+      const sevenDaysAgo = format(subDays(today, 7), 'yyyy-MM-dd');
+      const thirtyDaysAgo = format(subDays(today, 30), 'yyyy-MM-dd');
+      if (initialFromParam === todayStr && initialToParam === todayStr) return 'today';
+      if (initialFromParam === sevenDaysAgo && initialToParam === todayStr) return '7days';
+      if (initialFromParam === thirtyDaysAgo && initialToParam === todayStr) return '30days';
+      return 'custom';
     }
     return 'today';
   });
@@ -79,6 +81,19 @@ export default function AdminLeads() {
       to: endOfDay(today),
     };
   });
+
+  // Update date range when preset changes
+  const handleDatePresetChange = (preset: 'today' | '7days' | '30days' | 'custom') => {
+    setDatePreset(preset);
+    if (preset === 'today') {
+      setDateRange({ from: startOfDay(today), to: endOfDay(today) });
+    } else if (preset === '7days') {
+      setDateRange({ from: startOfDay(subDays(today, 7)), to: endOfDay(today) });
+    } else if (preset === '30days') {
+      setDateRange({ from: startOfDay(subDays(today, 30)), to: endOfDay(today) });
+    }
+    // 'custom' keeps the current dateRange and shows the DateRangeFilter
+  };
   
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
@@ -130,24 +145,6 @@ export default function AdminLeads() {
   // Check if user has permission (ADMIN, OWNER or MANAGER role)
   const canReturnLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'LEADS';
   const canManageLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'MANAGER';
-
-  // Update date range when tab changes
-  useEffect(() => {
-    if (activeTab === 'today') {
-      setDateRange({
-        from: startOfDay(today),
-        to: endOfDay(today),
-      });
-    } else {
-      // For 'all' tab, show last 30 days by default if not set from URL
-      if (!initialFromParam && !initialToParam) {
-        setDateRange({
-          from: startOfDay(subDays(today, 30)),
-          to: endOfDay(today),
-        });
-      }
-    }
-  }, [activeTab]);
 
   // Clear URL params after reading
   useEffect(() => {
@@ -780,12 +777,17 @@ export default function AdminLeads() {
         
         {/* Actions Row */}
         <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'today' | 'all')}>
-            <TabsList className="h-8">
-              <TabsTrigger value="today" className="text-xs md:text-sm h-7 px-2 md:px-3">Today</TabsTrigger>
-              <TabsTrigger value="all" className="text-xs md:text-sm h-7 px-2 md:px-3">All</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | '7days' | '30days' | 'custom')}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="custom">Custom Date</SelectItem>
+            </SelectContent>
+          </Select>
           {canManageLeads && (
             <>
               <Button variant="outline" size="sm" onClick={() => setShowTransferLeadsModal(true)} className="gap-1 text-xs md:text-sm">
@@ -950,7 +952,7 @@ export default function AdminLeads() {
             
             {/* Filters row - scrollable on mobile */}
             <div className="flex gap-2 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 md:pb-0 md:flex-wrap md:items-center">
-              {activeTab === 'all' && (
+              {datePreset === 'custom' && (
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <DateRangeFilter value={dateRange} onChange={setDateRange} />
                   <span className="text-xs text-muted-foreground hidden lg:inline">by creation date</span>
@@ -1017,7 +1019,7 @@ export default function AdminLeads() {
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-6">
           <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            {activeTab === 'today' ? "Today's Leads" : 'Leads'} ({filteredLeads.length})
+            {datePreset === 'today' ? "Today's Leads" : 'Leads'} ({filteredLeads.length})
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             {showReturnButton && (
