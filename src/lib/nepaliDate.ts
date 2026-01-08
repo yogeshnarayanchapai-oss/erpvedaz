@@ -1,6 +1,8 @@
 // Nepali (Bikram Samvat) Date Conversion Utilities
 // BS dates are typically 56 years and 8-9 months ahead of AD dates
 
+import { ADToBS, BSToAD } from 'ad-bs-date-conversion';
+
 const BS_MONTHS = [
   'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin',
   'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'
@@ -11,100 +13,38 @@ const BS_MONTHS_SHORT = [
   'Kar', 'Man', 'Pou', 'Mag', 'Fal', 'Cha'
 ];
 
-// Days in each month for BS years (2000-2090)
-// This is a simplified version - a full implementation would need all year data
-const BS_YEAR_DATA: Record<number, number[]> = {
-  2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
-  2081: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
-  2082: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
-  2083: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
-  2084: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
-  2085: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
-};
-
-// Reference date: 2080-01-01 BS = 2023-04-14 AD
-const BS_REFERENCE = { year: 2080, month: 1, day: 1 };
-
-// IMPORTANT: do date math using UTC date-only values to avoid DST/timezone off-by-one bugs.
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const AD_REFERENCE_UTC_MS = Date.UTC(2023, 3, 14); // April 14, 2023 (UTC midnight)
-
-function getDaysInBSMonth(year: number, month: number): number {
-  const yearData = BS_YEAR_DATA[year];
-  if (yearData) {
-    return yearData[month - 1];
-  }
-  // Default days if year data not available
-  const defaultDays = [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31];
-  return defaultDays[month - 1];
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
 }
 
-function getTotalDaysFromBSDate(year: number, month: number, day: number): number {
-  let totalDays = 0;
-
-  // Add days for years from reference
-  for (let y = BS_REFERENCE.year; y < year; y++) {
-    for (let m = 1; m <= 12; m++) {
-      totalDays += getDaysInBSMonth(y, m);
-    }
-  }
-
-  // Add days for months in current year
-  for (let m = 1; m < month; m++) {
-    totalDays += getDaysInBSMonth(year, m);
-  }
-
-  // Add days
-  totalDays += day - 1;
-
-  return totalDays;
+function toYmd(year: number, month: number, day: number) {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 
-function toUtcDateOnlyMs(date: Date): number {
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function fromUtcDateOnlyMs(ms: number): Date {
-  const d = new Date(ms);
-  // Return a local Date at midnight for the computed UTC Y/M/D
-  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+function parseYmd(input: string): { year: number; month: number; day: number } {
+  const normalized = input.trim().replace(/\//g, '-');
+  const [y, m, d] = normalized.split('-').map((v) => Number(v));
+  if (!y || !m || !d) {
+    throw new Error(`Invalid date string: ${input}`);
+  }
+  return { year: y, month: m, day: d };
 }
 
 export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
-  const daysDiff = getTotalDaysFromBSDate(bsYear, bsMonth, bsDay);
-  return fromUtcDateOnlyMs(AD_REFERENCE_UTC_MS + daysDiff * MS_PER_DAY);
+  const adStr = BSToAD(toYmd(bsYear, bsMonth, bsDay));
+  const ad = parseYmd(adStr);
+  // Create a local date-only object to avoid timezone shift
+  return new Date(ad.year, ad.month - 1, ad.day);
 }
 
 export function adToBS(adDate: Date): { year: number; month: number; day: number } {
-  // Convert the given Date to a date-only UTC timestamp to avoid timezone/DST drift
-  const daysDiff = Math.round((toUtcDateOnlyMs(adDate) - AD_REFERENCE_UTC_MS) / MS_PER_DAY);
-
-  let bsYear = BS_REFERENCE.year;
-  let bsMonth = BS_REFERENCE.month;
-  let bsDay = BS_REFERENCE.day + daysDiff;
-
-  // Handle negative days (dates before reference)
-  while (bsDay < 1) {
-    bsMonth--;
-    if (bsMonth < 1) {
-      bsMonth = 12;
-      bsYear--;
-    }
-    bsDay += getDaysInBSMonth(bsYear, bsMonth);
-  }
-
-  // Handle overflow days
-  while (bsDay > getDaysInBSMonth(bsYear, bsMonth)) {
-    bsDay -= getDaysInBSMonth(bsYear, bsMonth);
-    bsMonth++;
-    if (bsMonth > 12) {
-      bsMonth = 1;
-      bsYear++;
-    }
-  }
-
-  return { year: bsYear, month: bsMonth, day: bsDay };
+  // Convert using AD date-only (local) parts to avoid timezone drift
+  const adStr = toYmd(adDate.getFullYear(), adDate.getMonth() + 1, adDate.getDate());
+  const bsStr = ADToBS(adStr);
+  const bs = parseYmd(bsStr);
+  return { year: bs.year, month: bs.month, day: bs.day };
 }
+
 
 // Helper to parse YYYY-MM-DD as local date (not UTC)
 function parseLocalDate(dateStr: string): Date {
