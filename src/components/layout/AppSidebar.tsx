@@ -124,7 +124,7 @@ const hrmItems: MenuItem[] = [
   { title: 'Notices', url: '/hrm/notices', icon: Bell },
   { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
-  { title: 'Org Settings', url: '/hrm/org-settings', icon: Settings2 },
+  { title: 'HRM Settings', url: '/hrm/org-settings', icon: Settings2 },
 ];
 
 // Other submenu for Admin (Branding, Messaging, Knowledge Center) - NO Backup here, it's OWNER only
