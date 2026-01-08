@@ -30,21 +30,33 @@ import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
 import { useDateMode } from '@/contexts/DateModeContext';
 
-// Date Mode menu item component for profile dropdown
-function DateModeMenuItem() {
+// Date Format selector with current date display for profile dropdown
+function DateFormatSelector() {
   const { dateMode, setDateMode } = useDateMode();
+  const bsDate = getCurrentBSDate();
+  
+  const getFormattedDate = () => {
+    const adDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const bsDateStr = `${bsDate.day} ${getBSMonthName(bsDate.month)} ${bsDate.year}`;
+    
+    if (dateMode === 'AD') return adDate;
+    if (dateMode === 'BS') return bsDateStr;
+    return `${adDate} / ${bsDateStr}`;
+  };
   
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger className="cursor-pointer">
         <Calendar className="mr-2 h-4 w-4" />
-        Date Format
+        <span className="flex flex-col items-start">
+          <span className="text-xs text-muted-foreground">Date Format: {dateMode}</span>
+          <span className="text-sm font-medium">{getFormattedDate()}</span>
+        </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup value={dateMode} onValueChange={(v) => setDateMode(v as 'AD' | 'BS' | 'AD+BS')}>
+        <DropdownMenuRadioGroup value={dateMode} onValueChange={(v) => setDateMode(v as 'AD' | 'BS')}>
           <DropdownMenuRadioItem value="AD">AD (English)</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="BS">BS (Nepali)</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="AD+BS">AD + BS (Both)</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
@@ -254,24 +266,15 @@ function DashboardLayoutInner() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {/* Mobile: show date info in dropdown */}
-                  <div className="lg:hidden px-2 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-3 h-3" />
-                      <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                    </div>
-                    <div className="mt-0.5 text-foreground font-medium">
-                      {getCurrentBSDate().day} {getBSMonthName(getCurrentBSDate().month)} {getCurrentBSDate().year} BS
-                    </div>
-                  </div>
+                  {/* Date Format Selector - replaces static date display */}
+                  <DateFormatSelector />
+                  
+                  <DropdownMenuSeparator />
                   
                   <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     My Profile
                   </DropdownMenuItem>
-                  
-                  {/* Date Type Selection */}
-                  <DateModeMenuItem />
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
