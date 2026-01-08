@@ -203,10 +203,9 @@ const inventoryItems: MenuItem[] = [
 // Accounting submenu for Admin
 const accountingItems: MenuItem[] = [
   { title: 'Dashboard', url: '/admin/accounting/dashboard-new', icon: LayoutDashboard },
-  { title: 'Assets', url: '/admin/accounting/assets', icon: Box },
   { title: 'Transactions', url: '/admin/accounting/transactions', icon: FileText },
   { title: 'Activity Log', url: '/admin/accounting/activity-log', icon: History },
-  { title: 'Accounts', url: '/admin/accounting/accounts', icon: Wallet },
+  { title: 'Accounts & Assets', url: '/admin/accounting/accounts', icon: Wallet },
   { title: 'Categories', url: '/admin/accounting/categories', icon: ClipboardList },
   { title: 'Party Statement', url: '/admin/accounting/party-statement', icon: FileText },
 ];
