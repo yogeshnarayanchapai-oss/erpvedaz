@@ -76,18 +76,14 @@ type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
-// My HR menu items for all staff (without My Tasks - moved to main sidebar)
+// My HR menu items for all staff (simplified structure)
 const myHRItems: MenuItem[] = [
   { title: 'My HR', url: '/my-hr', icon: Briefcase },
   { title: 'My Documents', url: '/my-hr/documents', icon: FileText },
-  { title: 'My Attendance', url: '/my-hr/attendance', icon: Clock },
-  { title: 'Leave Requests', url: '/my-hr/leave', icon: Calendar },
-  { title: 'My Assets', url: '/my-hr/assets', icon: Box },
-  { title: 'Holidays', url: '/my-hr/holidays', icon: Calendar },
-  { title: 'HR Policies', url: '/my-hr/policies', icon: ScrollText },
-  { title: 'Notices', url: '/my-hr/notices', icon: Bell },
+  { title: 'Attendance & Leave', url: '/my-hr/attendance-leave', icon: Clock },
+  { title: 'Company Info', url: '/my-hr/company-info', icon: Building },
   { title: 'Team Chat', url: '/my-hr/chat', icon: MessageSquare },
-  { title: 'Salary Slips', url: '/my-hr/salary-slips', icon: Receipt },
+  { title: 'Notices', url: '/my-hr/notices', icon: Bell },
 ];
 
 // Messaging submenu for Admin
@@ -118,21 +114,16 @@ const marketingItems: MenuItem[] = [
   { title: 'Marketing Reports', url: '/admin/marketing/reports', icon: BarChart3 },
 ];
 
-// HRM submenu for HR role (core HRM features only)
+// HRM submenu for HR role (merged structure)
 const hrmItems: MenuItem[] = [
   { title: 'Employees', url: '/hrm/employees', icon: Users },
-  { title: 'Staff Documents', url: '/hrm/staff-documents', icon: FileText },
-  { title: 'Payroll', url: '/hrm/payroll', icon: DollarSign },
-  { title: 'HR Policies', url: '/hrm/policies', icon: ScrollText },
-  { title: 'Holidays & Events', url: '/hrm/holidays', icon: Calendar },
-  { title: 'Leave Management', url: '/hrm/leave', icon: Clock },
-  { title: 'Leave Quota', url: '/hrm/leave-quota', icon: ClipboardList },
-  { title: 'Notice Board', url: '/hrm/notices', icon: Bell },
-  { title: 'Team Structure', url: '/hrm/team-structure', icon: Network },
-  { title: 'Salary Slips', url: '/hrm/salary-slips', icon: Receipt },
-  { title: 'Attendance', url: '/hrm/attendance', icon: Clock },
+  { title: 'Documents', url: '/hrm/staff-documents', icon: FileText },
+  { title: 'Attendance & Leave', url: '/hrm/attendance-leave', icon: Clock },
+  { title: 'Company Info', url: '/hrm/company-info', icon: Building },
+  { title: 'Notices', url: '/hrm/notices', icon: Bell },
+  { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
-  { title: 'HRM Settings', url: '/hrm/settings', icon: Settings2 },
+  { title: 'Org Settings', url: '/hrm/org-settings', icon: Settings2 },
 ];
 
 // Other submenu for Admin (Branding, Messaging, Knowledge Center) - NO Backup here, it's OWNER only
