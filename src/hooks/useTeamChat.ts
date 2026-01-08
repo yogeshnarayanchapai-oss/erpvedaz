@@ -422,14 +422,21 @@ export function useCreateChatRoom() {
   return useMutation({
     mutationFn: async (data: Partial<ChatRoom>) => {
       const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+      
+      // Ensure creator is always in participants for non-GLOBAL rooms
+      let participants = data.participants || [];
+      if (data.type !== 'GLOBAL' && !participants.includes(user.user.id)) {
+        participants = [user.user.id, ...participants];
+      }
       
       const insertData = {
         name: data.name || 'New Room',
         type: data.type || 'DEPARTMENT',
-        created_by: user.user?.id,
+        created_by: user.user.id,
         store_id: storeId,
         role_based_group: data.role_based_group || null,
-        participants: data.participants || null,
+        participants: participants.length > 0 ? participants : [user.user.id],
       };
 
       const { data: result, error } = await supabase
@@ -757,24 +764,48 @@ export function useCreateDMRoom() {
 
 export function useEnsureDefaultGroups() {
   const storeId = useCurrentStoreId();
-  const createRoom = useCreateChatRoom();
-  const { data: rooms } = useStoreChatRooms();
+  const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async () => {
-      if (!storeId || !rooms) return;
+      if (!storeId) return;
+      
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
 
-      const existingNames = new Set(rooms.map(r => r.name));
+      // Check existing groups in this store
+      const { data: existingRooms } = await supabase
+        .from('chat_rooms')
+        .select('name')
+        .eq('store_id', storeId);
+      
+      const existingNames = new Set((existingRooms || []).map(r => r.name));
+      
+      // Get all active users in this store to add as participants
+      const { data: storeUsers } = await supabase
+        .from('user_store_access')
+        .select('user_id')
+        .eq('store_id', storeId)
+        .eq('is_active', true);
+      
+      const allUserIds = (storeUsers || []).map(u => u.user_id);
       
       for (const group of DEFAULT_GROUPS) {
         if (!existingNames.has(group.name)) {
-          await createRoom.mutateAsync({
-            name: group.name,
-            type: group.type,
-            role_based_group: group.role_based_group,
-          });
+          await supabase
+            .from('chat_rooms')
+            .insert({
+              name: group.name,
+              type: group.type,
+              store_id: storeId,
+              created_by: user.user.id,
+              role_based_group: group.role_based_group,
+              participants: allUserIds, // Add all store users as participants
+            });
         }
       }
+      
+      queryClient.invalidateQueries({ queryKey: ['chat-rooms', storeId] });
     },
   });
 }
