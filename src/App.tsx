@@ -109,6 +109,12 @@ import HRMStaffDocuments from "./pages/hrm/HRMStaffDocuments";
 import HRMTasks from "./pages/hrm/HRMTasks";
 import HRMSettings from "./pages/hrm/HRMSettings";
 
+// HRM merged pages
+import HRMAttendanceLeave from "./pages/hrm/HRMAttendanceLeave";
+import HRMCompanyInfoMerged from "./pages/hrm/HRMCompanyInfoMerged";
+import HRMSalaryPayroll from "./pages/hrm/HRMSalaryPayroll";
+import HRMOrgSettings from "./pages/hrm/HRMOrgSettings";
+
 // Knowledge Center pages (HRM)
 import KnowledgeCenterCourses from "./pages/hrm/KnowledgeCenterCourses";
 import KnowledgeCenterCourseDetail from "./pages/hrm/KnowledgeCenterCourseDetail";
