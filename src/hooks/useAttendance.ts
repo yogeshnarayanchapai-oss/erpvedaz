@@ -102,20 +102,40 @@ export function useTodayAttendance() {
 
 export function useCheckIn() {
   const queryClient = useQueryClient();
-  const storeId = useCurrentStoreId();
+  const currentStoreId = useCurrentStoreId();
   
   return useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
+      // Get employee with their assigned store
       const { data: employee } = await supabase
         .from('employees')
-        .select('id, full_name')
+        .select('id, full_name, store_id')
         .eq('user_id', userId)
         .single();
 
       if (!employee) throw new Error('Employee not found');
+
+      // Use employee's assigned store_id as the source of truth
+      const employeeStoreId = employee.store_id;
+      
+      if (!employeeStoreId) {
+        throw new Error('You are not assigned to any store. Please contact your administrator.');
+      }
+
+      // Validate that the current store matches the employee's assigned store
+      if (currentStoreId && currentStoreId !== employeeStoreId) {
+        // Get store name for better error message
+        const { data: employeeStore } = await supabase
+          .from('stores')
+          .select('name')
+          .eq('id', employeeStoreId)
+          .single();
+        
+        throw new Error(`You are not assigned to this store. Your attendance is recorded in "${employeeStore?.name || 'your assigned store'}".`);
+      }
 
       const today = new Date().toISOString().split('T')[0];
       const now = new Date().toISOString();
@@ -127,7 +147,7 @@ export function useCheckIn() {
           date: today,
           check_in_time: now,
           status: 'Present',
-          store_id: storeId,
+          store_id: employeeStoreId, // Always use employee's assigned store
         } as any)
         .select()
         .single();
@@ -135,13 +155,15 @@ export function useCheckIn() {
       if (error) throw error;
       
       // Return employee info for notification
-      return { data, employee_name: employee.full_name, actor_id: userId };
+      return { data, employee_name: employee.full_name, actor_id: userId, store_id: employeeStoreId };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['my-attendance'] });
       toast.success('Checked in successfully');
+
+      const storeId = result.store_id;
 
       // Notify Admin/Manager/HR about check-in
       try {
@@ -157,11 +179,11 @@ export function useCheckIn() {
           const notifications = storeUsers.map(u => ({
             target_user_id: u.user_id,
             title: 'Staff Check-in',
-            message: `${data.employee_name} checked in at ${checkInTime}`,
+            message: `${result.employee_name} checked in at ${checkInTime}`,
             type: 'ATTENDANCE',
             store_id: storeId,
-            actor_id: data.actor_id,
-            actor_name: data.employee_name,
+            actor_id: result.actor_id,
+            actor_name: result.employee_name,
           }));
 
           await supabase.from('notifications').insert(notifications);
@@ -173,7 +195,7 @@ export function useCheckIn() {
               await sendHRMEmail({
                 type: 'ATTENDANCE_CHECKIN',
                 to: adminEmails,
-                employeeName: data.employee_name,
+                employeeName: result.employee_name,
                 details: {
                   date: new Date().toLocaleDateString(),
                   time: checkInTime,
@@ -223,11 +245,21 @@ export function useCheckOut() {
 
 export function useCreateAttendance() {
   const queryClient = useQueryClient();
-  const storeId = useCurrentStoreId();
   
   return useMutation({
-    mutationFn: async (data: Partial<AttendanceRecord>) => {
-      const insertData = { ...data, store_id: storeId } as any;
+    mutationFn: async (data: Partial<AttendanceRecord> & { employee_id: string }) => {
+      // Get employee's assigned store_id
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('store_id')
+        .eq('id', data.employee_id)
+        .single();
+
+      if (!employee?.store_id) {
+        throw new Error('Employee is not assigned to any store');
+      }
+
+      const insertData = { ...data, store_id: employee.store_id } as any;
       const { data: result, error } = await supabase
         .from('attendance_records')
         .insert(insertData)
