@@ -215,19 +215,6 @@ function DashboardLayoutInner() {
             {/* Store Switcher - compact on mobile */}
             <StoreSwitcher />
             
-            {/* Breadcrumb - hidden on mobile */}
-            <div className="hidden md:flex items-center">
-              <Separator orientation="vertical" className="mx-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="text-sm font-medium">
-                      {pageName}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
             
             <div className="ml-auto flex items-center gap-1 md:gap-4">
               {/* Date - hidden on mobile */}
@@ -292,10 +279,6 @@ function DashboardLayoutInner() {
             </div>
           </header>
           
-          {/* Mobile page title */}
-          <div className="md:hidden px-4 py-2 border-b border-border bg-muted/30">
-            <h1 className="text-sm font-medium text-foreground truncate">{pageName}</h1>
-          </div>
           
           {/* Main content - responsive padding, full height */}
           <main className="flex-1 p-2 md:p-4 overflow-auto flex flex-col">
