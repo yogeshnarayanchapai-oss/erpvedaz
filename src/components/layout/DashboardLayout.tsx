@@ -6,12 +6,12 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/s
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
-import { DateModeToggle } from '@/components/DateModeToggle';
 import { UnifiedNotificationBell } from '@/components/notifications/UnifiedNotificationBell';
 import { StoreSwitcher } from './StoreSwitcher';
 import { TeamChatButton } from '@/components/chat/TeamChatButton';
 import { NoticePopup } from '@/components/hrm/NoticePopup';
-import { Loader2, Calendar, User, LogOut } from 'lucide-react';
+import { AttendanceButton } from './AttendanceButton';
+import { Loader2, Calendar, User, LogOut as LogOutIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,9 +20,36 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
+import { useDateMode } from '@/contexts/DateModeContext';
+
+// Date Mode menu item component for profile dropdown
+function DateModeMenuItem() {
+  const { dateMode, setDateMode } = useDateMode();
+  
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <Calendar className="mr-2 h-4 w-4" />
+        Date Format
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup value={dateMode} onValueChange={(v) => setDateMode(v as 'AD' | 'BS' | 'AD+BS')}>
+          <DropdownMenuRadioItem value="AD">AD (English)</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="BS">BS (Nepali)</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="AD+BS">AD + BS (Both)</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
 
 function DashboardLayoutInner() {
   const { user, profile, loading, signOut } = useAuth();
@@ -206,8 +233,8 @@ function DashboardLayoutInner() {
                 viewAllPath="/admin/notifications"
               />
               
-              {/* Date toggle - always visible but compact on mobile */}
-              <DateModeToggle />
+              {/* Attendance Check In/Out button */}
+              <AttendanceButton />
               
               {/* User menu */}
               <DropdownMenu>
@@ -242,6 +269,10 @@ function DashboardLayoutInner() {
                     <User className="mr-2 h-4 w-4" />
                     My Profile
                   </DropdownMenuItem>
+                  
+                  {/* Date Type Selection */}
+                  <DateModeMenuItem />
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={async () => {
@@ -250,7 +281,7 @@ function DashboardLayoutInner() {
                     }}
                     className="text-destructive focus:text-destructive"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOutIcon className="mr-2 h-4 w-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
