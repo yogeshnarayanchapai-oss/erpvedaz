@@ -66,11 +66,22 @@ function DateFormatSelector() {
 function DashboardLayoutInner() {
   const { user, profile, loading, signOut } = useAuth();
   const { currentStore } = useCurrentStore();
+  const { dateMode } = useDateMode();
   const navigate = useNavigate();
   const location = useLocation();
 
   const portalName = getRoleDisplayLabel(profile?.role);
   const storeName = currentStore?.name || 'Dashboard';
+  
+  // Get formatted date based on selected date mode
+  const getHeaderDate = () => {
+    const bsDate = getCurrentBSDate();
+    const adDate = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const bsDateStr = `${bsDate.day} ${getBSMonthName(bsDate.month)} ${bsDate.year}`;
+    
+    if (dateMode === 'BS') return bsDateStr;
+    return adDate; // Default to AD
+  };
 
   // Get page name from current route
   const pageName = useMemo(() => {
@@ -217,13 +228,10 @@ function DashboardLayoutInner() {
             
             
             <div className="ml-auto flex items-center gap-1 md:gap-4">
-              {/* Date - hidden on mobile */}
-              <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                <span className="text-foreground font-medium">
-                  ({getCurrentBSDate().day} {getBSMonthName(getCurrentBSDate().month)} {getCurrentBSDate().year})
-                </span>
+              {/* Date - hidden on mobile, synced with Profile menu date format */}
+              <div className="hidden lg:flex items-center gap-2 text-sm text-foreground font-medium">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span>{getHeaderDate()}</span>
               </div>
               <Separator orientation="vertical" className="h-4 hidden lg:block" />
               
