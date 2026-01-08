@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Eye, CheckCircle, XCircle, Trash2, Loader2, Shield, FileText, User } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Trash2, Loader2, Shield, FileText, User, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useEmployeeDocuments,
   useVerifyDocument,
@@ -121,30 +122,37 @@ export function EmployeeDocumentsTab({ employeeId, employee }: EmployeeDocuments
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(doc)}>
                   <Eye className="h-3 w-3 mr-1" /> View
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-green-600"
-                  onClick={() => { setVerifyDoc(doc); setVerifyStatus('VERIFIED'); }}
-                >
-                  <CheckCircle className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600"
-                  onClick={() => { setVerifyDoc(doc); setVerifyStatus('REJECTED'); }}
-                >
-                  <XCircle className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => setDeleteDoc(doc)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem
+                      onClick={() => { setVerifyDoc(doc); setVerifyStatus('VERIFIED'); }}
+                      className="text-green-600"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Verify
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => { setVerifyDoc(doc); setVerifyStatus('REJECTED'); }}
+                      className="text-red-600"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteDoc(doc)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ) : (
@@ -235,14 +243,27 @@ export function EmployeeDocumentsTab({ employeeId, employee }: EmployeeDocuments
                     <TableCell>{getStatusBadge(doc.status)}</TableCell>
                     <TableCell>{doc.verifier?.name || '-'}</TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleView(doc)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteDoc(doc)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => handleView(doc)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteDoc(doc)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
