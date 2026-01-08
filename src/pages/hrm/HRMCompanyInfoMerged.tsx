@@ -8,7 +8,7 @@ import HRMPolicies from './HRMPolicies';
 
 export default function HRMCompanyInfoMerged() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'holidays';
+  const activeTab = searchParams.get('tab') || 'policies';
   const setActiveTab = (tab: string) => setSearchParams({ tab });
 
   return (
@@ -20,22 +20,22 @@ export default function HRMCompanyInfoMerged() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
-          <TabsTrigger value="holidays" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Holidays & Events
-          </TabsTrigger>
           <TabsTrigger value="policies" className="gap-2">
             <FileText className="h-4 w-4" />
             HR Policies
           </TabsTrigger>
+          <TabsTrigger value="holidays" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Holidays & Events
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="holidays" className="mt-6">
-          <HRMHolidays />
-        </TabsContent>
 
         <TabsContent value="policies" className="mt-6">
           <HRMPolicies />
+        </TabsContent>
+
+        <TabsContent value="holidays" className="mt-6">
+          <HRMHolidays />
         </TabsContent>
       </Tabs>
     </div>
