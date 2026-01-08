@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Send, MessageSquare, Trash2, Users, Search, UserPlus, MoreVertical } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Send, MessageSquare, Trash2, Users, Search, UserPlus, MoreVertical, Building2, User } from 'lucide-react';
 import { 
   useStoreChatRooms, 
   useStoreChatMessages, 
@@ -23,6 +24,7 @@ import {
   useMarkRoomAsRead,
   ChatRoom 
 } from '@/hooks/useTeamChat';
+import { useDepartments, useEmployees } from '@/hooks/useHRM';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
@@ -30,6 +32,8 @@ import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+
+type TargetType = 'all' | 'department' | 'employee';
 
 // Get only employees for Team Chat
 function useEmployeeUsers() {
@@ -112,12 +116,18 @@ export default function HRMChat() {
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
   const [staffToAdd, setStaffToAdd] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Target audience state (like Notices)
+  const [targetType, setTargetType] = useState<TargetType>('employee');
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
 
   const { data: rooms = [], refetch: refetchRooms } = useStoreChatRooms();
   const { data: messages = [] } = useStoreChatMessages(selectedRoom?.id || null);
   const { data: employeeUsers = [] } = useEmployeeUsers();
   const { data: dmProfileMap = new Map() } = useDMParticipantProfiles(rooms);
   const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
+  const { data: departments = [] } = useDepartments();
+  const { data: employees = [] } = useEmployees();
   const markRoomAsRead = useMarkRoomAsRead();
   const sendMessage = useSendChatMessage();
   const createChatRoom = useCreateChatRoom();
@@ -162,9 +172,40 @@ export default function HRMChat() {
 
   const handleCreateRoom = async () => {
     if (!newRoom.name.trim()) return;
-    const participants = selectedMembers.length > 0 
-      ? [...selectedMembers, profile?.id].filter(Boolean) as string[]
-      : null;
+    
+    // Build participants based on target type
+    let participants: string[] = [];
+    
+    if (targetType === 'all') {
+      // All employees in the store (get user_ids from employees)
+      participants = employees
+        .filter(emp => emp.user_id && emp.status === 'Active')
+        .map(emp => emp.user_id as string);
+    } else if (targetType === 'department') {
+      // Employees from selected departments
+      participants = employees
+        .filter(emp => 
+          emp.user_id && 
+          emp.status === 'Active' && 
+          emp.department_id && 
+          selectedDepartmentIds.includes(emp.department_id)
+        )
+        .map(emp => emp.user_id as string);
+    } else {
+      // Specific employees selected
+      participants = selectedMembers;
+    }
+    
+    // Always include creator
+    if (profile?.id && !participants.includes(profile.id)) {
+      participants = [profile.id, ...participants];
+    }
+    
+    if (participants.length === 0) {
+      toast.error('Please select at least one member');
+      return;
+    }
+    
     await createChatRoom.mutateAsync({ 
       name: newRoom.name, 
       type: 'DEPARTMENT',
@@ -173,6 +214,8 @@ export default function HRMChat() {
     setCreateDialogOpen(false);
     setNewRoom({ name: '' });
     setSelectedMembers([]);
+    setTargetType('employee');
+    setSelectedDepartmentIds([]);
   };
 
   const handleDeleteRoom = async (room: ChatRoom) => {
@@ -200,6 +243,14 @@ export default function HRMChat() {
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
+    );
+  };
+
+  const toggleDepartmentSelection = (deptId: string) => {
+    setSelectedDepartmentIds(prev => 
+      prev.includes(deptId) 
+        ? prev.filter(id => id !== deptId)
+        : [...prev, deptId]
     );
   };
 
@@ -326,7 +377,7 @@ export default function HRMChat() {
               <DialogTrigger asChild>
                 <Button><Plus className="w-4 h-4 mr-2" />New Group</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Group Chat</DialogTitle>
                 </DialogHeader>
@@ -339,34 +390,112 @@ export default function HRMChat() {
                       placeholder="Sales Team" 
                     />
                   </div>
-                  <div>
-                    <Label>Add Members (Optional)</Label>
-                    <div className="h-48 border rounded-lg mt-2 overflow-y-auto">
-                      <div className="p-2 space-y-1">
-                        {employeeUsers
-                          .filter(u => u.id !== profile?.id)
-                          .map(user => (
-                            <div
-                              key={user.id}
-                              className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                              onClick={() => toggleMemberSelection(user.id)}
-                            >
-                              <Checkbox checked={selectedMembers.includes(user.id)} />
-                              <Avatar className="w-7 h-7">
-                                <AvatarFallback className="text-xs">{user.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{user.name}</span>
+
+                  {/* Target Audience Section */}
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Label className="text-base font-semibold">Target Audience</Label>
+                    <Select 
+                      value={targetType} 
+                      onValueChange={(v: TargetType) => {
+                        setTargetType(v);
+                        setSelectedDepartmentIds([]);
+                        setSelectedMembers([]);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2"><Users className="w-4 h-4" />All Employees</div>
+                        </SelectItem>
+                        <SelectItem value="department">
+                          <div className="flex items-center gap-2"><Building2 className="w-4 h-4" />Specific Departments</div>
+                        </SelectItem>
+                        <SelectItem value="employee">
+                          <div className="flex items-center gap-2"><User className="w-4 h-4" />Specific Employees</div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Department Selection */}
+                    {targetType === 'department' && (
+                      <div className="space-y-2 mt-3">
+                        <Label className="text-sm">Select Departments</Label>
+                        <ScrollArea className="h-40 border rounded-md p-3">
+                          {departments.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No departments found</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {departments.map((dept) => (
+                                <div 
+                                  key={dept.id} 
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded"
+                                  onClick={() => toggleDepartmentSelection(dept.id)}
+                                >
+                                  <Checkbox
+                                    checked={selectedDepartmentIds.includes(dept.id)}
+                                    onCheckedChange={() => toggleDepartmentSelection(dept.id)}
+                                  />
+                                  <label className="text-sm cursor-pointer">{dept.name}</label>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
+                        </ScrollArea>
+                        {selectedDepartmentIds.length > 0 && (
+                          <p className="text-xs text-muted-foreground">{selectedDepartmentIds.length} department(s) selected</p>
+                        )}
                       </div>
-                    </div>
-                    {selectedMembers.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {selectedMembers.length} member(s) selected
+                    )}
+
+                    {/* Employee Selection */}
+                    {targetType === 'employee' && (
+                      <div className="space-y-2 mt-3">
+                        <Label className="text-sm">Select Employees</Label>
+                        <ScrollArea className="h-40 border rounded-md p-3">
+                          {employees.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No employees found</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {employees
+                                .filter(emp => emp.user_id && emp.user_id !== profile?.id && emp.status === 'Active')
+                                .map((emp) => (
+                                  <div 
+                                    key={emp.id} 
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded"
+                                    onClick={() => emp.user_id && toggleMemberSelection(emp.user_id)}
+                                  >
+                                    <Checkbox
+                                      checked={emp.user_id ? selectedMembers.includes(emp.user_id) : false}
+                                      onCheckedChange={() => emp.user_id && toggleMemberSelection(emp.user_id)}
+                                    />
+                                    <label className="text-sm cursor-pointer">
+                                      {emp.full_name}
+                                      {emp.departments?.name && (
+                                        <span className="text-muted-foreground ml-1">({emp.departments.name})</span>
+                                      )}
+                                    </label>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                        {selectedMembers.length > 0 && (
+                          <p className="text-xs text-muted-foreground">{selectedMembers.length} employee(s) selected</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* All Employees Info */}
+                    {targetType === 'all' && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        All active employees in this store will be added to the group.
                       </p>
                     )}
                   </div>
-                  <Button onClick={handleCreateRoom} disabled={!newRoom.name} className="w-full">
+
+                  <Button onClick={handleCreateRoom} disabled={!newRoom.name || createChatRoom.isPending} className="w-full">
                     Create Group
                   </Button>
                 </div>
