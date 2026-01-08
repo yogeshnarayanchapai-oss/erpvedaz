@@ -282,7 +282,7 @@ const App = () => (
                 <Route path="/hrm/leave-quota" element={<HRMLeaveQuota />} />
                 <Route path="/hrm/notices" element={<HRMNotices />} />
                 <Route path="/hrm/team-structure" element={<HRMTeamStructure />} />
-                <Route path="/hrm/company-info" element={<HRMCompanyInfo />} />
+                <Route path="/hrm/company-info" element={<HRMCompanyInfoMerged />} />
                 <Route path="/hrm/salary-slips" element={<HRMSalarySlip />} />
                 <Route path="/hrm/assets" element={<HRMAssets />} />
                 <Route path="/hrm/attendance" element={<HRMAttendance />} />
@@ -291,7 +291,7 @@ const App = () => (
                 <Route path="/hrm/settings" element={<HRMSettings />} />
                 {/* HRM merged routes */}
                 <Route path="/hrm/attendance-leave" element={<HRMAttendanceLeave />} />
-                <Route path="/hrm/company-info-merged" element={<HRMCompanyInfoMerged />} />
+                {/* Route kept for backward compatibility */}
                 <Route path="/hrm/salary-payroll" element={<HRMSalaryPayroll />} />
                 <Route path="/hrm/org-settings" element={<HRMOrgSettings />} />
                 <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />

@@ -11,7 +11,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 
 export default function MyHRCompanyInfo() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'holidays';
+  const activeTab = searchParams.get('tab') || 'policies';
   const setActiveTab = (tab: string) => setSearchParams({ tab });
 
   // Holidays
@@ -49,15 +49,59 @@ export default function MyHRCompanyInfo() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
-          <TabsTrigger value="holidays" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Holidays & Events
-          </TabsTrigger>
           <TabsTrigger value="policies" className="gap-2">
             <FileText className="h-4 w-4" />
             HR Policies
           </TabsTrigger>
+          <TabsTrigger value="holidays" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Holidays & Events
+          </TabsTrigger>
         </TabsList>
+
+        {/* POLICIES TAB */}
+        <TabsContent value="policies" className="space-y-6 mt-6">
+          {loadingPolicies ? (
+            <div className="p-6 text-center text-muted-foreground">Loading...</div>
+          ) : activePolicies.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activePolicies.map(policy => (
+                <Card key={policy.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setViewPolicy(policy)}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <CardTitle className="text-base">{policy.title}</CardTitle>
+                      </div>
+                      {policy.category && (
+                        <Badge variant="outline">{policy.category}</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {policy.content || 'Click to view policy details'}
+                    </p>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Policy
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Info className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">No Policies Available</h3>
+                <p className="text-muted-foreground">
+                  There are no HR policies published yet.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         {/* HOLIDAYS TAB */}
         <TabsContent value="holidays" className="space-y-6 mt-6">
@@ -127,50 +171,6 @@ export default function MyHRCompanyInfo() {
                 </Card>
               )}
             </>
-          )}
-        </TabsContent>
-
-        {/* POLICIES TAB */}
-        <TabsContent value="policies" className="space-y-6 mt-6">
-          {loadingPolicies ? (
-            <div className="p-6 text-center text-muted-foreground">Loading...</div>
-          ) : activePolicies.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activePolicies.map(policy => (
-                <Card key={policy.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setViewPolicy(policy)}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <CardTitle className="text-base">{policy.title}</CardTitle>
-                      </div>
-                      {policy.category && (
-                        <Badge variant="outline">{policy.category}</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {policy.content || 'Click to view policy details'}
-                    </p>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Policy
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Info className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No Policies Available</h3>
-                <p className="text-muted-foreground">
-                  There are no HR policies published yet.
-                </p>
-              </CardContent>
-            </Card>
           )}
         </TabsContent>
       </Tabs>

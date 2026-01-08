@@ -116,6 +116,7 @@ const marketingItems: MenuItem[] = [
 
 // HRM submenu for HR role (merged structure)
 const hrmItems: MenuItem[] = [
+  { title: 'Dashboard', url: '/hrm', icon: LayoutDashboard },
   { title: 'Employees', url: '/hrm/employees', icon: Users },
   { title: 'Documents', url: '/hrm/staff-documents', icon: FileText },
   { title: 'Attendance & Leave', url: '/hrm/attendance-leave', icon: Clock },

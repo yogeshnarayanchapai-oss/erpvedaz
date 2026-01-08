@@ -2,9 +2,9 @@ import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, FileText } from 'lucide-react';
 
-// Import existing pages as components - they will be rendered directly
-import HRMHolidaysContent from './HRMHolidays';
-import HRMPoliciesContent from './HRMPolicies';
+// Import existing pages as components - they will be rendered directly with full edit capabilities
+import HRMHolidays from './HRMHolidays';
+import HRMPolicies from './HRMPolicies';
 
 export default function HRMCompanyInfoMerged() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,11 +31,11 @@ export default function HRMCompanyInfoMerged() {
         </TabsList>
 
         <TabsContent value="holidays" className="mt-6">
-          <HRMHolidaysContent />
+          <HRMHolidays />
         </TabsContent>
 
         <TabsContent value="policies" className="mt-6">
-          <HRMPoliciesContent />
+          <HRMPolicies />
         </TabsContent>
       </Tabs>
     </div>
