@@ -77,7 +77,6 @@ import CashBank from "./pages/admin/accounting/CashBank";
 import PartyStatement from "./pages/admin/accounting/PartyStatement";
 import CategoryManagement from "./pages/admin/accounting/CategoryManagement";
 import ActivityLog from "./pages/admin/accounting/ActivityLog";
-import AccountingAssets from "./pages/admin/accounting/Assets";
 
 // Inventory pages
 import StockSummary from "./pages/inventory/StockSummary";
@@ -237,7 +236,6 @@ const App = () => (
                 <Route path="/admin/accounting/party-statement" element={<PartyStatement />} />
                 <Route path="/admin/accounting/categories" element={<CategoryManagement />} />
                 <Route path="/admin/accounting/activity-log" element={<ActivityLog />} />
-                <Route path="/admin/accounting/assets" element={<AccountingAssets />} />
                 <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
                 <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
                 <Route path="/admin/sales-settings" element={<SalesSettings />} />
