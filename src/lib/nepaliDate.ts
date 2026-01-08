@@ -24,54 +24,34 @@ const BS_YEAR_DATA: Record<number, number[]> = {
 
 // Reference date: 2080-01-01 BS = 2023-04-14 AD
 const BS_REFERENCE = { year: 2080, month: 1, day: 1 };
-const AD_REFERENCE = new Date(2023, 3, 14); // April 14, 2023
 
-function getDaysInBSMonth(year: number, month: number): number {
-  const yearData = BS_YEAR_DATA[year];
-  if (yearData) {
-    return yearData[month - 1];
-  }
-  // Default days if year data not available
-  const defaultDays = [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31];
-  return defaultDays[month - 1];
+// IMPORTANT: do date math using UTC date-only values to avoid DST/timezone off-by-one bugs.
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const AD_REFERENCE_UTC_MS = Date.UTC(2023, 3, 14); // April 14, 2023 (UTC midnight)
+
+function toUtcDateOnlyMs(date: Date): number {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function getTotalDaysFromBSDate(year: number, month: number, day: number): number {
-  let totalDays = 0;
-  
-  // Add days for years from reference
-  for (let y = BS_REFERENCE.year; y < year; y++) {
-    for (let m = 1; m <= 12; m++) {
-      totalDays += getDaysInBSMonth(y, m);
-    }
-  }
-  
-  // Add days for months in current year
-  for (let m = 1; m < month; m++) {
-    totalDays += getDaysInBSMonth(year, m);
-  }
-  
-  // Add days
-  totalDays += day - 1;
-  
-  return totalDays;
+function fromUtcDateOnlyMs(ms: number): Date {
+  const d = new Date(ms);
+  // Return a local Date at midnight for the computed UTC Y/M/D
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
 export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
   const daysDiff = getTotalDaysFromBSDate(bsYear, bsMonth, bsDay);
-  const adDate = new Date(AD_REFERENCE);
-  adDate.setDate(adDate.getDate() + daysDiff);
-  return adDate;
+  return fromUtcDateOnlyMs(AD_REFERENCE_UTC_MS + daysDiff * MS_PER_DAY);
 }
 
 export function adToBS(adDate: Date): { year: number; month: number; day: number } {
-  // Calculate days from reference
-  const daysDiff = Math.floor((adDate.getTime() - AD_REFERENCE.getTime()) / (1000 * 60 * 60 * 24));
-  
+  // Convert the given Date to a date-only UTC timestamp to avoid timezone/DST drift
+  const daysDiff = Math.round((toUtcDateOnlyMs(adDate) - AD_REFERENCE_UTC_MS) / MS_PER_DAY);
+
   let bsYear = BS_REFERENCE.year;
   let bsMonth = BS_REFERENCE.month;
   let bsDay = BS_REFERENCE.day + daysDiff;
-  
+
   // Handle negative days (dates before reference)
   while (bsDay < 1) {
     bsMonth--;
@@ -81,7 +61,7 @@ export function adToBS(adDate: Date): { year: number; month: number; day: number
     }
     bsDay += getDaysInBSMonth(bsYear, bsMonth);
   }
-  
+
   // Handle overflow days
   while (bsDay > getDaysInBSMonth(bsYear, bsMonth)) {
     bsDay -= getDaysInBSMonth(bsYear, bsMonth);
@@ -91,7 +71,7 @@ export function adToBS(adDate: Date): { year: number; month: number; day: number
       bsYear++;
     }
   }
-  
+
   return { year: bsYear, month: bsMonth, day: bsDay };
 }
 
@@ -151,15 +131,21 @@ export function getBSMonths(): { value: number; label: string }[] {
 }
 
 export function getCurrentBSDate(): { year: number; month: number; day: number } {
-  // Get current date in Nepal timezone (UTC+5:45)
+  // Always compute "today" in Nepal (Asia/Kathmandu) to avoid device timezone issues
   const now = new Date();
-  const nepalOffsetMs = (5 * 60 + 45) * 60 * 1000; // Nepal is UTC+5:45 in milliseconds
-  const nepalTime = new Date(now.getTime() + nepalOffsetMs + now.getTimezoneOffset() * 60 * 1000);
-  
-  // Create a local date with Nepal's current year/month/day
-  const nepalDate = new Date(nepalTime.getFullYear(), nepalTime.getMonth(), nepalTime.getDate());
-  
-  return adToBS(nepalDate);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kathmandu',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const y = Number(parts.find(p => p.type === 'year')?.value);
+  const m = Number(parts.find(p => p.type === 'month')?.value);
+  const d = Number(parts.find(p => p.type === 'day')?.value);
+
+  // Create an AD date-only object (local midnight) for conversion
+  return adToBS(new Date(y, m - 1, d));
 }
 
 export function getBSYearRange(): number[] {
