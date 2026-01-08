@@ -151,7 +151,21 @@ export function getBSMonths(): { value: number; label: string }[] {
 }
 
 export function getCurrentBSDate(): { year: number; month: number; day: number } {
-  return adToBS(new Date());
+  // Get current date in Nepal timezone (UTC+5:45) to avoid off-by-one errors
+  const now = new Date();
+  const nepalOffset = 5 * 60 + 45; // Nepal is UTC+5:45
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const nepalMinutes = utcMinutes + nepalOffset;
+  
+  // Create a date object representing the current date in Nepal
+  const nepalDate = new Date(now);
+  if (nepalMinutes >= 24 * 60) {
+    // It's already the next day in Nepal
+    nepalDate.setUTCDate(nepalDate.getUTCDate() + 1);
+  }
+  
+  // Use the Nepal-adjusted date for BS conversion
+  return adToBS(nepalDate);
 }
 
 export function getBSYearRange(): number[] {
