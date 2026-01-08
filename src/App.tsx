@@ -272,6 +272,7 @@ const App = () => (
                 <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
                 <Route path="/admin/inventory/daily-pl" element={<DailyPL />} />
                 <Route path="/admin/inventory/ai-reorder" element={<AIStockReorder />} />
+                <Route path="/hrm" element={<HRDashboard />} />
                 <Route path="/hrm/employees" element={<HRMEmployees />} />
                 <Route path="/hrm/employees/:id" element={<HRMEmployeeDetail />} />
                 <Route path="/hrm/staff-documents" element={<HRMStaffDocuments />} />
