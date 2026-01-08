@@ -662,11 +662,12 @@ export function useLeaveTypes() {
   return useQuery({
     queryKey: ['leave_types', storeId],
     queryFn: async () => {
-      let query = supabase.from('leave_types').select('*').order('name');
-      if (storeId) {
-        query = query.eq('store_id', storeId);
-      }
-      const { data, error } = await query;
+      // Fetch store-specific leave types AND shared/global leave types (store_id IS NULL)
+      const { data, error } = await supabase
+        .from('leave_types')
+        .select('*')
+        .or(`store_id.eq.${storeId},store_id.is.null`)
+        .order('name');
       if (error) throw error;
       return data as LeaveType[];
     },
@@ -688,7 +689,14 @@ export function useCreateLeaveType() {
       queryClient.invalidateQueries({ queryKey: ['leave_types'] });
       toast.success('Leave type created');
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => {
+      // Handle duplicate name error with friendly message
+      if (e.code === '23505' || e.message?.includes('duplicate key') || e.message?.includes('unique constraint')) {
+        toast.error('Leave type with this name already exists in this store');
+      } else {
+        toast.error(e.message);
+      }
+    },
   });
 }
 
