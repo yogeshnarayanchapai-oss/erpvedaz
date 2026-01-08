@@ -19,13 +19,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { OrderBulkActions } from '@/components/orders/OrderBulkActions';
 import { SendToCourierModal } from '@/components/orders/SendToCourierModal';
-import { SubmitToCourierModal } from '@/components/orders/SubmitToCourierModal';
 import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
-import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
@@ -82,7 +80,6 @@ export default function AdminOrders() {
   // Bulk selection state
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [courierModalOpen, setCourierModalOpen] = useState(false);
-  const [submitCourierModalOpen, setSubmitCourierModalOpen] = useState(false);
   const [printViewOpen, setPrintViewOpen] = useState(false);
   const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -356,19 +353,6 @@ export default function AdminOrders() {
     exportOrdersToCourierFormat(selected, `courier_orders_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
 
-  const handleSubmitToCourier = () => {
-    const selected = getSelectedOrders();
-    if (selected.length === 0) {
-      toast.error('Please select at least one order to submit to courier');
-      return;
-    }
-    setSubmitCourierModalOpen(true);
-  };
-
-  const handleCourierSubmitComplete = () => {
-    setSelectedOrders(new Set());
-  };
-
   const handleBulkDelete = () => {
     const selected = getSelectedOrders();
     if (selected.length === 0) {
@@ -484,38 +468,8 @@ export default function AdminOrders() {
             </Button>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={exportCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportOrdersToCourierFormat(filteredOrders, `courier_orders_${dateFrom}_to_${dateTo}.xlsx`)}>
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Courier Excel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {selectedOrders.size > 0 && (
-        <OrderBulkActions
-          selectedCount={selectedOrders.size}
-          onPrint={handlePrint}
-          onDelete={handleBulkDelete}
-          onExport={handleExportSelected}
-          onExportCourier={handleExportCourierFormat}
-          onSubmitToCourier={handleSubmitToCourier}
-        />
-      )}
 
       {/* Order Summary Card */}
       {orderSummary.items.length > 0 && (
@@ -565,107 +519,119 @@ export default function AdminOrders() {
         </Card>
       )}
 
-      {/* Filters - Responsive layout */}
+      {/* Filters - Single row responsive layout */}
       <Card>
         <CardContent className="pt-4 md:pt-6">
-          <div className="flex flex-col gap-3">
-            {/* First row: Date Filter + Search */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'all' | 'custom')}>
-                <SelectTrigger className="w-[130px] h-9 text-xs shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {datePreset === 'custom' && (
-                <DateRangeFilter value={dateRange} onChange={setDateRange} />
-              )}
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search client or phone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-9"
-                />
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'all' | 'custom')}>
+              <SelectTrigger className="w-[110px] h-9 text-xs shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            {datePreset === 'custom' && (
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
+            )}
+            <div className="relative flex-1 min-w-[150px] max-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
             </div>
-            
-            {/* Second row: Status filters - Scrollable on mobile */}
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Status" />
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="PACKED">Packed</SelectItem>
+                <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                <SelectItem value="RETURNED">Returned</SelectItem>
+                <SelectItem value="REDIRECT">Redirect</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedDelivery} onValueChange={(val) => {
+              setSelectedDelivery(val);
+              if (val !== 'INSIDE_VALLEY') setSelectedInsideDeliveryStatus('all');
+            }}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
+                <SelectValue placeholder="Delivery" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Delivery</SelectItem>
+                <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
+                <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedDelivery === 'INSIDE_VALLEY' && (
+              <Select value={selectedInsideDeliveryStatus} onValueChange={setSelectedInsideDeliveryStatus}>
+                <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
+                  <SelectValue placeholder="Delivery Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="PACKED">Packed</SelectItem>
-                  <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="DELIVERED">Delivered</SelectItem>
-                  <SelectItem value="RETURNED">Returned</SelectItem>
-                  <SelectItem value="REDIRECT">Redirect</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="REACHED_CNR">Reached - CNR</SelectItem>
+                  <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedDelivery} onValueChange={(val) => {
-                setSelectedDelivery(val);
-                if (val !== 'INSIDE_VALLEY') setSelectedInsideDeliveryStatus('all');
-              }}>
-                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Delivery" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Delivery</SelectItem>
-                  <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                  <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-                </SelectContent>
-              </Select>
-              {selectedDelivery === 'INSIDE_VALLEY' && (
-                <Select value={selectedInsideDeliveryStatus} onValueChange={setSelectedInsideDeliveryStatus}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                    <SelectValue placeholder="Delivery Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="DELIVERED">Delivered</SelectItem>
-                    <SelectItem value="REACHED_CNR">Reached - CNR</SelectItem>
-                    <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
-                <SelectTrigger className="w-[130px] sm:w-[160px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  {staff.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
+            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
+                <SelectValue placeholder="Product" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
+                <SelectValue placeholder="Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                {staff.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(search || datePreset !== 'today' || selectedStatus !== 'all' || selectedDelivery !== 'all' || selectedProduct !== 'all' || selectedSalesPerson !== 'all') && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setSearch('');
+                  setDatePreset('today');
+                  setDateRange({ from: startOfDay(today), to: endOfDay(today) });
+                  setSelectedStatus('all');
+                  setSelectedDelivery('all');
+                  setSelectedInsideDeliveryStatus('all');
+                  setSelectedProduct('all');
+                  setSelectedSalesPerson('all');
+                }}
+                className="h-9 px-2"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -682,10 +648,46 @@ export default function AdminOrders() {
       {/* Orders Table */}
       <Card>
         <CardHeader className="pb-2 md:pb-4">
-          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-            <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            {datePreset === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
-          </CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              {datePreset === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
+              {selectedOrders.size > 0 && (
+                <Badge variant="secondary" className="ml-2">{selectedOrders.size} selected</Badge>
+              )}
+            </CardTitle>
+            {selectedOrders.size > 0 && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-1" />
+                      Export
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportSelected}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportCourierFormat}>
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Courier Excel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6 sm:pt-0">
           {/* Mobile card view */}
@@ -974,20 +976,12 @@ export default function AdminOrders() {
         </CardContent>
       </Card>
 
-      {/* Old Courier Modal (keep for backwards compatibility) */}
+      {/* Courier Modal */}
       <SendToCourierModal
         open={courierModalOpen}
         onOpenChange={setCourierModalOpen}
         orders={getSelectedOrders()}
-        onSubmit={handleCourierSubmitComplete}
-      />
-
-      {/* New Submit to Courier Modal */}
-      <SubmitToCourierModal
-        open={submitCourierModalOpen}
-        onOpenChange={setSubmitCourierModalOpen}
-        selectedOrderIds={Array.from(selectedOrders)}
-        onSuccess={handleCourierSubmitComplete}
+        onSubmit={() => setSelectedOrders(new Set())}
       />
 
       {/* Bulk Print View */}

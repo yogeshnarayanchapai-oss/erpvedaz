@@ -286,10 +286,6 @@ export default function CallingOrders() {
           <h1 className="text-2xl font-bold">My Orders</h1>
           <p className="text-muted-foreground">Orders you have confirmed</p>
         </div>
-        <ExportDropdown
-          onExportCSV={exportCSV}
-          onExportCourier={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)}
-        />
       </div>
 
       {/* Filters */}
@@ -317,10 +313,16 @@ export default function CallingOrders() {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-primary" />
-            Orders ({orders.length})
-          </CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-primary" />
+              Orders ({orders.length})
+            </CardTitle>
+            <ExportDropdown
+              onExportCSV={exportCSV}
+              onExportCourier={() => exportOrdersToCourierFormat(orders, `courier_orders_${dateRange.from}_to_${dateRange.to}.xlsx`)}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
