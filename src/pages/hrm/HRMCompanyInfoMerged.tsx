@@ -30,12 +30,12 @@ export default function HRMCompanyInfoMerged() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="policies" className="mt-6">
-          <HRMPolicies />
+        <TabsContent value="policies" className="mt-6" forceMount={activeTab === 'policies' ? true : undefined} hidden={activeTab !== 'policies'}>
+          {activeTab === 'policies' && <HRMPolicies key="policies-tab" />}
         </TabsContent>
 
-        <TabsContent value="holidays" className="mt-6">
-          <HRMHolidays />
+        <TabsContent value="holidays" className="mt-6" forceMount={activeTab === 'holidays' ? true : undefined} hidden={activeTab !== 'holidays'}>
+          {activeTab === 'holidays' && <HRMHolidays key="holidays-tab" />}
         </TabsContent>
       </Tabs>
     </div>
