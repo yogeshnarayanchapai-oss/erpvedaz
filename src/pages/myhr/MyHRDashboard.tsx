@@ -143,27 +143,27 @@ export default function MyHRDashboard() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link to="/my-hr/attendance">
+          <Link to="/my-hr/attendance-leave">
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardContent className="p-4 text-center">
                 <Clock className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <div className="font-medium">My Attendance</div>
+                <div className="font-medium">Attendance & Leave</div>
               </CardContent>
             </Card>
           </Link>
-          <Link to="/my-hr/leave">
+          <Link to="/my-hr/documents">
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardContent className="p-4 text-center">
                 <Calendar className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <div className="font-medium">Leave Requests</div>
+                <div className="font-medium">My Documents</div>
               </CardContent>
             </Card>
           </Link>
-          <Link to="/my-hr/assets">
+          <Link to="/my-hr/company-info">
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardContent className="p-4 text-center">
                 <Box className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <div className="font-medium">My Assets</div>
+                <div className="font-medium">Company Info</div>
               </CardContent>
             </Card>
           </Link>

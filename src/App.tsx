@@ -144,6 +144,10 @@ import MyHRHolidays from "./pages/myhr/MyHRHolidays";
 import MyHRPolicies from "./pages/myhr/MyHRPolicies";
 import MyTasks from "./pages/myhr/MyTasks";
 
+// My HR merged pages
+import MyHRAttendanceLeave from "./pages/myhr/MyHRAttendanceLeave";
+import MyHRCompanyInfo from "./pages/myhr/MyHRCompanyInfo";
+
 // Leads pages
 import LeadsDashboard from "./pages/leads/LeadsDashboard";
 import LeadsAll from "./pages/leads/LeadsAll";
@@ -285,6 +289,11 @@ const App = () => (
                 <Route path="/hrm/chat" element={<HRMChat />} />
                 <Route path="/hrm/tasks" element={<HRMTasks />} />
                 <Route path="/hrm/settings" element={<HRMSettings />} />
+                {/* HRM merged routes */}
+                <Route path="/hrm/attendance-leave" element={<HRMAttendanceLeave />} />
+                <Route path="/hrm/company-info-merged" element={<HRMCompanyInfoMerged />} />
+                <Route path="/hrm/salary-payroll" element={<HRMSalaryPayroll />} />
+                <Route path="/hrm/org-settings" element={<HRMOrgSettings />} />
                 <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
                 <Route path="/hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
                 <Route path="/hrm/knowledge-center/reports" element={<KnowledgeCenterReports />} />
@@ -296,14 +305,18 @@ const App = () => (
                 <Route path="/my-hr/tasks" element={<MyTasks />} />
                 <Route path="/my-tasks" element={<MyTasks />} />
                 <Route path="/my-hr/documents" element={<MyHRDocuments />} />
-                <Route path="/my-hr/attendance" element={<MyHRAttendance />} />
-                <Route path="/my-hr/leave" element={<MyHRLeave />} />
-                <Route path="/my-hr/assets" element={<MyHRDashboard />} />
                 <Route path="/my-hr/chat" element={<HRMChat />} />
-                <Route path="/my-hr/holidays" element={<MyHRHolidays />} />
-                <Route path="/my-hr/policies" element={<MyHRPolicies />} />
                 <Route path="/my-hr/notices" element={<HRMNotices />} />
                 <Route path="/my-hr/salary-slips" element={<StaffSelfService />} />
+                {/* My HR merged routes */}
+                <Route path="/my-hr/attendance-leave" element={<MyHRAttendanceLeave />} />
+                <Route path="/my-hr/company-info" element={<MyHRCompanyInfo />} />
+                {/* Legacy redirects for backward compatibility */}
+                <Route path="/my-hr/attendance" element={<Navigate to="/my-hr/attendance-leave" replace />} />
+                <Route path="/my-hr/leave" element={<Navigate to="/my-hr/attendance-leave?tab=leave" replace />} />
+                <Route path="/my-hr/holidays" element={<Navigate to="/my-hr/company-info" replace />} />
+                <Route path="/my-hr/policies" element={<Navigate to="/my-hr/company-info?tab=policies" replace />} />
+                <Route path="/my-hr/assets" element={<Navigate to="/my-hr" replace />} />
               </Route>
 
               <Route element={<DashboardLayout />}>
