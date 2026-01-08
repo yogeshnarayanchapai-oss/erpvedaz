@@ -29,6 +29,37 @@ const BS_REFERENCE = { year: 2080, month: 1, day: 1 };
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const AD_REFERENCE_UTC_MS = Date.UTC(2023, 3, 14); // April 14, 2023 (UTC midnight)
 
+function getDaysInBSMonth(year: number, month: number): number {
+  const yearData = BS_YEAR_DATA[year];
+  if (yearData) {
+    return yearData[month - 1];
+  }
+  // Default days if year data not available
+  const defaultDays = [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31];
+  return defaultDays[month - 1];
+}
+
+function getTotalDaysFromBSDate(year: number, month: number, day: number): number {
+  let totalDays = 0;
+
+  // Add days for years from reference
+  for (let y = BS_REFERENCE.year; y < year; y++) {
+    for (let m = 1; m <= 12; m++) {
+      totalDays += getDaysInBSMonth(y, m);
+    }
+  }
+
+  // Add days for months in current year
+  for (let m = 1; m < month; m++) {
+    totalDays += getDaysInBSMonth(year, m);
+  }
+
+  // Add days
+  totalDays += day - 1;
+
+  return totalDays;
+}
+
 function toUtcDateOnlyMs(date: Date): number {
   return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
 }
