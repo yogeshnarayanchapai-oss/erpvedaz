@@ -54,11 +54,17 @@ export function NepaliDatePicker({
   const [open, setOpen] = useState(false);
   const currentBS = getCurrentBSDate();
   
+  // Parse YYYY-MM-DD string as local date (not UTC) to avoid timezone shift
+  const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Initialize view based on value or current date
   const getInitialView = () => {
     if (value) {
       try {
-        const bs = adToBS(new Date(value));
+        const bs = adToBS(parseLocalDate(value));
         return { year: bs.year, month: bs.month };
       } catch {
         return { year: currentBS.year, month: currentBS.month };
@@ -74,7 +80,7 @@ export function NepaliDatePicker({
   useEffect(() => {
     if (value) {
       try {
-        const bs = adToBS(new Date(value));
+        const bs = adToBS(parseLocalDate(value));
         setViewYear(bs.year);
         setViewMonth(bs.month);
       } catch {
@@ -105,7 +111,11 @@ export function NepaliDatePicker({
 
   const handleDayClick = (day: number) => {
     const adDate = bsToAd(viewYear, viewMonth, day);
-    const formatted = adDate.toISOString().split('T')[0];
+    // Use local date formatting to avoid timezone shift (toISOString uses UTC which can shift by -1 day)
+    const year = adDate.getFullYear();
+    const month = String(adDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(adDate.getDate()).padStart(2, '0');
+    const formatted = `${year}-${month}-${dayStr}`;
     onChange(formatted);
     setOpen(false);
   };
@@ -114,12 +124,16 @@ export function NepaliDatePicker({
     return viewYear === currentBS.year && viewMonth === currentBS.month && day === currentBS.day;
   };
 
-  const selectedBS = value ? adToBS(new Date(value)) : null;
+  const selectedBS = value ? adToBS(parseLocalDate(value)) : null;
   const isSelected = (day: number) => {
     return selectedBS && viewYear === selectedBS.year && viewMonth === selectedBS.month && day === selectedBS.day;
   };
 
-  const displayValue = value ? formatBSDate(value, 'full') : '';
+  // Format display value using local date parsing
+  const displayValue = value ? (() => {
+    const bs = adToBS(parseLocalDate(value));
+    return `${bs.day} ${getBSMonthName(bs.month)} ${bs.year}`;
+  })() : '';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -205,7 +219,7 @@ export function NepaliDatePicker({
           {/* Footer showing AD equivalent */}
           {value && (
             <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
-              AD: {new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              AD: {parseLocalDate(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
             </div>
           )}
         </div>

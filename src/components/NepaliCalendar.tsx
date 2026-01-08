@@ -57,6 +57,12 @@ export function NepaliCalendar({ events = [], onDateClick, selectedDate, classNa
   const [viewYear, setViewYear] = useState(currentBS.year);
   const [viewMonth, setViewMonth] = useState(currentBS.month);
 
+  // Parse YYYY-MM-DD string as local date (not UTC) to avoid timezone shift
+  const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   const daysInMonth = getDaysInBSMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfBSMonth(viewYear, viewMonth);
 
@@ -83,7 +89,8 @@ export function NepaliCalendar({ events = [], onDateClick, selectedDate, classNa
     const map: Record<number, CalendarEvent[]> = {};
     events.forEach(event => {
       try {
-        const eventDate = new Date(event.date);
+        // Use local date parsing to avoid timezone shift
+        const eventDate = parseLocalDate(event.date);
         const bs = adToBS(eventDate);
         if (bs.year === viewYear && bs.month === viewMonth) {
           if (!map[bs.day]) map[bs.day] = [];

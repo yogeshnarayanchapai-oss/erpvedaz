@@ -95,8 +95,15 @@ export function adToBS(adDate: Date): { year: number; month: number; day: number
   return { year: bsYear, month: bsMonth, day: bsDay };
 }
 
+// Helper to parse YYYY-MM-DD as local date (not UTC)
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function formatBSDate(adDate: Date | string, format: 'full' | 'short' | 'numeric' = 'full'): string {
-  const date = typeof adDate === 'string' ? new Date(adDate) : adDate;
+  // Parse string dates as local dates to avoid timezone shift
+  const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
   const bs = adToBS(date);
   
   switch (format) {
@@ -115,7 +122,8 @@ export function formatDateWithMode(
   adDate: Date | string, 
   mode: 'AD' | 'BS' | 'AD+BS' = 'AD'
 ): string {
-  const date = typeof adDate === 'string' ? new Date(adDate) : adDate;
+  // Parse string dates as local dates to avoid timezone shift
+  const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
   const adFormatted = date.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 
