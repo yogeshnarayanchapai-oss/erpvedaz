@@ -1,7 +1,31 @@
 // Nepali (Bikram Samvat) Date Conversion Utilities
 // BS dates are typically 56 years and 8-9 months ahead of AD dates
 
-import { ADToBS, BSToAD } from 'ad-bs-date-conversion';
+import { ADToBS as _ADToBS, BSToAD as _BSToAD } from 'ad-bs-date-conversion';
+
+// Suppress alerts from the library by temporarily overriding window.alert
+function suppressAlert<T>(fn: () => T): T {
+  if (typeof window !== 'undefined') {
+    const originalAlert = window.alert;
+    window.alert = () => {}; // Suppress alert
+    try {
+      return fn();
+    } finally {
+      window.alert = originalAlert;
+    }
+  }
+  return fn();
+}
+
+// Wrapped ADToBS that suppresses alerts and handles null
+function safeADToBS(date: string): string | null {
+  return suppressAlert(() => _ADToBS(date));
+}
+
+// Wrapped BSToAD that suppresses alerts and handles null
+function safeBSToAD(date: string): string | null {
+  return suppressAlert(() => _BSToAD(date));
+}
 
 const BS_MONTHS = [
   'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin',
@@ -32,7 +56,11 @@ function parseYmd(input: string): { year: number; month: number; day: number } {
 
 export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
   try {
-    const adStr = BSToAD(toYmd(bsYear, bsMonth, bsDay));
+    const adStr = safeBSToAD(toYmd(bsYear, bsMonth, bsDay));
+    if (!adStr) {
+      // Fallback: return approximate AD date (BS is ~56.7 years ahead)
+      return new Date(bsYear - 57, bsMonth - 1, bsDay);
+    }
     const ad = parseYmd(adStr);
     // Create a local date-only object to avoid timezone shift
     return new Date(ad.year, ad.month - 1, ad.day);
@@ -46,7 +74,15 @@ export function adToBS(adDate: Date): { year: number; month: number; day: number
   try {
     // Convert using AD date-only (local) parts to avoid timezone drift
     const adStr = toYmd(adDate.getFullYear(), adDate.getMonth() + 1, adDate.getDate());
-    const bsStr = ADToBS(adStr);
+    const bsStr = safeADToBS(adStr);
+    if (!bsStr) {
+      // Fallback: approximate BS date (BS is ~56.7 years ahead)
+      return { 
+        year: adDate.getFullYear() + 57, 
+        month: adDate.getMonth() + 1, 
+        day: adDate.getDate() 
+      };
+    }
     const bs = parseYmd(bsStr);
     return { year: bs.year, month: bs.month, day: bs.day };
   } catch {
