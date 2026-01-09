@@ -103,10 +103,6 @@ export default function CallingOrders() {
     }
     
     if (datePreset === 'today') return { from: todayStr, to: todayStr };
-    if (datePreset === 'yesterday') {
-      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-      return { from: yesterday, to: yesterday };
-    }
     if (datePreset === 'last30') return { from: format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: todayStr };
     return { from: customDateFrom, to: customDateTo };
   }, [datePreset, todayStr, customDateFrom, customDateTo, isSearchActive]);
