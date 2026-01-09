@@ -88,6 +88,7 @@ export default function CallingLeads() {
   
   const dateRange = useMemo(() => {
     if (datePreset === 'today') return { from: today, to: today };
+    if (datePreset === 'last7') return { from: subDays(new Date(), 7).toISOString().split('T')[0], to: today };
     if (datePreset === 'last30') return { from: subDays(new Date(), 30).toISOString().split('T')[0], to: today };
     return { from: customDateFrom, to: customDateTo };
   }, [datePreset, today, customDateFrom, customDateTo]);

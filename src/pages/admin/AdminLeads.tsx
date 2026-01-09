@@ -60,8 +60,8 @@ export default function AdminLeads() {
   const initialToParam = searchParams.get('to');
   const initialStatusParam = searchParams.get('status');
   
-  // Date preset state: 'today', 'all', 'custom'
-  const [datePreset, setDatePreset] = useState<'today' | 'all' | 'custom'>(() => {
+  // Date preset state: 'today', 'last7', 'last30', 'custom'
+  const [datePreset, setDatePreset] = useState<'today' | 'last7' | 'last30' | 'custom'>(() => {
     if (initialFromParam || initialToParam) {
       const todayStr = format(today, 'yyyy-MM-dd');
       if (initialFromParam === todayStr && initialToParam === todayStr) return 'today';
@@ -84,15 +84,16 @@ export default function AdminLeads() {
   });
 
   // Update date range when preset changes
-  const handleDatePresetChange = (preset: 'today' | 'all' | 'custom') => {
+  const handleDatePresetChange = (preset: 'today' | 'last7' | 'last30' | 'custom') => {
     setDatePreset(preset);
     if (preset === 'today') {
       setDateRange({ from: startOfDay(today), to: endOfDay(today) });
-    } else if (preset === 'all') {
-      // Set a very wide range for 'all'
-      setDateRange({ from: startOfDay(new Date('2020-01-01')), to: endOfDay(today) });
+    } else if (preset === 'last7') {
+      setDateRange({ from: startOfDay(subDays(today, 7)), to: endOfDay(today) });
+    } else if (preset === 'last30') {
+      setDateRange({ from: startOfDay(subDays(today, 30)), to: endOfDay(today) });
     }
-    // 'custom' keeps the current dateRange and shows the DateRangeFilter
+    // 'custom' keeps the current dateRange and shows the custom date inputs
   };
   
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
@@ -976,13 +977,14 @@ export default function AdminLeads() {
             
             {/* Filters row - scrollable on mobile */}
             <div className="flex gap-2 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 md:pb-0 md:flex-wrap md:items-center">
-              <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'all' | 'custom')}>
-                <SelectTrigger className="w-[100px] h-9 flex-shrink-0">
+              <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'last7' | 'last30' | 'custom')}>
+                <SelectTrigger className="w-[130px] h-9 flex-shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="last7">Last 7 Days</SelectItem>
+                  <SelectItem value="last30">Last 30 Days</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>

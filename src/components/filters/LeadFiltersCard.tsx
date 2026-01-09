@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Calendar, Clock, X } from 'lucide-react';
 
-export type DatePreset = 'today' | 'last30' | 'custom';
+export type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 export type FollowupFilterType = 'ALL' | 'today' | 'upcoming' | 'pending' | 'overdue';
 
 export const STATUS_FILTER_OPTIONS = [
@@ -44,6 +44,7 @@ export const FOLLOWUP_FILTER_OPTIONS = [
 // Unified date presets for both Admin and Calling
 export const DATE_PRESETS = [
   { value: 'today', label: 'Today' },
+  { value: 'last7', label: 'Last 7 Days' },
   { value: 'last30', label: 'Last 30 Days' },
   { value: 'custom', label: 'Custom' },
 ];
