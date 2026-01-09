@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendToCourierModal } from '@/components/orders/SendToCourierModal';
@@ -29,6 +29,11 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+
+interface DateRange {
+  from: Date;
+  to: Date;
+}
 
 interface OrderSummaryItem {
   productId: string;
@@ -534,7 +539,27 @@ export default function AdminOrders() {
               </SelectContent>
             </Select>
             {datePreset === 'custom' && (
-              <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={format(dateRange.from, 'yyyy-MM-dd')}
+                  onChange={(e) => {
+                    const newFrom = startOfDay(new Date(e.target.value));
+                    setDateRange(prev => ({ ...prev, from: newFrom }));
+                  }}
+                  className="w-36 h-9"
+                />
+                <span className="text-muted-foreground text-sm">to</span>
+                <Input
+                  type="date"
+                  value={format(dateRange.to, 'yyyy-MM-dd')}
+                  onChange={(e) => {
+                    const newTo = endOfDay(new Date(e.target.value));
+                    setDateRange(prev => ({ ...prev, to: newTo }));
+                  }}
+                  className="w-36 h-9"
+                />
+              </div>
             )}
             <div className="relative flex-1 min-w-[150px] max-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
