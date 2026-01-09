@@ -36,7 +36,7 @@ import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsMo
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
-import { LeadFiltersCard, DatePreset, FollowupFilterType } from '@/components/filters/LeadFiltersCard';
+import { LeadFiltersCard, DatePreset } from '@/components/filters/LeadFiltersCard';
 import { toast } from 'sonner';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
@@ -101,7 +101,6 @@ export default function AdminLeads() {
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
-  const [followupFilter, setFollowupFilter] = useState<FollowupFilterType>('ALL');
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [reassignStaffId, setReassignStaffId] = useState('');
 
@@ -266,34 +265,7 @@ export default function AdminLeads() {
       matchesRefId ||
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
-    
-    // Follow-up filtering
-    let matchesFollowup = true;
-    if (followupFilter !== 'ALL' && lead.status === 'FOLLOW_UP') {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const followupTime = lead.next_followup_at ? new Date(lead.next_followup_at) : null;
-      
-      switch (followupFilter) {
-        case 'today':
-          matchesFollowup = followupTime ? followupTime.toISOString().split('T')[0] === todayStr : false;
-          break;
-        case 'upcoming':
-          matchesFollowup = followupTime ? followupTime > now : false;
-          break;
-        case 'pending':
-          matchesFollowup = followupTime ? followupTime <= now && !lead.followup_completed : false;
-          break;
-        case 'overdue':
-          const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-          matchesFollowup = followupTime ? followupTime < oneHourAgo && !lead.followup_completed : false;
-          break;
-      }
-    } else if (followupFilter !== 'ALL' && lead.status !== 'FOLLOW_UP') {
-      matchesFollowup = false;
-    }
-    
-    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch && matchesFollowup;
+    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch;
   }).sort((a, b) => {
     // Sort by created_at descending - newest first
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -799,7 +771,6 @@ export default function AdminLeads() {
     setSelectedProduct('ALL');
     setSelectedStatus('all');
     setAssignedToFilter('all');
-    setFollowupFilter('ALL');
     setSelectedLeads([]);
   };
 
@@ -1004,9 +975,6 @@ export default function AdminLeads() {
         assignedToFilter={assignedToFilter}
         onAssignedToFilterChange={setAssignedToFilter}
         callingStaff={callingStaff}
-        showFollowupFilter={true}
-        followupFilter={followupFilter}
-        onFollowupFilterChange={setFollowupFilter}
         isAdmin={true}
       />
 
