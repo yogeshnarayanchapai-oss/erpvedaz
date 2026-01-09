@@ -98,24 +98,61 @@ export function adToBS(adDate: Date): { year: number; month: number; day: number
 
 // Helper to parse YYYY-MM-DD as local date (not UTC)
 function parseLocalDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  // Handle various date formats
+  const normalized = dateStr.trim();
+  
+  // Try YYYY-MM-DD format first
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    const [year, month, day] = normalized.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  // Try ISO format (YYYY-MM-DDTHH:MM:SS...)
+  if (normalized.includes('T')) {
+    const datePart = normalized.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  // Fallback to Date constructor
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+  
+  // Ultimate fallback - return current date
+  return new Date();
 }
 
-export function formatBSDate(adDate: Date | string, format: 'full' | 'short' | 'numeric' = 'full'): string {
-  // Parse string dates as local dates to avoid timezone shift
-  const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
-  const bs = adToBS(date);
-  
-  switch (format) {
-    case 'full':
-      return `${bs.day} ${BS_MONTHS[bs.month - 1]} ${bs.year}`;
-    case 'short':
-      return `${bs.day} ${BS_MONTHS_SHORT[bs.month - 1]} ${bs.year}`;
-    case 'numeric':
-      return `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`;
-    default:
-      return `${bs.day} ${BS_MONTHS[bs.month - 1]} ${bs.year}`;
+export function formatBSDate(adDate: Date | string, formatType: 'full' | 'short' | 'numeric' = 'full'): string {
+  try {
+    // Validate input
+    if (!adDate) return '-';
+    
+    // Parse string dates as local dates to avoid timezone shift
+    const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
+    
+    // Check for invalid date
+    if (isNaN(date.getTime())) return '-';
+    
+    const bs = adToBS(date);
+    
+    // Validate BS month is in range
+    const monthName = BS_MONTHS[bs.month - 1] || 'Unknown';
+    const monthShort = BS_MONTHS_SHORT[bs.month - 1] || 'Unk';
+    
+    switch (formatType) {
+      case 'full':
+        return `${bs.day} ${monthName} ${bs.year}`;
+      case 'short':
+        return `${bs.day} ${monthShort} ${bs.year}`;
+      case 'numeric':
+        return `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`;
+      default:
+        return `${bs.day} ${monthName} ${bs.year}`;
+    }
+  } catch {
+    return '-';
   }
 }
 
@@ -123,23 +160,34 @@ export function formatDateWithMode(
   adDate: Date | string, 
   mode: 'AD' | 'BS' | 'AD+BS' = 'AD'
 ): string {
-  // Parse string dates as local dates to avoid timezone shift
-  const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
-  const adFormatted = date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-  
-  switch (mode) {
-    case 'AD':
-      return adFormatted;
-    case 'BS':
-      return formatBSDate(date, 'short');
-    case 'AD+BS':
-      return `${adFormatted} (${formatBSDate(date, 'short')})`;
-    default:
-      return adFormatted;
+  try {
+    // Validate input
+    if (!adDate) return '-';
+    
+    // Parse string dates as local dates to avoid timezone shift
+    const date = typeof adDate === 'string' ? parseLocalDate(adDate) : adDate;
+    
+    // Check for invalid date
+    if (isNaN(date.getTime())) return '-';
+    
+    const adFormatted = date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    
+    switch (mode) {
+      case 'AD':
+        return adFormatted;
+      case 'BS':
+        return formatBSDate(date, 'short');
+      case 'AD+BS':
+        return `${adFormatted} (${formatBSDate(date, 'short')})`;
+      default:
+        return adFormatted;
+    }
+  } catch {
+    return '-';
   }
 }
 

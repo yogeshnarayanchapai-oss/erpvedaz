@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
+
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown, X } from 'lucide-react';
@@ -41,6 +41,11 @@ import { toast } from 'sonner';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+
+interface DateRange {
+  from: Date;
+  to: Date;
+}
 
 export default function AdminLeads() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -983,7 +988,25 @@ export default function AdminLeads() {
               </Select>
               {datePreset === 'custom' && (
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <DateRangeFilter value={dateRange} onChange={setDateRange} />
+                  <Input
+                    type="date"
+                    value={format(dateRange.from, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const newFrom = startOfDay(new Date(e.target.value));
+                      setDateRange(prev => ({ ...prev, from: newFrom }));
+                    }}
+                    className="w-36 h-9"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <Input
+                    type="date"
+                    value={format(dateRange.to, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const newTo = endOfDay(new Date(e.target.value));
+                      setDateRange(prev => ({ ...prev, to: newTo }));
+                    }}
+                    className="w-36 h-9"
+                  />
                   <span className="text-xs text-muted-foreground hidden lg:inline">by creation date</span>
                 </div>
               )}
