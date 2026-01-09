@@ -280,7 +280,7 @@ export default function LeadsDashboard() {
         transferredToday,
         remainingInPool,
       };
-    }).filter(p => p.leadsToday >= 1 || p.transferredToday >= 1 || p.remainingInPool >= 1);
+    }).filter(p => p.leadsToday >= 1);
   }, [products, filteredLeads, today]);
 
   // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
