@@ -22,7 +22,7 @@ export default function HRMEmployees() {
   const { data: employees = [], isLoading } = useEmployees();
   const { data: departments = [] } = useDepartments();
   const { data: bankAccounts = [] } = useBankAccounts();
-  const { data: allUsers = [] } = useStaff(undefined, true);
+  const { data: allUsers = [] } = useStaff(undefined, true, undefined, true);
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
