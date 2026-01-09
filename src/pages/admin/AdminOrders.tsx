@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -23,7 +22,8 @@ import { SendToCourierModal } from '@/components/orders/SendToCourierModal';
 import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
-import { ShoppingCart, Search, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer, X } from 'lucide-react';
+import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, InsideDeliveryStatusFilter } from '@/components/filters/OrderFiltersCard';
+import { ShoppingCart, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
@@ -121,8 +121,8 @@ export default function AdminOrders() {
   const initialToParam = searchParams.get('to');
   const initialStatusParam = searchParams.get('status');
   
-  // Date preset state: 'today', 'last7', 'last30', 'custom'
-  const [datePreset, setDatePreset] = useState<'today' | 'last7' | 'last30' | 'custom'>(() => {
+  // Date preset state using shared DatePreset type
+  const [datePreset, setDatePreset] = useState<DatePreset>(() => {
     if (initialFromParam || initialToParam) {
       const todayStr = format(today, 'yyyy-MM-dd');
       if (initialFromParam === todayStr && initialToParam === todayStr) return 'today';
@@ -131,35 +131,34 @@ export default function AdminOrders() {
     return 'today';
   });
 
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    if (initialFromParam && initialToParam) {
-      return {
-        from: startOfDay(new Date(initialFromParam)),
-        to: endOfDay(new Date(initialToParam)),
-      };
-    }
-    return {
-      from: startOfDay(today),
-      to: endOfDay(today),
-    };
-  });
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const [customDateFrom, setCustomDateFrom] = useState(todayStr);
+  const [customDateTo, setCustomDateTo] = useState(todayStr);
 
-  // Update date range when preset changes
-  const handleDatePresetChange = (preset: 'today' | 'last7' | 'last30' | 'custom') => {
-    setDatePreset(preset);
-    if (preset === 'today') {
-      setDateRange({ from: startOfDay(today), to: endOfDay(today) });
-    } else if (preset === 'last7') {
-      setDateRange({ from: startOfDay(subDays(today, 7)), to: endOfDay(today) });
-    } else if (preset === 'last30') {
-      setDateRange({ from: startOfDay(subDays(today, 30)), to: endOfDay(today) });
+  // Date range computed from preset and custom dates
+  const dateRange = useMemo(() => {
+    if (datePreset === 'today') return { from: startOfDay(today), to: endOfDay(today) };
+    if (datePreset === 'last7') return { from: startOfDay(subDays(today, 7)), to: endOfDay(today) };
+    if (datePreset === 'last30') return { from: startOfDay(subDays(today, 30)), to: endOfDay(today) };
+    return { from: startOfDay(new Date(customDateFrom)), to: endOfDay(new Date(customDateTo)) };
+  }, [datePreset, today, customDateFrom, customDateTo]);
+
+  // Initialize from URL params
+  useEffect(() => {
+    if (initialFromParam && initialToParam) {
+      setCustomDateFrom(initialFromParam);
+      setCustomDateTo(initialToParam);
     }
-    // 'custom' keeps the current dateRange and shows the custom date inputs
-  };
+  }, [initialFromParam, initialToParam]);
   
-  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
-  const [selectedDelivery, setSelectedDelivery] = useState<string>('all');
-  const [selectedInsideDeliveryStatus, setSelectedInsideDeliveryStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatusFilter>(() => {
+    if (initialStatusParam && ['CONFIRMED', 'PACKED', 'DISPATCHED', 'DELIVERED', 'RETURNED', 'REDIRECT', 'CANCELLED'].includes(initialStatusParam)) {
+      return initialStatusParam as OrderStatusFilter;
+    }
+    return 'ALL';
+  });
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryFilter>('ALL');
+  const [selectedInsideDeliveryStatus, setSelectedInsideDeliveryStatus] = useState<InsideDeliveryStatusFilter>('ALL');
   const [selectedOrderDate, setSelectedOrderDate] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
@@ -200,8 +199,8 @@ export default function AdminOrders() {
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const matchesStatus = selectedStatus === 'all' || order.order_status === selectedStatus;
-      const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
+      const matchesStatus = selectedStatus === 'ALL' || order.order_status === selectedStatus;
+      const matchesDelivery = selectedDelivery === 'ALL' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
       // Order date filter
@@ -209,7 +208,7 @@ export default function AdminOrders() {
       const matchesOrderDate = selectedOrderDate === 'all' || orderDateStr === selectedOrderDate;
       // Inside Valley delivery status filter
       const insideDeliveryStatusVal = (order as any).inside_delivery_status || 'PENDING';
-      const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'all' || 
+      const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'ALL' || 
         (selectedDelivery === 'INSIDE_VALLEY' && insideDeliveryStatusVal === selectedInsideDeliveryStatus);
       // Check for duplicate - either order is_duplicate or linked lead is_duplicate
       const orderIsDuplicate = (order as any).is_duplicate === true || (order.leads as any)?.is_duplicate === true;
@@ -234,12 +233,12 @@ export default function AdminOrders() {
   const orderSummary = useMemo(() => {
     // Determine which status to filter for summary
     // If status filter is set to a specific status, use that; otherwise default to CONFIRMED
-    const summaryStatus = selectedStatus !== 'all' ? selectedStatus : 'CONFIRMED';
+    const summaryStatus = selectedStatus !== 'ALL' ? selectedStatus : 'CONFIRMED';
     
     // Filter orders for summary (same filters as main table but with specific status)
     const summaryOrders = orders.filter((order) => {
       const matchesStatus = order.order_status === summaryStatus;
-      const matchesDelivery = selectedDelivery === 'all' || order.delivery_location === selectedDelivery;
+      const matchesDelivery = selectedDelivery === 'ALL' || order.delivery_location === selectedDelivery;
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
       const matchesSearch =
@@ -525,143 +524,41 @@ export default function AdminOrders() {
         </Card>
       )}
 
-      {/* Filters - Single row responsive layout */}
-      <Card>
-        <CardContent className="pt-4 md:pt-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'last7' | 'last30' | 'custom')}>
-              <SelectTrigger className="w-[130px] h-9 text-xs shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last7">Last 7 Days</SelectItem>
-                <SelectItem value="last30">Last 30 Days</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            {datePreset === 'custom' && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={format(dateRange.from, 'yyyy-MM-dd')}
-                  onChange={(e) => {
-                    const newFrom = startOfDay(new Date(e.target.value));
-                    setDateRange(prev => ({ ...prev, from: newFrom }));
-                  }}
-                  className="w-36 h-9"
-                />
-                <span className="text-muted-foreground text-sm">to</span>
-                <Input
-                  type="date"
-                  value={format(dateRange.to, 'yyyy-MM-dd')}
-                  onChange={(e) => {
-                    const newTo = endOfDay(new Date(e.target.value));
-                    setDateRange(prev => ({ ...prev, to: newTo }));
-                  }}
-                  className="w-36 h-9"
-                />
-              </div>
-            )}
-            <div className="relative flex-1 min-w-[150px] max-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="PACKED">Packed</SelectItem>
-                <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="RETURNED">Returned</SelectItem>
-                <SelectItem value="REDIRECT">Redirect</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedDelivery} onValueChange={(val) => {
-              setSelectedDelivery(val);
-              if (val !== 'INSIDE_VALLEY') setSelectedInsideDeliveryStatus('all');
-            }}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
-                <SelectValue placeholder="Delivery" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Delivery</SelectItem>
-                <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-              </SelectContent>
-            </Select>
-            {selectedDelivery === 'INSIDE_VALLEY' && (
-              <Select value={selectedInsideDeliveryStatus} onValueChange={setSelectedInsideDeliveryStatus}>
-                <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
-                  <SelectValue placeholder="Delivery Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="DELIVERED">Delivered</SelectItem>
-                  <SelectItem value="REACHED_CNR">Reached - CNR</SelectItem>
-                  <SelectItem value="CUSTOMER_CANCELLED">Customer Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
-                <SelectValue placeholder="Product" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Products</SelectItem>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9 text-xs">
-                <SelectValue placeholder="Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staff.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(search || datePreset !== 'today' || selectedStatus !== 'all' || selectedDelivery !== 'all' || selectedProduct !== 'all' || selectedSalesPerson !== 'all') && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setSearch('');
-                  setDatePreset('today');
-                  setDateRange({ from: startOfDay(today), to: endOfDay(today) });
-                  setSelectedStatus('all');
-                  setSelectedDelivery('all');
-                  setSelectedInsideDeliveryStatus('all');
-                  setSelectedProduct('all');
-                  setSelectedSalesPerson('all');
-                }}
-                className="h-9 px-2"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters - Using shared OrderFiltersCard component */}
+      <OrderFiltersCard
+        searchQuery={search}
+        onSearchChange={setSearch}
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        customDateFrom={customDateFrom}
+        onCustomDateFromChange={setCustomDateFrom}
+        customDateTo={customDateTo}
+        onCustomDateToChange={setCustomDateTo}
+        deliveryFilter={selectedDelivery}
+        onDeliveryFilterChange={setSelectedDelivery}
+        statusFilter={selectedStatus}
+        onStatusFilterChange={setSelectedStatus}
+        insideDeliveryStatusFilter={selectedInsideDeliveryStatus}
+        onInsideDeliveryStatusFilterChange={setSelectedInsideDeliveryStatus}
+        productFilter={selectedProduct}
+        onProductFilterChange={setSelectedProduct}
+        products={products}
+        onReset={() => {
+          setSearch('');
+          setDatePreset('today');
+          setCustomDateFrom(todayStr);
+          setCustomDateTo(todayStr);
+          setSelectedStatus('ALL');
+          setSelectedDelivery('ALL');
+          setSelectedInsideDeliveryStatus('ALL');
+          setSelectedProduct('all');
+          setSelectedSalesPerson('all');
+        }}
+        showStaffFilter={true}
+        staffFilter={selectedSalesPerson}
+        onStaffFilterChange={setSelectedSalesPerson}
+        staff={staff}
+      />
 
       {/* No orders message for summary */}
       {orderSummary.items.length === 0 && filteredOrders.length === 0 && !isLoading && (

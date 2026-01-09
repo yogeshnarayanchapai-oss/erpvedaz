@@ -16,7 +16,6 @@ import { useUpdateOrderItems } from '@/hooks/useOrderItems';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,7 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, Search, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown, X } from 'lucide-react';
+import { Phone, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -37,6 +36,7 @@ import { AdminTransferLeadsModal } from '@/components/admin/AdminTransferLeadsMo
 import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress';
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
+import { LeadFiltersCard, DatePreset } from '@/components/filters/LeadFiltersCard';
 import { toast } from 'sonner';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
@@ -60,8 +60,8 @@ export default function AdminLeads() {
   const initialToParam = searchParams.get('to');
   const initialStatusParam = searchParams.get('status');
   
-  // Date preset state: 'today', 'last7', 'last30', 'custom'
-  const [datePreset, setDatePreset] = useState<'today' | 'last7' | 'last30' | 'custom'>(() => {
+  // Date preset state using shared DatePreset type
+  const [datePreset, setDatePreset] = useState<DatePreset>(() => {
     if (initialFromParam || initialToParam) {
       const todayStr = format(today, 'yyyy-MM-dd');
       if (initialFromParam === todayStr && initialToParam === todayStr) return 'today';
@@ -70,33 +70,27 @@ export default function AdminLeads() {
     return 'today';
   });
 
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    if (initialFromParam && initialToParam) {
-      return {
-        from: startOfDay(new Date(initialFromParam)),
-        to: endOfDay(new Date(initialToParam)),
-      };
-    }
-    return {
-      from: startOfDay(today),
-      to: endOfDay(today),
-    };
-  });
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const [customDateFrom, setCustomDateFrom] = useState(todayStr);
+  const [customDateTo, setCustomDateTo] = useState(todayStr);
 
-  // Update date range when preset changes
-  const handleDatePresetChange = (preset: 'today' | 'last7' | 'last30' | 'custom') => {
-    setDatePreset(preset);
-    if (preset === 'today') {
-      setDateRange({ from: startOfDay(today), to: endOfDay(today) });
-    } else if (preset === 'last7') {
-      setDateRange({ from: startOfDay(subDays(today, 7)), to: endOfDay(today) });
-    } else if (preset === 'last30') {
-      setDateRange({ from: startOfDay(subDays(today, 30)), to: endOfDay(today) });
+  // Date range computed from preset and custom dates
+  const dateRange = useMemo(() => {
+    if (datePreset === 'today') return { from: startOfDay(today), to: endOfDay(today) };
+    if (datePreset === 'last7') return { from: startOfDay(subDays(today, 7)), to: endOfDay(today) };
+    if (datePreset === 'last30') return { from: startOfDay(subDays(today, 30)), to: endOfDay(today) };
+    return { from: startOfDay(new Date(customDateFrom)), to: endOfDay(new Date(customDateTo)) };
+  }, [datePreset, today, customDateFrom, customDateTo]);
+
+  // Initialize from URL params
+  useEffect(() => {
+    if (initialFromParam && initialToParam) {
+      setCustomDateFrom(initialFromParam);
+      setCustomDateTo(initialToParam);
     }
-    // 'custom' keeps the current dateRange and shows the custom date inputs
-  };
+  }, [initialFromParam, initialToParam]);
   
-  const [selectedProduct, setSelectedProduct] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam || 'all');
   const [search, setSearch] = useState('');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
@@ -251,7 +245,7 @@ export default function AdminLeads() {
   }, [queryClient]);
 
   const filteredLeads = leads.filter((lead) => {
-    const matchesProduct = selectedProduct === 'all' || lead.product_id === selectedProduct;
+    const matchesProduct = selectedProduct === 'ALL' || lead.product_id === selectedProduct;
     // Handle special filters: "pending_transfer" and "duplicate"
     const matchesStatus = 
       selectedStatus === 'all' ? true :
@@ -772,8 +766,9 @@ export default function AdminLeads() {
   const handleResetFilters = () => {
     setSearch('');
     setDatePreset('today');
-    setDateRange({ from: startOfDay(today), to: endOfDay(today) });
-    setSelectedProduct('all');
+    setCustomDateFrom(todayStr);
+    setCustomDateTo(todayStr);
+    setSelectedProduct('ALL');
     setSelectedStatus('all');
     setAssignedToFilter('all');
     setSelectedLeads([]);
@@ -960,128 +955,28 @@ export default function AdminLeads() {
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4 md:pt-6">
-          <div className="flex flex-col gap-3">
-            {/* Search first on mobile */}
-            <div className="relative md:hidden">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or phone..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            
-            {/* Filters row - scrollable on mobile */}
-            <div className="flex gap-2 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 md:pb-0 md:flex-wrap md:items-center">
-              <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v as 'today' | 'last7' | 'last30' | 'custom')}>
-                <SelectTrigger className="w-[130px] h-9 flex-shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="last7">Last 7 Days</SelectItem>
-                  <SelectItem value="last30">Last 30 Days</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {datePreset === 'custom' && (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Input
-                    type="date"
-                    value={format(dateRange.from, 'yyyy-MM-dd')}
-                    onChange={(e) => {
-                      const newFrom = startOfDay(new Date(e.target.value));
-                      setDateRange(prev => ({ ...prev, from: newFrom }));
-                    }}
-                    className="w-36 h-9"
-                  />
-                  <span className="text-muted-foreground text-sm">to</span>
-                  <Input
-                    type="date"
-                    value={format(dateRange.to, 'yyyy-MM-dd')}
-                    onChange={(e) => {
-                      const newTo = endOfDay(new Date(e.target.value));
-                      setDateRange(prev => ({ ...prev, to: newTo }));
-                    }}
-                    className="w-36 h-9"
-                  />
-                  <span className="text-xs text-muted-foreground hidden lg:inline">by creation date</span>
-                </div>
-              )}
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger className="w-[120px] md:w-[180px] h-9 flex-shrink-0">
-                  <SelectValue placeholder="Product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[100px] md:w-[150px] h-9 flex-shrink-0">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending_transfer">Pending Transfer</SelectItem>
-                  <SelectItem value="duplicate">Duplicate</SelectItem>
-                  <SelectItem value="NEW">New</SelectItem>
-                  <SelectItem value="ASSIGNED">Assigned</SelectItem>
-                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
-                  <SelectItem value="CALL_NOT_RECEIVED">CNR</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  <SelectItem value="REDIRECT">Redirect</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                <SelectTrigger className="w-[110px] md:w-[150px] h-9 flex-shrink-0">
-                  <SelectValue placeholder="Assigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
-                  {callingStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* Desktop search */}
-              <div className="relative flex-1 min-w-[200px] hidden md:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or phone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 pr-8"
-                />
-                {search && (
-                  <button 
-                    onClick={() => setSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {/* Clear Button - Only show when filters are active */}
-              {hasActiveFilters && (
-                <Button variant="outline" size="sm" onClick={handleResetFilters} className="flex-shrink-0">
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters - Using shared LeadFiltersCard component */}
+      <LeadFiltersCard
+        searchQuery={search}
+        onSearchChange={setSearch}
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        customDateFrom={customDateFrom}
+        onCustomDateFromChange={setCustomDateFrom}
+        customDateTo={customDateTo}
+        onCustomDateToChange={setCustomDateTo}
+        productFilter={selectedProduct}
+        onProductFilterChange={setSelectedProduct}
+        statusFilter={selectedStatus}
+        onStatusFilterChange={setSelectedStatus}
+        products={products}
+        onReset={handleResetFilters}
+        showAssignedToFilter={true}
+        assignedToFilter={assignedToFilter}
+        onAssignedToFilterChange={setAssignedToFilter}
+        callingStaff={callingStaff}
+        isAdmin={true}
+      />
 
       {/* Leads Table */}
       <Card>
