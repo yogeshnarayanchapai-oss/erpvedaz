@@ -31,18 +31,32 @@ function parseYmd(input: string): { year: number; month: number; day: number } {
 }
 
 export function bsToAd(bsYear: number, bsMonth: number, bsDay: number): Date {
-  const adStr = BSToAD(toYmd(bsYear, bsMonth, bsDay));
-  const ad = parseYmd(adStr);
-  // Create a local date-only object to avoid timezone shift
-  return new Date(ad.year, ad.month - 1, ad.day);
+  try {
+    const adStr = BSToAD(toYmd(bsYear, bsMonth, bsDay));
+    const ad = parseYmd(adStr);
+    // Create a local date-only object to avoid timezone shift
+    return new Date(ad.year, ad.month - 1, ad.day);
+  } catch {
+    // Fallback: return approximate AD date (BS is ~56.7 years ahead)
+    return new Date(bsYear - 57, bsMonth - 1, bsDay);
+  }
 }
 
 export function adToBS(adDate: Date): { year: number; month: number; day: number } {
-  // Convert using AD date-only (local) parts to avoid timezone drift
-  const adStr = toYmd(adDate.getFullYear(), adDate.getMonth() + 1, adDate.getDate());
-  const bsStr = ADToBS(adStr);
-  const bs = parseYmd(bsStr);
-  return { year: bs.year, month: bs.month, day: bs.day };
+  try {
+    // Convert using AD date-only (local) parts to avoid timezone drift
+    const adStr = toYmd(adDate.getFullYear(), adDate.getMonth() + 1, adDate.getDate());
+    const bsStr = ADToBS(adStr);
+    const bs = parseYmd(bsStr);
+    return { year: bs.year, month: bs.month, day: bs.day };
+  } catch {
+    // Fallback: approximate BS date (BS is ~56.7 years ahead)
+    return { 
+      year: adDate.getFullYear() + 57, 
+      month: adDate.getMonth() + 1, 
+      day: adDate.getDate() 
+    };
+  }
 }
 
 
