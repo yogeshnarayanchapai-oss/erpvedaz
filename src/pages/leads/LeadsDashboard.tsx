@@ -229,7 +229,7 @@ export default function LeadsDashboard() {
           products: displayProducts,
           fullProducts: fullProductList,
         };
-      }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
+      }).filter(s => s.todayTransfer >= 1);
     }
     
     // Admin/Owner: show all calling staff with combined data from ALL creators in store
@@ -258,7 +258,7 @@ export default function LeadsDashboard() {
         products: displayProducts,
         fullProducts: fullProductList,
       };
-    }).filter(s => s.todayTransfer > 0 || s.remaining > 0);
+    }).filter(s => s.todayTransfer >= 1);
   }, [isAdminOrOwner, currentUserId, todayTransfers, allLeadsForTransferSummary, callingStaff, products]);
 
   // Product Leads Summary - uses filtered leads based on role
@@ -280,7 +280,7 @@ export default function LeadsDashboard() {
         transferredToday,
         remainingInPool,
       };
-    });
+    }).filter(p => p.leadsToday >= 1 || p.transferredToday >= 1 || p.remainingInPool >= 1);
   }, [products, filteredLeads, today]);
 
   // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
