@@ -423,7 +423,7 @@ export default function ViewTransactions() {
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Reference</TableHead>
+                <TableHead>Remark</TableHead>
                 <TableHead>Cleared</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
@@ -469,7 +469,7 @@ export default function ViewTransactions() {
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {transaction.reference_no || '-'}
+                    {transaction.note || '-'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={transaction.is_cleared ? 'default' : 'secondary'}>
@@ -631,7 +631,7 @@ export default function ViewTransactions() {
 
               {viewingTransaction.note && (
                 <div>
-                  <Label className="text-muted-foreground text-xs">Note</Label>
+                  <Label className="text-muted-foreground text-xs">Remark</Label>
                   <div className="mt-1 p-3 bg-muted/50 rounded-md">
                     <p className="text-sm">{viewingTransaction.note}</p>
                   </div>
