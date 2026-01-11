@@ -156,10 +156,10 @@ export function NewDepositDialog({ open, onOpenChange }: NewDepositDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">Notes</Label>
+            <Label htmlFor="note">Remark</Label>
             <Textarea
               id="note"
-              placeholder="Additional notes..."
+              placeholder="Optional remark..."
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={2}
