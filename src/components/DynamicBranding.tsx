@@ -27,6 +27,20 @@ export function DynamicBranding() {
       const element = document.querySelector(selector);
       if (element) {
         element.setAttribute(attribute, value);
+      } else {
+        // Create the meta tag if it doesn't exist
+        const meta = document.createElement('meta');
+        const parts = selector.match(/\[([^\]]+)\]/g);
+        if (parts) {
+          parts.forEach(part => {
+            const [attr, val] = part.slice(1, -1).split('=');
+            if (val) {
+              meta.setAttribute(attr, val.replace(/"/g, ''));
+            }
+          });
+        }
+        meta.setAttribute(attribute, value);
+        document.head.appendChild(meta);
       }
     };
 
@@ -40,7 +54,6 @@ export function DynamicBranding() {
 
     // Update theme color if primary color is set
     if (branding.primary_color) {
-      // Convert HSL to hex for theme-color (simplified conversion)
       const themeColor = '#1a1a2e'; // Keep dark theme base
       updateMetaTag('meta[name="theme-color"]', 'content', themeColor);
       updateMetaTag('meta[name="msapplication-TileColor"]', 'content', themeColor);
@@ -53,20 +66,18 @@ export function DynamicBranding() {
     if (!branding?.logo_url) return;
 
     const logoUrl = branding.logo_url;
+    const faviconUrl = branding.favicon_url || logoUrl;
     const cacheBuster = `?t=${Date.now()}`;
     
-    // Update favicon
-    const updateLink = (selector: string, href: string) => {
-      const element = document.querySelector(selector) as HTMLLinkElement;
-      if (element) {
-        element.href = href + cacheBuster;
-      }
-    };
-
     // Update favicon link
     let faviconLink = document.querySelector("link[rel='icon']") as HTMLLinkElement;
     if (faviconLink) {
-      faviconLink.href = branding.favicon_url || logoUrl + cacheBuster;
+      faviconLink.href = faviconUrl + cacheBuster;
+    } else {
+      faviconLink = document.createElement('link');
+      faviconLink.rel = 'icon';
+      faviconLink.href = faviconUrl + cacheBuster;
+      document.head.appendChild(faviconLink);
     }
 
     // Update apple-touch-icon links
@@ -74,6 +85,14 @@ export function DynamicBranding() {
     appleTouchIcons.forEach((icon) => {
       (icon as HTMLLinkElement).href = logoUrl + cacheBuster;
     });
+
+    // If no apple-touch-icon exists, create one
+    if (appleTouchIcons.length === 0) {
+      const appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      appleIcon.href = logoUrl + cacheBuster;
+      document.head.appendChild(appleIcon);
+    }
 
     // Dynamically update manifest for PWA (for future installs)
     updateManifest(branding.brand_name || 'ERP Software', logoUrl);
@@ -94,11 +113,11 @@ function updateManifest(brandName: string, logoUrl: string) {
     existingCustomManifest.remove();
   }
 
-  // Create dynamic manifest
+  // Create dynamic manifest with proper branding
   const manifest = {
     name: brandName,
     short_name: brandName.length > 12 ? brandName.substring(0, 12) : brandName,
-    description: `${brandName} - ERP System`,
+    description: `${brandName} - Business Management System`,
     theme_color: '#1a1a2e',
     background_color: '#0f0f23',
     display: 'standalone',
@@ -108,7 +127,37 @@ function updateManifest(brandName: string, logoUrl: string) {
     icons: [
       {
         src: logoUrl,
+        sizes: '72x72',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
+        sizes: '96x96',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
+        sizes: '128x128',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
+        sizes: '144x144',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
+        sizes: '152x152',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
         sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: logoUrl,
+        sizes: '384x384',
         type: 'image/png',
       },
       {
