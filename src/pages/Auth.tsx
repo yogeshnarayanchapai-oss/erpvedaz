@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Loader2, Zap, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Loader2, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -23,10 +24,10 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, user, profile } = useAuth();
-  const { branding } = useBranding();
+  const { branding, isLoading: brandingLoading } = useBranding();
   const navigate = useNavigate();
 
-  const brandName = branding?.brand_name || 'Zivkart OS';
+  const brandName = branding?.brand_name;
   const logoUrl = branding?.logo_url;
 
   useEffect(() => {
@@ -93,19 +94,31 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          {logoUrl ? (
-            <img 
-              src={`${logoUrl}?t=${branding?.updated_at}`} 
-              alt="Logo" 
-              className="w-14 h-14 object-contain mx-auto mb-4 rounded-xl"
-            />
+          {brandingLoading ? (
+            <>
+              <Skeleton className="w-14 h-14 mx-auto mb-4 rounded-xl" />
+              <Skeleton className="h-8 w-48 mx-auto mb-2" />
+              <Skeleton className="h-4 w-56 mx-auto" />
+            </>
           ) : (
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary mb-4">
-              <Zap className="w-7 h-7 text-primary-foreground" />
-            </div>
+            <>
+              {logoUrl ? (
+                <img 
+                  src={`${logoUrl}?t=${branding?.updated_at}`} 
+                  alt="Logo" 
+                  className="w-14 h-14 object-contain mx-auto mb-4 rounded-xl"
+                />
+              ) : (
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary mb-4">
+                  <span className="text-xl font-bold text-primary-foreground">
+                    {brandName?.[0] || 'E'}
+                  </span>
+                </div>
+              )}
+              <h1 className="text-2xl font-bold text-foreground">{brandName || 'ERP System'}</h1>
+              <p className="text-muted-foreground mt-1">Manage leads, calls, and orders</p>
+            </>
           )}
-          <h1 className="text-2xl font-bold text-foreground">{brandName}</h1>
-          <p className="text-muted-foreground mt-1">Manage leads, calls, and orders</p>
         </div>
 
         <Card className="border-border/50 shadow-lg">

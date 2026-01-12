@@ -6,12 +6,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Send, X, Plus, Users, MessageSquare, Search, 
   Paperclip, Pin, Volume2, VolumeX, Check, CheckCheck,
-  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink, UserPlus, Maximize2
+  AtSign, Hash, User, FileText, Image, Loader2, ExternalLink, UserPlus, Maximize2,
+  Menu, ArrowLeft
 } from 'lucide-react';
 import {
   useStoreChatRooms, 
@@ -97,6 +97,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false);
   const [staffToAdd, setStaffToAdd] = useState<string[]>([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true); // For mobile: show sidebar by default
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -437,17 +438,31 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[390px] h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
+    <div className="fixed inset-4 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] sm:h-[550px] bg-background rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          <span className="font-semibold">Team Chat</span>
-          {selectedRoom && (
-            <span className="text-primary-foreground/70 text-sm">– {selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name}</span>
+      <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-primary text-primary-foreground shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Mobile: Show back arrow when viewing chat, menu when viewing sidebar */}
+          <button 
+            onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+            className="sm:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+          >
+            {showMobileSidebar ? <MessageSquare className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+          </button>
+          <MessageSquare className="w-5 h-5 hidden sm:block" />
+          <span className="font-semibold truncate">
+            {selectedRoom && !showMobileSidebar 
+              ? (selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name)
+              : 'Team Chat'
+            }
+          </span>
+          {selectedRoom && showMobileSidebar && (
+            <span className="text-primary-foreground/70 text-sm truncate hidden sm:inline">
+              – {selectedRoom.type === 'DIRECT' ? getDMDisplayName(selectedRoom) : selectedRoom.name}
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button 
             onClick={() => { 
               onOpenChange(false); 
@@ -467,15 +482,20 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-32 border-r bg-muted/20 flex flex-col shrink-0">
+      <div className="flex flex-1 overflow-hidden relative">
+          {/* Sidebar - Full width on mobile when visible, fixed width on desktop */}
+          <div className={cn(
+            "border-r bg-muted/20 flex flex-col transition-all duration-200",
+            showMobileSidebar 
+              ? "absolute inset-0 z-10 sm:relative sm:w-36 sm:shrink-0" 
+              : "hidden sm:flex sm:w-36 sm:shrink-0"
+          )}>
             {/* Actions */}
-            <div className="px-4 py-3 border-b flex gap-3">
+            <div className="px-3 sm:px-4 py-3 border-b flex gap-3 shrink-0">
               {canCreateGroups && (
                 <button 
                   onClick={() => setShowNewRoomDialog(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                  className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
                   title="Create Group"
                 >
                   <Plus className="w-5 h-5 text-muted-foreground" />
@@ -483,7 +503,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               )}
               <button 
                 onClick={() => setShowUserSearch(!showUserSearch)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
                 title="Search Users"
               >
                 <Search className="w-5 h-5 text-muted-foreground" />
@@ -492,21 +512,21 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
             {/* User search for DMs */}
             {showUserSearch && (
-              <div className="p-3 border-b space-y-2 bg-background">
+              <div className="p-3 border-b space-y-2 bg-background shrink-0">
                 <Input
                   placeholder="Search users..."
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
-                  className="h-9 rounded-lg"
+                  className="h-10 sm:h-9 rounded-lg"
                 />
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {filteredUsers.slice(0, 5).map(user => (
+                <div className="max-h-40 sm:max-h-32 overflow-y-auto space-y-1">
+                  {filteredUsers.slice(0, 8).map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                      onClick={() => handleCreateDM(user)}
+                      className="flex items-center gap-2 p-2.5 sm:p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors active:bg-muted/80"
+                      onClick={() => { handleCreateDM(user); setShowMobileSidebar(false); }}
                     >
-                      <Avatar className="w-7 h-7">
+                      <Avatar className="w-8 h-8 sm:w-7 sm:h-7">
                         <AvatarFallback className="text-xs bg-primary/10 text-primary">{user.name[0]}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
@@ -521,25 +541,28 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
             {/* Groups Section */}
             <ScrollArea className="flex-1">
-              <div className="p-3">
-                <p className="text-xs text-muted-foreground font-semibold tracking-wider mb-2">GROUPS</p>
-                <div className="space-y-0.5">
+              <div className="p-3 sm:p-3">
+                <p className="text-xs text-muted-foreground font-semibold tracking-wider mb-3 sm:mb-2">GROUPS</p>
+                <div className="space-y-1 sm:space-y-0.5">
                   {groupRooms.map(room => {
                     const unreadCount = unreadPerRoom[room.id] || 0;
                     return (
                       <div
                         key={room.id}
                         className={cn(
-                          "flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                          "flex items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                           selectedRoom?.id === room.id 
                             ? "bg-primary/10 text-primary font-medium" 
                             : "hover:bg-muted text-foreground"
                         )}
-                        onClick={() => { setSelectedRoom(room); setActiveTab('groups'); }}
+                        onClick={() => { setSelectedRoom(room); setActiveTab('groups'); setShowMobileSidebar(false); }}
                       >
-                        <span className="text-xs truncate">{room.name}</span>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Hash className="w-4 h-4 sm:hidden shrink-0 text-muted-foreground" />
+                          <span className="text-sm sm:text-xs truncate">{room.name}</span>
+                        </div>
                         {unreadCount > 0 && selectedRoom?.id !== room.id && (
-                          <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                          <span className="min-w-[24px] sm:min-w-[20px] h-6 sm:h-5 px-2 sm:px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}
@@ -551,8 +574,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 {/* DMs Section */}
                 {dmRooms.length > 0 && (
                   <>
-                    <p className="text-xs text-muted-foreground font-semibold tracking-wider mt-6 mb-2">DIRECT MESSAGES</p>
-                    <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground font-semibold tracking-wider mt-6 mb-3 sm:mb-2">DIRECT MESSAGES</p>
+                    <div className="space-y-1 sm:space-y-0.5">
                       {dmRooms.map(room => {
                         const unreadCount = unreadPerRoom[room.id] || 0;
                         const displayName = getDMDisplayName(room);
@@ -560,19 +583,19 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                           <div
                             key={room.id}
                             className={cn(
-                              "flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                              "flex items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                               selectedRoom?.id === room.id 
                                 ? "bg-primary/10 text-primary font-medium" 
                                 : "hover:bg-muted text-foreground"
                             )}
-                            onClick={() => { setSelectedRoom(room); setActiveTab('dms'); }}
+                            onClick={() => { setSelectedRoom(room); setActiveTab('dms'); setShowMobileSidebar(false); }}
                           >
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <User className="w-3.5 h-3.5 shrink-0" />
-                              <span className="text-xs truncate">{displayName}</span>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <User className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+                              <span className="text-sm sm:text-xs truncate">{displayName}</span>
                             </div>
                             {unreadCount > 0 && selectedRoom?.id !== room.id && (
-                              <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                              <span className="min-w-[24px] sm:min-w-[20px] h-6 sm:h-5 px-2 sm:px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
                                 {unreadCount > 99 ? '99+' : unreadCount}
                               </span>
                             )}
@@ -587,7 +610,10 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
           </div>
 
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col bg-background">
+          <div className={cn(
+            "flex-1 flex flex-col bg-background",
+            showMobileSidebar && "hidden sm:flex"
+          )}>
             {selectedRoom ? (
               <>
                 {/* Room Header with Add Staff button and participant count */}
@@ -802,7 +828,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 px-3 py-3">
+                  <div className="flex items-center gap-2 sm:gap-3 px-3 py-3">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -813,9 +839,9 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                      className="flex-shrink-0 w-10 h-10 sm:w-auto sm:h-auto flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                     >
-                      {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
+                      {uploading ? <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" /> : <Paperclip className="w-5 h-5 sm:w-6 sm:h-6" />}
                     </button>
                     <Input
                       ref={inputRef}
@@ -823,13 +849,13 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       onChange={handleMessageChange}
                       onKeyDown={handleKeyDown}
                       placeholder="Type a message.."
-                      className="flex-1 h-10 rounded-full bg-background border-muted-foreground/20 px-4 text-sm"
+                      className="flex-1 h-11 sm:h-10 rounded-full bg-background border-muted-foreground/20 px-4 text-base sm:text-sm"
                       disabled={uploading}
                     />
                     <button 
                       onClick={handleSend} 
                       disabled={!message.trim() || sendMessage.isPending || uploading}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-primary/80 text-primary-foreground hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-primary/80 text-primary-foreground hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -849,25 +875,25 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
         {/* New Room Dialog */}
         {showNewRoomDialog && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-            <div className="bg-background border rounded-lg p-4 w-80 shadow-lg max-h-[80%] flex flex-col">
-              <h3 className="font-semibold mb-4">Create New Group</h3>
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 p-4">
+            <div className="bg-background border rounded-lg p-4 w-full max-w-sm shadow-lg max-h-[85%] flex flex-col">
+              <h3 className="font-semibold mb-4 text-lg">Create New Group</h3>
               <Input
                 value={newRoomName}
                 onChange={(e) => setNewRoomName(e.target.value)}
                 placeholder="Group name"
-                className="mb-4"
+                className="mb-4 h-11 sm:h-10"
               />
               
               {/* Staff Selection */}
               <p className="text-sm text-muted-foreground mb-2">Add members:</p>
-              <ScrollArea className="flex-1 max-h-48 border rounded-lg mb-4">
+              <ScrollArea className="flex-1 max-h-48 sm:max-h-48 border rounded-lg mb-4">
                 <div className="p-2 space-y-1">
                   {storeUsers.filter(u => u.id !== profile?.id).map(user => (
                     <div
                       key={user.id}
                       className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                        "flex items-center gap-2 p-2.5 sm:p-2 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                         selectedMembers.includes(user.id) 
                           ? "bg-primary/10 border border-primary/30" 
                           : "hover:bg-muted"
@@ -878,7 +904,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                         checked={selectedMembers.includes(user.id)}
                         className="pointer-events-none"
                       />
-                      <Avatar className="w-7 h-7">
+                      <Avatar className="w-8 h-8 sm:w-7 sm:h-7">
                         <AvatarFallback className="text-xs bg-primary/10 text-primary">
                           {user.name[0]}
                         </AvatarFallback>
@@ -899,8 +925,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               )}
               
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => { setShowNewRoomDialog(false); setSelectedMembers([]); }}>Cancel</Button>
-                <Button onClick={handleCreateRoom} disabled={!newRoomName.trim()}>Create</Button>
+                <Button variant="outline" size="lg" className="h-11 sm:h-10" onClick={() => { setShowNewRoomDialog(false); setSelectedMembers([]); }}>Cancel</Button>
+                <Button size="lg" className="h-11 sm:h-10" onClick={handleCreateRoom} disabled={!newRoomName.trim()}>Create</Button>
               </div>
             </div>
           </div>
@@ -908,13 +934,13 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
 
         {/* Add Staff Dialog */}
         {showAddStaffDialog && selectedRoom && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-            <div className="bg-background border rounded-lg p-4 w-80 shadow-lg max-h-[80%] flex flex-col">
-              <h3 className="font-semibold mb-4">Manage Members - {selectedRoom.name}</h3>
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 p-4">
+            <div className="bg-background border rounded-lg p-4 w-full max-w-sm shadow-lg max-h-[85%] flex flex-col">
+              <h3 className="font-semibold mb-4 text-lg">Manage Members - {selectedRoom.name}</h3>
               
               {/* Staff Selection */}
               <p className="text-sm text-muted-foreground mb-2">Select members for this group:</p>
-              <div className="h-48 border rounded-lg mb-4 overflow-y-auto">
+              <div className="h-52 sm:h-48 border rounded-lg mb-4 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   {storeUsers
                     .filter(u => u.id !== profile?.id)
@@ -925,7 +951,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                         <div
                           key={user.id}
                           className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                            "flex items-center gap-2 p-2.5 sm:p-2 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                             isSelected
                               ? isExistingMember 
                                 ? "bg-primary/10 border border-primary/30"
@@ -940,7 +966,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                             checked={isSelected}
                             className="pointer-events-none"
                           />
-                          <Avatar className="w-7 h-7">
+                          <Avatar className="w-8 h-8 sm:w-7 sm:h-7">
                             <AvatarFallback className="text-xs bg-primary/10 text-primary">
                               {user.name[0]}
                             </AvatarFallback>
@@ -968,8 +994,8 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
               )}
               
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => { setShowAddStaffDialog(false); setStaffToAdd([]); }}>Cancel</Button>
-                <Button onClick={handleAddStaffToRoom}>Save</Button>
+                <Button variant="outline" size="lg" className="h-11 sm:h-10" onClick={() => { setShowAddStaffDialog(false); setStaffToAdd([]); }}>Cancel</Button>
+                <Button size="lg" className="h-11 sm:h-10" onClick={handleAddStaffToRoom}>Save</Button>
               </div>
             </div>
           </div>
