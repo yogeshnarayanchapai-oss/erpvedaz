@@ -24,11 +24,12 @@ function getStoredNotifications(userId: string): LeadNotification[] {
     const stored = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Convert timestamps back to Date objects and filter last 24 hours
-      const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      // Convert timestamps back to Date objects and filter last 6 hours (reduced from 24)
+      const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
       return parsed
         .map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) }))
-        .filter((n: LeadNotification) => n.timestamp.getTime() > dayAgo);
+        .filter((n: LeadNotification) => n.timestamp.getTime() > sixHoursAgo)
+        .slice(0, 20); // Limit to 20 notifications
     }
   } catch (e) {
     console.error('Error reading notifications from storage:', e);
@@ -83,7 +84,7 @@ export function useLeadNotifications(userId: string | undefined) {
     processedLeadsRef.current.add(notification.leadId);
 
     setNotifications(prev => {
-      const updated = [notification, ...prev].slice(0, 50); // Keep last 50
+      const updated = [notification, ...prev].slice(0, 20); // Keep last 20 (reduced from 50)
       if (userId) {
         storeNotifications(userId, updated);
       }
