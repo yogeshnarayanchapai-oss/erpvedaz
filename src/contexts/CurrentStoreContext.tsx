@@ -46,6 +46,13 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
 
     try {
       setIsLoading(true);
+      
+      // Add timeout for store fetch
+      const TIMEOUT_MS = 8000;
+      const timeoutId = setTimeout(() => {
+        console.warn('Store fetch timeout - continuing with empty stores');
+        setIsLoading(false);
+      }, TIMEOUT_MS);
 
       // Fetch user's store access with store_role
       const { data: userStoreAccess, error: accessError } = await supabase
@@ -128,6 +135,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         setAvailableStores([]);
         setCurrentStoreState(null);
       }
+      clearTimeout(timeoutId);
     } catch (err) {
       console.error('Error in fetchStores:', err);
     } finally {

@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 const Index = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [waitingForAuth, setWaitingForAuth] = useState(true);
+  const [profileTimeout, setProfileTimeout] = useState(false);
 
   // Check if URL has auth tokens (from magic link redirect)
   useEffect(() => {
@@ -34,6 +36,20 @@ const Index = () => {
     }
   }, [user]);
 
+  // Timeout for profile loading - if profile doesn't load in 10 seconds, show error
+  useEffect(() => {
+    if (!loading && user && !profile) {
+      const timeout = setTimeout(() => {
+        setProfileTimeout(true);
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+    // Reset timeout if profile loads
+    if (profile) {
+      setProfileTimeout(false);
+    }
+  }, [loading, user, profile]);
+
   useEffect(() => {
     // Wait for initial auth check or magic link processing
     if (loading || waitingForAuth) return;
@@ -43,7 +59,7 @@ const Index = () => {
       return;
     }
     
-    if (!profile) return;
+    if (!profile) return; // Wait for profile (with timeout above)
     
     if (!profile.role) {
       // No role assigned - stay on page with message
@@ -61,11 +77,44 @@ const Index = () => {
       MARKETING: '/marketing/dashboard',
       MANAGER: '/manager/dashboard',
       HR: '/hr/dashboard',
+      ACCOUNTANT: '/admin/accounting/dashboard-new',
+      WAREHOUSE: '/admin/inventory/stock-summary',
     };
 
     const targetPath = routes[profile.role] || '/calling/dashboard';
     navigate(targetPath);
   }, [user, profile, loading, navigate, waitingForAuth]);
+
+  // Handle profile timeout - allow user to retry or logout
+  if (profileTimeout && user && !profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4 p-4">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-foreground mb-2">Loading taking too long</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Unable to load your profile. Please check your connection and try again.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={async () => {
+              await signOut();
+              navigate('/auth');
+            }}
+          >
+            Logout
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
