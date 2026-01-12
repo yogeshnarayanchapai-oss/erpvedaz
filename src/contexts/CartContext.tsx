@@ -49,10 +49,12 @@ export function CartProvider({ children, storeId }: CartProviderProps) {
     }
   }, [storeId]);
 
-  // Save cart to localStorage
+  // Save cart to localStorage (with size limit)
   useEffect(() => {
     if (storeId) {
-      localStorage.setItem(`cart_${storeId}`, JSON.stringify(items));
+      // Limit to 20 items to prevent storage bloat
+      const limitedItems = items.slice(0, 20);
+      localStorage.setItem(`cart_${storeId}`, JSON.stringify(limitedItems));
     }
   }, [items, storeId]);
 

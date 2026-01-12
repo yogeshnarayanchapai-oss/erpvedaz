@@ -162,7 +162,10 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
           key.startsWith('lead_draft_') ||
           key.startsWith('cart_') ||
           key.startsWith('notification_') ||
-          key.includes('_cache_')
+          key.startsWith('lead_notifications_') ||
+          key.includes('_cache_') ||
+          key.includes('tanstack') ||
+          key.includes('react-query')
         )) {
           keysToRemove.push(key);
         }
@@ -170,6 +173,25 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
       keysToRemove.forEach(key => localStorage.removeItem(key));
     } catch (e) {
       console.warn('Failed to clear localStorage:', e);
+    }
+    
+    // Clear runtime caches (NOT precache for PWA performance)
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          // Only delete runtime caches, keep precache/workbox intact
+          if (
+            name.includes('supabase') ||
+            name.includes('api') ||
+            name.includes('runtime')
+          ) {
+            await caches.delete(name);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to clear caches:', e);
     }
     
     try {

@@ -188,8 +188,8 @@ import MyProfile from "./pages/settings/MyProfile";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+      staleTime: 1000 * 60 * 2, // 2 minutes - fresher data
+      gcTime: 1000 * 60 * 10, // 10 minutes garbage collection - less memory
       refetchOnWindowFocus: false,
     },
   },

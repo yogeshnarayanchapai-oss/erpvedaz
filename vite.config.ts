@@ -49,17 +49,23 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
         cleanupOutdatedCaches: true,
-        runtimeCaching: [
+      runtimeCaching: [
+          // Static assets - cache for performance, strict limits
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|eot)$/i,
+            handler: "CacheFirst",
             options: {
-              cacheName: "supabase-cache",
+              cacheName: "static-assets",
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 6, // 6 hours (reduced from 24)
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24, // 24 hours for static assets
               },
             },
+          },
+          // API/Supabase requests - NEVER cache, always network only
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: "NetworkOnly",
           },
         ],
       },
