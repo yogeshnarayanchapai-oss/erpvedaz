@@ -153,6 +153,25 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
     setUser(null);
     setSession(null);
     
+    // Clear user-specific localStorage to prevent storage bloat
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('lead_draft_') ||
+          key.startsWith('cart_') ||
+          key.startsWith('notification_') ||
+          key.includes('_cache_')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.warn('Failed to clear localStorage:', e);
+    }
+    
     try {
       // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();

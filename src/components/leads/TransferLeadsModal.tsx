@@ -30,6 +30,7 @@ export function TransferLeadsModal({ open, onOpenChange, leadsInPool }: Transfer
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [count, setCount] = useState<string>('10');
   const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [staffSearchOpen, setStaffSearchOpen] = useState(false);
 
   // Calculate counts for each lead type based on pool_status = IN_POOL
   const newLeads = leadsInPool.filter(l => l.lead_bucket === 'NEW' && l.pool_status === 'IN_POOL');
@@ -168,21 +169,52 @@ export function TransferLeadsModal({ open, onOpenChange, leadsInPool }: Transfer
 
           <div className="space-y-2">
             <Label>Select Staff</Label>
-            <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose staff member" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[200px] overflow-y-auto">
-                {callingStaff.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{s.name}</span>
-                      <span className="text-xs text-muted-foreground">{s.email}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={staffSearchOpen} onOpenChange={setStaffSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={staffSearchOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedStaffId 
+                    ? callingStaff.find(s => s.id === selectedStaffId)?.name || "Select staff..."
+                    : "Select staff..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search staff..." />
+                  <CommandList className="max-h-[200px]">
+                    <CommandEmpty>No staff found.</CommandEmpty>
+                    <CommandGroup>
+                      {callingStaff.map((staff) => (
+                        <CommandItem
+                          key={staff.id}
+                          value={staff.name}
+                          onSelect={() => {
+                            setSelectedStaffId(staff.id);
+                            setStaffSearchOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{staff.name}</span>
+                            <span className="text-xs text-muted-foreground">{staff.email}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
