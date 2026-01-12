@@ -1018,3 +1018,85 @@ export function useMarkRoomAsRead() {
     },
   });
 }
+
+// Hook to get latest message per room for preview
+export function useLatestMessagesPerRoom() {
+  const storeId = useCurrentStoreId();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel(`latest-messages-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['latest-messages', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  return useQuery({
+    queryKey: ['latest-messages', storeId],
+    queryFn: async () => {
+      if (!storeId) return {};
+
+      // Get all rooms for this store
+      const { data: rooms } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('store_id', storeId);
+
+      if (!rooms || rooms.length === 0) return {};
+
+      const roomIds = rooms.map(r => r.id);
+
+      // Get the latest message for each room using a single query
+      // Group by room_id and get the most recent message
+      const latestMessages: Record<string, { text: string; time: string; sender: string }> = {};
+
+      for (const roomId of roomIds) {
+        const { data: message } = await supabase
+          .from('chat_messages')
+          .select('message_text, created_at, sender_id')
+          .eq('room_id', roomId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (message) {
+          // Get sender name
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', message.sender_id)
+            .single();
+
+          latestMessages[roomId] = {
+            text: message.message_text,
+            time: message.created_at,
+            sender: profile?.name?.split(' ')[0] || 'User',
+          };
+        }
+      }
+
+      return latestMessages;
+    },
+    enabled: !!storeId,
+    staleTime: 10000, // Cache for 10 seconds
+  });
+}
