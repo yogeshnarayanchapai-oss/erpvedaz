@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import SetupAdmin from "./pages/SetupAdmin";
 import NotFound from "./pages/NotFound";
+import InstallApp from "./pages/InstallApp";
 
 import AdminUnifiedDashboard from "./pages/admin/AdminUnifiedDashboard";
 import AdminSalesDashboard from "./pages/admin/AdminSalesDashboard";
@@ -207,6 +208,7 @@ const App = () => (
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/auth/update-password" element={<UpdatePassword />} />
               <Route path="/setup" element={<SetupAdmin />} />
+              <Route path="/install" element={<InstallApp />} />
 
               {/* Main routes (using DashboardLayout with store_id filtering) */}
               <Route element={<DashboardLayout />}>
