@@ -23,12 +23,31 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [brandingTimedOut, setBrandingTimedOut] = useState(false);
   const { signIn, user, profile } = useAuth();
   const { branding, isLoading: brandingLoading } = useBranding();
   const navigate = useNavigate();
 
+  // Timeout for branding - show fallback after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (brandingLoading) {
+        setBrandingTimedOut(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [brandingLoading]);
+
+  // Reset timeout flag when branding loads
+  useEffect(() => {
+    if (!brandingLoading && branding) {
+      setBrandingTimedOut(false);
+    }
+  }, [brandingLoading, branding]);
+
   const brandName = branding?.brand_name;
   const logoUrl = branding?.logo_url;
+  const showBrandingSkeleton = brandingLoading && !brandingTimedOut;
 
   useEffect(() => {
     if (user && profile) {
@@ -94,7 +113,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          {brandingLoading ? (
+          {showBrandingSkeleton ? (
             <>
               <Skeleton className="w-14 h-14 mx-auto mb-4 rounded-xl" />
               <Skeleton className="h-8 w-48 mx-auto mb-2" />
