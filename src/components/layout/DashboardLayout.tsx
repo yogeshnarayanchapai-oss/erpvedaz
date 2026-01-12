@@ -11,7 +11,6 @@ import { StoreSwitcher } from './StoreSwitcher';
 import { TeamChatButton } from '@/components/chat/TeamChatButton';
 import { NoticePopup } from '@/components/hrm/NoticePopup';
 import { AttendanceButton } from './AttendanceButton';
-import { DynamicBranding } from '@/components/pwa/DynamicBranding';
 import { Loader2, Calendar, User, LogOut as LogOutIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -308,7 +307,6 @@ function DashboardLayoutInner() {
 export function DashboardLayout() {
   return (
     <CurrentStoreProvider>
-      <DynamicBranding />
       <DashboardLayoutInner />
     </CurrentStoreProvider>
   );

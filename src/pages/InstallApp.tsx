@@ -14,8 +14,6 @@ import {
   Bell,
   Zap
 } from "lucide-react";
-import { useCurrentStore } from "@/contexts/CurrentStoreContext";
-import { useStoreBranding } from "@/hooks/useStoreBranding";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,12 +26,6 @@ export default function InstallApp() {
   const [isAndroid, setIsAndroid] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [installed, setInstalled] = useState(false);
-  
-  const { currentStore } = useCurrentStore();
-  const { data: branding } = useStoreBranding(currentStore?.id || '');
-
-  const appName = currentStore?.name || 'ERP System';
-  const logoUrl = branding?.logo_url || currentStore?.logo_url;
 
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
@@ -83,7 +75,7 @@ export default function InstallApp() {
             </div>
             <CardTitle className="text-2xl">App Installed!</CardTitle>
             <CardDescription>
-              {appName} तपाईंको home screen मा install भइसक्यो
+              Vedaz Store तपाईंको home screen मा install भइसक्यो
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -101,15 +93,11 @@ export default function InstallApp() {
       {/* Hero Section */}
       <div className="container max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <div className="mx-auto mb-6 rounded-2xl bg-primary/10 p-6 w-24 h-24 flex items-center justify-center overflow-hidden">
-            {logoUrl ? (
-              <img src={logoUrl} alt={appName} className="w-full h-full object-contain" />
-            ) : (
-              <Smartphone className="h-12 w-12 text-primary" />
-            )}
+          <div className="mx-auto mb-6 rounded-2xl bg-primary/10 p-6 w-24 h-24 flex items-center justify-center">
+            <Smartphone className="h-12 w-12 text-primary" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {appName} App Install गर्नुहोस्
+            Vedaz Store App Install गर्नुहोस्
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Home screen मा add गरेर native app जस्तै experience पाउनुहोस्। 
@@ -151,7 +139,7 @@ export default function InstallApp() {
               {deferredPrompt ? (
                 <Button onClick={handleInstall} className="w-full gap-2" size="lg">
                   <Download className="h-5 w-5" />
-                  Install {appName}
+                  Install Vedaz App
                 </Button>
               ) : (
                 <div className="space-y-3">

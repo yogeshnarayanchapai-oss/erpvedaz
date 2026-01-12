@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "prompt",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "ERP System",
-        short_name: "ERP",
-        description: "Manage eCommerce leads, calls, followups and orders",
+        name: "Vedaz Store - ERP System",
+        short_name: "Vedaz",
+        description: "Manage eCommerce leads, calls, followups and orders with Vedaz Store",
         theme_color: "#1a1a2e",
         background_color: "#0f0f23",
         display: "standalone",
