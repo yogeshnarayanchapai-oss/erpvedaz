@@ -172,7 +172,7 @@ export function TransferLeadsModal({ open, onOpenChange, leadsInPool }: Transfer
               <SelectTrigger>
                 <SelectValue placeholder="Choose staff member" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[200px] overflow-y-auto">
                 {callingStaff.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     <div className="flex flex-col">

@@ -24,6 +24,7 @@ import {
   useToggleMuteRoom,
   useSearchMessages,
   usePinnedMessages,
+  useLatestMessagesPerRoom,
   useEmployeeUsers,
   useCreateDMRoom,
   useEnsureDefaultGroups,
@@ -108,6 +109,7 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
   const { data: pinnedMessages = [] } = usePinnedMessages(selectedRoom?.id || null);
   const { data: storeUsers = [] } = useEmployeeUsers();
   const { data: unreadPerRoom = {} } = useUnreadCountPerRoom();
+  const { data: latestMessages = {} } = useLatestMessagesPerRoom();
   
   // Fetch all participant profiles for DM name resolution
   const dmParticipantIds = [...new Set(
@@ -546,26 +548,43 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                 <div className="space-y-1 sm:space-y-0.5">
                   {groupRooms.map(room => {
                     const unreadCount = unreadPerRoom[room.id] || 0;
+                    const latestMsg = latestMessages[room.id];
                     return (
                       <div
                         key={room.id}
                         className={cn(
-                          "flex items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
+                          "flex items-start sm:items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                           selectedRoom?.id === room.id 
                             ? "bg-primary/10 text-primary font-medium" 
                             : "hover:bg-muted text-foreground"
                         )}
                         onClick={() => { setSelectedRoom(room); setActiveTab('groups'); setShowMobileSidebar(false); }}
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Hash className="w-4 h-4 sm:hidden shrink-0 text-muted-foreground" />
-                          <span className="text-sm sm:text-xs truncate">{room.name}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Hash className="w-4 h-4 sm:hidden shrink-0 text-muted-foreground" />
+                            <span className="text-sm sm:text-xs font-medium truncate">{room.name}</span>
+                          </div>
+                          {/* Mobile: Show latest message preview */}
+                          {latestMsg && (
+                            <p className="sm:hidden text-xs text-muted-foreground mt-1 truncate pl-6">
+                              <span className="font-medium">{latestMsg.sender}:</span> {latestMsg.text.substring(0, 30)}{latestMsg.text.length > 30 ? '...' : ''}
+                            </p>
+                          )}
                         </div>
-                        {unreadCount > 0 && selectedRoom?.id !== room.id && (
-                          <span className="min-w-[24px] sm:min-w-[20px] h-6 sm:h-5 px-2 sm:px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
-                        )}
+                        <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          {/* Mobile: Show time */}
+                          {latestMsg && (
+                            <span className="sm:hidden text-[10px] text-muted-foreground">
+                              {formatMessageDate(latestMsg.time)}
+                            </span>
+                          )}
+                          {unreadCount > 0 && selectedRoom?.id !== room.id && (
+                            <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -579,26 +598,43 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
                       {dmRooms.map(room => {
                         const unreadCount = unreadPerRoom[room.id] || 0;
                         const displayName = getDMDisplayName(room);
+                        const latestMsg = latestMessages[room.id];
                         return (
                           <div
                             key={room.id}
                             className={cn(
-                              "flex items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
+                              "flex items-start sm:items-center justify-between px-3 py-3 sm:py-2.5 rounded-lg cursor-pointer transition-colors active:scale-[0.98]",
                               selectedRoom?.id === room.id 
                                 ? "bg-primary/10 text-primary font-medium" 
                                 : "hover:bg-muted text-foreground"
                             )}
                             onClick={() => { setSelectedRoom(room); setActiveTab('dms'); setShowMobileSidebar(false); }}
                           >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <User className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
-                              <span className="text-sm sm:text-xs truncate">{displayName}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+                                <span className="text-sm sm:text-xs font-medium truncate">{displayName}</span>
+                              </div>
+                              {/* Mobile: Show latest message preview */}
+                              {latestMsg && (
+                                <p className="sm:hidden text-xs text-muted-foreground mt-1 truncate pl-6">
+                                  {latestMsg.text.substring(0, 35)}{latestMsg.text.length > 35 ? '...' : ''}
+                                </p>
+                              )}
                             </div>
-                            {unreadCount > 0 && selectedRoom?.id !== room.id && (
-                              <span className="min-w-[24px] sm:min-w-[20px] h-6 sm:h-5 px-2 sm:px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
-                                {unreadCount > 99 ? '99+' : unreadCount}
-                              </span>
-                            )}
+                            <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                              {/* Mobile: Show time */}
+                              {latestMsg && (
+                                <span className="sm:hidden text-[10px] text-muted-foreground">
+                                  {formatMessageDate(latestMsg.time)}
+                                </span>
+                              )}
+                              {unreadCount > 0 && selectedRoom?.id !== room.id && (
+                                <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full">
+                                  {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}

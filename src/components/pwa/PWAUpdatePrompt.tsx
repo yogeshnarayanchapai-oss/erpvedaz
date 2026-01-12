@@ -1,10 +1,11 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 export function PWAUpdatePrompt() {
   const [dismissed, setDismissed] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const {
     needRefresh: [needRefresh],
@@ -18,8 +19,38 @@ export function PWAUpdatePrompt() {
     },
   });
 
-  const handleUpdate = () => {
-    updateServiceWorker(true);
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    
+    try {
+      // Unregister all existing service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      
+      // Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(cacheName => caches.delete(cacheName))
+        );
+      }
+      
+      // Trigger the service worker update
+      await updateServiceWorker(true);
+      
+      // Force reload to get fresh content
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Update failed:', error);
+      // Fallback: just reload the page
+      window.location.reload();
+    }
   };
 
   const handleDismiss = () => {
@@ -47,15 +78,26 @@ export function PWAUpdatePrompt() {
                 size="sm"
                 variant="secondary"
                 onClick={handleUpdate}
+                disabled={isUpdating}
                 className="flex-1 text-xs"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Update Now
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Update Now
+                  </>
+                )}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleDismiss}
+                disabled={isUpdating}
                 className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
               >
                 <X className="h-4 w-4" />

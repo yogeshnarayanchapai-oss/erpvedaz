@@ -601,7 +601,7 @@ export function AppSidebar() {
     if (titleLower.includes('notification')) return badges.notifications;
     if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
     if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
-    if (titleLower.includes('inventory') || titleLower.includes('stock summary')) return badges.lowStock;
+    // Removed lowStock badge from inventory/stock summary to reduce noise
     
     return 0;
   };

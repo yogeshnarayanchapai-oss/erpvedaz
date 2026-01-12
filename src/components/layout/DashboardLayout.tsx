@@ -227,7 +227,7 @@ function DashboardLayoutInner() {
             <StoreSwitcher />
             
             
-            <div className="ml-auto flex items-center gap-1 md:gap-4">
+            <div className="ml-auto flex items-center gap-2 md:gap-3">
               {/* Date - hidden on mobile, synced with Profile menu date format */}
               <div className="hidden lg:flex items-center gap-2 text-sm text-foreground font-medium">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
