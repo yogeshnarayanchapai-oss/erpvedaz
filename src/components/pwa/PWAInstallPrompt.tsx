@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, X, Smartphone, Share, Plus } from "lucide-react";
+import { useCurrentStore } from "@/contexts/CurrentStoreContext";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,6 +14,9 @@ export function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const { currentStore } = useCurrentStore();
+
+  const appName = currentStore?.name || 'ERP System';
 
   useEffect(() => {
     // Check if already installed
@@ -79,7 +83,7 @@ export function PWAInstallPrompt() {
                 <Smartphone className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Install Vedaz App</CardTitle>
+                <CardTitle className="text-base">Install {appName}</CardTitle>
                 <CardDescription className="text-xs">
                   Quick access from home screen
                 </CardDescription>
