@@ -124,10 +124,13 @@ export function TransferLeadsModal({ open, onOpenChange, leadsInPool }: Transfer
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
+              <PopoverContent
+                className="w-full p-0 max-h-[70vh] overflow-hidden"
+                align="start"
+              >
                 <Command>
                   <CommandInput placeholder="Search products..." />
-                  <CommandList>
+                  <CommandList className="max-h-[45vh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
                     <CommandEmpty>No product found.</CommandEmpty>
                     <CommandGroup>
                       {products.map((product) => {
@@ -183,10 +186,13 @@ export function TransferLeadsModal({ open, onOpenChange, leadsInPool }: Transfer
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
+              <PopoverContent
+                className="w-full p-0 max-h-[70vh] overflow-hidden"
+                align="start"
+              >
                 <Command>
                   <CommandInput placeholder="Search staff..." />
-                  <CommandList className="max-h-[200px]">
+                  <CommandList className="max-h-[45vh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
                     <CommandEmpty>No staff found.</CommandEmpty>
                     <CommandGroup>
                       {callingStaff.map((staff) => (
