@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, X, Smartphone, Share, Plus } from "lucide-react";
+import { useBranding } from "@/hooks/useBranding";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,6 +14,11 @@ export function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const { branding } = useBranding();
+
+  // Get dynamic brand name and logo
+  const brandName = branding?.brand_name || 'ERP Software';
+  const logoUrl = branding?.logo_url;
 
   useEffect(() => {
     // Check if already installed
@@ -75,11 +81,19 @@ export function PWAInstallPrompt() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2">
-                <Smartphone className="h-5 w-5 text-primary" />
+              <div className="rounded-lg bg-primary/10 p-2 overflow-hidden">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={brandName} 
+                    className="h-5 w-5 object-contain"
+                  />
+                ) : (
+                  <Smartphone className="h-5 w-5 text-primary" />
+                )}
               </div>
               <div>
-                <CardTitle className="text-base">Install Vedaz App</CardTitle>
+                <CardTitle className="text-base">Install {brandName}</CardTitle>
                 <CardDescription className="text-xs">
                   Quick access from home screen
                 </CardDescription>
