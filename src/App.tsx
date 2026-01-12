@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import '@/lib/storageCleanup'; // Auto-cleanup on app startup
 
 const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
 const Sonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
@@ -184,7 +185,15 @@ import LogisticsPortalOrders from "./pages/logistics/LogisticsPortalOrders";
 import NotificationSettingsPage from "./pages/settings/NotificationSettingsPage";
 import MyProfile from "./pages/settings/MyProfile";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Loading component
 const Loading = () => (
