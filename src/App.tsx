@@ -9,6 +9,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DateModeProvider } from "@/contexts/DateModeContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Loader2 } from 'lucide-react';
+import { DynamicBranding } from "@/components/DynamicBranding";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -404,6 +406,8 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          <DynamicBranding />
+          <PWAInstallPrompt />
         </TooltipProvider>
       </DateModeProvider>
     </AuthProvider>
