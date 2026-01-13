@@ -467,7 +467,7 @@ export default function AdminDashboard() {
                       <TableHead className="table-header text-right">VD</TableHead>
                       <TableHead className="table-header text-right">OVD Qty</TableHead>
                       <TableHead className="table-header text-right">VD Qty</TableHead>
-                      <TableHead className="table-header text-right">Revenue</TableHead>
+                      <TableHead className="table-header text-right">Net Sales</TableHead>
                       <TableHead className="table-header text-right">P/L</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -480,7 +480,7 @@ export default function AdminDashboard() {
                         <TableCell className="text-right">{item.vdOrders || 0}</TableCell>
                         <TableCell className="text-right text-primary font-medium">{item.ovdQtySold || 0}</TableCell>
                         <TableCell className="text-right text-primary font-medium">{item.vdQtySold || 0}</TableCell>
-                        <TableCell className="text-right">₹{item.revenue.toFixed(0)}</TableCell>
+                        <TableCell className="text-right">₹{(item.netSales || 0).toFixed(0)}</TableCell>
                         <TableCell className={`text-right font-medium ${item.pl >= 0 ? 'text-success' : 'text-destructive'}`}>
                           ₹{item.pl.toFixed(0)}
                         </TableCell>
