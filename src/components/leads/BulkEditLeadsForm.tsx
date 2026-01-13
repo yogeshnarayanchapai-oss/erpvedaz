@@ -134,7 +134,7 @@ export function BulkEditLeadsForm({ open, onOpenChange, selectedLeads, onComplet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="sm:max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-lg font-semibold">Bulk Edit Leads ({selectedLeads.length})</DialogTitle>
         </DialogHeader>
