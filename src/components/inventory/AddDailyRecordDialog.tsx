@@ -149,7 +149,7 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-muted/30 p-4 rounded-lg">
                 <div>
                   <Label className="text-xs text-muted-foreground">Sell (Units)</Label>
-                  <p className="font-semibold">{sell}</p>
+                  <p className="font-semibold">{sell} <span className="text-xs text-muted-foreground font-normal">({totalOrders} Orders)</span></p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Ads Spent (NPR)</Label>
