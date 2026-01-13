@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+import { DEFAULT_COST_SETTINGS } from './useCostSettings';
 
 const VALID_ORDER_STATUSES = ['CONFIRMED', 'DISPATCHED', 'DELIVERED'];
 
@@ -297,16 +298,19 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         }
       });
 
-      // Fetch RTO% for the month (use first day of date range)
-      const yearMonth = fromDate.substring(0, 7); // YYYY-MM
-      const { data: rtoSetting } = await supabase
-        .from('rto_settings')
-        .select('rto_percent')
+      // Fetch cost settings for the store (single row, not per month)
+      const { data: costSettings } = await supabase
+        .from('cost_settings')
+        .select('*')
         .eq('store_id', storeId)
-        .eq('year_month', yearMonth)
         .maybeSingle();
 
-      const rtoPercent = rtoSetting?.rto_percent || 0;
+      const rtoPercent = costSettings?.rto_percent ?? DEFAULT_COST_SETTINGS.rto_percent;
+      const rtoChargePerUnit = costSettings?.rto_charge_per_unit ?? DEFAULT_COST_SETTINGS.rto_charge_per_unit;
+      const officeCostPerOrder = costSettings?.office_cost_per_order ?? DEFAULT_COST_SETTINGS.office_cost_per_order;
+      const deliveryChargePerOrder = costSettings?.delivery_charge_per_order ?? DEFAULT_COST_SETTINGS.delivery_charge_per_order;
+      const redirectPercent = costSettings?.redirect_percent ?? DEFAULT_COST_SETTINGS.redirect_percent;
+      const redirectChargePerUnit = costSettings?.redirect_charge_per_unit ?? DEFAULT_COST_SETTINGS.redirect_charge_per_unit;
 
 
       return products.map(product => {
@@ -338,16 +342,13 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         const dailyAdsUsd = latestAdsByProduct[product.id] || 0;
         const adsSpend = dailyAdsUsd * daysDiff * dollarRate;
         
-        // Calculate P/L with CORRECTED formulas:
-        // Product Cost = qtySold × costPrice (not orderCount)
-        // Redirect = orderCount × 20% × 50 (not qtySold)
-        // RTO = orderCount × RTO% × 200 (not qtySold)
+        // Calculate P/L with settings from cost_settings table
         const productCost = totalQtySold * (product.cost_price || 0);
-        const staffOfficeCost = totalOrderCount * 50;
-        const deliveryCost = totalOrderCount * 250;
-        const redirectCost = Math.round(totalOrderCount * 0.2 * 50);
+        const staffOfficeCost = totalOrderCount * officeCostPerOrder;
+        const deliveryCost = totalOrderCount * deliveryChargePerOrder;
+        const redirectCost = Math.round(totalOrderCount * (redirectPercent / 100) * redirectChargePerUnit);
         const rtoUnits = Math.round(totalOrderCount * (rtoPercent / 100));
-        const rtoCost = rtoUnits * 200;
+        const rtoCost = rtoUnits * rtoChargePerUnit;
         
         const pl = totalRevenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
         

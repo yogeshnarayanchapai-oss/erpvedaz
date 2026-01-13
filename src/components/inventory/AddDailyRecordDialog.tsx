@@ -38,23 +38,30 @@ export function AddDailyRecordDialog({ initialDate, initialWarehouse, onSaved }:
   const adsSpentNpr = metrics?.adsSpentNpr || 0;
   const totalOrders = metrics?.totalOrders || 0;
   const rtoPercent = metrics?.rtoPercent || 0;
+  
+  // Get configurable cost settings from metrics
+  const rtoChargePerUnit = metrics?.rtoChargePerUnit || 200;
+  const officeCostPerOrder = metrics?.officeCostPerOrder || 50;
+  const deliveryChargePerOrder = metrics?.deliveryChargePerOrder || 250;
+  const redirectChargePerUnit = metrics?.redirectChargePerUnit || 50;
+  const redirectPercent = metrics?.redirectPercent || 20;
 
   // RTO = Sell × RTO% / 100
   const rto = Math.round(sell * (rtoPercent / 100));
-  // RTO Cost = RTO × 200
-  const rtoCost = rto * 200;
-  // Staff + Office Cost = Total Orders × 50
-  const staffOfficeCost = totalOrders * 50;
+  // RTO Cost = RTO × RTO Charge per Unit (from settings)
+  const rtoCost = rto * rtoChargePerUnit;
+  // Staff + Office Cost = Total Orders × Office Cost per Order (from settings)
+  const staffOfficeCost = totalOrders * officeCostPerOrder;
   // Actual Sell = Sell − RTO
   const actualSell = sell - rto;
   // Actual Product Cost = Product Cost - (Product Cost × RTO% / 100)
   const actualProductCost = productCost - (productCost * rtoPercent / 100);
-  // Delivery Charge = Total Orders × 250
-  const deliveryCharge = totalOrders * 250;
-  // Redirect Cost = Sell × 20% × 50
-  const redirectCost = Math.round(sell * 0.20 * 50);
-  // Actual Product Value = productValue (from stock movement OUT)
-  const actualProductValue = productValue;
+  // Delivery Charge = Total Orders × Delivery Charge per Order (from settings)
+  const deliveryCharge = totalOrders * deliveryChargePerOrder;
+  // Redirect Cost = Sell × Redirect% × Redirect Charge per Unit (from settings)
+  const redirectCost = Math.round(sell * (redirectPercent / 100) * redirectChargePerUnit);
+  // Actual Product Value = Product Value - (Product Value × RTO% / 100)
+  const actualProductValue = productValue - (productValue * rtoPercent / 100);
   // P/L = Actual Product Value − Actual Product Cost − Staff+Office Cost − Ads Spent − Delivery Charge − Redirect Cost − RTO Cost
   const profitLoss = actualProductValue - actualProductCost - staffOfficeCost - adsSpentNpr - deliveryCharge - redirectCost - rtoCost;
 
