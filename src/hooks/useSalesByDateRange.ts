@@ -352,6 +352,12 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         
         const pl = totalRevenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
         
+        // Calculate Actual Product Value = Revenue - (Revenue × RTO% / 100)
+        const actualProductValue = totalRevenue - (totalRevenue * rtoPercent / 100);
+        
+        // Net Sales = Actual Product Value - All Costs (delivery, RTO charges, redirect, office cost)
+        const netSales = actualProductValue - deliveryCost - rtoCost - redirectCost - staffOfficeCost;
+        
         return {
           name: product.name,
           target: adsTarget,
@@ -362,6 +368,8 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
           ovdQtySold,
           vdQtySold,
           revenue: totalRevenue,
+          actualProductValue,
+          netSales,
           costPrice: product.cost_price || 0,
           sellPrice: product.sell_price || 0,
           pl,
