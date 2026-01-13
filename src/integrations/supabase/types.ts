@@ -1860,6 +1860,59 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_settings: {
+        Row: {
+          created_at: string
+          delivery_charge_per_order: number
+          id: string
+          office_cost_per_order: number
+          redirect_charge_per_unit: number
+          redirect_percent: number
+          rto_charge_per_unit: number
+          rto_percent: number
+          store_id: string | null
+          updated_at: string
+          updated_by: string | null
+          usd_rate: number
+        }
+        Insert: {
+          created_at?: string
+          delivery_charge_per_order?: number
+          id?: string
+          office_cost_per_order?: number
+          redirect_charge_per_unit?: number
+          redirect_percent?: number
+          rto_charge_per_unit?: number
+          rto_percent?: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_rate?: number
+        }
+        Update: {
+          created_at?: string
+          delivery_charge_per_order?: number
+          id?: string
+          office_cost_per_order?: number
+          redirect_charge_per_unit?: number
+          redirect_percent?: number
+          rto_charge_per_unit?: number
+          rto_percent?: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_stats: {
         Row: {
           avg_delivery_hours: number | null

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from './useCurrentStoreId';
+import { DEFAULT_COST_SETTINGS } from './useCostSettings';
 
 // Fetch all metrics needed for a daily record
 export function useDailyRecordMetrics(date: string, warehouseId?: string | null) {
@@ -16,7 +17,13 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
           productValue: 0,
           adsSpentNpr: 0,
           totalOrders: 0,
-          rtoPercent: 0,
+          rtoPercent: DEFAULT_COST_SETTINGS.rto_percent,
+          usdRate: DEFAULT_COST_SETTINGS.usd_rate,
+          deliveryChargePerOrder: DEFAULT_COST_SETTINGS.delivery_charge_per_order,
+          rtoChargePerUnit: DEFAULT_COST_SETTINGS.rto_charge_per_unit,
+          redirectChargePerUnit: DEFAULT_COST_SETTINGS.redirect_charge_per_unit,
+          officeCostPerOrder: DEFAULT_COST_SETTINGS.office_cost_per_order,
+          redirectPercent: DEFAULT_COST_SETTINGS.redirect_percent,
         };
       }
 
@@ -80,18 +87,14 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
 
       const adsSpentNpr = adSpendData?.reduce((sum, a) => sum + (a.amount_spent || 0), 0) || 0;
 
-      // 4. Get RTO% for the month
-      const yearMonth = date.substring(0, 7); // YYYY-MM
-      const { data: rtoSetting, error: rtoError } = await supabase
-        .from('rto_settings')
-        .select('rto_percent')
+      // 4. Get cost settings for the store (single row, not per month)
+      const { data: costSettings, error: costError } = await supabase
+        .from('cost_settings')
+        .select('*')
         .eq('store_id', storeId)
-        .eq('year_month', yearMonth)
         .maybeSingle();
 
-      if (rtoError) throw rtoError;
-
-      const rtoPercent = rtoSetting?.rto_percent || 0;
+      if (costError) throw costError;
 
       return {
         sell,
@@ -99,7 +102,13 @@ export function useDailyRecordMetrics(date: string, warehouseId?: string | null)
         productValue,
         adsSpentNpr,
         totalOrders,
-        rtoPercent,
+        rtoPercent: costSettings?.rto_percent ?? DEFAULT_COST_SETTINGS.rto_percent,
+        usdRate: costSettings?.usd_rate ?? DEFAULT_COST_SETTINGS.usd_rate,
+        deliveryChargePerOrder: costSettings?.delivery_charge_per_order ?? DEFAULT_COST_SETTINGS.delivery_charge_per_order,
+        rtoChargePerUnit: costSettings?.rto_charge_per_unit ?? DEFAULT_COST_SETTINGS.rto_charge_per_unit,
+        redirectChargePerUnit: costSettings?.redirect_charge_per_unit ?? DEFAULT_COST_SETTINGS.redirect_charge_per_unit,
+        officeCostPerOrder: costSettings?.office_cost_per_order ?? DEFAULT_COST_SETTINGS.office_cost_per_order,
+        redirectPercent: costSettings?.redirect_percent ?? DEFAULT_COST_SETTINGS.redirect_percent,
       };
     },
     enabled: !!storeId && !!date,

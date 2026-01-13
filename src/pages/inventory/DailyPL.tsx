@@ -17,7 +17,7 @@ import { usePLSummaryByRange, useDailyPLTrend, useAITargetSuggestions } from '@/
 import { useWholesalePLSummary } from '@/hooks/useWholesalePL';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useStockMovementMetrics, useOfficeManagementExpense, useAdsSpendMetrics } from '@/hooks/useDailyPLMetrics';
-import { useRTOSettings, useRTOSettingForMonth, useUpsertRTOSetting } from '@/hooks/useRTOSettings';
+import { useCostSettings, useUpdateCostSettings, DEFAULT_COST_SETTINGS } from '@/hooks/useCostSettings';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -33,8 +33,16 @@ export default function DailyPL() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: today, endDate: today, label: 'Today' });
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>(warehouseFromUrl || 'all');
-  const [rtoSettingsOpen, setRtoSettingsOpen] = useState(false);
-  const [rtoInputs, setRtoInputs] = useState<Record<string, number>>({});
+  const [costSettingsOpen, setCostSettingsOpen] = useState(false);
+  const [costInputs, setCostInputs] = useState({
+    rto_percent: DEFAULT_COST_SETTINGS.rto_percent,
+    usd_rate: DEFAULT_COST_SETTINGS.usd_rate,
+    delivery_charge_per_order: DEFAULT_COST_SETTINGS.delivery_charge_per_order,
+    rto_charge_per_unit: DEFAULT_COST_SETTINGS.rto_charge_per_unit,
+    redirect_charge_per_unit: DEFAULT_COST_SETTINGS.redirect_charge_per_unit,
+    office_cost_per_order: DEFAULT_COST_SETTINGS.office_cost_per_order,
+    redirect_percent: DEFAULT_COST_SETTINGS.redirect_percent,
+  });
   
   const { data: warehouses } = useActiveWarehouses();
   const { data: plData, isLoading } = usePLSummaryByRange(dateRange.startDate, dateRange.endDate, selectedWarehouse);
@@ -51,13 +59,11 @@ export default function DailyPL() {
   const savePL = useSaveDailyPL();
   
   // New data hooks for real metrics
-  const yearMonth = format(new Date(dateRange.startDate), 'yyyy-MM');
   const { data: stockMetrics } = useStockMovementMetrics(dateRange.startDate, dateRange.endDate);
   const { data: officeExpense } = useOfficeManagementExpense(dateRange.startDate, dateRange.endDate);
   const { data: adsMetrics } = useAdsSpendMetrics(dateRange.startDate, dateRange.endDate);
-  const { data: rtoSetting } = useRTOSettingForMonth(yearMonth);
-  const { data: allRtoSettings } = useRTOSettings();
-  const upsertRTO = useUpsertRTOSetting();
+  const { data: costSettings } = useCostSettings();
+  const updateCostSettings = useUpdateCostSettings();
   
   const [warehouseOpen, setWarehouseOpen] = useState(false);
   const [recordsOpen, setRecordsOpen] = useState(true);
@@ -97,24 +103,28 @@ export default function DailyPL() {
     }));
   }, [editableFields.ads_spent_usd, usdRate]);
 
-  // Initialize RTO inputs from saved settings
+  // Initialize cost inputs from saved settings
   useEffect(() => {
-    if (allRtoSettings) {
-      const inputs: Record<string, number> = {};
-      allRtoSettings.forEach(s => {
-        inputs[s.year_month] = s.rto_percent;
+    if (costSettings) {
+      setCostInputs({
+        rto_percent: costSettings.rto_percent,
+        usd_rate: costSettings.usd_rate,
+        delivery_charge_per_order: costSettings.delivery_charge_per_order,
+        rto_charge_per_unit: costSettings.rto_charge_per_unit,
+        redirect_charge_per_unit: costSettings.redirect_charge_per_unit,
+        office_cost_per_order: costSettings.office_cost_per_order,
+        redirect_percent: costSettings.redirect_percent,
       });
-      setRtoInputs(inputs);
     }
-  }, [allRtoSettings]);
+  }, [costSettings]);
 
   // Use actual metrics from hooks
   const U = stockMetrics?.unitsSold ?? plData?.summary?.total_units_sold ?? 0;
   const GS = stockMetrics?.grossSales ?? plData?.summary?.gross_sales_value ?? 0;
   const COGS = plData?.summary?.product_cost ?? 0;
   
-  // RTO % from settings for the current month
-  const R = rtoSetting?.rto_percent ?? 0;
+  // RTO % from cost settings
+  const R = costSettings?.rto_percent ?? DEFAULT_COST_SETTINGS.rto_percent;
   
   // Total Expense from "office management" category transactions
   const officeManagementExpense = officeExpense?.totalExpense ?? 0;
@@ -175,8 +185,9 @@ export default function DailyPL() {
     });
   };
 
-  const handleSaveRTOSetting = async (month: string, value: number) => {
-    await upsertRTO.mutateAsync({ yearMonth: month, rtoPercent: value });
+  const handleSaveCostSettings = async () => {
+    await updateCostSettings.mutateAsync(costInputs);
+    setCostSettingsOpen(false);
   };
 
   const formatCurrency = (val: number) => `Rs ${val.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -195,16 +206,6 @@ export default function DailyPL() {
     ? 'All Warehouses' 
     : warehouses?.find(w => w.id === selectedWarehouse)?.name || 'Selected Warehouse';
 
-  // Generate last 12 months for RTO settings
-  const last12Months = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(format(date, 'yyyy-MM'));
-    }
-    return months;
-  }, []);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -232,8 +233,8 @@ export default function DailyPL() {
           </Select>
           <DateQuickFilters value={dateRange} onChange={setDateRange} />
           
-          {/* RTO Settings Button */}
-          <Dialog open={rtoSettingsOpen} onOpenChange={setRtoSettingsOpen}>
+          {/* Cost Settings Button */}
+          <Dialog open={costSettingsOpen} onOpenChange={setCostSettingsOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="icon" className="h-9 w-9">
                 <Settings className="h-4 w-4" />
@@ -241,33 +242,88 @@ export default function DailyPL() {
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto mx-4 sm:mx-auto">
               <DialogHeader>
-                <DialogTitle>RTO % Settings by Month</DialogTitle>
+                <DialogTitle>Cost Settings</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                {last12Months.map((month) => (
-                  <div key={month} className="flex items-center gap-3">
-                    <Label className="w-24 text-sm font-medium">
-                      {format(new Date(month + '-01'), 'MMM yyyy')}
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.1}
-                      placeholder="RTO %"
-                      className="flex-1"
-                      value={rtoInputs[month] ?? ''}
-                      onChange={(e) => setRtoInputs(prev => ({ ...prev, [month]: +e.target.value }))}
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveRTOSetting(month, rtoInputs[month] || 0)}
-                      disabled={upsertRTO.isPending}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ))}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">RTO %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={costInputs.rto_percent}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, rto_percent: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">USD Rate (NPR)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={costInputs.usd_rate}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, usd_rate: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Delivery Charge per Order</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={costInputs.delivery_charge_per_order}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, delivery_charge_per_order: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">RTO Charge per Unit</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={costInputs.rto_charge_per_unit}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, rto_charge_per_unit: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Redirect Charge per Unit</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={costInputs.redirect_charge_per_unit}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, redirect_charge_per_unit: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Office Cost per Order</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={costInputs.office_cost_per_order}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, office_cost_per_order: +e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Redirect %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={costInputs.redirect_percent}
+                    onChange={(e) => setCostInputs(prev => ({ ...prev, redirect_percent: +e.target.value }))}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleSaveCostSettings}
+                  disabled={updateCostSettings.isPending}
+                >
+                  {updateCostSettings.isPending ? 'Saving...' : 'Save Settings'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
