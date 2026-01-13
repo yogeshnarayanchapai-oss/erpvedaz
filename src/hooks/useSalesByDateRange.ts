@@ -343,20 +343,29 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         const adsSpend = dailyAdsUsd * daysDiff * dollarRate;
         
         // Calculate P/L with settings from cost_settings table
+        // Product Cost = Sum of CONFIRMED order costs (qty × cost_price)
         const productCost = totalQtySold * (product.cost_price || 0);
+        
+        // Actual Revenue = Revenue - (Revenue × RTO% / 100)
+        const actualRevenue = totalRevenue - (totalRevenue * rtoPercent / 100);
+        
+        // Actual Product Cost = Product Cost - (Product Cost × RTO% / 100)
+        const actualProductCost = productCost - (productCost * rtoPercent / 100);
+        
         const staffOfficeCost = totalOrderCount * officeCostPerOrder;
         const deliveryCost = totalOrderCount * deliveryChargePerOrder;
         const redirectCost = Math.round(totalOrderCount * (redirectPercent / 100) * redirectChargePerUnit);
         const rtoUnits = Math.round(totalOrderCount * (rtoPercent / 100));
         const rtoCost = rtoUnits * rtoChargePerUnit;
         
-        const pl = totalRevenue - productCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
+        // P/L = Actual Revenue - Actual Product Cost - Office Cost - Ads - Delivery - Redirect - RTO Cost
+        const pl = actualRevenue - actualProductCost - staffOfficeCost - adsSpend - deliveryCost - redirectCost - rtoCost;
         
-        // Calculate Actual Product Value = Revenue - (Revenue × RTO% / 100)
-        const actualProductValue = totalRevenue - (totalRevenue * rtoPercent / 100);
+        // Keep actualProductValue for backward compatibility (hidden, used for calculations)
+        const actualProductValue = actualRevenue;
         
-        // Net Sales = Actual Product Value - All Costs (delivery, RTO charges, redirect, office cost)
-        const netSales = actualProductValue - deliveryCost - rtoCost - redirectCost - staffOfficeCost;
+        // Net Sales = Actual Revenue - All Costs (for internal calculation only)
+        const netSales = actualRevenue - deliveryCost - rtoCost - redirectCost - staffOfficeCost;
         
         return {
           name: product.name,
