@@ -6105,6 +6105,7 @@ export type Database = {
           reference_id: string | null
           reference_order_count: number | null
           reference_type: string | null
+          related_to_accounting: boolean | null
           remark: string | null
           sale_category: string | null
           source: string | null
@@ -6135,6 +6136,7 @@ export type Database = {
           reference_id?: string | null
           reference_order_count?: number | null
           reference_type?: string | null
+          related_to_accounting?: boolean | null
           remark?: string | null
           sale_category?: string | null
           source?: string | null
@@ -6165,6 +6167,7 @@ export type Database = {
           reference_id?: string | null
           reference_order_count?: number | null
           reference_type?: string | null
+          related_to_accounting?: boolean | null
           remark?: string | null
           sale_category?: string | null
           source?: string | null
