@@ -10,26 +10,10 @@ import {
   bsToAd, 
   adToBS,
   getBSYearRange,
-  formatBSDate
+  getDaysInBSMonth
 } from '@/lib/nepaliDate';
 
-const BS_YEAR_DATA: Record<number, number[]> = {
-  2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
-  2081: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
-  2082: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
-  2083: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
-  2084: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
-  2085: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
-};
-
 const BS_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function getDaysInBSMonth(year: number, month: number): number {
-  const yearData = BS_YEAR_DATA[year];
-  if (yearData) return yearData[month - 1];
-  const defaultDays = [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31];
-  return defaultDays[month - 1];
-}
 
 function getFirstDayOfBSMonth(year: number, month: number): number {
   const adDate = bsToAd(year, month, 1);
