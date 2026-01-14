@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useUpdateStockMovement, StockMovement } from '@/hooks/useStockMovements';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
@@ -102,6 +103,7 @@ export default function StockMovements() {
     movement_source?: string;
     reference_order_count: number;
     adjustment_direction?: 'PLUS' | 'MINUS';
+    related_to_accounting: boolean;
   }>({
     product_id: '',
     warehouse_id: '',
@@ -118,6 +120,7 @@ export default function StockMovements() {
     remark: '',
     reference_order_count: 0,
     adjustment_direction: 'PLUS',
+    related_to_accounting: true,
   });
 
   const { data: movements, isLoading } = useStockMovements({
@@ -178,6 +181,7 @@ export default function StockMovements() {
       remark: '',
       reference_order_count: 0,
       adjustment_direction: 'PLUS',
+      related_to_accounting: true,
     });
   };
 
@@ -261,6 +265,8 @@ export default function StockMovements() {
       to_warehouse_id: isTransfer ? form.to_warehouse_id : null,
       // For adjustments, include the direction
       adjustment_direction: isAdjustment ? form.adjustment_direction : null,
+      // Related to accounting - only applicable for IN and WHOLESALE_OUT
+      related_to_accounting: (form.movement_type === 'IN' || form.movement_type === 'WHOLESALE_OUT') ? form.related_to_accounting : true,
     };
     
     if (editingMovement) {
@@ -306,6 +312,7 @@ export default function StockMovements() {
       movement_source: movement.movement_source || undefined,
       reference_order_count: movement.reference_order_count || 0,
       adjustment_direction: (movement as any).adjustment_direction || 'PLUS',
+      related_to_accounting: (movement as any).related_to_accounting !== false,
     });
     setDialogOpen(true);
   };
@@ -555,6 +562,22 @@ export default function StockMovements() {
                   <Label>Remark</Label>
                   <Textarea value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} />
                 </div>
+                {/* Related to Accounting checkbox - shown for IN and WHOLESALE_OUT movements */}
+                {(form.movement_type === 'IN' || form.movement_type === 'WHOLESALE_OUT') && (
+                  <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
+                    <Checkbox
+                      id="related_to_accounting"
+                      checked={form.related_to_accounting}
+                      onCheckedChange={(checked) => setForm({ ...form, related_to_accounting: !!checked })}
+                    />
+                    <Label htmlFor="related_to_accounting" className="text-sm font-medium cursor-pointer">
+                      Related to Accounting
+                    </Label>
+                    <span className="text-xs text-muted-foreground">
+                      (Creates party ledger entry when checked)
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); setEditingMovement(null); }}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={

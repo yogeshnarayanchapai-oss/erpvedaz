@@ -33,6 +33,7 @@ export interface StockMovement {
   deleted_at: string | null;
   deleted_by: string | null;
   adjustment_direction: 'PLUS' | 'MINUS' | null;
+  related_to_accounting: boolean | null;
   created_at: string;
   updated_at: string;
   products?: { id: string; name: string; wholesale_price?: number; store_id?: string | null };
@@ -142,6 +143,7 @@ interface CreateStockMovementInput {
   remark?: string | null;
   reference_order_count?: number | null;
   adjustment_direction?: 'PLUS' | 'MINUS' | null;
+  related_to_accounting?: boolean;
 }
 
 export function useCreateStockMovement() {
