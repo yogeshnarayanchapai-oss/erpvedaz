@@ -167,7 +167,10 @@ export function useCreateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['daily_pl'] });
+      // Sync party ledger + statement immediately after creating a movement
+      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
       toast.success('Movement recorded');
     },
