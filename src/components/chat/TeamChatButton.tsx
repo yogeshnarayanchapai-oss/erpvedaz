@@ -39,7 +39,7 @@ export function TeamChatButton() {
           // Get sender name and room info
           const { data: profile } = await supabase
             .from('profiles')
-            .select('name, username')
+            .select('name, username, email')
             .eq('id', senderId)
             .single();
           
@@ -49,13 +49,15 @@ export function TeamChatButton() {
             .eq('id', payload.new.room_id)
             .single();
           
-          const senderName = profile?.name || profile?.username || 'Someone';
+          const senderName = profile?.name || profile?.username || profile?.email || 'Someone';
           const roomName = room?.name || 'Team Chat';
           const messagePreview = (payload.new.message_text || '').substring(0, 50);
           
           // Show toast notification (always)
-          toast.info(`${senderName} in ${roomName}`, {
-            description: messagePreview + (messagePreview.length >= 50 ? '...' : ''),
+          toast.info(`${senderName} sent you a new message`, {
+            description:
+              (roomName ? `${roomName}: ` : '') +
+              (messagePreview + (messagePreview.length >= 50 ? '...' : '')),
             duration: 4000,
           });
           
