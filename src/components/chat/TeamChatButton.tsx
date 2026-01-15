@@ -5,21 +5,24 @@ import { useUnreadMessageCount } from '@/hooks/useTeamChat';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export function TeamChatButton() {
   const [open, setOpen] = useState(false);
   const { data: unreadCount = 0 } = useUnreadMessageCount();
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
+  const { user } = useAuth();
   const [notification, setNotification] = useState<string | null>(null);
   const prevUnreadRef = useRef(unreadCount);
 
   // Listen for new messages and show notification
   useEffect(() => {
-    if (!storeId) return;
+    if (!storeId || !user?.id) return;
 
     const channel = supabase
-      .channel('new-message-notification')
+      .channel(`new-message-notification-${storeId}-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -29,24 +32,42 @@ export function TeamChatButton() {
           filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
-          // Don't show notification if chat is open
-          if (open) return;
-          
-          // Get sender name
+          // Don't show notification for own messages
           const senderId = payload.new.sender_id;
+          if (senderId === user.id) return;
+          
+          // Get sender name and room info
           const { data: profile } = await supabase
             .from('profiles')
-            .select('name')
+            .select('name, username')
             .eq('id', senderId)
             .single();
           
-          const senderName = profile?.name?.split(' ')[0] || 'Someone';
-          setNotification(`New message from ${senderName}`);
+          const { data: room } = await supabase
+            .from('chat_rooms')
+            .select('name')
+            .eq('id', payload.new.room_id)
+            .single();
           
-          // Auto-hide after 3 seconds
-          setTimeout(() => {
-            setNotification(null);
-          }, 3000);
+          const senderName = profile?.name || profile?.username || 'Someone';
+          const roomName = room?.name || 'Team Chat';
+          const messagePreview = (payload.new.message_text || '').substring(0, 50);
+          
+          // Show toast notification (always)
+          toast.info(`${senderName} in ${roomName}`, {
+            description: messagePreview + (messagePreview.length >= 50 ? '...' : ''),
+            duration: 4000,
+          });
+          
+          // Show floating notification if chat is closed
+          if (!open) {
+            setNotification(`New message from ${senderName.split(' ')[0]}`);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+              setNotification(null);
+            }, 3000);
+          }
         }
       )
       .subscribe();
@@ -54,7 +75,7 @@ export function TeamChatButton() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [storeId, open]);
+  }, [storeId, user?.id, open]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);

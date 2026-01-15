@@ -87,17 +87,24 @@ export function useChatMessages(roomId: string | null) {
       if (error) throw error;
 
       // Get sender names from profiles
-      const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', senderIds);
-
-      const profileMap = new Map((profiles || []).map(p => [p.id, p.name]));
+      const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id).filter(Boolean))];
+      
+      let profileMap = new Map<string, string>();
+      
+      if (senderIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, username')
+          .in('id', senderIds);
+        
+        if (!profilesError && profiles) {
+          profileMap = new Map(profiles.map(p => [p.id, p.name || p.username || 'Unknown User']));
+        }
+      }
 
       return ((messages || []) as any[]).map(m => ({
         ...m,
-        sender_name: profileMap.get(m.sender_id) || 'Unknown'
+        sender_name: profileMap.get(m.sender_id) || 'Unknown User'
       })) as ChatMessage[];
     },
     enabled: !!roomId,
