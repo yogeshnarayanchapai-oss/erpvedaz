@@ -909,7 +909,7 @@ export function useUnreadMessageCount() {
   });
 }
 
-// Hook to get unread count per room
+// Hook to get unread count per room (only accessible rooms)
 export function useUnreadCountPerRoom() {
   const storeId = useCurrentStoreId();
   const { user } = useAuth();
@@ -931,6 +931,10 @@ export function useUnreadCountPerRoom() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['unread-per-room', storeId, user.id] });
+          // Also invalidate the total unread count
+          queryClient.invalidateQueries({ queryKey: ['unread-count', storeId, user.id] });
+          // Invalidate sidebar badges for Team Chat badge
+          queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
         }
       )
       .subscribe();
@@ -945,21 +949,36 @@ export function useUnreadCountPerRoom() {
     queryFn: async () => {
       if (!storeId || !user?.id) return {};
 
-      // Get all rooms for this store (including DM rooms where user is participant)
-      const { data: rooms } = await supabase
+      // Get all rooms for this store with participants info
+      const { data: allRooms } = await supabase
         .from('chat_rooms')
-        .select('id')
+        .select('id, type, participants')
         .eq('store_id', storeId);
 
-      if (!rooms || rooms.length === 0) return {};
+      if (!allRooms || allRooms.length === 0) return {};
 
-      const roomIds = rooms.map(r => r.id);
+      // Filter rooms where user has access (same logic as useUnreadMessageCount)
+      const accessibleRoomIds = allRooms
+        .filter((room) => {
+          // GLOBAL rooms are visible to everyone in the store
+          if (room.type === 'GLOBAL') return true;
+          
+          // For DM and DEPARTMENT rooms, check if user is in participants array
+          if (room.participants && Array.isArray(room.participants)) {
+            return room.participants.includes(user.id);
+          }
+          
+          return false;
+        })
+        .map(r => r.id);
 
-      // Get all messages not sent by current user
+      if (accessibleRoomIds.length === 0) return {};
+
+      // Get all messages not sent by current user from accessible rooms
       const { data: messages } = await supabase
         .from('chat_messages')
         .select('id, room_id, read_by, sender_id')
-        .in('room_id', roomIds)
+        .in('room_id', accessibleRoomIds)
         .neq('sender_id', user.id);
 
       // Count unread per room
