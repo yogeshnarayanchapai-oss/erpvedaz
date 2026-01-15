@@ -45,6 +45,7 @@ export function useChatRooms() {
 
 export function useChatMessages(roomId: string | null) {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -86,25 +87,39 @@ export function useChatMessages(roomId: string | null) {
 
       if (error) throw error;
 
-      // Get sender names from profiles
       const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id).filter(Boolean))];
-      
+
+      // Fetch display names from profiles (if allowed) + employees (fallback)
       let profileMap = new Map<string, string>();
-      
       if (senderIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, username, email')
           .in('id', senderIds);
-        
+
         if (!profilesError && profiles) {
-          profileMap = new Map(profiles.map(p => [p.id, p.name || p.username || p.email || 'Unknown User']));
+          profileMap = new Map(profiles.map(p => [p.id, p.name || p.username || p.email || '']));
+        }
+      }
+
+      let employeeMap = new Map<string, string>();
+      if (storeId && senderIds.length > 0) {
+        const { data: employees, error: empError } = await supabase
+          .from('employees')
+          .select('user_id, full_name')
+          .eq('store_id', storeId)
+          .in('user_id', senderIds);
+
+        if (!empError && employees) {
+          employeeMap = new Map(
+            (employees || []).filter(e => e.user_id).map(e => [e.user_id as string, e.full_name as string])
+          );
         }
       }
 
       return ((messages || []) as any[]).map(m => ({
         ...m,
-        sender_name: profileMap.get(m.sender_id) || 'Unknown User'
+        sender_name: profileMap.get(m.sender_id) || employeeMap.get(m.sender_id) || 'Unknown User',
       })) as ChatMessage[];
     },
     enabled: !!roomId,
