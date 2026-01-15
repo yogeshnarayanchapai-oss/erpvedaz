@@ -226,17 +226,24 @@ export function useStoreChatMessages(roomId: string | null) {
       if (error) throw error;
 
       // Get sender profiles
-      const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, username')
-        .in('id', senderIds);
-
-      const profileMap = new Map((profiles || []).map(p => [p.id, { name: p.name, username: p.username }]));
+      const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id).filter(Boolean))];
+      
+      let profileMap = new Map<string, { name: string | null; username: string | null }>();
+      
+      if (senderIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, username')
+          .in('id', senderIds);
+        
+        if (!profilesError && profiles) {
+          profileMap = new Map(profiles.map(p => [p.id, { name: p.name, username: p.username }]));
+        }
+      }
 
       return ((messages || []) as any[]).map(m => ({
         ...m,
-        sender_name: profileMap.get(m.sender_id)?.name || 'Unknown',
+        sender_name: profileMap.get(m.sender_id)?.name || profileMap.get(m.sender_id)?.username || 'Unknown User',
         sender_username: profileMap.get(m.sender_id)?.username || null,
       })) as ChatMessage[];
     },
@@ -1103,14 +1110,16 @@ export function useLatestMessagesPerRoom() {
           // Get sender name
           const { data: profile } = await supabase
             .from('profiles')
-            .select('name')
+            .select('name, username')
             .eq('id', message.sender_id)
             .single();
+
+          const senderName = profile?.name || profile?.username || 'User';
 
           latestMessages[roomId] = {
             text: message.message_text,
             time: message.created_at,
-            sender: profile?.name?.split(' ')[0] || 'User',
+            sender: senderName.split(' ')[0],
           };
         }
       }
