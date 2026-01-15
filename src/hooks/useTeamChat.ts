@@ -157,34 +157,56 @@ export function useStoreChatRooms() {
 export function useChatParticipantProfiles() {
   const storeId = useCurrentStoreId();
   const { data: rooms = [] } = useStoreChatRooms();
-  
+
   // Collect all participant IDs from DM rooms
   const participantIds = [...new Set(
     rooms
       .filter(r => r.type === 'DIRECT' && r.participants)
       .flatMap(r => r.participants || [])
   )];
-  
+
   return useQuery({
     queryKey: ['chat-participant-profiles', storeId, participantIds.join(',')],
     queryFn: async () => {
-      if (participantIds.length === 0) return new Map<string, string>();
-      
-      const { data: profiles, error } = await supabase
+      if (!storeId || participantIds.length === 0) return new Map<string, string>();
+
+      // Employee names are accessible to staff, so use them as a reliable fallback
+      const { data: employees } = await supabase
+        .from('employees')
+        .select('user_id, full_name')
+        .eq('store_id', storeId)
+        .in('user_id', participantIds);
+
+      const employeeNameMap = new Map<string, string>(
+        (employees || []).filter(e => e.user_id).map(e => [e.user_id as string, e.full_name as string])
+      );
+
+      // Profiles might be restricted for staff; still try to get them (better display names like store name)
+      const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name')
+        .select('id, name, username, email')
         .in('id', participantIds);
-      
-      if (error) throw error;
-      
-      return new Map((profiles || []).map(p => [p.id, p.name || 'Unknown']));
+
+      const profileNameMap = new Map<string, string>(
+        (profiles || [])
+          .map(p => [p.id, (p.name || p.username || p.email || '').trim()] as const)
+          .filter(([, v]) => !!v)
+      );
+
+      // Merge, preferring profile display name when available
+      const merged = new Map<string, string>();
+      for (const id of participantIds) {
+        merged.set(id, profileNameMap.get(id) || employeeNameMap.get(id) || 'Unknown');
+      }
+      return merged;
     },
-    enabled: participantIds.length > 0,
+    enabled: !!storeId && participantIds.length > 0,
   });
 }
 
 export function useStoreChatMessages(roomId: string | null) {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -225,27 +247,52 @@ export function useStoreChatMessages(roomId: string | null) {
 
       if (error) throw error;
 
-      // Get sender profiles
       const senderIds = [...new Set((messages || []).map((m: any) => m.sender_id).filter(Boolean))];
-      
-      let profileMap = new Map<string, { name: string | null; username: string | null }>();
-      
+
+      // Profiles (best label) + employees (fallback) — avoids "Unknown" for staff portals
+      let profileMap = new Map<string, { display: string | null; username: string | null }>();
       if (senderIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, name, username')
+          .select('id, name, username, email')
           .in('id', senderIds);
-        
+
         if (!profilesError && profiles) {
-          profileMap = new Map(profiles.map(p => [p.id, { name: p.name, username: p.username }]));
+          profileMap = new Map(
+            profiles.map(p => [
+              p.id,
+              {
+                display: (p.name || p.username || p.email || null),
+                username: p.username,
+              },
+            ])
+          );
         }
       }
 
-      return ((messages || []) as any[]).map(m => ({
-        ...m,
-        sender_name: profileMap.get(m.sender_id)?.name || profileMap.get(m.sender_id)?.username || 'Unknown User',
-        sender_username: profileMap.get(m.sender_id)?.username || null,
-      })) as ChatMessage[];
+      let employeeMap = new Map<string, string>();
+      if (storeId && senderIds.length > 0) {
+        const { data: employees, error: empError } = await supabase
+          .from('employees')
+          .select('user_id, full_name')
+          .eq('store_id', storeId)
+          .in('user_id', senderIds);
+
+        if (!empError && employees) {
+          employeeMap = new Map(
+            (employees || []).filter(e => e.user_id).map(e => [e.user_id as string, e.full_name as string])
+          );
+        }
+      }
+
+      return ((messages || []) as any[]).map(m => {
+        const profileInfo = profileMap.get(m.sender_id);
+        return {
+          ...m,
+          sender_name: profileInfo?.display || employeeMap.get(m.sender_id) || 'Unknown User',
+          sender_username: profileInfo?.username || null,
+        };
+      }) as ChatMessage[];
     },
     enabled: !!roomId,
   });

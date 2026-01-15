@@ -36,25 +36,39 @@ export function TeamChatButton() {
           const senderId = payload.new.sender_id;
           if (senderId === user.id) return;
           
-          // Get sender name and room info
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, username, email')
-            .eq('id', senderId)
-            .single();
-          
-          const { data: room } = await supabase
-            .from('chat_rooms')
-            .select('name')
-            .eq('id', payload.new.room_id)
-            .single();
-          
-          const senderName = profile?.name || profile?.username || profile?.email || 'Someone';
+          // Get sender name and room info (prefer profile name, fallback to employee full name)
+          const [{ data: profile }, { data: room }] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('name, username, email')
+              .eq('id', senderId)
+              .maybeSingle(),
+            supabase
+              .from('chat_rooms')
+              .select('name')
+              .eq('id', payload.new.room_id)
+              .maybeSingle(),
+          ]);
+
+          let senderName = profile?.name || profile?.username || profile?.email;
+
+          // If profile rows are not visible due to permissions, use employees table as fallback
+          if (!senderName) {
+            const { data: employee } = await supabase
+              .from('employees')
+              .select('full_name')
+              .eq('store_id', storeId)
+              .eq('user_id', senderId)
+              .maybeSingle();
+
+            senderName = employee?.full_name || senderName;
+          }
+
           const roomName = room?.name || 'Team Chat';
           const messagePreview = (payload.new.message_text || '').substring(0, 50);
-          
+
           // Show toast notification (always)
-          toast.info(`${senderName} sent you a new message`, {
+          toast.info(`${senderName || 'Someone'} sent you new message`, {
             description:
               (roomName ? `${roomName}: ` : '') +
               (messagePreview + (messagePreview.length >= 50 ? '...' : '')),
