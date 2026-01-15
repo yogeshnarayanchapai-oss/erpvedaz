@@ -67,7 +67,7 @@ function useEmployeeUsers() {
       
       return (profiles || []).map(p => ({
         id: p.id,
-        name: p.name,
+        name: p.name || p.username || p.email || 'Unknown',
         username: p.username,
         email: p.email,
         role: p.role,
@@ -92,12 +92,12 @@ function useDMParticipantProfiles(rooms: ChatRoom[]) {
       
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, name')
+        .select('id, name, username, email')
         .in('id', participantIds);
       
       if (error) throw error;
       
-      return new Map((profiles || []).map(p => [p.id, p.name || 'Unknown']));
+      return new Map((profiles || []).map(p => [p.id, p.name || p.username || p.email || 'Unknown']));
     },
     enabled: participantIds.length > 0,
   });

@@ -122,13 +122,16 @@ export function TeamChatDialog({ open, onOpenChange }: TeamChatDialogProps) {
     queryKey: ['dm-profiles', dmParticipantIds.join(',')],
     queryFn: async () => {
       if (dmParticipantIds.length === 0) return [];
-      const { data } = await supabase.from('profiles').select('id, name').in('id', dmParticipantIds);
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, name, username, email')
+        .in('id', dmParticipantIds);
       return data || [];
     },
     enabled: dmParticipantIds.length > 0,
   });
   
-  const profileMap = new Map(participantProfiles.map((p: any) => [p.id, p.name]));
+  const profileMap = new Map(participantProfiles.map((p: any) => [p.id, p.name || p.username || p.email || 'Unknown']));
   const sendMessage = useSendChatMessage();
   const createRoom = useCreateChatRoom();
   const deleteRoom = useDeleteChatRoom();

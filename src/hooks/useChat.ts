@@ -94,11 +94,11 @@ export function useChatMessages(roomId: string | null) {
       if (senderIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, name, username')
+          .select('id, name, username, email')
           .in('id', senderIds);
         
         if (!profilesError && profiles) {
-          profileMap = new Map(profiles.map(p => [p.id, p.name || p.username || 'Unknown User']));
+          profileMap = new Map(profiles.map(p => [p.id, p.name || p.username || p.email || 'Unknown User']));
         }
       }
 
