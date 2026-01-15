@@ -15,6 +15,7 @@ export interface SidebarBadges {
   todayAttendance: number;
   myTasks: number;
   myHR: number; // Staff-specific: admin actions requiring their attention
+  teamChat: number; // Unread chat messages across accessible rooms
 }
 
 // Helper function to fetch HR notifications count - extracted to avoid TS deep instantiation
@@ -98,9 +99,9 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
     queryFn: async (): Promise<SidebarBadges> => {
-      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0 };
+      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0 };
 
-      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0 };
+      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0 };
       const role = profile.role;
 
       // Fetch user view state for "unseen" calculations
@@ -247,6 +248,41 @@ export function useSidebarBadges() {
       const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
       if (isStaffRole) {
         badges.myHR = await fetchHRNotificationsCount(user.id);
+      }
+
+      // Team Chat badge: count unread messages across accessible rooms (store-wise)
+      if (storeId) {
+        // Get all rooms for this store
+        const { data: allRooms } = await supabase
+          .from('chat_rooms')
+          .select('id, type, participants')
+          .eq('store_id', storeId);
+
+        if (allRooms && allRooms.length > 0) {
+          // Filter rooms where user has access
+          const accessibleRoomIds = allRooms
+            .filter((room) => {
+              if (room.type === 'GLOBAL') return true;
+              if (room.participants && Array.isArray(room.participants)) {
+                return room.participants.includes(user.id);
+              }
+              return false;
+            })
+            .map(r => r.id);
+
+          if (accessibleRoomIds.length > 0) {
+            const { data: messages } = await supabase
+              .from('chat_messages')
+              .select('id, read_by, sender_id')
+              .in('room_id', accessibleRoomIds)
+              .neq('sender_id', user.id);
+
+            badges.teamChat = (messages || []).filter(msg => {
+              const readBy = msg.read_by || [];
+              return !readBy.includes(user.id);
+            }).length;
+          }
+        }
       }
 
       return badges;

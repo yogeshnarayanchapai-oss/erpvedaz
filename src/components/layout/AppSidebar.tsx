@@ -580,15 +580,18 @@ export function AppSidebar() {
     if (!badges) return 0;
     const titleLower = title.toLowerCase();
     
+    // Team Chat badge: show unread messages count
+    if (titleLower === 'team chat') return badges.teamChat;
+    
     // My Tasks: show Pending + In Progress count
     if (titleLower === 'my tasks') return badges.myTasks;
     
     // Task Management for MANAGER: show their pending tasks
     if (titleLower === 'task management' && role === 'MANAGER') return badges.myTasks;
     
-    // My HR for staff: show only admin action notifications
+    // My HR for staff: show only admin action notifications + team chat
     const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
-    if (titleLower === 'my hr' && isStaffRole) return badges.myHR;
+    if (titleLower === 'my hr' && isStaffRole) return badges.myHR + badges.teamChat;
     
     // My Orders for staff: NO badge
     if (titleLower === 'my orders' && isStaffRole) return 0;
@@ -600,7 +603,8 @@ export function AppSidebar() {
     if (titleLower.includes('order')) return badges.orders;
     if (titleLower.includes('notification')) return badges.notifications;
     if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
-    if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
+    // HRM parent menu: show leave requests + team chat for admins
+    if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests + badges.teamChat;
     // Removed lowStock badge from inventory/stock summary to reduce noise
     
     return 0;
