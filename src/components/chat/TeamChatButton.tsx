@@ -65,6 +65,8 @@ export function TeamChatButton() {
     // Refetch unread count when closing chat to update badge
     if (!isOpen) {
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-per-room'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
     }
   };
 

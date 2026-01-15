@@ -1031,9 +1031,11 @@ export function useMarkRoomAsRead() {
     },
     onSuccess: () => {
       // Invalidate all unread count queries to ensure badge updates
+      // Use partial key matching to invalidate all user/store combinations
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       queryClient.invalidateQueries({ queryKey: ['unread-per-room'] });
       queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
     },
   });
 }
