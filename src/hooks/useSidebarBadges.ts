@@ -41,10 +41,10 @@ export function useSidebarBadges() {
 
   // Set up real-time subscriptions for badge updates
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !storeId) return;
 
     const channel = supabase
-      .channel('sidebar-badges-realtime')
+      .channel(`sidebar-badges-realtime-${storeId}-${profile.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'leads' },
@@ -89,12 +89,21 @@ export function useSidebarBadges() {
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages', filter: `store_id=eq.${storeId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+          queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+          queryClient.invalidateQueries({ queryKey: ['unread-per-room'] });
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id, queryClient]);
+  }, [profile?.id, storeId, queryClient]);
 
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
