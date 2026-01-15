@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Key, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Key, User, Eye, EyeOff, Pencil, Save, X } from 'lucide-react';
 
 export default function MyProfile() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -18,6 +18,86 @@ export default function MyProfile() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Profile editing state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.name || '');
+      setEditPhone(profile.phone || '');
+    }
+  }, [profile]);
+
+  const handleSaveName = async () => {
+    if (!editName.trim()) {
+      toast({
+        title: "Error",
+        description: "Name cannot be empty.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: editName.trim() })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Your name has been updated.",
+      });
+      setIsEditingName(false);
+      // Trigger a page reload to refresh profile in context
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating name:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update name. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleSavePhone = async () => {
+    setIsSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ phone: editPhone.trim() || null })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Your phone number has been updated.",
+      });
+      setIsEditingPhone(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating phone:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update phone. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,9 +206,48 @@ export default function MyProfile() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Editable Name Field */}
             <div>
               <Label>Name</Label>
-              <Input value={profile?.name || ''} disabled />
+              {isEditingName ? (
+                <div className="flex gap-2">
+                  <Input 
+                    value={editName} 
+                    onChange={(e) => setEditName(e.target.value)}
+                    disabled={isSavingProfile}
+                    placeholder="Enter your name"
+                  />
+                  <Button 
+                    size="icon" 
+                    onClick={handleSaveName}
+                    disabled={isSavingProfile}
+                  >
+                    {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingName(false);
+                      setEditName(profile?.name || '');
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input value={profile?.name || ''} disabled className="flex-1" />
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => setIsEditingName(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
             <div>
               <Label>Email</Label>
@@ -138,14 +257,50 @@ export default function MyProfile() {
               <Label>Role</Label>
               <Input value={profile?.role || ''} disabled />
             </div>
+            {/* Editable Phone Field */}
             <div>
               <Label>Phone</Label>
-              <Input value={profile?.phone || 'Not set'} disabled />
+              {isEditingPhone ? (
+                <div className="flex gap-2">
+                  <Input 
+                    value={editPhone} 
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    disabled={isSavingProfile}
+                    placeholder="Enter your phone number"
+                  />
+                  <Button 
+                    size="icon" 
+                    onClick={handleSavePhone}
+                    disabled={isSavingProfile}
+                  >
+                    {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingPhone(false);
+                      setEditPhone(profile?.phone || '');
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input value={profile?.phone || 'Not set'} disabled className="flex-1" />
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => setIsEditingPhone(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Contact your administrator to update your profile information.
-          </p>
         </CardContent>
       </Card>
 
