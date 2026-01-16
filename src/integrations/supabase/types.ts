@@ -1058,6 +1058,7 @@ export type Database = {
           date: string
           employee_id: string
           id: string
+          late_minutes: number | null
           notes: string | null
           status: string
           store_id: string | null
@@ -1069,6 +1070,7 @@ export type Database = {
           date?: string
           employee_id: string
           id?: string
+          late_minutes?: number | null
           notes?: string | null
           status?: string
           store_id?: string | null
@@ -1080,6 +1082,7 @@ export type Database = {
           date?: string
           employee_id?: string
           id?: string
+          late_minutes?: number | null
           notes?: string | null
           status?: string
           store_id?: string | null
@@ -2542,12 +2545,15 @@ export type Database = {
           designation: string | null
           email: string | null
           full_name: string
+          grace_minutes: number | null
           guardian_name: string | null
           guardian_phone: string | null
           guardian_relation: string | null
           id: string
           joining_date: string | null
           notes: string | null
+          office_end_time: string | null
+          office_start_time: string | null
           pan_number: string | null
           phone: string | null
           photo_url: string | null
@@ -2568,12 +2574,15 @@ export type Database = {
           designation?: string | null
           email?: string | null
           full_name: string
+          grace_minutes?: number | null
           guardian_name?: string | null
           guardian_phone?: string | null
           guardian_relation?: string | null
           id?: string
           joining_date?: string | null
           notes?: string | null
+          office_end_time?: string | null
+          office_start_time?: string | null
           pan_number?: string | null
           phone?: string | null
           photo_url?: string | null
@@ -2594,12 +2603,15 @@ export type Database = {
           designation?: string | null
           email?: string | null
           full_name?: string
+          grace_minutes?: number | null
           guardian_name?: string | null
           guardian_phone?: string | null
           guardian_relation?: string | null
           id?: string
           joining_date?: string | null
           notes?: string | null
+          office_end_time?: string | null
+          office_start_time?: string | null
           pan_number?: string | null
           phone?: string | null
           photo_url?: string | null

@@ -40,6 +40,10 @@ export interface Employee {
   notes: string | null;
   created_at: string;
   store_id: string | null;
+  // Office time settings for attendance
+  office_start_time: string | null;
+  office_end_time: string | null;
+  grace_minutes: number | null;
   departments?: { name: string } | null;
   hr_bank_accounts?: { bank_name: string; account_number: string } | null;
 }

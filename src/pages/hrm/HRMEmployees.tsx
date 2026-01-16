@@ -50,6 +50,9 @@ export default function HRMEmployees() {
     base_salary: '',
     bank_account_id: '',
     notes: '',
+    office_start_time: '09:00',
+    office_end_time: '17:00',
+    grace_minutes: '30',
   });
 
   // Get users who don't already have an employee record (except the one being edited)
@@ -79,7 +82,22 @@ export default function HRMEmployees() {
   }, [searchParams, allUsers, linkedUserIds, setSearchParams]);
 
   const resetForm = () => {
-    setForm({ user_id: '', full_name: '', email: '', phone: '', position: '', department_id: '', joining_date: '', status: 'Active', base_salary: '', bank_account_id: '', notes: '' });
+    setForm({ 
+      user_id: '', 
+      full_name: '', 
+      email: '', 
+      phone: '', 
+      position: '', 
+      department_id: '', 
+      joining_date: '', 
+      status: 'Active', 
+      base_salary: '', 
+      bank_account_id: '', 
+      notes: '',
+      office_start_time: '09:00',
+      office_end_time: '17:00',
+      grace_minutes: '30',
+    });
     setEditing(null);
   };
 
@@ -121,6 +139,9 @@ export default function HRMEmployees() {
       base_salary: form.base_salary ? parseFloat(form.base_salary) : null,
       bank_account_id: form.bank_account_id || null,
       notes: form.notes || null,
+      office_start_time: form.office_start_time || '09:00',
+      office_end_time: form.office_end_time || '17:00',
+      grace_minutes: form.grace_minutes ? parseInt(form.grace_minutes) : 30,
     };
     if (editing) {
       await updateEmployee.mutateAsync({ id: editing.id, ...payload });
@@ -145,6 +166,9 @@ export default function HRMEmployees() {
       base_salary: emp.base_salary?.toString() || '',
       bank_account_id: emp.bank_account_id || '',
       notes: emp.notes || '',
+      office_start_time: emp.office_start_time?.slice(0, 5) || '09:00',
+      office_end_time: emp.office_end_time?.slice(0, 5) || '17:00',
+      grace_minutes: emp.grace_minutes?.toString() || '30',
     });
     setIsOpen(true);
   };
@@ -243,6 +267,25 @@ export default function HRMEmployees() {
                       {bankAccounts.map((b) => <SelectItem key={b.id} value={b.id}>{b.bank_name} - {b.account_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                {/* Office Time Settings */}
+                <div className="sm:col-span-2 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
+                  <Label className="text-sm font-medium mb-3 block">Office Time Settings (for Attendance)</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Start Time</Label>
+                      <Input type="time" value={form.office_start_time} onChange={(e) => setForm({ ...form, office_start_time: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">End Time</Label>
+                      <Input type="time" value={form.office_end_time} onChange={(e) => setForm({ ...form, office_end_time: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Grace (min)</Label>
+                      <Input type="number" value={form.grace_minutes} onChange={(e) => setForm({ ...form, grace_minutes: e.target.value })} min={0} max={120} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Check-in after start time + grace = Late</p>
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Notes</Label>
