@@ -20,7 +20,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliCalendar, CalendarEvent } from '@/components/NepaliCalendar';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
 
-const STATUSES = ['Present', 'Absent', 'Half-day', 'Work From Home', 'Leave'];
+const STATUSES = ['Present', 'Late', 'Absent', 'Half-day', 'Work From Home', 'Leave'];
 
 export default function HRMAttendanceLeave() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -77,7 +77,7 @@ function AttendanceSection() {
     date: today,
     check_in_time: '',
     check_out_time: '',
-    status: 'Present' as 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave',
+    status: 'Present' as 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave' | 'Late',
     notes: '',
   });
 
@@ -136,6 +136,7 @@ function AttendanceSection() {
 
   const statusColors: Record<string, string> = {
     Present: 'bg-green-100 text-green-800',
+    Late: 'bg-orange-100 text-orange-800',
     Absent: 'bg-red-100 text-red-800',
     'Half-day': 'bg-yellow-100 text-yellow-800',
     'Work From Home': 'bg-blue-100 text-blue-800',

@@ -16,7 +16,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliCalendar, CalendarEvent } from '@/components/NepaliCalendar';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
 
-const STATUSES = ['Present', 'Absent', 'Half-day', 'Work From Home', 'Leave'];
+const STATUSES = ['Present', 'Late', 'Absent', 'Half-day', 'Work From Home', 'Leave'];
 
 export default function HRMAttendance() {
   const today = new Date().toISOString().split('T')[0];
@@ -28,7 +28,7 @@ export default function HRMAttendance() {
     date: today,
     check_in_time: '',
     check_out_time: '',
-    status: 'Present' as 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave',
+    status: 'Present' as 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave' | 'Late',
     notes: '',
   });
 
@@ -99,6 +99,7 @@ export default function HRMAttendance() {
 
   const statusColors: Record<string, string> = {
     Present: 'bg-green-100 text-green-800',
+    Late: 'bg-orange-100 text-orange-800',
     Absent: 'bg-red-100 text-red-800',
     'Half-day': 'bg-yellow-100 text-yellow-800',
     'Work From Home': 'bg-blue-100 text-blue-800',
@@ -343,7 +344,12 @@ export default function HRMAttendance() {
                         <TableCell>{record.check_out_time ? format(parseISO(record.check_out_time), 'HH:mm') : '-'}</TableCell>
                         <TableCell>{calculateHours(record.check_in_time, record.check_out_time)}</TableCell>
                         <TableCell>
-                          <Badge className={statusColors[record.status]}>{record.status}</Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge className={statusColors[record.status]}>{record.status}</Badge>
+                            {record.status === 'Late' && record.late_minutes && (
+                              <span className="text-xs text-orange-600">+{record.late_minutes} min</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{record.notes || '-'}</TableCell>
                         <TableCell>

@@ -10,11 +10,12 @@ export interface AttendanceRecord {
   date: string;
   check_in_time: string | null;
   check_out_time: string | null;
-  status: 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave';
+  status: 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave' | 'Late';
+  late_minutes: number | null;
   notes: string | null;
   created_at: string;
   store_id?: string | null;
-  employees?: { full_name: string };
+  employees?: { full_name: string; office_start_time?: string; grace_minutes?: number };
 }
 
 export function useAttendanceRecords(employeeId?: string, dateRange?: { from: string; to: string }) {
@@ -100,6 +101,40 @@ export function useTodayAttendance() {
   });
 }
 
+// Helper function to calculate attendance status based on office time
+function calculateAttendanceStatus(
+  checkInTime: Date,
+  officeStartTime: string | null,
+  graceMinutes: number | null
+): { status: 'Present' | 'Late'; lateMinutes: number | null } {
+  // Default values
+  const defaultOfficeStart = '09:00:00';
+  const defaultGrace = 30;
+  
+  const officeStart = officeStartTime || defaultOfficeStart;
+  const grace = graceMinutes ?? defaultGrace;
+  
+  // Parse office start time (format: HH:MM:SS or HH:MM)
+  const [hours, minutes] = officeStart.split(':').map(Number);
+  
+  // Create a date with the office start time on the same day as check-in
+  const officeStartDate = new Date(checkInTime);
+  officeStartDate.setHours(hours, minutes, 0, 0);
+  
+  // Add grace period
+  const graceDeadline = new Date(officeStartDate.getTime() + grace * 60 * 1000);
+  
+  if (checkInTime <= graceDeadline) {
+    return { status: 'Present', lateMinutes: null };
+  }
+  
+  // Calculate how many minutes late (from office start, not grace deadline)
+  const lateMs = checkInTime.getTime() - officeStartDate.getTime();
+  const lateMinutes = Math.floor(lateMs / (60 * 1000));
+  
+  return { status: 'Late', lateMinutes };
+}
+
 export function useCheckIn() {
   const queryClient = useQueryClient();
   const currentStoreId = useCurrentStoreId();
@@ -109,10 +144,10 @@ export function useCheckIn() {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
-      // Get employee with their assigned store
+      // Get employee with their assigned store and office time settings
       const { data: employee } = await supabase
         .from('employees')
-        .select('id, full_name, store_id')
+        .select('id, full_name, store_id, office_start_time, office_end_time, grace_minutes')
         .eq('user_id', userId)
         .single();
 
@@ -138,30 +173,83 @@ export function useCheckIn() {
       }
 
       const today = new Date().toISOString().split('T')[0];
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowIso = now.toISOString();
 
-      const { data, error } = await supabase
-        .from('attendance_records' as any)
-        .insert({
-          employee_id: employee.id,
-          date: today,
-          check_in_time: now,
-          status: 'Present',
-          store_id: employeeStoreId, // Always use employee's assigned store
-        } as any)
-        .select()
-        .single();
+      // Calculate status based on office time settings
+      const { status, lateMinutes } = calculateAttendanceStatus(
+        now,
+        employee.office_start_time,
+        employee.grace_minutes
+      );
 
-      if (error) throw error;
+      // Check if there's an existing Absent record for today (auto-marked) - update it instead
+      const { data: existingRecord } = await supabase
+        .from('attendance_records')
+        .select('id, status')
+        .eq('employee_id', employee.id)
+        .eq('date', today)
+        .maybeSingle();
+
+      let data;
+      if (existingRecord) {
+        // Update the existing record (could be auto-marked Absent)
+        const { data: updated, error } = await supabase
+          .from('attendance_records' as any)
+          .update({
+            check_in_time: nowIso,
+            status,
+            late_minutes: lateMinutes,
+            notes: existingRecord.status === 'Absent' 
+              ? `Status changed from Absent to ${status} at check-in` 
+              : null,
+          } as any)
+          .eq('id', existingRecord.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        data = updated;
+      } else {
+        // Create new record
+        const { data: inserted, error } = await supabase
+          .from('attendance_records' as any)
+          .insert({
+            employee_id: employee.id,
+            date: today,
+            check_in_time: nowIso,
+            status,
+            late_minutes: lateMinutes,
+            store_id: employeeStoreId,
+          } as any)
+          .select()
+          .single();
+
+        if (error) throw error;
+        data = inserted;
+      }
       
       // Return employee info for notification
-      return { data, employee_name: employee.full_name, actor_id: userId, store_id: employeeStoreId };
+      return { 
+        data, 
+        employee_name: employee.full_name, 
+        actor_id: userId, 
+        store_id: employeeStoreId,
+        status,
+        lateMinutes 
+      };
     },
     onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['my-attendance'] });
-      toast.success('Checked in successfully');
+      
+      // Show appropriate message based on status
+      if (result.status === 'Late') {
+        toast.warning(`Checked in - Late by ${result.lateMinutes} minutes`);
+      } else {
+        toast.success('Checked in successfully');
+      }
 
       const storeId = result.store_id;
 
