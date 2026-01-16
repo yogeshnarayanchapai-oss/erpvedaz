@@ -155,8 +155,9 @@ export default function HRMEmployeeDetail() {
     'Not assigned';
 
   // Calculate attendance stats - use actual status from DB
+  // "Late" employees are also counted as "Present" (they attended office, just late)
   const attendanceStats = {
-    present: attendanceRecords?.filter(r => r.status === 'Present' || r.status === 'Work From Home').length || 0,
+    present: attendanceRecords?.filter(r => r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late').length || 0,
     late: attendanceRecords?.filter(r => r.status === 'Late').length || 0,
     absent: attendanceRecords?.filter(r => r.status === 'Absent').length || 0,
     halfDay: attendanceRecords?.filter(r => r.status === 'Half-day').length || 0,
