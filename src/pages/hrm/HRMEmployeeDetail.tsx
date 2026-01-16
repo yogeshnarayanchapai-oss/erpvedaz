@@ -39,6 +39,9 @@ interface EmployeeDetail {
   guardian_phone?: string | null;
   citizenship_number?: string | null;
   pan_number?: string | null;
+  office_start_time?: string | null;
+  office_end_time?: string | null;
+  grace_minutes?: number | null;
   departments?: { name: string } | null;
   hr_bank_accounts?: { bank_name: string; account_number: string; branch: string | null } | null;
   profiles?: { name: string; email: string } | null;
@@ -98,6 +101,7 @@ export default function HRMEmployeeDetail() {
   const getAttendanceStatusColor = (status: string) => {
     switch (status) {
       case 'Present': return 'bg-green-500/10 text-green-600';
+      case 'Late': return 'bg-orange-500/10 text-orange-600';
       case 'Absent': return 'bg-red-500/10 text-red-600';
       case 'Half-day': return 'bg-yellow-500/10 text-yellow-600';
       case 'Work From Home': return 'bg-blue-500/10 text-blue-600';
@@ -150,20 +154,14 @@ export default function HRMEmployeeDetail() {
     departments?.find(d => d.id === employee.department_id)?.name || 
     'Not assigned';
 
-  // Calculate attendance stats
+  // Calculate attendance stats - use actual status from DB
   const attendanceStats = {
     present: attendanceRecords?.filter(r => r.status === 'Present' || r.status === 'Work From Home').length || 0,
+    late: attendanceRecords?.filter(r => r.status === 'Late').length || 0,
     absent: attendanceRecords?.filter(r => r.status === 'Absent').length || 0,
     halfDay: attendanceRecords?.filter(r => r.status === 'Half-day').length || 0,
     leave: attendanceRecords?.filter(r => r.status === 'Leave').length || 0,
-    lateArrivals: attendanceRecords?.filter(r => {
-      if (!r.check_in_time) return false;
-      const checkInTime = new Date(r.check_in_time);
-      const hours = checkInTime.getHours();
-      const minutes = checkInTime.getMinutes();
-      // Consider late if check-in after 10:00 AM
-      return hours > 10 || (hours === 10 && minutes > 0);
-    }).length || 0,
+    totalLateMinutes: attendanceRecords?.reduce((sum, r) => sum + ((r as any).late_minutes || 0), 0) || 0,
   };
 
   return (
@@ -181,7 +179,7 @@ export default function HRMEmployeeDetail() {
       </div>
 
       {/* Attendance Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-500/10">
@@ -189,7 +187,18 @@ export default function HRMEmployeeDetail() {
             </div>
             <div>
               <p className="text-2xl font-bold">{attendanceStats.present}</p>
-              <p className="text-xs text-muted-foreground">Present Days</p>
+              <p className="text-xs text-muted-foreground">Present</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <Clock className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{attendanceStats.late}</p>
+              <p className="text-xs text-muted-foreground">Late Days</p>
             </div>
           </div>
         </Card>
@@ -200,25 +209,14 @@ export default function HRMEmployeeDetail() {
             </div>
             <div>
               <p className="text-2xl font-bold">{attendanceStats.absent}</p>
-              <p className="text-xs text-muted-foreground">Absent Days</p>
+              <p className="text-xs text-muted-foreground">Absent</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-yellow-500/10">
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{attendanceStats.lateArrivals}</p>
-              <p className="text-xs text-muted-foreground">Late Arrivals</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <Calendar className="h-5 w-5 text-orange-600" />
+              <Calendar className="h-5 w-5 text-yellow-600" />
             </div>
             <div>
               <p className="text-2xl font-bold">{attendanceStats.halfDay}</p>
@@ -234,6 +232,17 @@ export default function HRMEmployeeDetail() {
             <div>
               <p className="text-2xl font-bold">{attendanceStats.leave}</p>
               <p className="text-xs text-muted-foreground">On Leave</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{attendanceStats.totalLateMinutes}</p>
+              <p className="text-xs text-muted-foreground">Late Minutes</p>
             </div>
           </div>
         </Card>
@@ -350,6 +359,31 @@ export default function HRMEmployeeDetail() {
               </CardContent>
             </Card>
 
+            {/* Office Time Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Office Time Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Office Hours</p>
+                    <p className="font-medium">
+                      {employee.office_start_time?.substring(0, 5) || '09:00'} - {employee.office_end_time?.substring(0, 5) || '17:00'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Grace Period</p>
+                    <p className="font-medium">{employee.grace_minutes || 30} minutes</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Salary Details */}
             <Card>
               <CardHeader>
@@ -419,6 +453,7 @@ export default function HRMEmployeeDetail() {
                       <TableHead>Status</TableHead>
                       <TableHead>Check In</TableHead>
                       <TableHead>Check Out</TableHead>
+                      <TableHead>Late (mins)</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -442,6 +477,13 @@ export default function HRMEmployeeDetail() {
                           {record.check_out_time 
                             ? format(new Date(record.check_out_time), 'hh:mm a')
                             : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {(record as any).late_minutes ? (
+                            <span className="text-orange-600 font-medium">
+                              {(record as any).late_minutes} min
+                            </span>
+                          ) : '-'}
                         </TableCell>
                         <TableCell className="text-muted-foreground max-w-[200px] truncate">
                           {record.notes || '-'}
