@@ -128,8 +128,8 @@ function calculateAttendanceStatus(
     return { status: 'Present', lateMinutes: null };
   }
   
-  // Calculate how many minutes late (from office start, not grace deadline)
-  const lateMs = checkInTime.getTime() - officeStartDate.getTime();
+  // Calculate how many minutes late (from grace deadline, not office start)
+  const lateMs = checkInTime.getTime() - graceDeadline.getTime();
   const lateMinutes = Math.floor(lateMs / (60 * 1000));
   
   return { status: 'Late', lateMinutes };
