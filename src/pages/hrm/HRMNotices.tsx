@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice, useDepartments, useEmployees } from '@/hooks/useHRM';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Bell, Pencil, Trash2, Users, Building2, User, Eye } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Bell, Pencil, Trash2, Users, Building2, User, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { FormattedDate } from '@/components/FormattedDate';
 
 type TargetType = 'all' | 'department' | 'employee';
@@ -61,6 +62,28 @@ export default function HRMNotices() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<NoticeForm>(initialForm);
   const [viewNotice, setViewNotice] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
+
+  // Helper to check if a notice is active
+  const isNoticeActive = (notice: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    // Expired if end_date passed
+    if (notice.end_date && notice.end_date < today) return false;
+    // Scheduled (future start) - still consider as "active" category
+    if (notice.start_date && notice.start_date > today) return true;
+    // Inactive flag
+    if (!notice.is_active) return false;
+    return true;
+  };
+
+  // Filter notices by tab
+  const filteredNotices = useMemo(() => {
+    if (activeTab === 'active') {
+      return notices.filter(n => isNoticeActive(n));
+    } else {
+      return notices.filter(n => !isNoticeActive(n));
+    }
+  }, [notices, activeTab]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -307,60 +330,77 @@ export default function HRMNotices() {
         )}
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-primary" />Notices</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                {isAdmin && <TableHead>Target</TableHead>}
-                {isAdmin && <TableHead>Popup</TableHead>}
-                <TableHead>Start</TableHead>
-                <TableHead>End</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notices.map((n) => (
-                <TableRow key={n.id}>
-                  <TableCell className="font-medium">{n.title}</TableCell>
-                  {isAdmin && <TableCell>{getTargetDisplay(n)}</TableCell>}
-                  {isAdmin && (
-                    <TableCell>
-                      {(n as any).show_as_popup ? (
-                        <Badge variant="default" className="text-xs">Yes</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">No</Badge>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'closed')} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="active" className="gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Active
+            <Badge variant="secondary" className="ml-1">{notices.filter(n => isNoticeActive(n)).length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="closed" className="gap-2">
+            <XCircle className="w-4 h-4" />
+            Expired / Closed
+            <Badge variant="secondary" className="ml-1">{notices.filter(n => !isNoticeActive(n)).length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab}>
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-primary" />Notices</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    {isAdmin && <TableHead>Target</TableHead>}
+                    {isAdmin && <TableHead>Popup</TableHead>}
+                    <TableHead>Start</TableHead>
+                    <TableHead>End</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredNotices.map((n) => (
+                    <TableRow key={n.id}>
+                      <TableCell className="font-medium">{n.title}</TableCell>
+                      {isAdmin && <TableCell>{getTargetDisplay(n)}</TableCell>}
+                      {isAdmin && (
+                        <TableCell>
+                          {(n as any).show_as_popup ? (
+                            <Badge variant="default" className="text-xs">Yes</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">No</Badge>
+                          )}
+                        </TableCell>
                       )}
-                    </TableCell>
+                      <TableCell><FormattedDate date={n.start_date} /></TableCell>
+                      <TableCell><FormattedDate date={n.end_date} /></TableCell>
+                      <TableCell>{getStatusDisplay(n)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => setViewNotice(n)} title="View"><Eye className="w-4 h-4" /></Button>
+                        {isAdmin && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredNotices.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
+                        {isLoading ? 'Loading...' : activeTab === 'active' ? 'No active notices' : 'No expired/closed notices'}
+                      </TableCell>
+                    </TableRow>
                   )}
-                  <TableCell><FormattedDate date={n.start_date} /></TableCell>
-                  <TableCell><FormattedDate date={n.end_date} /></TableCell>
-                  <TableCell>{getStatusDisplay(n)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => setViewNotice(n)} title="View"><Eye className="w-4 h-4" /></Button>
-                    {isAdmin && (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(n)}><Pencil className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(n.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {notices.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 5} className="text-center py-8 text-muted-foreground">
-                    {isLoading ? 'Loading...' : 'No notices'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* View Notice Dialog */}
       <Dialog open={!!viewNotice} onOpenChange={(open) => !open && setViewNotice(null)}>
