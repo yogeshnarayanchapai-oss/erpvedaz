@@ -146,6 +146,8 @@ export default function HRMNotices() {
   };
 
   const getStatusDisplay = (notice: any) => {
+    if (!notice) return null;
+    
     const today = new Date().toISOString().split('T')[0];
     
     // Check if expired (end_date has passed)
