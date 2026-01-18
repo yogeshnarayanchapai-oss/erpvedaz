@@ -41,6 +41,7 @@ import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminDataTools from "./pages/admin/AdminDataTools";
 import SalesSettings from "./pages/admin/SalesSettings";
 import AdminBranding from "./pages/admin/AdminBranding";
+import AdminSettings from "./pages/admin/AdminSettings";
 import Stores from "./pages/admin/Stores";
 import StoreDetail from "./pages/admin/StoreDetail";
 
@@ -255,6 +256,7 @@ const App = () => (
                 <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
                 <Route path="/admin/notifications" element={<AdminNotifications />} />
                 <Route path="/admin/branding" element={<AdminBranding />} />
+                <Route path="/admin/settings" element={<AdminSettings />} />
                 <Route path="/admin/data-tools" element={<AdminDataTools />} />
                 <Route path="/admin/stores" element={<Stores />} />
                 <Route path="/admin/stores/:storeId" element={<StoreDetail />} />

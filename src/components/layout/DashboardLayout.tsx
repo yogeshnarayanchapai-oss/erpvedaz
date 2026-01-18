@@ -11,7 +11,7 @@ import { StoreSwitcher } from './StoreSwitcher';
 import { TeamChatButton } from '@/components/chat/TeamChatButton';
 import { NoticePopup } from '@/components/hrm/NoticePopup';
 import { AttendanceButton } from './AttendanceButton';
-import { Loader2, Calendar, User, LogOut as LogOutIcon } from 'lucide-react';
+import { Loader2, Calendar, User, LogOut as LogOutIcon, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -271,10 +271,10 @@ function DashboardLayoutInner() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {/* Date Format Selector - replaces static date display */}
-                  <DateFormatSelector />
-                  
-                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
                   
                   <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
                     <User className="mr-2 h-4 w-4" />
