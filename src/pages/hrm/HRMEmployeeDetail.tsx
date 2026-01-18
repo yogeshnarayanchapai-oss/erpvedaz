@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ArrowLeft, User, Calendar, FileText, Building2, Phone, Mail, Briefcase, DollarSign, CreditCard, Wallet, CheckCircle, XCircle, Clock, Shield, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +51,24 @@ export default function HRMEmployeeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [attendanceFilter, setAttendanceFilter] = useState<'this_month' | 'last_month'>('this_month');
+
+  // Calculate date range for attendance filter
+  const attendanceDateRange = useMemo(() => {
+    const today = new Date();
+    if (attendanceFilter === 'this_month') {
+      return {
+        from: format(startOfMonth(today), 'yyyy-MM-dd'),
+        to: format(endOfMonth(today), 'yyyy-MM-dd')
+      };
+    } else {
+      const lastMonth = subMonths(today, 1);
+      return {
+        from: format(startOfMonth(lastMonth), 'yyyy-MM-dd'),
+        to: format(endOfMonth(lastMonth), 'yyyy-MM-dd')
+      };
+    }
+  }, [attendanceFilter]);
 
   const { data: employee, isLoading: employeeLoading } = useQuery({
     queryKey: ['employee-detail', id],
@@ -71,7 +89,7 @@ export default function HRMEmployeeDetail() {
     enabled: !!id,
   });
 
-  const { data: attendanceRecords, isLoading: attendanceLoading } = useAttendanceRecords(id);
+  const { data: attendanceRecords, isLoading: attendanceLoading } = useAttendanceRecords(id, attendanceDateRange);
   const { data: leaveRequests, isLoading: leaveLoading } = useLeaveRequests({ employeeId: id });
   const { data: departments } = useDepartments();
 
@@ -434,10 +452,32 @@ export default function HRMEmployeeDetail() {
         <TabsContent value="attendance">
           <Card>
             <CardHeader>
-              <CardTitle>Attendance History</CardTitle>
-              <CardDescription>
-                {attendanceRecords?.length || 0} records found
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Attendance History</CardTitle>
+                  <CardDescription>
+                    {attendanceRecords?.length || 0} records found
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={attendanceFilter === 'this_month' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAttendanceFilter('this_month')}
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    This Month
+                  </Button>
+                  <Button 
+                    variant={attendanceFilter === 'last_month' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAttendanceFilter('last_month')}
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Last Month
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {attendanceLoading ? (
