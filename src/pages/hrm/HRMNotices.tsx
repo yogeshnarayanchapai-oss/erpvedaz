@@ -145,6 +145,27 @@ export default function HRMNotices() {
     return <Badge variant="secondary">{notice.target_audience}</Badge>;
   };
 
+  const getStatusDisplay = (notice: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if expired (end_date has passed)
+    if (notice.end_date && notice.end_date < today) {
+      return <Badge variant="destructive">Expired</Badge>;
+    }
+    
+    // Check if not started yet
+    if (notice.start_date && notice.start_date > today) {
+      return <Badge variant="outline">Scheduled</Badge>;
+    }
+    
+    // Check is_active flag
+    if (!notice.is_active) {
+      return <Badge variant="secondary">Inactive</Badge>;
+    }
+    
+    return <Badge variant="default">Active</Badge>;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -315,7 +336,7 @@ export default function HRMNotices() {
                   )}
                   <TableCell><FormattedDate date={n.start_date} /></TableCell>
                   <TableCell><FormattedDate date={n.end_date} /></TableCell>
-                  <TableCell><Badge variant={n.is_active ? 'default' : 'secondary'}>{n.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
+                  <TableCell>{getStatusDisplay(n)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setViewNotice(n)} title="View"><Eye className="w-4 h-4" /></Button>
                     {isAdmin && (
@@ -361,9 +382,7 @@ export default function HRMNotices() {
                 </div>
               )}
             </div>
-            <Badge variant={viewNotice?.is_active ? 'default' : 'secondary'}>
-              {viewNotice?.is_active ? 'Active' : 'Inactive'}
-            </Badge>
+            {getStatusDisplay(viewNotice)}
           </div>
         </DialogContent>
       </Dialog>
