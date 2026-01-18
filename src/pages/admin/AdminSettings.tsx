@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Settings, Palette, Bell, Database, BookOpen, Calendar as CalendarIcon } from 'lucide-react';
+import { Settings, Palette, Bell, Database, BookOpen, Calendar as CalendarIcon, Building2 } from 'lucide-react';
 import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 
@@ -18,6 +18,9 @@ import { OrderCopyFormatEditor } from '@/components/admin/OrderCopyFormatEditor'
 import BrandingSettingsTab from '@/components/settings/BrandingSettingsTab';
 import DataToolsSettingsTab from '@/components/settings/DataToolsSettingsTab';
 import KnowledgeSettingsTab from '@/components/settings/KnowledgeSettingsTab';
+
+// Import HRM Settings component
+import HRMSettings from '@/pages/hrm/HRMSettings';
 
 const ADMIN_ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'HR'];
 
@@ -75,6 +78,22 @@ function GeneralSettingsTab() {
 
       {/* Lead Sources Management (from Sales Settings) */}
       <LeadSourcesManagement />
+
+      {/* HRM Settings - Leave Types, Departments, Bank Accounts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            HRM Settings
+          </CardTitle>
+          <CardDescription>
+            Manage leave types, departments, and bank accounts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <HRMSettings />
+        </CardContent>
+      </Card>
     </div>
   );
 }

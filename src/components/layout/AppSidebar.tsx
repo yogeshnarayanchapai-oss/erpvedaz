@@ -124,7 +124,6 @@ const hrmItems: MenuItem[] = [
   { title: 'Notices', url: '/hrm/notices', icon: Bell },
   { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
-  { title: 'HRM Settings', url: '/hrm/org-settings', icon: Settings2 },
 ];
 
 // Other submenu for Admin (Branding, Messaging, Knowledge Center) - NO Backup here, it's OWNER only
@@ -229,7 +228,6 @@ const salesItems: MenuItem[] = [
     ]
   },
   { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
-  { title: 'Sales Settings', url: '/admin/sales-settings', icon: Settings2 },
   {
     title: 'Courier Integration',
     url: '/admin/logistics-dashboard',
@@ -282,11 +280,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Briefcase,
       children: hrmItems,
     },
-    {
-      title: 'Settings',
-      url: '/admin/settings',
-      icon: Settings2,
-    },
   ],
   ADMIN: [
     { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
@@ -329,11 +322,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       url: '/hrm/employees',
       icon: Briefcase,
       children: hrmItems,
-    },
-    {
-      title: 'Settings',
-      url: '/admin/settings',
-      icon: Settings2,
     },
   ],
   HR: [
