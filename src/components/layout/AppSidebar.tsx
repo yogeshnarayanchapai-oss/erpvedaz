@@ -283,10 +283,9 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: hrmItems,
     },
     {
-      title: 'Other',
-      url: '/admin/branding',
+      title: 'Settings',
+      url: '/admin/settings',
       icon: Settings2,
-      children: ownerOtherItems,
     },
   ],
   ADMIN: [
@@ -332,10 +331,9 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: hrmItems,
     },
     {
-      title: 'Other',
-      url: '/admin/branding',
+      title: 'Settings',
+      url: '/admin/settings',
       icon: Settings2,
-      children: otherItems,
     },
   ],
   HR: [
