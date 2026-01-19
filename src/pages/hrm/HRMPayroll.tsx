@@ -1,22 +1,22 @@
 import { useState } from 'react';
-import { usePayrollRecords, useCreatePayrollRecord, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useEmployees } from '@/hooks/useHRM';
+import { usePayrollRecords, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Download, Play, CheckCircle, Pencil } from 'lucide-react';
+import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
   const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
   const { data: records = [], isLoading } = usePayrollRecords(selectedMonth);
-  const { data: employees = [] } = useEmployees();
   const generatePayroll = useGenerateMonthlyPayroll();
   const updatePayroll = useUpdatePayrollRecord();
+  const deletePayroll = useDeletePayrollRecord();
 
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
@@ -140,10 +140,32 @@ export default function HRMPayroll() {
                     <Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="w-4 h-4" /></Button>
-                    {r.payment_status !== 'Paid' && (
-                      <Button variant="ghost" size="icon" onClick={() => markAsPaid(r.id)}><CheckCircle className="w-4 h-4 text-success" /></Button>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(r)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        {r.payment_status !== 'Paid' && (
+                          <DropdownMenuItem onClick={() => markAsPaid(r.id)}>
+                            <CheckCircle className="w-4 h-4 mr-2 text-success" />
+                            Mark as Paid
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => deletePayroll.mutate(r.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

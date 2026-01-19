@@ -471,6 +471,21 @@ export function useUpdatePayrollRecord() {
   });
 }
 
+export function useDeletePayrollRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('payroll_records').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll_records'] });
+      toast.success('Payroll record deleted');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
 export function useGenerateMonthlyPayroll() {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
