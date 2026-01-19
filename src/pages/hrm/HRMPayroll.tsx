@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { usePayrollRecords, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useDeletePayrollRecord } from '@/hooks/useHRM';
+import { useEmployeeBankAccounts } from '@/hooks/useEmployeeBankAccounts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
@@ -20,6 +22,9 @@ export default function HRMPayroll() {
 
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
+  
+  // Payment confirmation state
+  const [paymentConfirmRecord, setPaymentConfirmRecord] = useState<any>(null);
 
   const handleGenerate = () => generatePayroll.mutate(selectedMonth);
 
@@ -43,12 +48,14 @@ export default function HRMPayroll() {
     setEditingRecord(null);
   };
 
-  const markAsPaid = async (id: string) => {
+  const confirmPayment = async () => {
+    if (!paymentConfirmRecord) return;
     await updatePayroll.mutateAsync({
-      id,
+      id: paymentConfirmRecord.id,
       payment_status: 'Paid',
       paid_on: new Date().toISOString().split('T')[0],
     });
+    setPaymentConfirmRecord(null);
   };
 
   const exportCSV = () => {
@@ -102,7 +109,7 @@ export default function HRMPayroll() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Total Net Salary</div>
-            <div className="text-2xl font-bold text-success">₹{totalNet.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-success">रू {totalNet.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -132,10 +139,10 @@ export default function HRMPayroll() {
               {records.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
-                  <TableCell className="text-right">₹{r.basic_salary.toLocaleString()}</TableCell>
-                  <TableCell className="text-right text-success">+₹{(r.allowances || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right text-destructive">-₹{(r.deductions || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right font-bold">₹{r.net_salary.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge>
                   </TableCell>
@@ -152,7 +159,7 @@ export default function HRMPayroll() {
                           Edit
                         </DropdownMenuItem>
                         {r.payment_status !== 'Paid' && (
-                          <DropdownMenuItem onClick={() => markAsPaid(r.id)}>
+                          <DropdownMenuItem onClick={() => setPaymentConfirmRecord(r)}>
                             <CheckCircle className="w-4 h-4 mr-2 text-success" />
                             Mark as Paid
                           </DropdownMenuItem>
@@ -175,6 +182,7 @@ export default function HRMPayroll() {
         </CardContent>
       </Card>
 
+      {/* Edit Payroll Dialog */}
       <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Payroll</DialogTitle></DialogHeader>
@@ -186,6 +194,109 @@ export default function HRMPayroll() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Confirmation Dialog */}
+      <PaymentConfirmationDialog
+        record={paymentConfirmRecord}
+        onClose={() => setPaymentConfirmRecord(null)}
+        onConfirm={confirmPayment}
+        isPending={updatePayroll.isPending}
+      />
     </div>
+  );
+}
+
+// Separate component for payment confirmation with bank details
+function PaymentConfirmationDialog({ 
+  record, 
+  onClose, 
+  onConfirm, 
+  isPending 
+}: { 
+  record: any; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  isPending: boolean;
+}) {
+  const { data: bankAccounts = [], isLoading } = useEmployeeBankAccounts(record?.employee_id);
+  
+  if (!record) return null;
+
+  const defaultBank = bankAccounts.find(b => b.is_default) || bankAccounts[0];
+
+  return (
+    <Dialog open={!!record} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-success" />
+            Confirm Payment
+          </DialogTitle>
+          <DialogDescription>
+            Review payment details before marking as paid
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Employee Info */}
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Employee</span>
+              <span className="font-medium">{record.employees?.full_name || '-'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Net Salary</span>
+              <span className="font-bold text-lg text-success">रू {record.net_salary?.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Bank Account Info */}
+          <div className="p-4 border rounded-lg space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium mb-2">
+              <CreditCard className="w-4 h-4 text-primary" />
+              Bank Account Details
+            </div>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading bank details...</p>
+            ) : defaultBank ? (
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bank</span>
+                  <span className="font-medium">{defaultBank.bank_name}</span>
+                </div>
+                {defaultBank.branch && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Branch</span>
+                    <span>{defaultBank.branch}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Account No.</span>
+                  <span className="font-mono">{defaultBank.account_number}</span>
+                </div>
+                {defaultBank.account_name && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Name</span>
+                    <span>{defaultBank.account_name}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-amber-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                No bank account linked
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={onConfirm} disabled={isPending}>
+            {isPending ? 'Processing...' : 'Confirm Payment'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
