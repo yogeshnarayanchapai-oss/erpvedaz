@@ -1,20 +1,51 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePayrollRecords, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { useEmployeeBankAccounts } from '@/hooks/useEmployeeBankAccounts';
+import { useDateMode } from '@/contexts/DateModeContext';
+import { getCurrentBSDate, getBSMonthName, getBSYearRange, bsToAd, adToBS } from '@/lib/nepaliDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
-  const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
+  const { dateMode } = useDateMode();
+  const currentBS = getCurrentBSDate();
+  const bsYearOptions = getBSYearRange();
+
+  // For AD mode: store as YYYY-MM-01
+  // For BS mode: store BS year and month separately, convert to AD for query
+  const [adMonth, setAdMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
+  const [bsYear, setBsYear] = useState(currentBS.year);
+  const [bsMonth, setBsMonth] = useState(currentBS.month);
+
+  // Compute the AD date string for querying based on mode
+  const selectedMonth = useMemo(() => {
+    if (dateMode === 'BS') {
+      // Convert BS year/month to AD date (use day 1)
+      const adDate = bsToAd(bsYear, bsMonth, 1);
+      const year = adDate.getFullYear();
+      const month = String(adDate.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}-01`;
+    }
+    return adMonth;
+  }, [dateMode, adMonth, bsYear, bsMonth]);
+
+  // Get display label for the selected month
+  const monthDisplayLabel = useMemo(() => {
+    if (dateMode === 'BS') {
+      return `${getBSMonthName(bsMonth)} ${bsYear}`;
+    }
+    return format(new Date(adMonth), 'MMMM yyyy');
+  }, [dateMode, adMonth, bsYear, bsMonth]);
+
   const { data: records = [], isLoading } = usePayrollRecords(selectedMonth);
   const generatePayroll = useGenerateMonthlyPayroll();
   const updatePayroll = useUpdatePayrollRecord();
@@ -88,8 +119,38 @@ export default function HRMPayroll() {
           <h1 className="text-2xl font-bold">Payroll</h1>
           <p className="text-muted-foreground">Manage monthly payroll records</p>
         </div>
-        <div className="flex gap-2">
-          <Input type="month" value={selectedMonth.slice(0, 7)} onChange={(e) => setSelectedMonth(e.target.value + '-01')} className="w-40" />
+        <div className="flex gap-2 items-center">
+          {dateMode === 'BS' ? (
+            <>
+              <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <SelectItem key={m} value={m.toString()}>{getBSMonthName(m)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bsYearOptions.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <Input 
+              type="month" 
+              value={adMonth.slice(0, 7)} 
+              onChange={(e) => setAdMonth(e.target.value + '-01')} 
+              className="w-40" 
+            />
+          )}
           <Button variant="outline" onClick={handleGenerate} disabled={generatePayroll.isPending}>
             <Play className="w-4 h-4 mr-2" />Generate
           </Button>
@@ -121,7 +182,12 @@ export default function HRMPayroll() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="w-5 h-5 text-primary" />Payroll for {format(new Date(selectedMonth), 'MMMM yyyy')}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            Payroll for {monthDisplayLabel}
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -176,7 +242,13 @@ export default function HRMPayroll() {
                   </TableCell>
                 </TableRow>
               ))}
-              {records.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No records. Click Generate to create payroll.'}</TableCell></TableRow>}
+              {records.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    {isLoading ? 'Loading...' : 'No records. Click Generate to create payroll.'}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
