@@ -27,7 +27,8 @@ export function useAttendanceRecords(employeeId?: string, dateRange?: { from: st
       let query = supabase
         .from('attendance_records')
         .select('*, employees(full_name)')
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .order('check_in_time', { ascending: false, nullsFirst: false });
 
       if (storeId) {
         query = query.eq('store_id', storeId);
