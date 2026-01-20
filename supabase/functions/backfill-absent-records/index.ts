@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const startDateStr = body.startDate || '2026-01-01';
     const endDateStr = body.endDate || new Date().toISOString().split('T')[0];
 
-    console.log(`Backfilling absent records from ${startDateStr} to ${endDateStr}`);
+    console.log(`Backfilling attendance records from ${startDateStr} to ${endDateStr}`);
 
     // Get all active employees with their store info
     const { data: employees, error: empError } = await supabase
@@ -56,15 +56,13 @@ Deno.serve(async (req) => {
 
     if (holError) throw holError;
 
-    // Create a map of holiday dates by store
-    const holidayMap = new Map<string, Set<string>>();
+    // Create a set of holiday dates by store (date -> Set<store_id>)
+    const holidayMap = new Map<string, Set<string | null>>();
     holidays?.forEach(h => {
       if (!holidayMap.has(h.date)) {
         holidayMap.set(h.date, new Set());
       }
-      if (h.store_id) {
-        holidayMap.get(h.date)!.add(h.store_id);
-      }
+      holidayMap.get(h.date)!.add(h.store_id);
     });
     console.log(`Found ${holidays?.length || 0} office holidays`);
 
@@ -101,8 +99,8 @@ Deno.serve(async (req) => {
 
     console.log(`Processing ${dates.length} days`);
 
-    // Find missing absent records
-    const absentRecords: Array<{
+    // Find missing records to insert
+    const recordsToInsert: Array<{
       employee_id: string;
       date: string;
       status: string;
@@ -113,11 +111,7 @@ Deno.serve(async (req) => {
     for (const dateStr of dates) {
       const date = new Date(dateStr + 'T00:00:00');
       const dayOfWeek = date.getDay();
-
-      // Skip Saturdays (6 = Saturday, auto holiday)
-      if (dayOfWeek === 6) {
-        continue;
-      }
+      const isSaturday = dayOfWeek === 6;
 
       for (const emp of employees || []) {
         const key = `${emp.id}_${dateStr}`;
@@ -127,44 +121,72 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Skip if on approved leave
-        if (leaveSet.has(key)) {
-          continue;
-        }
-
-        // Skip if store has holiday on this date
-        if (holidayMap.has(dateStr)) {
-          const storeHolidays = holidayMap.get(dateStr)!;
-          // If no store specified in holiday OR employee's store matches
-          if (storeHolidays.size === 0 || (emp.store_id && storeHolidays.has(emp.store_id))) {
-            continue;
-          }
-        }
-
         // Skip if employee joined after this date
         if (emp.joining_date && new Date(emp.joining_date) > date) {
           continue;
         }
 
-        // This employee should be marked absent for this date
-        absentRecords.push({
+        // Determine status based on conditions (priority order)
+        let status: string;
+        let notes: string;
+
+        // 1. Check if Saturday (auto holiday)
+        if (isSaturday) {
+          status = 'Saturday';
+          notes = 'Auto-marked Saturday (weekly off)';
+        }
+        // 2. Check if on approved leave
+        else if (leaveSet.has(key)) {
+          status = 'Leave';
+          notes = 'Approved leave';
+        }
+        // 3. Check if store has holiday on this date
+        else if (holidayMap.has(dateStr)) {
+          const storeHolidays = holidayMap.get(dateStr)!;
+          // Check if there's a global holiday (null store_id) or store-specific
+          const hasGlobalHoliday = storeHolidays.has(null);
+          const hasStoreHoliday = emp.store_id ? storeHolidays.has(emp.store_id) : false;
+          
+          if (hasGlobalHoliday || hasStoreHoliday) {
+            status = 'Holiday';
+            notes = 'Office holiday';
+          } else {
+            // No holiday for this employee's store - mark absent
+            status = 'Absent';
+            notes = 'Auto-marked absent (no check-in)';
+          }
+        }
+        // 4. Otherwise mark as absent
+        else {
+          status = 'Absent';
+          notes = 'Auto-marked absent (no check-in)';
+        }
+
+        recordsToInsert.push({
           employee_id: emp.id,
           date: dateStr,
-          status: 'Absent',
+          status,
           store_id: emp.store_id,
-          notes: 'Auto-marked absent (backfill)',
+          notes,
         });
       }
     }
 
-    console.log(`Found ${absentRecords.length} missing absent records to insert`);
+    console.log(`Found ${recordsToInsert.length} missing records to insert`);
 
-    // Insert absent records in batches
+    // Count by status
+    const statusCounts: Record<string, number> = {};
+    recordsToInsert.forEach(r => {
+      statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+    });
+    console.log('Status breakdown:', statusCounts);
+
+    // Insert records in batches
     let insertedCount = 0;
     const batchSize = 100;
     
-    for (let i = 0; i < absentRecords.length; i += batchSize) {
-      const batch = absentRecords.slice(i, i + batchSize);
+    for (let i = 0; i < recordsToInsert.length; i += batchSize) {
+      const batch = recordsToInsert.slice(i, i + batchSize);
       const { error: insertError } = await supabase
         .from('attendance_records')
         .upsert(batch, { onConflict: 'employee_id,date' });
@@ -176,27 +198,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Successfully inserted ${insertedCount} absent records`);
-
-    // Group by employee for summary
-    const employeeSummary: Record<string, string[]> = {};
-    absentRecords.forEach(r => {
-      const emp = employees?.find(e => e.id === r.employee_id);
-      const name = emp?.full_name || r.employee_id;
-      if (!employeeSummary[name]) {
-        employeeSummary[name] = [];
-      }
-      employeeSummary[name].push(r.date);
-    });
+    console.log(`Successfully inserted ${insertedCount} records`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Backfilled ${insertedCount} absent records`,
+        message: `Backfilled ${insertedCount} attendance records`,
         dateRange: { start: startDateStr, end: endDateStr },
         totalDays: dates.length,
         recordsInserted: insertedCount,
-        employeeSummary,
+        statusBreakdown: statusCounts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

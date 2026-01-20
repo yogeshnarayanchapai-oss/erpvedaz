@@ -67,6 +67,8 @@ export default function MyHRAttendanceLeave() {
     'Work From Home': 'bg-blue-100 text-blue-800',
     Leave: 'bg-purple-100 text-purple-800',
     Late: 'bg-amber-100 text-amber-800',
+    Saturday: 'bg-slate-100 text-slate-800',
+    Holiday: 'bg-indigo-100 text-indigo-800',
   };
 
   // Get date range based on filter and date mode (BS or AD)

@@ -141,6 +141,8 @@ export default function HRMEmployeeDetail() {
       case 'Half-day': return 'bg-yellow-500/10 text-yellow-600';
       case 'Work From Home': return 'bg-blue-500/10 text-blue-600';
       case 'Leave': return 'bg-purple-500/10 text-purple-600';
+      case 'Saturday': return 'bg-slate-500/10 text-slate-600';
+      case 'Holiday': return 'bg-indigo-500/10 text-indigo-600';
       default: return 'bg-muted text-muted-foreground';
     }
   };
