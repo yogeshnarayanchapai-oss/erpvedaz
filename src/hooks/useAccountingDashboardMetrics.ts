@@ -135,54 +135,27 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
       const totalExpense = expenseData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
 
       // Get receivables and payables from party transactions and payments
-      let partyTxQuery = supabase.from('party_transactions').select('party_id, direction, amount');
-      let partyPayQuery = supabase.from('party_payments').select('party_id, payment_type, amount');
+      // Only count UNSETTLED party transactions for outstanding calculations
+      let partyTxQuery = supabase
+        .from('party_transactions')
+        .select('party_id, direction, amount')
+        .eq('is_settled', false);
       
       if (storeId) {
         partyTxQuery = partyTxQuery.eq('store_id', storeId);
-        partyPayQuery = partyPayQuery.eq('store_id', storeId);
       }
       
-      const [{ data: transactions }, { data: payments }] = await Promise.all([
-        partyTxQuery,
-        partyPayQuery,
-      ]);
+      const { data: transactions } = await partyTxQuery;
 
-      // Calculate totals per party
-      const partyBalances = new Map<string, { receivable: number; payable: number; received: number; paid: number }>();
-      
-      transactions?.forEach(tx => {
-        const current = partyBalances.get(tx.party_id) || { receivable: 0, payable: 0, received: 0, paid: 0 };
-        if (tx.direction === 'RECEIVABLE') {
-          current.receivable += tx.amount || 0;
-        } else if (tx.direction === 'PAYABLE') {
-          current.payable += tx.amount || 0;
-        }
-        partyBalances.set(tx.party_id, current);
-      });
-
-      payments?.forEach(payment => {
-        const current = partyBalances.get(payment.party_id) || { receivable: 0, payable: 0, received: 0, paid: 0 };
-        if (payment.payment_type === 'RECEIVED') {
-          current.received += payment.amount || 0;
-        } else if (payment.payment_type === 'PAID') {
-          current.paid += payment.amount || 0;
-        }
-        partyBalances.set(payment.party_id, current);
-      });
-      
+      // Calculate totals - only unsettled transactions
       let receivableOutstanding = 0;
       let payableOutstanding = 0;
       
-      partyBalances.forEach(balance => {
-        const netReceivable = balance.receivable - balance.received;
-        const netPayable = balance.payable - balance.paid;
-        
-        if (netReceivable > 0) {
-          receivableOutstanding += netReceivable;
-        }
-        if (netPayable > 0) {
-          payableOutstanding += netPayable;
+      transactions?.forEach(tx => {
+        if (tx.direction === 'RECEIVABLE') {
+          receivableOutstanding += tx.amount || 0;
+        } else if (tx.direction === 'PAYABLE') {
+          payableOutstanding += tx.amount || 0;
         }
       });
 
