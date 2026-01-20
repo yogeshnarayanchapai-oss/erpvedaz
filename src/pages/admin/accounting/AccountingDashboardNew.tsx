@@ -73,7 +73,6 @@ export default function AccountingDashboardNew() {
       icon: CreditCard,
       color: 'text-warning',
       description: 'Amount to collect from parties',
-      onClick: () => navigate('/admin/accounting/receivables'),
     },
     {
       title: 'Payable Outstanding',
@@ -81,7 +80,6 @@ export default function AccountingDashboardNew() {
       icon: AlertCircle,
       color: 'text-primary',
       description: 'Amount to pay to parties',
-      onClick: () => navigate('/admin/accounting/payables'),
     },
   ];
 
@@ -253,7 +251,7 @@ export default function AccountingDashboardNew() {
         {stats.map((stat, index) => (
           <Card 
             key={index} 
-            className="cursor-pointer hover:shadow-md transition-shadow hover:border-primary/50"
+            className={stat.onClick ? "cursor-pointer hover:shadow-md transition-shadow hover:border-primary/50" : ""}
             onClick={stat.onClick}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -269,9 +267,11 @@ export default function AccountingDashboardNew() {
               {stat.description && (
                 <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
               )}
-              <p className="text-xs text-primary flex items-center gap-1 mt-2">
-                View details <ArrowRight className="h-3 w-3" />
-              </p>
+              {stat.onClick && (
+                <p className="text-xs text-primary flex items-center gap-1 mt-2">
+                  View details <ArrowRight className="h-3 w-3" />
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
