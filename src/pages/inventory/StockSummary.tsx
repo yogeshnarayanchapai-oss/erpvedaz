@@ -10,8 +10,6 @@ import { useInventorySummaryByWarehouse, WarehouseStockSummary } from '@/hooks/u
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useHighAlertData } from '@/hooks/useHighAlertData';
 import { HighAlertSettingsDialog } from '@/components/inventory/HighAlertSettingsDialog';
-import DateQuickFilters, { DateRange, getPresetRanges } from '@/components/inventory/DateQuickFilters';
-import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -27,12 +25,6 @@ export default function StockSummary() {
   const [highAlertDays, setHighAlertDays] = useState<number | null>(null);
   const [showHighAlertSettings, setShowHighAlertSettings] = useState(false);
   
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
-    endDate: today,
-    label: 'This Month',
-  });
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,11 +43,7 @@ export default function StockSummary() {
   }, []);
 
   const { data: warehouses } = useActiveWarehouses();
-  const { data: inventoryData, isLoading } = useInventorySummaryByWarehouse(
-    activeTab,
-    dateRange.startDate,
-    dateRange.endDate
-  );
+  const { data: inventoryData, isLoading } = useInventorySummaryByWarehouse(activeTab);
 
   // Build current stock map for high alert calculation
   const currentStockMap = useMemo(() => {
@@ -199,7 +187,7 @@ export default function StockSummary() {
           <h1 className="text-xl md:text-2xl font-bold">Stock Summary</h1>
           <p className="text-sm text-muted-foreground">Inventory across warehouses</p>
         </div>
-        <DateQuickFilters value={dateRange} onChange={setDateRange} />
+        
       </div>
 
       {/* Warehouse Tabs - Scrollable on mobile */}
