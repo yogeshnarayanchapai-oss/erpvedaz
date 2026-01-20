@@ -401,7 +401,9 @@ export default function PartyStatement() {
       
       // Create a transaction record for account balance update
       const amount = selectedInventoryEntry.debit > 0 ? selectedInventoryEntry.debit : selectedInventoryEntry.credit;
-      const isReceiving = selectedInventoryEntry.debit > 0;
+      // Credit entries are Receivables (WHOLESALE_OUT = they owe us) → settling = income
+      // Debit entries are Payables (STOCK_IN = we owe them) → settling = expense
+      const isReceiving = selectedInventoryEntry.credit > 0;
       
       await supabase.from('transactions').insert({
         date: new Date().toISOString().split('T')[0],
