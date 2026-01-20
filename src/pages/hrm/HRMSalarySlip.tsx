@@ -6,15 +6,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
+import { useDateMode } from '@/contexts/DateModeContext';
+import { adToBS, getBSMonthName, bsToAd, getBSYears, getBSMonths } from '@/lib/nepaliDate';
 import jsPDF from 'jspdf';
 
 export default function HRMSalarySlip() {
+  const { dateMode } = useDateMode();
   const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
-  const { data: records = [], isLoading } = usePayrollRecords(selectedMonth);
+  
+  // BS date state for Nepali calendar filter
+  const currentBS = adToBS(new Date());
+  const [bsYear, setBsYear] = useState(currentBS.year);
+  const [bsMonth, setBsMonth] = useState(currentBS.month);
+  
+  // Compute the actual month to query based on mode
+  const getQueryMonth = () => {
+    if (dateMode === 'BS') {
+      // Convert BS selection to AD for database query
+      const adDate = bsToAd(bsYear, bsMonth, 1);
+      return format(adDate, 'yyyy-MM-01');
+    }
+    return selectedMonth;
+  };
+
+  const { data: records = [], isLoading } = usePayrollRecords(getQueryMonth());
   const { data: company } = useCompanyInfo();
   const { data: employees = [] } = useEmployees();
   const { data: bankAccounts = [] } = useBankAccounts();
@@ -24,16 +44,38 @@ export default function HRMSalarySlip() {
   const [viewSlip, setViewSlip] = useState<any>(null);
 
   const getEmployee = (id: string) => employees.find((e) => e.id === id);
-  const getBank = (id: string | null) => id ? bankAccounts.find((b) => b.id === id) : bankAccounts.find((b) => b.is_default);
+  
+  // Only return the employee's linked bank, no default fallback
+  const getEmployeeBank = (bankAccountId: string | null | undefined) => {
+    if (!bankAccountId) return null;
+    return bankAccounts.find((b) => b.id === bankAccountId) || null;
+  };
+
+  // Get display month/year based on date mode
+  const getDisplayMonthYear = (adDateStr: string) => {
+    const adDate = new Date(adDateStr);
+    if (dateMode === 'BS') {
+      const bs = adToBS(adDate);
+      return `${getBSMonthName(bs.month)} ${bs.year}`;
+    }
+    return format(adDate, 'MMMM yyyy');
+  };
+
+  // Get Nepali month/year for PDF (always show Nepali for PDF as per requirement)
+  const getNepaliMonthYear = (adDateStr: string) => {
+    const adDate = new Date(adDateStr);
+    const bs = adToBS(adDate);
+    return `${getBSMonthName(bs.month)} ${bs.year}`;
+  };
 
   const handleDownloadPDF = async () => {
     if (!viewSlip) return;
 
     const employee = getEmployee(viewSlip.employee_id);
-    const bank = getBank(employee?.bank_account_id || null);
+    const employeeBank = getEmployeeBank(employee?.bank_account_id);
     const companyName = currentStore?.name || company?.company_name || 'Company';
     const employeeName = viewSlip.employees?.full_name || 'Employee';
-    const monthYear = format(new Date(viewSlip.month), 'MMMM yyyy');
+    const monthYear = getNepaliMonthYear(viewSlip.month); // Always Nepali month in PDF
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -84,9 +126,15 @@ export default function HRMSalarySlip() {
     doc.text(`Slip No: ${viewSlip.id.slice(0, 8).toUpperCase()}`, pageWidth - 20, y, { align: 'right' });
     y += 10;
 
-    // Employee Info Box
+    // Employee Info Box - Dynamic height based on name length
+    const nameMaxWidth = 85; // Max width for name text
+    doc.setFontSize(10);
+    const nameLines = doc.splitTextToSize(employeeName, nameMaxWidth);
+    const nameRowCount = nameLines.length;
+    const boxHeight = 35 + (nameRowCount > 1 ? (nameRowCount - 1) * 5 : 0);
+    
     doc.setFillColor(248, 249, 250);
-    doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, 'F');
+    doc.roundedRect(20, y, pageWidth - 40, boxHeight, 3, 3, 'F');
     y += 10;
 
     doc.setFontSize(10);
@@ -94,7 +142,15 @@ export default function HRMSalarySlip() {
     doc.text('Employee Name:', 25, y);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
-    doc.text(employeeName, 70, y);
+    
+    // Handle multi-line name
+    if (nameRowCount > 1) {
+      nameLines.forEach((line: string, idx: number) => {
+        doc.text(line, 70, y + (idx * 5));
+      });
+    } else {
+      doc.text(employeeName, 70, y);
+    }
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80);
@@ -103,7 +159,7 @@ export default function HRMSalarySlip() {
     doc.setTextColor(viewSlip.payment_status === 'Paid' ? 34 : 100, viewSlip.payment_status === 'Paid' ? 139 : 100, viewSlip.payment_status === 'Paid' ? 34 : 100);
     doc.text(viewSlip.payment_status, pageWidth / 2 + 30, y);
 
-    y += 8;
+    y += 8 + (nameRowCount > 1 ? (nameRowCount - 1) * 5 : 0);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80);
     doc.text('Position:', 25, y);
@@ -125,7 +181,6 @@ export default function HRMSalarySlip() {
 
     // Salary Breakdown Table
     const tableStartY = y;
-    const colWidth = (pageWidth - 40) / 2;
 
     // Table Header
     doc.setFillColor(59, 130, 246);
@@ -182,8 +237,8 @@ export default function HRMSalarySlip() {
 
     y += 12;
 
-    // Bank Details
-    if (bank) {
+    // Bank Details - Only show if employee has linked bank account
+    if (employeeBank) {
       doc.setFillColor(248, 249, 250);
       doc.roundedRect(20, y, pageWidth - 40, 22, 3, 3, 'F');
       y += 8;
@@ -196,8 +251,8 @@ export default function HRMSalarySlip() {
       
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(80);
-      doc.text(`Bank: ${bank.bank_name}`, 25, y);
-      doc.text(`A/C No: ${bank.account_number}`, pageWidth / 2, y);
+      doc.text(`Bank: ${employeeBank.bank_name}`, 25, y);
+      doc.text(`A/C No: ${employeeBank.account_number}`, pageWidth / 2, y);
       y += 18;
     }
 
@@ -237,8 +292,17 @@ export default function HRMSalarySlip() {
     doc.text('Authorized Signature', pageWidth - 45, y, { align: 'center' });
 
     // Save PDF
-    const fileName = `Salary_Slip_${employeeName.replace(/\s+/g, '_')}_${format(new Date(viewSlip.month), 'MMM_yyyy')}.pdf`;
+    const bs = adToBS(new Date(viewSlip.month));
+    const fileName = `Salary_Slip_${employeeName.replace(/\s+/g, '_')}_${getBSMonthName(bs.month)}_${bs.year}.pdf`;
     doc.save(fileName);
+  };
+
+  // Get current display month for card title
+  const getCurrentDisplayMonth = () => {
+    if (dateMode === 'BS') {
+      return `${getBSMonthName(bsMonth)} ${bsYear}`;
+    }
+    return format(new Date(selectedMonth), 'MMMM yyyy');
   };
 
   return (
@@ -248,11 +312,52 @@ export default function HRMSalarySlip() {
           <h1 className="text-2xl font-bold">Salary Slips</h1>
           <p className="text-muted-foreground">Generate and view salary slips</p>
         </div>
-        <Input type="month" value={selectedMonth.slice(0, 7)} onChange={(e) => setSelectedMonth(e.target.value + '-01')} className="w-40" />
+        
+        {/* Date Filter - Show BS or AD based on dateMode */}
+        {dateMode === 'BS' ? (
+          <div className="flex gap-2">
+            <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+              <SelectTrigger className="w-24">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {getBSYears().map((year) => (
+                  <SelectItem key={year.value} value={year.value.toString()}>
+                    {year.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {getBSMonths().map((month) => (
+                  <SelectItem key={month.value} value={month.value.toString()}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <Input 
+            type="month" 
+            value={selectedMonth.slice(0, 7)} 
+            onChange={(e) => setSelectedMonth(e.target.value + '-01')} 
+            className="w-40" 
+          />
+        )}
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-primary" />Salary Slips for {format(new Date(selectedMonth), 'MMMM yyyy')}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            Salary Slips for {getCurrentDisplayMonth()}
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -311,15 +416,15 @@ export default function HRMSalarySlip() {
               {/* Title */}
               <div className="text-center py-2 bg-primary/10 rounded-md">
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Salary Slip</h3>
-                <p className="text-xs text-muted-foreground">{format(new Date(viewSlip.month), 'MMMM yyyy')}</p>
+                <p className="text-xs text-muted-foreground">{getDisplayMonthYear(viewSlip.month)}</p>
               </div>
 
               {/* Employee Info */}
               <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-md text-sm">
                 <div className="space-y-1">
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="font-medium">{viewSlip.employees?.full_name}</span>
+                    <span className="text-muted-foreground shrink-0">Name:</span>
+                    <span className="font-medium break-words">{viewSlip.employees?.full_name}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-muted-foreground">Position:</span>
@@ -374,16 +479,21 @@ export default function HRMSalarySlip() {
                 </div>
               </div>
 
-              {/* Bank Details */}
-              {getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null) && (
-                <div className="p-3 bg-muted/50 rounded-md text-sm">
-                  <p className="font-medium text-primary mb-1">Bank Details</p>
-                  <div className="flex gap-6 text-muted-foreground">
-                    <span>{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.bank_name}</span>
-                    <span className="font-mono">{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.account_number}</span>
+              {/* Bank Details - Only show if employee has linked bank */}
+              {(() => {
+                const emp = getEmployee(viewSlip.employee_id);
+                const bank = getEmployeeBank(emp?.bank_account_id);
+                if (!bank) return null;
+                return (
+                  <div className="p-3 bg-muted/50 rounded-md text-sm">
+                    <p className="font-medium text-primary mb-1">Bank Details</p>
+                    <div className="flex gap-6 text-muted-foreground">
+                      <span>{bank.bank_name}</span>
+                      <span className="font-mono">{bank.account_number}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Notes */}
               {viewSlip.notes && (
