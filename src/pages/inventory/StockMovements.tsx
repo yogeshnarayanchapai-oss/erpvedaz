@@ -17,6 +17,7 @@ import { useStockMovements, useCreateStockMovement, useDeleteStockMovement, useU
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
+import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { useProductDaybookStats, DeliveryLocationFilter } from '@/hooks/useProductDaybookStats';
 import { format, subDays } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -497,8 +498,8 @@ export default function StockMovements() {
                     <Label>
                       {form.movement_type === 'IN' ? 'Supplier (Optional)' : 'Party'}
                     </Label>
-                    <Select 
-                      value={form.party_id || 'none'} 
+                    <SearchablePartySelect
+                      value={form.party_id || 'none'}
                       onValueChange={(v) => setForm({ 
                         ...form, 
                         party_id: v === 'none' ? undefined : v,
@@ -506,25 +507,15 @@ export default function StockMovements() {
                           form.movement_type === 'IN' ? 'SUPPLIER' : 'WHOLESALE'
                         )
                       })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={
-                          form.movement_type === 'IN' 
-                            ? 'Select supplier' 
-                            : form.movement_type === 'WHOLESALE_OUT'
-                              ? 'Select party (optional)'
-                              : 'Select customer'
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {(form.movement_type === 'IN' ? suppliers : customers)?.map((party) => (
-                          <SelectItem key={party.id} value={party.id}>
-                            {party.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder={
+                        form.movement_type === 'IN' 
+                          ? 'Select supplier' 
+                          : 'Select party (optional)'
+                      }
+                      partyType={form.movement_type === 'IN' ? 'SUPPLIER' : 'CUSTOMER'}
+                      showNoneOption={true}
+                      showAddButton={false}
+                    />
                   </div>
                 )}
                 {/* Product Daybook Reference Stats - only for OUT type */}
