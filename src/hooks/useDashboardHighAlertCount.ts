@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
-const HIGH_ALERT_DAYS_KEY = 'high_alert_days';
+const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
 
 export function useDashboardHighAlertCount() {
   const storeId = useCurrentStoreId();
