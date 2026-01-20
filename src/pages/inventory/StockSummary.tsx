@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,34 +9,22 @@ import { Package, Boxes, DollarSign, AlertTriangle, ArrowDownToLine, ArrowUpFrom
 import { useInventorySummaryByWarehouse, WarehouseStockSummary } from '@/hooks/useInventorySummaryByWarehouse';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useHighAlertData } from '@/hooks/useHighAlertData';
+import { useHighAlertDays } from '@/hooks/useHighAlertDays';
 import { HighAlertSettingsDialog } from '@/components/inventory/HighAlertSettingsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
-const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
-
-// Helper to get initial high alert days from localStorage
-const getInitialHighAlertDays = (): number | null => {
-  if (typeof window === 'undefined') return null;
-  const saved = localStorage.getItem(HIGH_ALERT_DAYS_KEY);
-  if (saved) {
-    const parsed = parseInt(saved);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= 60) {
-      return parsed;
-    }
-  }
-  return null;
-};
-
 export default function StockSummary() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [reorderOnly, setReorderOnly] = useState(false);
   const [highAlertOnly, setHighAlertOnly] = useState(false);
-  const [highAlertDays, setHighAlertDays] = useState<number | null>(getInitialHighAlertDays);
   const [showHighAlertSettings, setShowHighAlertSettings] = useState(false);
+
+  // High alert days from database (store-wise)
+  const { highAlertDays, updateHighAlertDays, isUpdating } = useHighAlertDays();
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -95,9 +83,7 @@ export default function StockSummary() {
   };
 
   const handleHighAlertDaysApply = (days: number) => {
-    setHighAlertDays(days);
-    localStorage.setItem(HIGH_ALERT_DAYS_KEY, days.toString());
-    toast({ title: `High Alert set to ${days} days` });
+    updateHighAlertDays(days);
   };
 
   // Handle double-click to open settings

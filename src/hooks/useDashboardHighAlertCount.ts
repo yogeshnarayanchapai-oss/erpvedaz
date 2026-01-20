@@ -3,15 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
-const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
-
 export function useDashboardHighAlertCount() {
   const storeId = useCurrentStoreId();
-  
-  // Get high alert days from localStorage
-  const highAlertDays = typeof window !== 'undefined' 
-    ? parseInt(localStorage.getItem(HIGH_ALERT_DAYS_KEY) || '0') || null 
-    : null;
+
+  // Fetch high alert days from database (store-wise)
+  const { data: highAlertDays } = useQuery({
+    queryKey: ['high-alert-days', storeId],
+    queryFn: async (): Promise<number | null> => {
+      if (!storeId) return null;
+
+      const { data, error } = await supabase
+        .from('cost_settings')
+        .select('high_alert_days')
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching high alert days:', error);
+        return null;
+      }
+
+      return data?.high_alert_days ?? null;
+    },
+    enabled: !!storeId,
+    staleTime: 60000,
+  });
 
   return useQuery({
     queryKey: ['dashboard_high_alert_count', storeId, highAlertDays],
