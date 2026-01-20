@@ -1867,6 +1867,7 @@ export type Database = {
         Row: {
           created_at: string
           delivery_charge_per_order: number
+          high_alert_days: number | null
           id: string
           office_cost_per_order: number
           redirect_charge_per_unit: number
@@ -1881,6 +1882,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_charge_per_order?: number
+          high_alert_days?: number | null
           id?: string
           office_cost_per_order?: number
           redirect_charge_per_unit?: number
@@ -1895,6 +1897,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_charge_per_order?: number
+          high_alert_days?: number | null
           id?: string
           office_cost_per_order?: number
           redirect_charge_per_unit?: number

@@ -6,8 +6,6 @@ import { useEffect } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { format, subDays } from 'date-fns';
 
-const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
-
 export interface SidebarBadges {
   orders: number;
   leads: number;
@@ -192,13 +190,16 @@ export function useSidebarBadges() {
             .select('*, employees!inner(store_id)', { count: 'exact', head: true })
             .eq('status', 'PENDING')
             .eq('employees.store_id', storeId);
-          badges.pendingDocuments = docCount || 0;
         }
 
-        // High Alert inventory count (store-wise)
-        const highAlertDays = typeof window !== 'undefined' 
-          ? parseInt(localStorage.getItem(HIGH_ALERT_DAYS_KEY) || '0') || null 
-          : null;
+        // High Alert inventory count (store-wise from database)
+        const { data: costSettings } = await supabase
+          .from('cost_settings')
+          .select('high_alert_days')
+          .eq('store_id', storeId)
+          .maybeSingle();
+        
+        const highAlertDays = costSettings?.high_alert_days ?? null;
         
         if (highAlertDays && highAlertDays >= 1 && storeId) {
           // Get current stock for store products
