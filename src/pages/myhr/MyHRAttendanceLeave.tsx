@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, LogIn, LogOut, Calendar, CalendarDays, List, Plus, CheckCircle, XCircle, Info } from 'lucide-react';
-import { differenceInDays, differenceInMinutes, format, parseISO } from 'date-fns';
+import { Clock, LogIn, LogOut, Calendar, CalendarDays, List, Plus, CheckCircle, XCircle, Info, Timer } from 'lucide-react';
+import { differenceInDays, differenceInMinutes, format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
 import { NepaliCalendar, CalendarEvent } from '@/components/NepaliCalendar';
@@ -30,6 +30,7 @@ export default function MyHRAttendanceLeave() {
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [monthFilter, setMonthFilter] = useState<'this' | 'last'>('this');
 
   // Leave hooks
   const { data: employee, isLoading: loadingEmployee } = useMyEmployeeProfile();
@@ -60,7 +61,29 @@ export default function MyHRAttendanceLeave() {
     'Half-day': 'bg-yellow-100 text-yellow-800',
     'Work From Home': 'bg-blue-100 text-blue-800',
     Leave: 'bg-purple-100 text-purple-800',
+    Late: 'bg-amber-100 text-amber-800',
   };
+
+  // Get date range based on filter
+  const getDateRange = () => {
+    const now = new Date();
+    if (monthFilter === 'this') {
+      return { start: startOfMonth(now), end: endOfMonth(now) };
+    } else {
+      const lastMonth = subMonths(now, 1);
+      return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
+    }
+  };
+
+  const dateRange = getDateRange();
+
+  // Filter attendance based on month
+  const filteredAttendance = useMemo(() => {
+    return myAttendance.filter(a => {
+      const recordDate = new Date(a.date);
+      return recordDate >= dateRange.start && recordDate <= dateRange.end;
+    });
+  }, [myAttendance, dateRange.start, dateRange.end]);
 
   const leaveStatusColors: Record<string, string> = {
     Pending: 'bg-warning/10 text-warning',
@@ -74,25 +97,40 @@ export default function MyHRAttendanceLeave() {
     return myAttendance.map(r => ({
       date: r.date,
       title: r.status,
-      type: r.status === 'Present' || r.status === 'Work From Home' ? 'attendance' :
+      type: r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late' ? 'attendance' :
         r.status === 'Leave' ? 'leave' :
           r.status === 'Absent' ? 'holiday' : 'event',
     }));
   }, [myAttendance]);
 
-  // Attendance stats
-  const thisMonthPresent = myAttendance.filter(a =>
-    new Date(a.date).getMonth() === new Date().getMonth() &&
-    (a.status === 'Present' || a.status === 'Work From Home')
+  // Attendance stats - based on filtered month, include Late in present count
+  const thisMonthPresent = filteredAttendance.filter(a =>
+    a.status === 'Present' || a.status === 'Work From Home' || a.status === 'Late'
   ).length;
-  const thisMonthAbsent = myAttendance.filter(a =>
-    new Date(a.date).getMonth() === new Date().getMonth() &&
+  const thisMonthAbsent = filteredAttendance.filter(a =>
     a.status === 'Absent'
   ).length;
-  const thisMonthLeave = myAttendance.filter(a =>
-    new Date(a.date).getMonth() === new Date().getMonth() &&
+  const thisMonthLeave = filteredAttendance.filter(a =>
     a.status === 'Leave'
   ).length;
+
+  // Calculate total late minutes
+  const totalLateMinutes = filteredAttendance.reduce((total, a) => {
+    if (a.status === 'Late' && a.late_minutes) {
+      return total + a.late_minutes;
+    }
+    return total;
+  }, 0);
+
+  const formatLateMinutes = (minutes: number) => {
+    if (minutes === 0) return '0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
 
   // Leave stats
   const approvedDays = requests
@@ -195,8 +233,21 @@ export default function MyHRAttendanceLeave() {
             </CardContent>
           </Card>
 
+          {/* Month Filter */}
+          <div className="flex justify-end">
+            <Select value={monthFilter} onValueChange={(v: 'this' | 'last') => setMonthFilter(v)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="this">This Month</SelectItem>
+                <SelectItem value="last">Last Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Monthly Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">{thisMonthPresent}</div>
@@ -213,6 +264,15 @@ export default function MyHRAttendanceLeave() {
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-purple-600">{thisMonthLeave}</div>
                 <div className="text-sm text-muted-foreground">Leave Days</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Timer className="w-5 h-5 text-amber-600" />
+                  <span className="text-2xl font-bold text-amber-600">{formatLateMinutes(totalLateMinutes)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Late Minutes</div>
               </CardContent>
             </Card>
           </div>
@@ -258,8 +318,11 @@ export default function MyHRAttendanceLeave() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {myAttendance.slice(0, 30).map((record) => (
-                        <TableRow key={record.id}>
+                      {filteredAttendance.map((record) => (
+                        <TableRow 
+                          key={record.id}
+                          className={record.status === 'Late' ? 'bg-amber-50 dark:bg-amber-950/20' : ''}
+                        >
                           <TableCell><FormattedDate date={record.date} /></TableCell>
                           <TableCell>{record.check_in_time ? format(parseISO(record.check_in_time), 'hh:mm a') : '-'}</TableCell>
                           <TableCell>{record.check_out_time ? format(parseISO(record.check_out_time), 'hh:mm a') : '-'}</TableCell>
@@ -269,7 +332,7 @@ export default function MyHRAttendanceLeave() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {myAttendance.length === 0 && (
+                      {filteredAttendance.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             {loadingAttendance ? 'Loading...' : 'No attendance records'}
