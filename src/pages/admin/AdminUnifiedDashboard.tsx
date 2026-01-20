@@ -274,7 +274,7 @@ export default function AdminUnifiedDashboard() {
   }, [inventoryData, yesterdayPLData, highAlertCount]);
 
 const hrmMetrics = useMemo(() => {
-    const presentToday = attendanceData?.filter(a => a.status === 'Present').length || 0;
+    const presentToday = attendanceData?.filter(a => a.status === 'Present' || a.status === 'Late').length || 0;
     const pendingLeaveCount = leaveRequestsData?.filter(l => l.status === 'Pending').length || 0;
     const pendingDocsCount = pendingDocsData || 0;
     return {
