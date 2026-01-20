@@ -23,6 +23,9 @@ interface SearchablePartySelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BOTH';
+  showNoneOption?: boolean;
+  showAddButton?: boolean;
 }
 
 export function SearchablePartySelect({
@@ -30,9 +33,16 @@ export function SearchablePartySelect({
   onValueChange,
   placeholder = 'Select party...',
   disabled = false,
+  partyType,
+  showNoneOption = false,
+  showAddButton = true,
 }: SearchablePartySelectProps) {
   const [open, setOpen] = useState(false);
-  const { data: parties = [] } = usePartiesWithBalances();
+  const { data: allParties = [] } = usePartiesWithBalances(partyType);
+
+  const parties = useMemo(() => {
+    return allParties;
+  }, [allParties]);
 
   const selectedParty = useMemo(() => {
     return parties.find((p) => p.id === value);
@@ -49,16 +59,33 @@ export function SearchablePartySelect({
             className="flex-1 justify-between font-normal"
             disabled={disabled}
           >
-            {selectedParty ? selectedParty.name : placeholder}
+            {value === 'none' ? 'None' : selectedParty ? selectedParty.name : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0" align="start">
           <Command>
             <CommandInput placeholder="Search party..." />
-            <CommandList>
+            <CommandList className="max-h-[300px]">
               <CommandEmpty>No party found.</CommandEmpty>
               <CommandGroup>
+                {showNoneOption && (
+                  <CommandItem
+                    value="none"
+                    onSelect={() => {
+                      onValueChange('none');
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === 'none' ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <span className="text-muted-foreground">None</span>
+                  </CommandItem>
+                )}
                 {parties.map((party) => (
                   <CommandItem
                     key={party.id}
@@ -87,13 +114,15 @@ export function SearchablePartySelect({
           </Command>
         </PopoverContent>
       </Popover>
-      <AddPartyDialog
-        trigger={
-          <Button variant="outline" size="icon" type="button">
-            <Plus className="h-4 w-4" />
-          </Button>
-        }
-      />
+      {showAddButton && (
+        <AddPartyDialog
+          trigger={
+            <Button variant="outline" size="icon" type="button">
+              <Plus className="h-4 w-4" />
+            </Button>
+          }
+        />
+      )}
     </div>
   );
 }
