@@ -17,30 +17,31 @@ import { Button } from '@/components/ui/button';
 
 const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
 
+// Helper to get initial high alert days from localStorage
+const getInitialHighAlertDays = (): number | null => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem(HIGH_ALERT_DAYS_KEY);
+  if (saved) {
+    const parsed = parseInt(saved);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 60) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
 export default function StockSummary() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [reorderOnly, setReorderOnly] = useState(false);
   const [highAlertOnly, setHighAlertOnly] = useState(false);
-  const [highAlertDays, setHighAlertDays] = useState<number | null>(null);
+  const [highAlertDays, setHighAlertDays] = useState<number | null>(getInitialHighAlertDays);
   const [showHighAlertSettings, setShowHighAlertSettings] = useState(false);
-  
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<number>(0);
   const queryClient = useQueryClient();
-
-  // Load high alert days from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(HIGH_ALERT_DAYS_KEY);
-    if (saved) {
-      const parsed = parseInt(saved);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 60) {
-        setHighAlertDays(parsed);
-      }
-    }
-  }, []);
 
   const { data: warehouses } = useActiveWarehouses();
   const { data: inventoryData, isLoading } = useInventorySummaryByWarehouse(activeTab);
