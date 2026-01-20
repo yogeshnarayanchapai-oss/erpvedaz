@@ -67,7 +67,7 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
       });
       
       const totalAccountBalance = assetAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
-      const totalLiabilities = liabilityAccounts.reduce((sum, acc) => sum + Math.abs(acc.current_balance || 0), 0);
+      const liabilityAccountTotal = liabilityAccounts.reduce((sum, acc) => sum + Math.abs(acc.current_balance || 0), 0);
 
       // Get asset items from transactions (transactions with asset category)
       let categoryQuery = supabase
@@ -101,10 +101,8 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
         const { data: assetTransactions } = await assetTxQuery;
         totalAssetItems = assetTransactions?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
       }
-
-      // Net Worth = Asset Items (Saman) + Account Balances - Liabilities
+      // Total Assets = Asset Items (Saman) + Account Balances
       const totalAssets = totalAssetItems + totalAccountBalance;
-      const netWorth = totalAssets - totalLiabilities;
 
       // Get income for period from transactions table
       let incomeQuery = supabase
@@ -188,10 +186,19 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
         }
       });
 
+      // Liabilities = Payable Outstanding - Receivable Outstanding + Liability Accounts
+      // (Net amount we owe after subtracting what others owe us)
+      const totalLiabilitiesCalc = (payableOutstanding - receivableOutstanding) + liabilityAccountTotal;
+      
+      // Net Worth = Assets + Account Balances + Liabilities (negative value reduces net worth)
+      // Since liabilities is now (payable - receivable + liability_accounts), 
+      // a positive value means we owe more, so we subtract it
+      const netWorth = totalAssets - liabilityAccountTotal + (receivableOutstanding - payableOutstanding);
+
       return {
         netWorth,
         totalAssets,
-        totalLiabilities,
+        totalLiabilities: totalLiabilitiesCalc,
         totalAssetItems,
         totalIncome,
         totalExpense,
