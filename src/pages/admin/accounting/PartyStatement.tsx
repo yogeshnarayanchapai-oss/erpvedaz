@@ -994,7 +994,7 @@ export default function PartyStatement() {
                 onClick={handleBulkPayment} 
                 disabled={isBulkPaying || !selectedAccountId || !bulkPayAmount || parseFloat(bulkPayAmount) <= 0}
               >
-                {isBulkPaying ? 'Processing...' : `Pay ₹${parseFloat(bulkPayAmount || '0').toLocaleString()}`}
+                {isBulkPaying ? 'Processing...' : `${selectedPendingStats.totalCredit > selectedPendingStats.totalDebit ? 'Receive' : 'Pay'} ₹${parseFloat(bulkPayAmount || '0').toLocaleString()}`}
               </Button>
             </DialogFooter>
           </DialogContent>
