@@ -199,3 +199,35 @@ export function getDaysInBSMonth(year: number, month: number): number {
     return month <= 6 ? 31 : 30;
   }
 }
+
+// Get BS month date range in AD dates
+export function getBSMonthRange(bsYear: number, bsMonth: number): { start: Date; end: Date } {
+  try {
+    const daysInMonth = getDaysInBSMonth(bsYear, bsMonth);
+    const startDate = bsToAd(bsYear, bsMonth, 1);
+    const endDate = bsToAd(bsYear, bsMonth, daysInMonth);
+    return { start: startDate, end: endDate };
+  } catch {
+    // Fallback
+    const now = new Date();
+    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+  }
+}
+
+// Get current BS month range in AD dates
+export function getCurrentBSMonthRange(): { start: Date; end: Date } {
+  const currentBS = getCurrentBSDate();
+  return getBSMonthRange(currentBS.year, currentBS.month);
+}
+
+// Get previous BS month range in AD dates
+export function getPreviousBSMonthRange(): { start: Date; end: Date } {
+  const currentBS = getCurrentBSDate();
+  let prevMonth = currentBS.month - 1;
+  let prevYear = currentBS.year;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  return getBSMonthRange(prevYear, prevMonth);
+}

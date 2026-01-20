@@ -18,11 +18,16 @@ import { useTodayAttendance, useCheckIn, useCheckOut, useMyAttendance } from '@/
 import { useMyEmployeeProfile } from '@/hooks/useEmployeeDocuments';
 import { useLeaveRequests, useCreateLeaveRequest, useLeaveTypes } from '@/hooks/useHRM';
 import { useMyLeaveQuota } from '@/hooks/useLeaveQuota';
+import { useDateMode } from '@/contexts/DateModeContext';
+import { getCurrentBSMonthRange, getPreviousBSMonthRange } from '@/lib/nepaliDate';
 
 export default function MyHRAttendanceLeave() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'attendance';
   const setActiveTab = (tab: string) => setSearchParams({ tab });
+
+  // Date mode for BS/AD filter logic
+  const { dateMode } = useDateMode();
 
   // Attendance hooks
   const { data: todayAttendance, isLoading: loadingToday } = useTodayAttendance();
@@ -64,8 +69,17 @@ export default function MyHRAttendanceLeave() {
     Late: 'bg-amber-100 text-amber-800',
   };
 
-  // Get date range based on filter
+  // Get date range based on filter and date mode (BS or AD)
   const dateRange = useMemo(() => {
+    // If BS mode, use BS month boundaries
+    if (dateMode === 'BS') {
+      if (monthFilter === 'this') {
+        return getCurrentBSMonthRange();
+      } else {
+        return getPreviousBSMonthRange();
+      }
+    }
+    // AD mode - use standard AD months
     const now = new Date();
     if (monthFilter === 'this') {
       return { start: startOfMonth(now), end: endOfMonth(now) };
@@ -73,7 +87,7 @@ export default function MyHRAttendanceLeave() {
       const lastMonth = subMonths(now, 1);
       return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
     }
-  }, [monthFilter]);
+  }, [monthFilter, dateMode]);
 
   // Filter attendance based on month
   const filteredAttendance = useMemo(() => {
