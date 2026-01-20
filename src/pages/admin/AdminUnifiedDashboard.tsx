@@ -456,17 +456,10 @@ const hrmMetrics = useMemo(() => {
                 <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Low Stock</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm md:text-base font-bold text-orange-600">
-                    {inventoryMetrics.lowStock}
-                  </p>
-                  {inventoryMetrics.highAlertCount > 0 && (
-                    <span className="text-[9px] md:text-xs text-red-600 font-medium">
-                      ({inventoryMetrics.highAlertCount} High Alert)
-                    </span>
-                  )}
-                </div>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">High Alert Stock</p>
+                <p className="text-sm md:text-base font-bold text-orange-600">
+                  {inventoryMetrics.highAlertCount}
+                </p>
               </div>
             </div>
           </CardContent>
