@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, X } from 'lucide-react';
+import { CompactProductSelect } from '@/components/ui/compact-product-select';
 import { useProducts } from '@/hooks/useProducts';
 import { useLeadSources } from '@/hooks/useLeadSources';
 import { supabase } from '@/integrations/supabase/client';
@@ -308,16 +309,12 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
                     placeholder="Optional"
                   />
                   
-                  <Select value={row.product_id} onValueChange={(v) => updateRow(row.id, 'product_id', v)}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.filter(p => p.is_active).map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CompactProductSelect
+                    products={products}
+                    value={row.product_id}
+                    onSelect={(v) => updateRow(row.id, 'product_id', v)}
+                    placeholder="Select product"
+                  />
                   
                   <Select value={row.source} onValueChange={(v) => updateRow(row.id, 'source', v)}>
                     <SelectTrigger className="h-9 text-sm">
