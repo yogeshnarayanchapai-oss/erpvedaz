@@ -67,7 +67,8 @@ export default function StockSummary() {
 
   const handleSave = async (item: WarehouseStockSummary) => {
     try {
-      const newReorderRequired = item.current_stock <= editValue;
+      // Only mark as reorder required if reorder_level > 0 and current_stock <= reorder_level
+      const newReorderRequired = editValue > 0 && item.current_stock <= editValue;
       
       const { error } = await supabase
         .from('product_inventory')
@@ -174,7 +175,7 @@ export default function StockSummary() {
       totalValue: acc.totalValue + item.stock_value,
       totalIn: acc.totalIn + item.total_in,
       totalOut: acc.totalOut + item.total_out,
-      reorderCount: acc.reorderCount + (item.reorder_required ? 1 : 0),
+      reorderCount: acc.reorderCount + (item.reorder_required && item.reorder_level > 0 ? 1 : 0),
     }),
     { totalProducts: 0, totalStock: 0, totalValue: 0, totalIn: 0, totalOut: 0, reorderCount: 0 }
   );
