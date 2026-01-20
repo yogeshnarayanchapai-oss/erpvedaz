@@ -406,7 +406,7 @@ export default function StockSummary() {
                           </div>
                           
                           {/* High Alert Info */}
-                          {highAlertDays && alertInfo && (
+                          {highAlertOnly && highAlertDays && alertInfo && (
                             <div className="grid grid-cols-2 gap-2 text-xs mt-2 pt-2 border-t border-dashed">
                               <div>
                                 <span className="text-muted-foreground">Avg Out/day ({highAlertDays}d)</span>
@@ -451,7 +451,7 @@ export default function StockSummary() {
                           <TableHead className="text-right text-green-600">In</TableHead>
                           <TableHead className="text-right text-red-600">Out</TableHead>
                           <TableHead className="text-right">Current</TableHead>
-                          {highAlertDays && (
+                          {highAlertOnly && highAlertDays && (
                             <>
                               <TableHead className="text-right">Avg Out/day</TableHead>
                               <TableHead className="text-right">Days Cover</TableHead>
@@ -488,7 +488,7 @@ export default function StockSummary() {
                                 -{inv.total_out}
                               </TableCell>
                               <TableCell className="text-right font-semibold">{inv.current_stock}</TableCell>
-                              {highAlertDays && (
+                              {highAlertOnly && highAlertDays && (
                                 <>
                                   <TableCell className="text-right">
                                     {alertInfo ? alertInfo.avgOutPerDay.toFixed(1) : '-'}

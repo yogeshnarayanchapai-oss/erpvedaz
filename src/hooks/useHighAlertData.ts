@@ -50,23 +50,11 @@ export function useHighAlertData(
       const outTotals: Record<string, number> = {};
 
       movements?.forEach((m: any) => {
-        // For TRANSFER movements, source warehouse loses stock
-        if (m.movement_type === 'TRANSFER') {
-          if (m.from_warehouse_id) {
-            const key = `${m.product_id}_${m.from_warehouse_id}`;
-            if (!outTotals[key]) outTotals[key] = 0;
-            outTotals[key] += m.qty || 0;
-          }
-        } else {
-          // OUT types: OUT, WHOLESALE_OUT, TRANSFER_OUT, RTO_OUT, ADJUSTMENT with MINUS
-          const isOut = ['OUT', 'TRANSFER_OUT', 'RTO_OUT', 'WHOLESALE_OUT'].includes(m.movement_type) ||
-                        (m.movement_type === 'ADJUSTMENT' && m.adjustment_direction === 'MINUS');
-
-          if (isOut && m.warehouse_id) {
-            const key = `${m.product_id}_${m.warehouse_id}`;
-            if (!outTotals[key]) outTotals[key] = 0;
-            outTotals[key] += m.qty || 0;
-          }
+        // Only count pure OUT movements for High Alert calculation
+        if (m.movement_type === 'OUT' && m.warehouse_id) {
+          const key = `${m.product_id}_${m.warehouse_id}`;
+          if (!outTotals[key]) outTotals[key] = 0;
+          outTotals[key] += m.qty || 0;
         }
       });
 
@@ -78,11 +66,12 @@ export function useHighAlertData(
         let daysCover: number | null = null;
         let isHighAlert = false;
 
-        if (avgOutPerDay > 0) {
+        if (avgOutPerDay >= 1) {
+          // Only products with avgOutPerDay >= 1 can be High Alert
           daysCover = currentStock / avgOutPerDay;
           isHighAlert = daysCover < highAlertDays;
         }
-        // If avgOutPerDay = 0, isHighAlert stays false
+        // If avgOutPerDay < 1, isHighAlert stays false (not included in High Alert)
 
         const [productId, warehouseId] = key.split('_');
         result.set(key, {
