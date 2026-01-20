@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,7 @@ import { format, subDays } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useAvailableStock } from '@/hooks/useAvailableStock';
 
 const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO_IN'] as const;
 
@@ -80,6 +81,13 @@ export default function StockMovements() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<StockMovement | null>(null);
   const [viewingMovement, setViewingMovement] = useState<StockMovement | null>(null);
+  const [insufficientStockAlert, setInsufficientStockAlert] = useState<{
+    show: boolean;
+    availableStock: number;
+    requiredQty: number;
+    productName: string;
+    warehouseName: string;
+  }>({ show: false, availableStock: 0, requiredQty: 0, productName: '', warehouseName: '' });
   const { effectiveRole } = useEffectiveRole();
   const canEdit = ['ADMIN', 'OWNER', 'MANAGER', 'WAREHOUSE'].includes(effectiveRole || '');
   const [form, setForm] = useState<{
@@ -138,6 +146,10 @@ export default function StockMovements() {
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
   const updateMovement = useUpdateStockMovement();
+
+  // Determine the warehouse ID to check stock for (source warehouse for transfers, regular warehouse for others)
+  const stockCheckWarehouseId = form.movement_type === 'TRANSFER' ? form.from_warehouse_id : form.warehouse_id;
+  const { data: availableStockData } = useAvailableStock(form.product_id || undefined, stockCheckWarehouseId || undefined);
 
   // Determine delivery location based on selected warehouse name
   const selectedWarehouse = warehouses?.find(w => w.id === form.warehouse_id);
@@ -230,6 +242,8 @@ export default function StockMovements() {
     // Validation based on movement type
     const isTransfer = form.movement_type === 'TRANSFER';
     const isWholesaleOut = form.movement_type === 'WHOLESALE_OUT';
+    const isOut = form.movement_type === 'OUT';
+    const isAdjustmentMinus = form.movement_type === 'ADJUSTMENT' && form.adjustment_direction === 'MINUS';
     
     if (!form.product_id || form.qty <= 0) return;
     
@@ -244,6 +258,27 @@ export default function StockMovements() {
     } else {
       // For non-transfers, require warehouse_id
       if (!form.warehouse_id) return;
+    }
+    
+    // Stock validation for stock-decreasing movements (OUT, TRANSFER, WHOLESALE_OUT, ADJUSTMENT MINUS)
+    const isStockDecreasing = isOut || isTransfer || isWholesaleOut || isAdjustmentMinus;
+    if (isStockDecreasing && !editingMovement) {
+      const currentAvailableStock = availableStockData?.currentStock ?? 0;
+      
+      if (form.qty > currentAvailableStock) {
+        const productName = products?.find(p => p.id === form.product_id)?.name || 'Selected Product';
+        const warehouseToCheck = isTransfer ? form.from_warehouse_id : form.warehouse_id;
+        const warehouseName = warehouses?.find(w => w.id === warehouseToCheck)?.name || 'Selected Warehouse';
+        
+        setInsufficientStockAlert({
+          show: true,
+          availableStock: currentAvailableStock,
+          requiredQty: form.qty,
+          productName,
+          warehouseName,
+        });
+        return;
+      }
     }
     
     // For WHOLESALE_OUT, party is optional now
@@ -527,6 +562,23 @@ export default function StockMovements() {
                     )}
                   </div>
                 )}
+                {/* Available Stock Info - shown for stock-decreasing movements */}
+                {(form.movement_type === 'OUT' || form.movement_type === 'TRANSFER' || form.movement_type === 'WHOLESALE_OUT' || (form.movement_type === 'ADJUSTMENT' && form.adjustment_direction === 'MINUS')) && form.product_id && (form.movement_type === 'TRANSFER' ? form.from_warehouse_id : form.warehouse_id) && (
+                  <div className={`p-3 rounded-md border ${(availableStockData?.currentStock ?? 0) <= 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'}`}>
+                    <div className="flex items-center gap-2">
+                      <Package className={`h-4 w-4 ${(availableStockData?.currentStock ?? 0) <= 0 ? 'text-red-600' : 'text-green-600'}`} />
+                      <span className={`text-sm font-medium ${(availableStockData?.currentStock ?? 0) <= 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                        Available Stock: {availableStockData?.currentStock ?? 0} units
+                      </span>
+                      {form.qty > (availableStockData?.currentStock ?? 0) && (
+                        <Badge variant="destructive" className="ml-auto">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Insufficient
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className={`grid gap-4 ${form.movement_type === 'OUT' ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <div className="space-y-2">
                     <Label>Quantity *</Label>
@@ -591,6 +643,50 @@ export default function StockMovements() {
               </div>
             </DialogContent>
           </Dialog>
+          
+          {/* Insufficient Stock Alert Dialog */}
+          <AlertDialog open={insufficientStockAlert.show} onOpenChange={(open) => setInsufficientStockAlert(prev => ({ ...prev, show: open }))}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Insufficient Stock
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <p>
+                    Cannot complete this movement. The requested quantity exceeds available stock.
+                  </p>
+                  <div className="bg-muted p-3 rounded-md space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Product:</span>
+                      <span className="font-medium">{insufficientStockAlert.productName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Warehouse:</span>
+                      <span className="font-medium">{insufficientStockAlert.warehouseName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Available Stock:</span>
+                      <span className="font-medium text-green-600">{insufficientStockAlert.availableStock} units</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Requested Quantity:</span>
+                      <span className="font-medium text-red-600">{insufficientStockAlert.requiredQty} units</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Shortage:</span>
+                      <span className="font-bold text-destructive">{insufficientStockAlert.requiredQty - insufficientStockAlert.availableStock} units</span>
+                    </div>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setInsufficientStockAlert(prev => ({ ...prev, show: false }))}>
+                  OK, I Understand
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
