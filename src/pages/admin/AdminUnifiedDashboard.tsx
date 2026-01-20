@@ -265,7 +265,7 @@ export default function AdminUnifiedDashboard() {
     const totals = inventoryData?.totals;
     const totalStock = totals?.totalStock || 0;
     const totalValue = totals?.totalValue || 0;
-    const lowStock = items.filter(i => i.reorder_required).length;
+    const lowStock = items.filter(i => i.reorder_required && i.reorder_level > 0).length;
     
     // Yesterday's P/L from daily_records (sum if multiple entries)
     const yesterdayProfit = yesterdayPLData?.reduce((sum, r) => sum + (r.profit_loss || 0), 0) || 0;

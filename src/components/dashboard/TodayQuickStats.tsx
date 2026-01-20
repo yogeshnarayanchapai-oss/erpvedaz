@@ -69,11 +69,12 @@ export function TodayQuickStats() {
         .select('*', { count: 'exact', head: true })
         .in('delivery_status', ['IN_TRANSIT', 'OUT_FOR_DELIVERY']);
 
-      // Low stock products
+      // Low stock products (excluding reorder_level = 0)
       const { count: lowStock } = await supabase
         .from('product_inventory')
         .select('*', { count: 'exact', head: true })
-        .eq('reorder_required', true);
+        .eq('reorder_required', true)
+        .gt('reorder_level', 0);
 
       // Pending inside valley deliveries
       const { count: pendingInsideValley } = await supabase

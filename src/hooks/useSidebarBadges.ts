@@ -175,11 +175,12 @@ export function useSidebarBadges() {
         const { count: leaveCount } = await leaveQuery;
         badges.leaveRequests = leaveCount || 0;
 
-        // Low stock alert (products below reorder level)
+        // Low stock alert (products below reorder level, excluding reorder_level = 0)
         const { count: lowStockCount } = await supabase
           .from('product_inventory')
           .select('*', { count: 'exact', head: true })
-          .eq('reorder_required', true);
+          .eq('reorder_required', true)
+          .gt('reorder_level', 0);
         badges.lowStock = lowStockCount || 0;
 
         // Pending documents for approval
