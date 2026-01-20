@@ -523,7 +523,8 @@ export default function PartyStatement() {
               .eq('id', entry.id);
             
             // Create a transaction record for account balance update
-            const isReceiving = entry.debit > 0;
+            // Credit entries are Receivables (WHOLESALE_OUT = they owe us) → settling = income
+            const isReceiving = entry.credit > 0;
             await supabase.from('transactions').insert({
               date: today,
               type: isReceiving ? 'income' : 'expense',
@@ -576,7 +577,8 @@ export default function PartyStatement() {
               .eq('id', entry.id);
             
             // Create a transaction record for the paid portion
-            const isReceiving = entry.debit > 0;
+            // Credit entries are Receivables (WHOLESALE_OUT = they owe us) → settling = income
+            const isReceiving = entry.credit > 0;
             await supabase.from('transactions').insert({
               date: today,
               type: isReceiving ? 'income' : 'expense',
@@ -900,8 +902,8 @@ export default function PartyStatement() {
         <Dialog open={inventoryPayDialogOpen} onOpenChange={setInventoryPayDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {selectedInventoryEntry?.debit && selectedInventoryEntry.debit > 0 ? 'Make Payment' : 'Receive Payment'}
+            <DialogTitle>
+                {selectedInventoryEntry?.credit && selectedInventoryEntry.credit > 0 ? 'Receive Payment' : 'Make Payment'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
