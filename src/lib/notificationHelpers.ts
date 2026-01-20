@@ -1,6 +1,10 @@
 import { createNotification, createNotifications, CreateNotificationParams } from '@/hooks/useNotifications';
 
 // Helper to notify when new leads are created
+// NOTE: Lead/Order related notifications are NO LONGER sent to ADMIN/OWNER roles.
+// ADMIN/OWNER can view all lead/order activities in Sales > Activity Log instead.
+// This keeps their notification inbox clean and focused on HRM/system notifications.
+
 export async function notifyNewLeadsCreated({
   count,
   productName,
@@ -16,6 +20,8 @@ export async function notifyNewLeadsCreated({
   portal: string;
   storeId?: string;
 }) {
+  // Log activity for Activity Log page (store in notifications but don't target ADMIN/OWNER)
+  // These will be visible in Sales > Activity Log
   await createNotifications([
     {
       type: 'LEAD_TRANSFER',
@@ -23,20 +29,7 @@ export async function notifyNewLeadsCreated({
       message: `${createdByName} created ${count} new lead${count > 1 ? 's' : ''}${productName ? ` for ${productName}` : ''} via ${portal}`,
       actorId: createdById,
       actorName: createdByName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
-      meta: { count, productName, portal },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'LEAD_TRANSFER',
-      title: 'New Leads Created',
-      message: `${createdByName} created ${count} new lead${count > 1 ? 's' : ''}${productName ? ` for ${productName}` : ''} via ${portal}`,
-      actorId: createdById,
-      actorName: createdByName,
-      targetRole: 'OWNER',
+      targetRole: 'MANAGER', // Only notify MANAGER, not ADMIN/OWNER
       portal: 'ADMIN',
       linkPath: '/admin/leads',
       meta: { count, productName, portal },
@@ -79,28 +72,14 @@ export async function notifyLeadTransfer({
     storeId,
   });
 
-  // Summary notification to Admin/Manager
+  // Summary notification to Manager only (not ADMIN/OWNER - they can view in Activity Log)
   notifications.push({
     type: 'LEAD_TRANSFER',
     title: 'Leads transferred',
     message: `Transferred ${count} lead${count > 1 ? 's' : ''} to ${targetUserName}${productName ? ` for ${productName}` : ''}.`,
     actorId,
     actorName,
-    targetRole: 'ADMIN',
-    portal: 'ADMIN',
-    linkPath: '/admin/leads',
-    meta: { count, productName, targetUserName, targetUserId },
-    storeId,
-  });
-
-  // Notify OWNER
-  notifications.push({
-    type: 'LEAD_TRANSFER',
-    title: 'Leads transferred',
-    message: `${actorName} transferred ${count} lead${count > 1 ? 's' : ''} to ${targetUserName}${productName ? ` for ${productName}` : ''}.`,
-    actorId,
-    actorName,
-    targetRole: 'OWNER',
+    targetRole: 'MANAGER',
     portal: 'ADMIN',
     linkPath: '/admin/leads',
     meta: { count, productName, targetUserName, targetUserId },
@@ -128,8 +107,8 @@ export async function notifyLeadReturnedToCNR({
   actorName: string;
   storeId?: string;
 }) {
+  // Only notify LEADS role - ADMIN/OWNER can see in Activity Log
   const notifications: CreateNotificationParams[] = [
-    // Notify LEADS role
     {
       type: 'LEAD_CNR',
       title: 'Lead returned as CNR',
@@ -139,32 +118,6 @@ export async function notifyLeadReturnedToCNR({
       targetRole: 'LEADS',
       portal: 'LEADS',
       linkPath: '/leads/dashboard',
-      meta: { leadId, customerName, phone, productName },
-      storeId,
-    },
-    // Notify Admin
-    {
-      type: 'LEAD_CNR',
-      title: 'Lead marked as CNR',
-      message: `${customerName} (${phone}) marked as CNR by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
-      meta: { leadId, customerName, phone, productName },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'LEAD_CNR',
-      title: 'Lead marked as CNR',
-      message: `${customerName} (${phone}) marked as CNR by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
       meta: { leadId, customerName, phone, productName },
       storeId,
     },
@@ -201,6 +154,7 @@ export async function notifyOrderConfirmed({
   const locationLabel = isInside ? 'Inside Valley' : 'Outside Valley';
   const logisticsPath = isInside ? '/logistics/orders/inside-valley' : '/logistics/orders/outside-valley';
 
+  // Only notify LOGISTICS and MANAGER - ADMIN/OWNER can see in Activity Log
   const notifications: CreateNotificationParams[] = [
     // Notify Logistics
     {
@@ -215,19 +169,6 @@ export async function notifyOrderConfirmed({
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
       storeId,
     },
-    // Notify Admin
-    {
-      type: 'ORDER_CONFIRMED',
-      title: `New ${locationLabel.toLowerCase()} order confirmed`,
-      message: `${actorName} confirmed: ${productName} x${quantity} for ${customerName} - Rs.${amount}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
-      storeId,
-    },
     // Notify Manager
     {
       type: 'ORDER_CONFIRMED',
@@ -236,19 +177,6 @@ export async function notifyOrderConfirmed({
       actorId,
       actorName,
       targetRole: 'MANAGER',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'ORDER_CONFIRMED',
-      title: `New ${locationLabel.toLowerCase()} order confirmed`,
-      message: `${actorName} confirmed: ${productName} x${quantity} for ${customerName} - Rs.${amount}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, quantity, customerName, phone, deliveryLocation, amount },
@@ -279,6 +207,7 @@ export async function notifyOrderRedirected({
   actorName: string;
   storeId?: string;
 }) {
+  // Only notify calling staff and Manager - ADMIN/OWNER can see in Activity Log
   const notifications: CreateNotificationParams[] = [
     // Notify the original calling staff
     {
@@ -293,19 +222,6 @@ export async function notifyOrderRedirected({
       meta: { orderId, productName, customerName, amount },
       storeId,
     },
-    // Notify Admin
-    {
-      type: 'ORDER_REDIRECTED',
-      title: 'Order redirected',
-      message: `${actorName} redirected order for ${customerName} (${productName}, Rs.${amount})`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { orderId, productName, customerName, amount },
-      storeId,
-    },
     // Notify Manager
     {
       type: 'ORDER_REDIRECTED',
@@ -314,19 +230,6 @@ export async function notifyOrderRedirected({
       actorId,
       actorName,
       targetRole: 'MANAGER',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { orderId, productName, customerName, amount },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'ORDER_REDIRECTED',
-      title: 'Order redirected',
-      message: `${actorName} redirected order for ${customerName} (${productName}, Rs.${amount})`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { orderId, productName, customerName, amount },
@@ -376,33 +279,7 @@ export async function notifyDeliveryUpdated({
     });
   }
 
-  // Notify Admin
-  notifications.push({
-    type: 'DELIVERY_UPDATED',
-    title: 'Delivery status updated',
-    message: `${actorName} updated order for ${customerName} to "${statusLabel}"`,
-    actorId,
-    actorName,
-    targetRole: 'ADMIN',
-    portal: 'ADMIN',
-    linkPath: '/admin/orders',
-    meta: { orderId, customerName, newStatus, deliveryLocation },
-    storeId,
-  });
-
-  // Notify OWNER
-  notifications.push({
-    type: 'DELIVERY_UPDATED',
-    title: 'Delivery status updated',
-    message: `${actorName} updated order for ${customerName} to "${statusLabel}"`,
-    actorId,
-    actorName,
-    targetRole: 'OWNER',
-    portal: 'ADMIN',
-    linkPath: '/admin/orders',
-    meta: { orderId, customerName, newStatus, deliveryLocation },
-    storeId,
-  });
+  // No notifications to ADMIN/OWNER - they can see in Activity Log
 
   // Notify Follow-up if outside valley
   if (deliveryLocation === 'OUTSIDE_VALLEY') {
@@ -443,20 +320,8 @@ export async function notifyInsideDeliveryUpdate({
 }) {
   const statusLabel = deliveryStatus.replace(/_/g, ' ').toLowerCase();
   
+  // Only notify Logistics - ADMIN/OWNER can see in Activity Log
   const notifications: CreateNotificationParams[] = [
-    // Notify Admin
-    {
-      type: 'DELIVERY_UPDATED',
-      title: 'Inside valley delivery update',
-      message: `${actorName} updated ${customerName}'s order to "${statusLabel}"${remark ? ` - ${remark}` : ''}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { orderId, customerName, deliveryStatus, remark },
-      storeId,
-    },
     // Notify Logistics
     {
       type: 'DELIVERY_UPDATED',
@@ -467,19 +332,6 @@ export async function notifyInsideDeliveryUpdate({
       targetRole: 'LOGISTICS',
       portal: 'LOGISTICS',
       linkPath: '/logistics/orders/inside-valley',
-      meta: { orderId, customerName, deliveryStatus, remark },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'DELIVERY_UPDATED',
-      title: 'Inside valley delivery update',
-      message: `${actorName} updated ${customerName}'s order to "${statusLabel}"${remark ? ` - ${remark}` : ''}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
       meta: { orderId, customerName, deliveryStatus, remark },
       storeId,
     },
@@ -518,36 +370,9 @@ export async function notifyLeadStatusChange({
     CANCELLED: 'Cancelled',
   };
 
-  const notifications: CreateNotificationParams[] = [
-    // Notify Admin
-    {
-      type: typeMap[newStatus],
-      title: `Lead status: ${labelMap[newStatus]}`,
-      message: `${customerName} (${phone}) marked as ${labelMap[newStatus]} by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
-      meta: { leadId, customerName, phone, newStatus },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: typeMap[newStatus],
-      title: `Lead status: ${labelMap[newStatus]}`,
-      message: `${customerName} (${phone}) marked as ${labelMap[newStatus]} by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
-      meta: { leadId, customerName, phone, newStatus },
-      storeId,
-    },
-  ];
-
-  // Notify LEADS role for CNR and Cancelled statuses
+  // Only notify LEADS role for CNR and Cancelled - ADMIN/OWNER can see in Activity Log
+  const notifications: CreateNotificationParams[] = [];
+  
   if (newStatus === 'CALL_NOT_RECEIVED' || newStatus === 'CANCELLED') {
     notifications.push({
       type: typeMap[newStatus],
@@ -563,7 +388,9 @@ export async function notifyLeadStatusChange({
     });
   }
 
-  await createNotifications(notifications);
+  if (notifications.length > 0) {
+    await createNotifications(notifications);
+  }
 }
 
 // Helper for logistics export
@@ -580,19 +407,8 @@ export async function notifyLogisticsExport({
   actorName: string;
   storeId?: string;
 }) {
+  // Only notify MANAGER - ADMIN/OWNER can see in Activity Log
   await createNotifications([
-    {
-      type: 'LOGISTICS_EXPORTED',
-      title: 'Orders exported to partner',
-      message: `${actorName} exported ${count} order${count > 1 ? 's' : ''} to ${partnerName}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { count, partnerName },
-      storeId,
-    },
     {
       type: 'LOGISTICS_EXPORTED',
       title: 'Orders exported to partner',
@@ -600,19 +416,6 @@ export async function notifyLogisticsExport({
       actorId,
       actorName,
       targetRole: 'MANAGER',
-      portal: 'ADMIN',
-      linkPath: '/admin/orders',
-      meta: { count, partnerName },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'LOGISTICS_EXPORTED',
-      title: 'Orders exported to partner',
-      message: `${actorName} exported ${count} order${count > 1 ? 's' : ''} to ${partnerName}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: '/admin/orders',
       meta: { count, partnerName },
@@ -679,6 +482,7 @@ export async function notifyOrderEdited({
   actorName: string;
   storeId?: string;
 }) {
+  // Only notify MANAGER - ADMIN/OWNER can see in Activity Log
   await createNotifications([
     {
       type: 'ORDER_EDITED',
@@ -686,32 +490,7 @@ export async function notifyOrderEdited({
       message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
       actorId,
       actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: `/admin/orders/${orderId}`,
-      meta: { orderId, customerName, changeCount },
-      storeId,
-    },
-    {
-      type: 'ORDER_EDITED',
-      title: 'Order edited',
-      message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
-      actorId,
-      actorName,
       targetRole: 'MANAGER',
-      portal: 'ADMIN',
-      linkPath: `/admin/orders/${orderId}`,
-      meta: { orderId, customerName, changeCount },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'ORDER_EDITED',
-      title: 'Order edited',
-      message: `${actorName} edited order for ${customerName} (${changeCount} field${changeCount > 1 ? 's' : ''} changed)`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
       portal: 'ADMIN',
       linkPath: `/admin/orders/${orderId}`,
       meta: { orderId, customerName, changeCount },
@@ -748,21 +527,8 @@ export async function notifyDuplicatePhoneDetected({
     ? `existing customer "${existingCustomerName}" (${existingCustomerOrders || 0} orders)`
     : `existing lead "${existingLeadName}"`;
 
+  // Only notify LEADS role - ADMIN/OWNER can see in Activity Log
   const notifications: CreateNotificationParams[] = [
-    // Notify ADMIN
-    {
-      type: 'LEAD_DUPLICATE',
-      title: 'Duplicate phone detected',
-      message: `${customerName} (${phone}) matches ${duplicateInfo}. Created by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'ADMIN',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
-      meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
-      storeId,
-    },
-    // Notify LEADS role
     {
       type: 'LEAD_DUPLICATE',
       title: 'Duplicate phone detected',
@@ -772,19 +538,6 @@ export async function notifyDuplicatePhoneDetected({
       targetRole: 'LEADS',
       portal: 'LEADS',
       linkPath: '/leads/all',
-      meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
-      storeId,
-    },
-    // Notify OWNER
-    {
-      type: 'LEAD_DUPLICATE',
-      title: 'Duplicate phone detected',
-      message: `${customerName} (${phone}) matches ${duplicateInfo}. Created by ${actorName}`,
-      actorId,
-      actorName,
-      targetRole: 'OWNER',
-      portal: 'ADMIN',
-      linkPath: '/admin/leads',
       meta: { leadId, customerName, phone, productName, existingCustomerName, existingLeadName },
       storeId,
     },

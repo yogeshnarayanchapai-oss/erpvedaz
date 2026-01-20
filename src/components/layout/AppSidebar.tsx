@@ -218,6 +218,7 @@ const salesItems: MenuItem[] = [
   { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
   { title: 'Customers', url: '/admin/customers', icon: Users },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Activity Log', url: '/admin/sales/activity-log', icon: History },
   { 
     title: 'Reports', 
     url: '/admin/reports', 

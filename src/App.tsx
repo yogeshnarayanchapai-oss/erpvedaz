@@ -38,6 +38,7 @@ import DailyPerformance from "./pages/admin/reports/DailyPerformance";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminStaffTargets from "./pages/admin/AdminStaffTargets";
 import AdminNotifications from "./pages/admin/AdminNotifications";
+import SalesActivityLog from "./pages/admin/SalesActivityLog";
 import AdminDataTools from "./pages/admin/AdminDataTools";
 import SalesSettings from "./pages/admin/SalesSettings";
 import AdminBranding from "./pages/admin/AdminBranding";
@@ -239,6 +240,7 @@ const App = () => (
                 <Route path="/admin/reports" element={<AdminReports />} />
                 <Route path="/admin/reports/daily-performance" element={<DailyPerformance />} />
                 <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                <Route path="/admin/sales/activity-log" element={<SalesActivityLog />} />
                 <Route path="/admin/accounting/dashboard" element={<AccountingDashboard />} />
                 <Route path="/admin/accounting/dashboard-new" element={<AccountingDashboardNew />} />
                 <Route path="/admin/accounting/new-deposit" element={<NewDeposit />} />
