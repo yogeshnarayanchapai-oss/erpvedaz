@@ -154,13 +154,13 @@ export default function HRMSalarySlip() {
       
       if (row.color === 'green') {
         doc.setTextColor(34, 139, 34);
-        doc.text(`+ रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+        doc.text(`+ Rs. ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
       } else if (row.color === 'red') {
         doc.setTextColor(220, 53, 69);
-        doc.text(`- रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+        doc.text(`- Rs. ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
       } else {
         doc.setTextColor(0);
-        doc.text(`रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+        doc.text(`Rs. ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
       }
       y += 10;
     });
@@ -172,7 +172,7 @@ export default function HRMSalarySlip() {
     doc.setFontSize(11);
     doc.setTextColor(37, 99, 235);
     doc.text('Net Salary Payable', 25, y + 8);
-    doc.text(`रू ${viewSlip.net_salary.toLocaleString()}`, pageWidth - 25, y + 8, { align: 'right' });
+    doc.text(`Rs. ${viewSlip.net_salary.toLocaleString()}`, pageWidth - 25, y + 8, { align: 'right' });
     y += 12;
 
     // Table border
