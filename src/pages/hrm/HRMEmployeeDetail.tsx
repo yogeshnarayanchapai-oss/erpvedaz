@@ -16,6 +16,9 @@ import { EmployeeDocumentsTab } from '@/components/hrm/EmployeeDocumentsTab';
 import { EmployeeBankAccountsCard } from '@/components/hrm/EmployeeBankAccountsCard';
 import { EmployeeAssignedAssetsCard } from '@/components/hrm/EmployeeAssignedAssetsCard';
 import { EmployeeLeaveQuotaCard } from '@/components/hrm/EmployeeLeaveQuotaCard';
+import { useDateMode } from '@/contexts/DateModeContext';
+import { getCurrentBSMonthRange, getPreviousBSMonthRange } from '@/lib/nepaliDate';
+import { FormattedDate } from '@/components/FormattedDate';
 
 interface EmployeeDetail {
   id: string;
@@ -52,9 +55,23 @@ export default function HRMEmployeeDetail() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [attendanceFilter, setAttendanceFilter] = useState<'this_month' | 'last_month'>('this_month');
+  
+  // Date mode for BS/AD filter logic
+  const { dateMode } = useDateMode();
 
-  // Calculate date range for attendance filter
+  // Calculate date range for attendance filter based on date mode
   const attendanceDateRange = useMemo(() => {
+    // If BS mode, use BS month boundaries
+    if (dateMode === 'BS') {
+      const bsRange = attendanceFilter === 'this_month' 
+        ? getCurrentBSMonthRange() 
+        : getPreviousBSMonthRange();
+      return {
+        from: format(bsRange.start, 'yyyy-MM-dd'),
+        to: format(bsRange.end, 'yyyy-MM-dd')
+      };
+    }
+    // AD mode - use standard AD months
     const today = new Date();
     if (attendanceFilter === 'this_month') {
       return {
@@ -68,7 +85,7 @@ export default function HRMEmployeeDetail() {
         to: format(endOfMonth(lastMonth), 'yyyy-MM-dd')
       };
     }
-  }, [attendanceFilter]);
+  }, [attendanceFilter, dateMode]);
 
   const { data: employee, isLoading: employeeLoading } = useQuery({
     queryKey: ['employee-detail', id],
@@ -500,9 +517,9 @@ export default function HRMEmployeeDetail() {
                   </TableHeader>
                   <TableBody>
                     {attendanceRecords.map((record) => (
-                      <TableRow key={record.id}>
+                      <TableRow key={record.id} className={record.status === 'Late' ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
                         <TableCell className="font-medium">
-                          {format(new Date(record.date), 'MMM dd, yyyy')}
+                          <FormattedDate date={record.date} />
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={getAttendanceStatusColor(record.status)}>
