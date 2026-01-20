@@ -374,7 +374,7 @@ export default function StockSummary() {
                               {alertInfo?.isHighAlert && (
                                 <Badge className="bg-orange-500 text-white text-xs">High Alert</Badge>
                               )}
-                              {item.reorder_required && (
+                              {item.reorder_required && item.reorder_level > 0 && (
                                 <Badge variant="destructive" className="text-xs">Reorder</Badge>
                               )}
                             </div>
@@ -462,7 +462,7 @@ export default function StockSummary() {
                               className={
                                 alertInfo?.isHighAlert 
                                   ? 'bg-orange-50 dark:bg-orange-950/20' 
-                                  : inv.reorder_required 
+                                  : inv.reorder_required && inv.reorder_level > 0
                                     ? 'bg-destructive/10' 
                                     : ''
                               }
@@ -525,7 +525,7 @@ export default function StockSummary() {
                                   {alertInfo?.isHighAlert && (
                                     <Badge className="bg-orange-500 hover:bg-orange-600 text-white">Alert</Badge>
                                   )}
-                                  {inv.reorder_required ? (
+                                  {inv.reorder_required && inv.reorder_level > 0 ? (
                                     <Badge variant="destructive">Reorder</Badge>
                                   ) : !alertInfo?.isHighAlert && (
                                     <Badge variant="secondary">OK</Badge>
