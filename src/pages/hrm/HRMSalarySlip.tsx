@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Printer } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
+import jsPDF from 'jspdf';
 
 export default function HRMSalarySlip() {
   const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
@@ -25,8 +26,219 @@ export default function HRMSalarySlip() {
   const getEmployee = (id: string) => employees.find((e) => e.id === id);
   const getBank = (id: string | null) => id ? bankAccounts.find((b) => b.id === id) : bankAccounts.find((b) => b.is_default);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    if (!viewSlip) return;
+
+    const employee = getEmployee(viewSlip.employee_id);
+    const bank = getBank(employee?.bank_account_id || null);
+    const companyName = currentStore?.name || company?.company_name || 'Company';
+    const employeeName = viewSlip.employees?.full_name || 'Employee';
+    const monthYear = format(new Date(viewSlip.month), 'MMMM yyyy');
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Header - Company Name
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(companyName, pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    // Company Details
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    if (company?.address) {
+      doc.text(company.address, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+    }
+    if (company?.phone || company?.email) {
+      const contactInfo = [company?.phone, company?.email].filter(Boolean).join(' | ');
+      doc.text(contactInfo, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+    }
+
+    // Divider line
+    y += 3;
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.5);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 10;
+
+    // Title
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text('SALARY SLIP', pageWidth / 2, y, { align: 'center' });
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    doc.text(`For the month of ${monthYear}`, pageWidth / 2, y, { align: 'center' });
+    y += 12;
+
+    // Slip Number
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Slip No: ${viewSlip.id.slice(0, 8).toUpperCase()}`, pageWidth - 20, y, { align: 'right' });
+    y += 10;
+
+    // Employee Info Box
+    doc.setFillColor(248, 249, 250);
+    doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, 'F');
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Employee Name:', 25, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(employeeName, 70, y);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    doc.text('Status:', pageWidth / 2 + 10, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(viewSlip.payment_status === 'Paid' ? 34 : 100, viewSlip.payment_status === 'Paid' ? 139 : 100, viewSlip.payment_status === 'Paid' ? 34 : 100);
+    doc.text(viewSlip.payment_status, pageWidth / 2 + 30, y);
+
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    doc.text('Position:', 25, y);
+    doc.setTextColor(0);
+    doc.text(employee?.position || '-', 70, y);
+
+    doc.setTextColor(80);
+    doc.text('Payment Date:', pageWidth / 2 + 10, y);
+    doc.setTextColor(0);
+    doc.text(viewSlip.paid_on ? format(new Date(viewSlip.paid_on), 'dd MMM yyyy') : 'Pending', pageWidth / 2 + 48, y);
+
+    y += 8;
+    doc.setTextColor(80);
+    doc.text('Department:', 25, y);
+    doc.setTextColor(0);
+    doc.text(employee?.departments?.name || '-', 70, y);
+
+    y += 20;
+
+    // Salary Breakdown Table
+    const tableStartY = y;
+    const colWidth = (pageWidth - 40) / 2;
+
+    // Table Header
+    doc.setFillColor(59, 130, 246);
+    doc.rect(20, y, pageWidth - 40, 10, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255);
+    doc.text('Description', 25, y + 7);
+    doc.text('Amount (NPR)', pageWidth - 25, y + 7, { align: 'right' });
+    y += 10;
+
+    // Table Rows
+    const rows = [
+      { label: 'Basic Salary', value: viewSlip.basic_salary, color: null },
+      { label: 'Allowances', value: viewSlip.allowances || 0, color: 'green' },
+      { label: 'Deductions', value: viewSlip.deductions || 0, color: 'red' },
+    ];
+
+    rows.forEach((row, index) => {
+      doc.setFillColor(index % 2 === 0 ? 255 : 249, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 251);
+      doc.rect(20, y, pageWidth - 40, 10, 'F');
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60);
+      doc.text(row.label, 25, y + 7);
+      
+      if (row.color === 'green') {
+        doc.setTextColor(34, 139, 34);
+        doc.text(`+ रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+      } else if (row.color === 'red') {
+        doc.setTextColor(220, 53, 69);
+        doc.text(`- रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+      } else {
+        doc.setTextColor(0);
+        doc.text(`रू ${row.value.toLocaleString()}`, pageWidth - 25, y + 7, { align: 'right' });
+      }
+      y += 10;
+    });
+
+    // Net Salary Row
+    doc.setFillColor(239, 246, 255);
+    doc.rect(20, y, pageWidth - 40, 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(37, 99, 235);
+    doc.text('Net Salary Payable', 25, y + 8);
+    doc.text(`रू ${viewSlip.net_salary.toLocaleString()}`, pageWidth - 25, y + 8, { align: 'right' });
+    y += 12;
+
+    // Table border
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.3);
+    doc.rect(20, tableStartY, pageWidth - 40, y - tableStartY);
+
+    y += 12;
+
+    // Bank Details
+    if (bank) {
+      doc.setFillColor(248, 249, 250);
+      doc.roundedRect(20, y, pageWidth - 40, 22, 3, 3, 'F');
+      y += 8;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text('Payment Details', 25, y);
+      y += 8;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      doc.text(`Bank: ${bank.bank_name}`, 25, y);
+      doc.text(`A/C No: ${bank.account_number}`, pageWidth / 2, y);
+      y += 18;
+    }
+
+    // Notes
+    if (viewSlip.notes) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text('Remarks:', 20, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      doc.text(viewSlip.notes, 20, y);
+      y += 12;
+    }
+
+    // Footer
+    y = Math.max(y + 10, 250);
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.3);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 8;
+
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(`Generated on: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, 20, y);
+    y += 4;
+    doc.text('This is a computer-generated document. No signature required.', 20, y);
+
+    // Authorized Signature
+    doc.setDrawColor(150);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([2, 1], 0);
+    doc.line(pageWidth - 70, y - 8, pageWidth - 20, y - 8);
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text('Authorized Signature', pageWidth - 45, y, { align: 'center' });
+
+    // Save PDF
+    const fileName = `Salary_Slip_${employeeName.replace(/\s+/g, '_')}_${format(new Date(viewSlip.month), 'MMM_yyyy')}.pdf`;
+    doc.save(fileName);
   };
 
   return (
@@ -55,7 +267,7 @@ export default function HRMSalarySlip() {
               {records.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
-                  <TableCell className="text-right font-bold">₹{r.net_salary.toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge></TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => setViewSlip(r)}>
@@ -71,147 +283,133 @@ export default function HRMSalarySlip() {
       </Card>
 
       <Dialog open={!!viewSlip} onOpenChange={(open) => !open && setViewSlip(null)}>
-        <DialogContent className="max-w-2xl print:max-w-full print:m-0 print:shadow-none">
-          <DialogHeader className="print:hidden">
-            <DialogTitle>Salary Slip</DialogTitle>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Salary Slip Preview
+            </DialogTitle>
           </DialogHeader>
           {viewSlip && (
-            <div className="space-y-6 p-6 border rounded-lg bg-white print:border-none print:shadow-none" id="salary-slip">
-              {/* Store Header with Logo */}
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center gap-4">
-                  {(branding?.logo_url || currentStore?.logo_url) && (
-                    <img 
-                      src={branding?.logo_url || currentStore?.logo_url || ''} 
-                      alt="Store Logo" 
-                      className="h-16 w-auto object-contain"
-                    />
-                  )}
-                  <div>
-                    <h2 className="text-2xl font-bold text-primary">{currentStore?.name || company?.company_name || 'Company Name'}</h2>
-                    {company?.address && <p className="text-sm text-muted-foreground">{company.address}</p>}
-                    {company?.phone && <p className="text-sm text-muted-foreground">Phone: {company.phone}</p>}
-                    {company?.email && <p className="text-sm text-muted-foreground">Email: {company.email}</p>}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="inline-block px-4 py-2 bg-primary/10 rounded-lg">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Slip No.</p>
-                    <p className="font-mono font-bold text-primary">{viewSlip.id.slice(0, 8).toUpperCase()}</p>
-                  </div>
-                </div>
+            <div className="space-y-4" id="salary-slip">
+              {/* Company Header */}
+              <div className="text-center border-b pb-4">
+                {(branding?.logo_url || currentStore?.logo_url) && (
+                  <img 
+                    src={branding?.logo_url || currentStore?.logo_url || ''} 
+                    alt="Logo" 
+                    className="h-12 w-auto object-contain mx-auto mb-2"
+                  />
+                )}
+                <h2 className="text-xl font-bold text-foreground">{currentStore?.name || company?.company_name || 'Company Name'}</h2>
+                {company?.address && <p className="text-xs text-muted-foreground">{company.address}</p>}
+                {(company?.phone || company?.email) && (
+                  <p className="text-xs text-muted-foreground">{[company?.phone, company?.email].filter(Boolean).join(' | ')}</p>
+                )}
               </div>
 
-              {/* Title Banner */}
-              <div className="text-center py-3 bg-primary rounded-lg">
-                <h3 className="text-lg font-bold text-primary-foreground uppercase tracking-widest">Salary Slip</h3>
-                <p className="text-sm text-primary-foreground/80">For the month of {format(new Date(viewSlip.month), 'MMMM yyyy')}</p>
+              {/* Title */}
+              <div className="text-center py-2 bg-primary/10 rounded-md">
+                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Salary Slip</h3>
+                <p className="text-xs text-muted-foreground">{format(new Date(viewSlip.month), 'MMMM yyyy')}</p>
               </div>
 
-              {/* Employee Info Card */}
-              <div className="grid grid-cols-2 gap-6 p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-2">
+              {/* Employee Info */}
+              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-md text-sm">
+                <div className="space-y-1">
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground text-sm w-32">Employee Name:</span>
-                    <span className="font-semibold">{viewSlip.employees?.full_name}</span>
+                    <span className="text-muted-foreground">Name:</span>
+                    <span className="font-medium">{viewSlip.employees?.full_name}</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground text-sm w-32">Position:</span>
-                    <span className="font-medium">{getEmployee(viewSlip.employee_id)?.position || '-'}</span>
+                    <span className="text-muted-foreground">Position:</span>
+                    <span>{getEmployee(viewSlip.employee_id)?.position || '-'}</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-muted-foreground text-sm w-32">Department:</span>
-                    <span className="font-medium">{getEmployee(viewSlip.employee_id)?.departments?.name || '-'}</span>
+                    <span className="text-muted-foreground">Department:</span>
+                    <span>{getEmployee(viewSlip.employee_id)?.departments?.name || '-'}</span>
                   </div>
                 </div>
-                <div className="space-y-2 text-right">
+                <div className="space-y-1 text-right">
                   <div className="flex justify-end gap-2">
-                    <span className="text-muted-foreground text-sm">Payment Date:</span>
-                    <span className="font-semibold">{viewSlip.paid_on ? format(new Date(viewSlip.paid_on), 'dd MMM yyyy') : 'Pending'}</span>
+                    <span className="text-muted-foreground">Slip No:</span>
+                    <span className="font-mono text-xs">{viewSlip.id.slice(0, 8).toUpperCase()}</span>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <span className="text-muted-foreground text-sm">Status:</span>
-                    <Badge variant={viewSlip.payment_status === 'Paid' ? 'default' : 'secondary'} className="print:border print:border-current">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={viewSlip.payment_status === 'Paid' ? 'default' : 'secondary'} className="text-xs">
                       {viewSlip.payment_status}
                     </Badge>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <span className="text-muted-foreground">Paid On:</span>
+                    <span>{viewSlip.paid_on ? format(new Date(viewSlip.paid_on), 'dd MMM yyyy') : '-'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Salary Breakdown */}
-              <div className="border rounded-lg overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
-                  <thead className="bg-primary text-primary-foreground">
-                    <tr>
-                      <th className="text-left p-4 font-semibold">Description</th>
-                      <th className="text-right p-4 font-semibold">Amount (NPR)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t bg-white">
-                      <td className="p-4">Basic Salary</td>
-                      <td className="text-right p-4 font-medium">रू {viewSlip.basic_salary.toLocaleString()}</td>
-                    </tr>
-                    <tr className="border-t bg-muted/30">
-                      <td className="p-4">Allowances</td>
-                      <td className="text-right p-4 font-medium text-green-600">+ रू {(viewSlip.allowances || 0).toLocaleString()}</td>
-                    </tr>
-                    <tr className="border-t bg-white">
-                      <td className="p-4">Deductions</td>
-                      <td className="text-right p-4 font-medium text-destructive">- रू {(viewSlip.deductions || 0).toLocaleString()}</td>
-                    </tr>
-                    <tr className="border-t-2 border-primary bg-primary/5">
-                      <td className="p-4 font-bold text-primary">Net Salary Payable</td>
-                      <td className="text-right p-4 font-bold text-primary text-lg">रू {viewSlip.net_salary.toLocaleString()}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="border rounded-md overflow-hidden">
+                <div className="grid grid-cols-2 bg-primary text-primary-foreground text-sm font-medium">
+                  <div className="p-2.5">Description</div>
+                  <div className="p-2.5 text-right">Amount (NPR)</div>
+                </div>
+                <div className="divide-y">
+                  <div className="grid grid-cols-2 text-sm">
+                    <div className="p-2.5">Basic Salary</div>
+                    <div className="p-2.5 text-right font-medium">रू {viewSlip.basic_salary.toLocaleString()}</div>
+                  </div>
+                  <div className="grid grid-cols-2 text-sm bg-muted/30">
+                    <div className="p-2.5">Allowances</div>
+                    <div className="p-2.5 text-right font-medium text-green-600">+ रू {(viewSlip.allowances || 0).toLocaleString()}</div>
+                  </div>
+                  <div className="grid grid-cols-2 text-sm">
+                    <div className="p-2.5">Deductions</div>
+                    <div className="p-2.5 text-right font-medium text-destructive">- रू {(viewSlip.deductions || 0).toLocaleString()}</div>
+                  </div>
+                  <div className="grid grid-cols-2 text-sm bg-primary/5 font-bold">
+                    <div className="p-3 text-primary">Net Salary</div>
+                    <div className="p-3 text-right text-primary text-base">रू {viewSlip.net_salary.toLocaleString()}</div>
+                  </div>
+                </div>
               </div>
 
               {/* Bank Details */}
               {getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null) && (
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="font-semibold mb-2 text-primary">Payment Details</p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Bank Name:</span>
-                      <p className="font-medium">{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.bank_name}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Account Number:</span>
-                      <p className="font-medium font-mono">{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.account_number}</p>
-                    </div>
+                <div className="p-3 bg-muted/50 rounded-md text-sm">
+                  <p className="font-medium text-primary mb-1">Bank Details</p>
+                  <div className="flex gap-6 text-muted-foreground">
+                    <span>{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.bank_name}</span>
+                    <span className="font-mono">{getBank(getEmployee(viewSlip.employee_id)?.bank_account_id || null)?.account_number}</span>
                   </div>
                 </div>
               )}
 
               {/* Notes */}
               {viewSlip.notes && (
-                <div className="p-4 border-l-4 border-primary/50 bg-primary/5 rounded-r-lg">
-                  <p className="font-semibold text-sm text-primary">Remarks</p>
-                  <p className="text-muted-foreground text-sm mt-1">{viewSlip.notes}</p>
+                <div className="p-3 border-l-2 border-primary/50 bg-primary/5 rounded-r-md text-sm">
+                  <p className="font-medium text-primary">Remarks</p>
+                  <p className="text-muted-foreground">{viewSlip.notes}</p>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="border-t pt-4 mt-6">
-                <div className="flex justify-between items-end">
-                  <div className="text-xs text-muted-foreground">
-                    <p>Generated on: {format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
-                    <p className="mt-1">This is a computer-generated document. No signature required.</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="border-t border-dashed pt-2 w-40">
-                      <p className="text-xs text-muted-foreground">Authorized Signature</p>
-                    </div>
-                  </div>
+              <div className="pt-3 border-t text-xs text-muted-foreground flex justify-between items-end">
+                <div>
+                  <p>Generated: {format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
+                  <p>Computer-generated document</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-t border-dashed w-24 mb-1"></div>
+                  <span>Authorized Signature</span>
                 </div>
               </div>
             </div>
           )}
-          <div className="flex justify-end gap-2 print:hidden">
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />Print
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleDownloadPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              Download PDF
             </Button>
           </div>
         </DialogContent>
