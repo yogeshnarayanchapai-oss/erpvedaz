@@ -19,19 +19,6 @@ Deno.serve(async (req) => {
     const todayStr = today.toISOString().split("T")[0];
     const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
 
-    // Skip if today is Saturday (auto holiday)
-    if (dayOfWeek === 6) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Saturday is auto holiday - skipping absent marking",
-          markedAbsent: 0,
-          employees: [],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Check current time - only run after 10 PM (22:00)
     const currentHour = today.getHours();
     if (currentHour < 22) {
@@ -50,8 +37,7 @@ Deno.serve(async (req) => {
     const { data: employees, error: empError } = await supabase
       .from("employees")
       .select("id, full_name, store_id, office_start_time, grace_minutes")
-      .eq("status", "Active")
-      .not("store_id", "is", null);
+      .eq("status", "Active");
 
     if (empError) throw empError;
 
@@ -72,12 +58,12 @@ Deno.serve(async (req) => {
     const { data: holidays, error: holError } = await supabase
       .from("office_holidays")
       .select("store_id")
-      .eq("date", todayStr)
-      .in("store_id", storeIds);
+      .eq("date", todayStr);
 
     if (holError) throw holError;
 
     const holidayStoreIds = new Set(holidays?.map((h) => h.store_id) || []);
+    const hasGlobalHoliday = holidays?.some(h => h.store_id === null) || false;
 
     // Fetch approved leave requests that cover today
     const { data: approvedLeaves, error: leaveError } = await supabase
@@ -91,33 +77,65 @@ Deno.serve(async (req) => {
 
     const employeesOnLeave = new Set(approvedLeaves?.map((l) => l.employee_id) || []);
 
-    // Filter employees who should be marked absent
-    const absentEmployees = (employees || []).filter((emp) => {
+    // Build records to insert with appropriate status
+    const recordsToInsert: Array<{
+      employee_id: string;
+      date: string;
+      status: string;
+      store_id: string | null;
+      notes: string;
+    }> = [];
+
+    const isSaturday = dayOfWeek === 6;
+
+    for (const emp of employees || []) {
       // Skip if already has an attendance record
-      if (checkedInEmployeeIds.has(emp.id)) return false;
+      if (checkedInEmployeeIds.has(emp.id)) continue;
 
-      // Skip if employee's store has a holiday today
-      if (holidayStoreIds.has(emp.store_id)) return false;
+      let status: string;
+      let notes: string;
 
-      // Skip if employee has approved leave today
-      if (employeesOnLeave.has(emp.id)) return false;
+      // 1. Saturday (weekly off)
+      if (isSaturday) {
+        status = "Saturday";
+        notes = "Weekly off (Saturday)";
+      }
+      // 2. Approved leave
+      else if (employeesOnLeave.has(emp.id)) {
+        status = "Leave";
+        notes = "Approved leave";
+      }
+      // 3. Global holiday or store-specific holiday
+      else if (hasGlobalHoliday || (emp.store_id && holidayStoreIds.has(emp.store_id))) {
+        status = "Holiday";
+        notes = "Office holiday";
+      }
+      // 4. No check-in = Absent
+      else {
+        status = "Absent";
+        notes = "Auto-marked absent (no check-in by 10 PM)";
+      }
 
-      return true;
-    });
-
-    // Mark absent employees
-    if (absentEmployees.length > 0) {
-      const absentRecords = absentEmployees.map((emp) => ({
+      recordsToInsert.push({
         employee_id: emp.id,
         date: todayStr,
-        status: "Absent",
+        status,
         store_id: emp.store_id,
-        notes: "Auto-marked absent (no check-in by 10 PM)",
-      }));
+        notes,
+      });
+    }
 
+    // Count by status
+    const statusCounts: Record<string, number> = {};
+    recordsToInsert.forEach(r => {
+      statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+    });
+
+    // Insert records
+    if (recordsToInsert.length > 0) {
       const { error: insertError } = await supabase
         .from("attendance_records")
-        .upsert(absentRecords, { onConflict: "employee_id,date", ignoreDuplicates: true });
+        .upsert(recordsToInsert, { onConflict: "employee_id,date" });
 
       if (insertError) throw insertError;
     }
@@ -125,17 +143,20 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        markedAbsent: absentEmployees.length,
-        employees: absentEmployees.map((e) => e.full_name),
-        skippedHoliday: holidayStoreIds.size,
-        skippedLeave: employeesOnLeave.size,
+        totalRecords: recordsToInsert.length,
+        statusBreakdown: statusCounts,
+        employees: recordsToInsert.map((r) => {
+          const emp = employees?.find(e => e.id === r.employee_id);
+          return { name: emp?.full_name, status: r.status };
+        }),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error marking absent employees:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error?.message || "Unknown error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
