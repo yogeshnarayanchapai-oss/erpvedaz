@@ -65,7 +65,7 @@ export default function MyHRAttendanceLeave() {
   };
 
   // Get date range based on filter
-  const getDateRange = () => {
+  const dateRange = useMemo(() => {
     const now = new Date();
     if (monthFilter === 'this') {
       return { start: startOfMonth(now), end: endOfMonth(now) };
@@ -73,9 +73,7 @@ export default function MyHRAttendanceLeave() {
       const lastMonth = subMonths(now, 1);
       return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
     }
-  };
-
-  const dateRange = getDateRange();
+  }, [monthFilter]);
 
   // Filter attendance based on month
   const filteredAttendance = useMemo(() => {
@@ -83,7 +81,7 @@ export default function MyHRAttendanceLeave() {
       const recordDate = new Date(a.date);
       return recordDate >= dateRange.start && recordDate <= dateRange.end;
     });
-  }, [myAttendance, dateRange.start, dateRange.end]);
+  }, [myAttendance, dateRange]);
 
   const leaveStatusColors: Record<string, string> = {
     Pending: 'bg-warning/10 text-warning',
