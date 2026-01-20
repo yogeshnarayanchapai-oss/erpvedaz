@@ -17,6 +17,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDashboardHighAlertCount } from '@/hooks/useDashboardHighAlertCount';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -256,6 +257,9 @@ export default function AdminUnifiedDashboard() {
     };
   }, [accountsData, todayTransactions, partiesData]);
 
+  // High Alert count
+  const { data: highAlertCount = 0 } = useDashboardHighAlertCount();
+
   const inventoryMetrics = useMemo(() => {
     const items = inventoryData?.items || [];
     const totals = inventoryData?.totals;
@@ -266,8 +270,8 @@ export default function AdminUnifiedDashboard() {
     // Yesterday's P/L from daily_records (sum if multiple entries)
     const yesterdayProfit = yesterdayPLData?.reduce((sum, r) => sum + (r.profit_loss || 0), 0) || 0;
     
-    return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size, yesterdayProfit };
-  }, [inventoryData, yesterdayPLData]);
+    return { totalStock, totalValue, lowStock, warehouseCount: new Set(items.map(i => i.warehouse_id)).size, yesterdayProfit, highAlertCount };
+  }, [inventoryData, yesterdayPLData, highAlertCount]);
 
 const hrmMetrics = useMemo(() => {
     const presentToday = attendanceData?.filter(a => a.status === 'Present').length || 0;
@@ -444,18 +448,25 @@ const hrmMetrics = useMemo(() => {
           </CardContent>
         </Card>
         
-        {/* Low Stock Items */}
+        {/* Low Stock / High Alert Items */}
         <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-200/50 dark:border-orange-800/50">
           <CardContent className="p-2 md:p-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-orange-500/20 shrink-0">
                 <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-600" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Low Stock</p>
-                <p className="text-sm md:text-base font-bold text-orange-600">
-                  {inventoryMetrics.lowStock}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-sm md:text-base font-bold text-orange-600">
+                    {inventoryMetrics.lowStock}
+                  </p>
+                  {inventoryMetrics.highAlertCount > 0 && (
+                    <span className="text-[9px] md:text-xs text-red-600 font-medium">
+                      ({inventoryMetrics.highAlertCount} High Alert)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>

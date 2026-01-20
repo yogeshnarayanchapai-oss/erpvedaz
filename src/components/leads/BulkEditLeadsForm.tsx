@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CompactProductSelect } from '@/components/ui/compact-product-select';
 import { useProducts } from '@/hooks/useProducts';
 import { useLeadSources } from '@/hooks/useLeadSources';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
@@ -189,16 +190,12 @@ export function BulkEditLeadsForm({ open, onOpenChange, selectedLeads, onComplet
                   placeholder="Optional"
                 />
                 
-                <Select value={row.product_id} onValueChange={(v) => updateRow(row.id, 'product_id', v)}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.filter(p => p.is_active).map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CompactProductSelect
+                  products={products}
+                  value={row.product_id}
+                  onSelect={(v) => updateRow(row.id, 'product_id', v)}
+                  placeholder="Select product"
+                />
                 
                 <Select value={row.source} onValueChange={(v) => updateRow(row.id, 'source', v)}>
                   <SelectTrigger className="h-9 text-sm">
