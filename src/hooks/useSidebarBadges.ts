@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useEffect } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { format, subDays } from 'date-fns';
+
+const HIGH_ALERT_DAYS_KEY = 'inventory_high_alert_days';
 
 export interface SidebarBadges {
   orders: number;
@@ -16,6 +19,7 @@ export interface SidebarBadges {
   myTasks: number;
   myHR: number; // Staff-specific: admin actions requiring their attention
   teamChat: number; // Unread chat messages across accessible rooms
+  highAlert: number; // High alert inventory count
 }
 
 // Helper function to fetch HR notifications count - extracted to avoid TS deep instantiation
@@ -108,9 +112,9 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', profile?.id, profile?.role, storeId],
     queryFn: async (): Promise<SidebarBadges> => {
-      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0 };
+      if (!profile?.id || !user?.id) return { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0, highAlert: 0 };
 
-      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0 };
+      const badges: SidebarBadges = { orders: 0, leads: 0, notifications: 0, leaveRequests: 0, lowStock: 0, pendingDocuments: 0, todayAttendance: 0, myTasks: 0, myHR: 0, teamChat: 0, highAlert: 0 };
       const role = profile.role;
 
       // Fetch user view state for "unseen" calculations
@@ -135,7 +139,7 @@ export function useSidebarBadges() {
         .in('status', ['PENDING', 'IN_PROGRESS']);
       badges.myTasks = myTaskCount || 0;
 
-      if (role === 'ADMIN' || role === 'MANAGER') {
+      if (role === 'ADMIN' || role === 'MANAGER' || role === 'OWNER') {
         // Unseen leads (created after last_seen_at) - filter by store_id
         const leadsLastSeen = viewState['all_leads'];
         if (leadsLastSeen && storeId) {
@@ -181,12 +185,71 @@ export function useSidebarBadges() {
           .gt('reorder_level', 0);
         badges.lowStock = lowStockCount || 0;
 
-        // Pending documents for approval
-        const { count: docCount } = await supabase
-          .from('employee_documents')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'PENDING');
-        badges.pendingDocuments = docCount || 0;
+        // Pending documents for approval (store-wise)
+        if (storeId) {
+          const { count: docCount } = await supabase
+            .from('employee_documents')
+            .select('*, employees!inner(store_id)', { count: 'exact', head: true })
+            .eq('status', 'PENDING')
+            .eq('employees.store_id', storeId);
+          badges.pendingDocuments = docCount || 0;
+        }
+
+        // High Alert inventory count (store-wise)
+        const highAlertDays = typeof window !== 'undefined' 
+          ? parseInt(localStorage.getItem(HIGH_ALERT_DAYS_KEY) || '0') || null 
+          : null;
+        
+        if (highAlertDays && highAlertDays >= 1 && storeId) {
+          // Get current stock for store products
+          const { data: stockData } = await supabase
+            .from('product_inventory')
+            .select('product_id, warehouse_id, current_stock, products!inner(store_id, is_active)')
+            .eq('products.store_id', storeId)
+            .eq('products.is_active', true);
+
+          if (stockData && stockData.length > 0) {
+            const currentStockMap = new Map<string, number>();
+            stockData.forEach((s: any) => {
+              const key = `${s.product_id}_${s.warehouse_id}`;
+              currentStockMap.set(key, s.current_stock || 0);
+            });
+
+            // Get OUT movements for past X days
+            const today = new Date();
+            const startDate = format(subDays(today, highAlertDays - 1), 'yyyy-MM-dd');
+            const endDate = format(today, 'yyyy-MM-dd');
+
+            const { data: movements } = await supabase
+              .from('stock_movements')
+              .select('product_id, warehouse_id, movement_type, qty, products!inner(store_id)')
+              .eq('products.store_id', storeId)
+              .eq('movement_type', 'OUT')
+              .or('is_deleted.is.null,is_deleted.eq.false')
+              .gte('movement_date', startDate)
+              .lte('movement_date', endDate);
+
+            const outTotals: Record<string, number> = {};
+            movements?.forEach((m: any) => {
+              const key = `${m.product_id}_${m.warehouse_id}`;
+              if (!outTotals[key]) outTotals[key] = 0;
+              outTotals[key] += m.qty || 0;
+            });
+
+            let highAlertCount = 0;
+            currentStockMap.forEach((currentStock, key) => {
+              const totalOut = outTotals[key] || 0;
+              const avgOutPerDay = totalOut / highAlertDays;
+              if (avgOutPerDay >= 1) {
+                const daysCover = currentStock / avgOutPerDay;
+                if (daysCover < highAlertDays) {
+                  highAlertCount++;
+                }
+              }
+            });
+            badges.highAlert = highAlertCount;
+          }
+        }
       }
 
       if (role === 'LEADS' && storeId) {

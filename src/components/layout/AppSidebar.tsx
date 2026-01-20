@@ -590,9 +590,10 @@ export function AppSidebar() {
     if (titleLower.includes('order')) return badges.orders;
     if (titleLower.includes('notification')) return badges.notifications;
     if (titleLower.includes('leave') && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests;
-    // HRM parent menu: show leave requests + team chat for admins
-    if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests + badges.teamChat;
-    // Removed lowStock badge from inventory/stock summary to reduce noise
+    // HRM parent menu: show leave requests + pending documents + team chat for admins/owners
+    if (titleLower === 'hrm' && (role === 'ADMIN' || role === 'HR' || role === 'MANAGER' || role === 'OWNER')) return badges.leaveRequests + badges.pendingDocuments + badges.teamChat;
+    // Inventory parent menu: show high alert count for admins/owners
+    if (titleLower === 'inventory' && (role === 'ADMIN' || role === 'MANAGER' || role === 'OWNER')) return badges.highAlert;
     
     return 0;
   };
