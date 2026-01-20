@@ -15,7 +15,36 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+
+    // Skip if today is Saturday (auto holiday)
+    if (dayOfWeek === 6) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Saturday is auto holiday - skipping absent marking",
+          markedAbsent: 0,
+          employees: [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check current time - only run after 10 PM (22:00)
+    const currentHour = today.getHours();
+    if (currentHour < 22) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Too early to mark absent. Current hour: ${currentHour}. Will mark at 22:00 or later.`,
+          markedAbsent: 0,
+          employees: [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Get all active employees with their store and office time settings
     const { data: employees, error: empError } = await supabase
@@ -30,36 +59,60 @@ Deno.serve(async (req) => {
     const { data: existingRecords, error: recError } = await supabase
       .from("attendance_records")
       .select("employee_id")
-      .eq("date", today);
+      .eq("date", todayStr);
 
     if (recError) throw recError;
 
     const checkedInEmployeeIds = new Set(existingRecords?.map((r) => r.employee_id) || []);
 
-    // Filter employees who haven't checked in and are past their cutoff time
-    const now = new Date();
+    // Get all store IDs from employees
+    const storeIds = [...new Set(employees?.map((e) => e.store_id).filter(Boolean) || [])];
+
+    // Fetch office holidays for today across all stores
+    const { data: holidays, error: holError } = await supabase
+      .from("office_holidays")
+      .select("store_id")
+      .eq("date", todayStr)
+      .in("store_id", storeIds);
+
+    if (holError) throw holError;
+
+    const holidayStoreIds = new Set(holidays?.map((h) => h.store_id) || []);
+
+    // Fetch approved leave requests that cover today
+    const { data: approvedLeaves, error: leaveError } = await supabase
+      .from("leave_requests")
+      .select("employee_id")
+      .eq("status", "Approved")
+      .lte("from_date", todayStr)
+      .gte("to_date", todayStr);
+
+    if (leaveError) throw leaveError;
+
+    const employeesOnLeave = new Set(approvedLeaves?.map((l) => l.employee_id) || []);
+
+    // Filter employees who should be marked absent
     const absentEmployees = (employees || []).filter((emp) => {
+      // Skip if already has an attendance record
       if (checkedInEmployeeIds.has(emp.id)) return false;
 
-      // Calculate cutoff time (office_start + grace)
-      const officeStart = emp.office_start_time || "09:00:00";
-      const grace = emp.grace_minutes ?? 30;
+      // Skip if employee's store has a holiday today
+      if (holidayStoreIds.has(emp.store_id)) return false;
 
-      const [hours, minutes] = officeStart.split(":").map(Number);
-      const cutoffDate = new Date();
-      cutoffDate.setHours(hours, minutes + grace, 0, 0);
+      // Skip if employee has approved leave today
+      if (employeesOnLeave.has(emp.id)) return false;
 
-      return now > cutoffDate;
+      return true;
     });
 
     // Mark absent employees
     if (absentEmployees.length > 0) {
       const absentRecords = absentEmployees.map((emp) => ({
         employee_id: emp.id,
-        date: today,
+        date: todayStr,
         status: "Absent",
         store_id: emp.store_id,
-        notes: "Auto-marked absent (no check-in)",
+        notes: "Auto-marked absent (no check-in by 10 PM)",
       }));
 
       const { error: insertError } = await supabase
@@ -74,6 +127,8 @@ Deno.serve(async (req) => {
         success: true,
         markedAbsent: absentEmployees.length,
         employees: absentEmployees.map((e) => e.full_name),
+        skippedHoliday: holidayStoreIds.size,
+        skippedLeave: employeesOnLeave.size,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
