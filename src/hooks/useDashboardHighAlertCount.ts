@@ -20,11 +20,13 @@ export function useDashboardHighAlertCount() {
         return 0;
       }
 
-      // 1. Get current stock for all product-warehouse combos
+      // 1. Get current stock for all product-warehouse combos from product_inventory
+      // Filter by store via products table and only include active products
       const { data: stockData, error: stockError } = await supabase
         .from('product_inventory')
-        .select('product_id, warehouse_id, current_stock, products!inner(store_id)')
-        .eq('products.store_id', storeId);
+        .select('product_id, warehouse_id, current_stock, products!inner(store_id, is_active)')
+        .eq('products.store_id', storeId)
+        .eq('products.is_active', true);
 
       if (stockError) throw stockError;
 
@@ -37,7 +39,7 @@ export function useDashboardHighAlertCount() {
         currentStockMap.set(key, s.current_stock || 0);
       });
 
-      // 2. Get OUT movements for past X days
+      // 2. Get ONLY OUT movements for past X days (not transfers, adjustments, wholesale etc.)
       const today = new Date();
       const startDate = format(subDays(today, highAlertDays - 1), 'yyyy-MM-dd');
       const endDate = format(today, 'yyyy-MM-dd');
@@ -62,11 +64,13 @@ export function useDashboardHighAlertCount() {
       });
 
       // 3. Count high alert items
+      // Products with avgOutPerDay < 1 are NOT included in High Alert
       let highAlertCount = 0;
       currentStockMap.forEach((currentStock, key) => {
         const totalOut = outTotals[key] || 0;
         const avgOutPerDay = totalOut / highAlertDays;
         
+        // Only count if avgOutPerDay >= 1
         if (avgOutPerDay >= 1) {
           const daysCover = currentStock / avgOutPerDay;
           if (daysCover < highAlertDays) {
