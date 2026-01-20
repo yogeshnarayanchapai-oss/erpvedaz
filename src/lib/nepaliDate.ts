@@ -179,6 +179,15 @@ export function getBSYearRange(): number[] {
   return years;
 }
 
+export function getBSYears(): { value: number; label: string }[] {
+  const current = getCurrentBSDate();
+  const years: { value: number; label: string }[] = [];
+  for (let y = current.year - 5; y <= current.year + 2; y++) {
+    years.push({ value: y, label: y.toString() });
+  }
+  return years;
+}
+
 export function getDaysInBSMonth(year: number, month: number): number {
   try {
     // Create a date for the first of next month and subtract one day
