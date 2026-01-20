@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.factory-reset]
 verify_jwt = true
+
+[functions.mark-absent-employees]
+verify_jwt = false
+
+[functions.backfill-absent-records]
+verify_jwt = false
