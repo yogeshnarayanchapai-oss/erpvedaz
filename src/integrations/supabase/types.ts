@@ -7382,6 +7382,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_saturday_attendance_records: {
+        Args: { target_date: string }
+        Returns: number
+      }
       create_verification_otp: { Args: { p_user_id: string }; Returns: string }
       generate_otp: { Args: never; Returns: string }
       get_all_public_tables: {

@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.backfill-absent-records]
 verify_jwt = false
+
+[functions.create-saturday-records]
+verify_jwt = false

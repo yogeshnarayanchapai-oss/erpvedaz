@@ -184,7 +184,7 @@ export function useCheckIn() {
         employee.grace_minutes
       );
 
-      // Check if there's an existing Absent record for today (auto-marked) - update it instead
+      // Check if there's an existing record for today (could be auto-marked Absent, Saturday, Holiday, or Leave)
       const { data: existingRecord } = await supabase
         .from('attendance_records')
         .select('id, status')
@@ -192,17 +192,23 @@ export function useCheckIn() {
         .eq('date', today)
         .maybeSingle();
 
+      // Statuses that should be converted to Present/Late when employee checks in
+      const convertibleStatuses = ['Absent', 'Saturday', 'Holiday', 'Leave'];
+
       let data;
       if (existingRecord) {
-        // Update the existing record (could be auto-marked Absent)
+        // Update the existing record if it's a convertible status
+        const previousStatus = existingRecord.status;
+        const shouldConvert = convertibleStatuses.includes(previousStatus);
+        
         const { data: updated, error } = await supabase
           .from('attendance_records' as any)
           .update({
             check_in_time: nowIso,
             status,
             late_minutes: lateMinutes,
-            notes: existingRecord.status === 'Absent' 
-              ? `Status changed from Absent to ${status} at check-in` 
+            notes: shouldConvert
+              ? `Status changed from ${previousStatus} to ${status} at check-in` 
               : null,
           } as any)
           .eq('id', existingRecord.id)
