@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { usePayrollRecords, useCompanyInfo, useEmployees, useBankAccounts } from '@/hooks/useHRM';
+import { usePayrollRecords, useCompanyInfo, useEmployees, useBankAccounts, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Trash2 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
 import { useDateMode } from '@/contexts/DateModeContext';
-import { adToBS, getBSMonthName, bsToAd, getBSYears, getBSMonths } from '@/lib/nepaliDate';
+import { adToBS, getBSMonthName, bsToAd, getBSYears, getBSMonths, formatBSDate } from '@/lib/nepaliDate';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { isAdminOrManager } from '@/lib/roleUtils';
 import jsPDF from 'jspdf';
 
 export default function HRMSalarySlip() {
@@ -40,8 +43,14 @@ export default function HRMSalarySlip() {
   const { data: bankAccounts = [] } = useBankAccounts();
   const { currentStore } = useCurrentStore();
   const { data: branding } = useStoreBranding(currentStore?.id || '');
+  const { effectiveRole } = useEffectiveRole();
+  const deletePayroll = useDeletePayrollRecord();
 
   const [viewSlip, setViewSlip] = useState<any>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [slipToDelete, setSlipToDelete] = useState<any>(null);
+
+  const canDelete = isAdminOrManager(effectiveRole);
 
   const getEmployee = (id: string) => employees.find((e) => e.id === id);
   
@@ -66,6 +75,12 @@ export default function HRMSalarySlip() {
     const adDate = new Date(adDateStr);
     const bs = adToBS(adDate);
     return `${getBSMonthName(bs.month)} ${bs.year}`;
+  };
+
+  // Get Nepali date for paid_on date in PDF
+  const getNepaliPaidDate = (paidOnStr: string | null) => {
+    if (!paidOnStr) return 'Pending';
+    return formatBSDate(paidOnStr, 'full');
   };
 
   const handleDownloadPDF = async () => {
@@ -169,7 +184,7 @@ export default function HRMSalarySlip() {
     doc.setTextColor(80);
     doc.text('Payment Date:', pageWidth / 2 + 10, y);
     doc.setTextColor(0);
-    doc.text(viewSlip.paid_on ? format(new Date(viewSlip.paid_on), 'dd MMM yyyy') : 'Pending', pageWidth / 2 + 48, y);
+    doc.text(getNepaliPaidDate(viewSlip.paid_on), pageWidth / 2 + 48, y);
 
     y += 8;
     doc.setTextColor(80);
@@ -375,9 +390,24 @@ export default function HRMSalarySlip() {
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => setViewSlip(r)}>
-                      <FileText className="w-4 h-4 mr-2" />View Slip
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setViewSlip(r)}>
+                        <FileText className="w-4 h-4 mr-2" />View
+                      </Button>
+                      {canDelete && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setSlipToDelete(r);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -516,14 +546,58 @@ export default function HRMSalarySlip() {
               </div>
             </div>
           )}
-          <div className="flex justify-end pt-2">
-            <Button onClick={handleDownloadPDF} className="gap-2">
-              <Download className="w-4 h-4" />
-              Download PDF
-            </Button>
+          <div className="flex justify-between pt-2">
+            {canDelete && (
+              <Button 
+                variant="ghost" 
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                onClick={() => {
+                  setSlipToDelete(viewSlip);
+                  setDeleteConfirmOpen(true);
+                  setViewSlip(null);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            )}
+            <div className={canDelete ? '' : 'ml-auto'}>
+              <Button onClick={handleDownloadPDF} className="gap-2">
+                <Download className="w-4 h-4" />
+                Download PDF
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the salary slip for{' '}
+              <span className="font-medium">{slipToDelete?.employees?.full_name}</span>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (slipToDelete) {
+                  deletePayroll.mutate(slipToDelete.id);
+                  setSlipToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -76,7 +76,7 @@ export function CompactProductSelect({
       >
         <Command>
           <CommandInput placeholder="Search products..." className="h-9" />
-          <CommandList className="max-h-[200px] overflow-y-auto">
+          <CommandList className="max-h-[45vh] sm:max-h-[300px] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
             <CommandEmpty>No product found.</CommandEmpty>
             <CommandGroup>
               {filteredProducts.map((product) => (
