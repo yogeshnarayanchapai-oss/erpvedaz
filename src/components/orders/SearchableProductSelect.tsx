@@ -57,7 +57,7 @@ export function SearchableProductSelect({
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search products..." />
-          <CommandList>
+          <CommandList className="max-h-[45vh] sm:max-h-[300px] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
             <CommandEmpty>No product found.</CommandEmpty>
             <CommandGroup>
               {products.map((product) => (
