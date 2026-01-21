@@ -40,13 +40,16 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
   const defaultSource = leadSources.length > 0 ? leadSources[0].name : '';
   const draftKey = `${DRAFT_KEY_PREFIX}${currentStore?.id || 'default'}`;
 
-  const createEmptyRow = useCallback((): LeadRow => ({
+  // Track the last selected product to use as default for new rows
+  const [lastSelectedProduct, setLastSelectedProduct] = useState<string>('');
+
+  const createEmptyRow = useCallback((defaultProductId?: string): LeadRow => ({
     id: crypto.randomUUID(),
     date: new Date().toISOString().split('T')[0],
     client_name: '',
     contact_number: '',
     alt_phone: '',
-    product_id: '',
+    product_id: defaultProductId || '',
     source: defaultSource,
     remark: '',
   }), [defaultSource]);
@@ -109,7 +112,8 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
   }, [open, draftKey, leadSources]);
 
   const addRows = (count: number) => {
-    const newRows = Array.from({ length: count }, () => createEmptyRow());
+    // Use the last selected product as default for new rows
+    const newRows = Array.from({ length: count }, () => createEmptyRow(lastSelectedProduct));
     const updatedRows = [...rows, ...newRows];
     setRows(updatedRows);
     saveDraft(updatedRows);
@@ -129,6 +133,11 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
     const updatedRows = rows.map(row => (row.id === id ? { ...row, [field]: value } : row));
     setRows(updatedRows);
     saveDraft(updatedRows);
+    
+    // Track the last selected product for new rows
+    if (field === 'product_id' && value) {
+      setLastSelectedProduct(value);
+    }
   };
 
   // Handle close attempt
@@ -146,6 +155,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
   const handleConfirmDiscard = () => {
     clearDraft();
     setShowDiscardConfirm(false);
+    setLastSelectedProduct('');
     setRows([createEmptyRow()]);
     onOpenChange(false);
   };
@@ -153,6 +163,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
   // Manual clear draft
   const handleClearDraft = () => {
     clearDraft();
+    setLastSelectedProduct('');
     const source = leadSources.length > 0 ? leadSources[0].name : '';
     setRows([{
       id: crypto.randomUUID(),
@@ -189,6 +200,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
 
     await bulkCreateLeads.mutateAsync(leadsToCreate);
     clearDraft();
+    setLastSelectedProduct('');
     onOpenChange(false);
     setRows([createEmptyRow()]);
   };
