@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import {
   Sheet,
@@ -45,6 +46,7 @@ interface TaskDetailSheetProps {
 }
 
 export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetProps) {
+  const { user } = useAuth();
   const { data: remarks } = useTaskRemarks(task?.id || '');
   const { data: statusHistory } = useTaskStatusHistory(task?.id || '');
   const { data: attachments } = useTaskAttachments(task?.id || '');
@@ -61,7 +63,11 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const [replyText, setReplyText] = useState('');
   const [showReassign, setShowReassign] = useState(false);
 
-  const canReply = ['ADMIN', 'MANAGER', 'HR', 'OWNER'].includes(effectiveRole);
+  // Check if current user is the assigned person for this task
+  const isAssignedToMe = task?.assigned_to?.id === user?.id;
+  
+  // Can reply: Admin/Manager/HR/Owner OR the assigned user
+  const canReply = ['ADMIN', 'MANAGER', 'HR', 'OWNER'].includes(effectiveRole) || isAssignedToMe;
   const canReassign = ['ADMIN', 'MANAGER', 'HR', 'OWNER'].includes(effectiveRole);
 
   const handleReassign = async (newAssigneeId: string) => {
