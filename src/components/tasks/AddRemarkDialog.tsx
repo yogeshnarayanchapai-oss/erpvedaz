@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ interface AddRemarkDialogProps {
   onOpenChange: (open: boolean) => void;
   parentRemarkId?: string;
   isReply?: boolean;
+  defaultIsIssue?: boolean;
 }
 
 export function AddRemarkDialog({ 
@@ -26,10 +27,17 @@ export function AddRemarkDialog({
   onOpenChange, 
   parentRemarkId,
   isReply = false,
+  defaultIsIssue = false,
 }: AddRemarkDialogProps) {
   const [remark, setRemark] = useState('');
   const [isIssue, setIsIssue] = useState(false);
   const addRemark = useAddTaskRemark();
+
+  useEffect(() => {
+    if (!open) return;
+    setRemark('');
+    setIsIssue(isReply ? false : defaultIsIssue);
+  }, [open, defaultIsIssue, isReply]);
 
   const handleSubmit = async () => {
     if (!remark.trim()) return;
@@ -74,7 +82,7 @@ export function AddRemarkDialog({
                 htmlFor="isIssue"
                 className="flex items-center gap-2 text-sm cursor-pointer"
               >
-                <AlertCircle className="h-4 w-4 text-red-500" />
+                <AlertCircle className="h-4 w-4 text-destructive" />
                 Mark as Issue
               </Label>
             </div>
