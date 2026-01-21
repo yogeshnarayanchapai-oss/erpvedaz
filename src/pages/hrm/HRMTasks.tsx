@@ -62,6 +62,8 @@ export default function HRMTasks() {
   const { effectiveRole } = useEffectiveRole();
   const isManager = effectiveRole === 'MANAGER';
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
+  // Allow Admin, Manager, and Owner to update status of their assigned tasks
+  const canUpdateOwnTaskStatus = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
   
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -350,8 +352,8 @@ export default function HRMTasks() {
                         <TaskPriorityBadge priority={task.priority} />
                       </TableCell>
                       <TableCell>
-                        {/* Manager can update status of their own tasks */}
-                        {isManager && isMyPendingTask(task) ? (
+                        {/* Admin/Manager/Owner can update status of their assigned tasks */}
+                        {canUpdateOwnTaskStatus && isMyPendingTask(task) ? (
                           <Select
                             value={task.status}
                             onValueChange={(value) => handleStatusChange(task, value as TaskStatus)}
