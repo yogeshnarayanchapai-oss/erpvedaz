@@ -40,6 +40,7 @@ import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
+import { AddRemarkDialog } from '@/components/tasks/AddRemarkDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function HRMTasks() {
@@ -65,6 +67,10 @@ export default function HRMTasks() {
   // Allow Admin, Manager, and Owner to update status of their assigned tasks
   const canUpdateOwnTaskStatus = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
   
+  const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
+  const [remarkDialogTaskId, setRemarkDialogTaskId] = useState<string>('');
+  const [remarkDialogDefaultIsIssue, setRemarkDialogDefaultIsIssue] = useState(false);
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -118,6 +124,12 @@ export default function HRMTasks() {
   const handleViewTask = (task: Task) => {
     setSelectedTask(task);
     setSheetOpen(true);
+  };
+
+  const openRemarkDialog = (taskId: string, defaultIsIssue = false) => {
+    setRemarkDialogTaskId(taskId);
+    setRemarkDialogDefaultIsIssue(defaultIsIssue);
+    setRemarkDialogOpen(true);
   };
 
   const handleEditTask = (task: Task) => {
@@ -385,9 +397,18 @@ export default function HRMTasks() {
                         {format(new Date(task.created_at), 'MMM dd')}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {task.has_issues && (
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openRemarkDialog(task.id, true)}
+                          title={task.has_issues ? 'View / add issue' : 'Report issue'}
+                          className={cn(
+                            'h-8 w-8 p-0',
+                            task.has_issues ? 'text-destructive' : 'text-muted-foreground'
+                          )}
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -397,6 +418,14 @@ export default function HRMTasks() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openRemarkDialog(task.id, false)}>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Add remark
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openRemarkDialog(task.id, true)}>
+                              <AlertCircle className="h-4 w-4 mr-2" />
+                              Report issue
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleViewTask(task)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View
@@ -428,6 +457,16 @@ export default function HRMTasks() {
         task={selectedTask}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <AddRemarkDialog
+        taskId={remarkDialogTaskId}
+        open={remarkDialogOpen}
+        onOpenChange={(open) => {
+          setRemarkDialogOpen(open);
+          if (!open) setRemarkDialogTaskId('');
+        }}
+        defaultIsIssue={remarkDialogDefaultIsIssue}
       />
 
       {/* Edit Task Dialog */}
