@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal } from 'lucide-react';
+import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MyBankAccountsCard } from '@/components/hrm/MyBankAccountsCard';
 import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
 import {
   useAllEmployeeDocuments,
@@ -140,6 +141,10 @@ export default function HRMStaffDocuments() {
           <TabsTrigger value="my" className="gap-2">
             <User className="h-4 w-4" />
             My Documents
+          </TabsTrigger>
+          <TabsTrigger value="bank" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            My Bank
           </TabsTrigger>
         </TabsList>
 
@@ -402,6 +407,11 @@ export default function HRMStaffDocuments() {
         </DialogContent>
       </Dialog>
 
+        </TabsContent>
+
+        {/* My Bank Tab */}
+        <TabsContent value="bank" className="space-y-6">
+          <MyBankAccountsCard />
         </TabsContent>
       </Tabs>
 
