@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { FileSpreadsheet, ArrowLeft, Eye, Trash2, CheckCircle, Plus } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Eye, Trash2, CheckCircle, Plus, EyeOff } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAccounts } from '@/hooks/useAccounts';
@@ -43,6 +44,7 @@ export default function PartyStatement() {
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [balanceFilter, setBalanceFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [hideZeroBalance, setHideZeroBalance] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -83,9 +85,13 @@ export default function PartyStatement() {
         (balanceFilter === 'receivable' && partyReceivable > 0) ||
         (balanceFilter === 'payable' && partyPayable > 0);
       
-      return matchesType && matchesSearch && matchesBalance;
+      // Hide zero balance filter
+      const hasBalance = partyReceivable > 0 || partyPayable > 0;
+      const matchesZeroBalance = !hideZeroBalance || hasBalance;
+      
+      return matchesType && matchesSearch && matchesBalance && matchesZeroBalance;
     });
-  }, [parties, partyTypeFilter, searchTerm, balanceFilter]);
+  }, [parties, partyTypeFilter, searchTerm, balanceFilter, hideZeroBalance]);
 
   const summaryStats = useMemo(() => {
     // Receivable = unsettled receivables (net_receivable), Payable = unsettled payables (net_payable)
@@ -1068,7 +1074,20 @@ export default function PartyStatement() {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle>All Parties</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>All Parties</CardTitle>
+          <div className="flex items-center gap-2">
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="hide-zero-balance" className="text-sm font-normal cursor-pointer">
+              Hide Zero Balance
+            </Label>
+            <Switch
+              id="hide-zero-balance"
+              checked={hideZeroBalance}
+              onCheckedChange={setHideZeroBalance}
+            />
+          </div>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
