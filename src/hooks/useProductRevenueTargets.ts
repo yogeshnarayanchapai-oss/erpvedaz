@@ -18,7 +18,7 @@ export interface ProductRevenueTarget {
 }
 
 /**
- * Hook to calculate revenue-based targets from ads spend
+ * Hook to calculate revenue-based targets from ad_spend_reference
  * Formula: Target Revenue = Ads Spent (USD) * 60% * 1000
  * Example: $90 USD ads → $90 * 0.6 * 1000 = Rs. 54,000 target revenue
  */
@@ -31,18 +31,16 @@ export function useProductRevenueTargets(dateRange: DateRange) {
   return useQuery({
     queryKey: ['product_revenue_targets', fromDate, toDate, storeId],
     queryFn: async () => {
-      // Fetch ads spend for the date range
-      let adsQuery = supabase
-        .from('ads_spend')
-        .select('product_id, usd_amount, npr_amount, date, products(id, name)')
-        .gte('date', fromDate)
-        .lte('date', toDate);
+      if (!storeId) return [] as ProductRevenueTarget[];
 
-      if (storeId) {
-        adsQuery = adsQuery.eq('store_id', storeId);
-      }
+      // Fetch ad spend reference for the date range (amount is in USD)
+      const { data: adsData, error: adsError } = await supabase
+        .from('ad_spend_reference')
+        .select('product_id, amount, spend_date, product:products(id, name)')
+        .eq('store_id', storeId)
+        .gte('spend_date', fromDate)
+        .lte('spend_date', toDate);
 
-      const { data: adsData, error: adsError } = await adsQuery;
       if (adsError) throw adsError;
 
       // Aggregate USD spend per product
@@ -53,10 +51,10 @@ export function useProductRevenueTargets(dateRange: DateRange) {
       }> = {};
 
       (adsData || []).forEach(ad => {
-        if (ad.product_id && ad.products) {
+        if (ad.product_id && ad.product) {
           const productId = ad.product_id;
-          const productName = (ad.products as any)?.name || 'Unknown';
-          const usdAmount = ad.usd_amount || 0;
+          const productName = (ad.product as any)?.name || 'Unknown';
+          const usdAmount = ad.amount || 0; // amount is in USD
 
           if (!productAdsSpend[productId]) {
             productAdsSpend[productId] = {
@@ -76,19 +74,15 @@ export function useProductRevenueTargets(dateRange: DateRange) {
       }
 
       // Fetch CONFIRMED/DISPATCHED/DELIVERED orders
-      let ordersQuery = supabase
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('id, order_status, delivery_location, inside_delivery_status')
         .eq('is_deleted', false)
+        .eq('store_id', storeId)
         .gte('order_date', `${fromDate}T00:00:00`)
         .lte('order_date', `${toDate}T23:59:59`)
         .in('order_status', ['CONFIRMED', 'DISPATCHED', 'DELIVERED']);
 
-      if (storeId) {
-        ordersQuery = ordersQuery.eq('store_id', storeId);
-      }
-
-      const { data: ordersData, error: ordersError } = await ordersQuery;
       if (ordersError) throw ordersError;
 
       // Get valid order IDs based on OVD/VD logic
@@ -164,6 +158,6 @@ export function useProductRevenueTargets(dateRange: DateRange) {
 
       return results;
     },
-    enabled: !!dateRange.from && !!dateRange.to,
+    enabled: !!dateRange.from && !!dateRange.to && !!storeId,
   });
 }
