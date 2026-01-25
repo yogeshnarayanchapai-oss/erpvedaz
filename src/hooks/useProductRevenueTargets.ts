@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
-import { format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 
 interface DateRange {
   from: Date;
@@ -28,50 +28,91 @@ export function useProductRevenueTargets(dateRange: DateRange) {
   const { currentStore } = useCurrentStore();
   const storeId = currentStore?.id;
 
+  // Inclusive day count so: today=1, last 7 days=7, etc.
+  const dayCount = Math.max(1, differenceInCalendarDays(dateRange.to, dateRange.from) + 1);
+
   return useQuery({
     queryKey: ['product_revenue_targets', fromDate, toDate, storeId],
     queryFn: async () => {
       if (!storeId) return [] as ProductRevenueTarget[];
 
-      // Fetch ALL ad spend references for this store (not date-filtered)
-      // because ad campaigns are ongoing and we want to show all products with active spend
+      // ad_spend_reference is treated as a DAILY USD spend baseline per product.
+      // For any selected date range, total spend = daily_usd * dayCount.
       const { data: adsData, error: adsError } = await supabase
         .from('ad_spend_reference')
-        .select('product_id, amount, spend_date, product:products(id, name)')
+        .select('product_id, amount, spend_date, updated_at')
         .eq('store_id', storeId)
         .gt('amount', 0);
 
       if (adsError) throw adsError;
 
-      // Aggregate USD spend per product
-      const productAdsSpend: Record<string, { 
-        product_id: string; 
-        product_name: string; 
-        total_usd: number;
-      }> = {};
+      // Pick the latest daily spend entry per product (by spend_date, then updated_at)
+      const latestDailySpendByProduct: Record<string, { product_id: string; daily_usd: number; spend_date?: string | null; updated_at?: string | null }> = {};
 
-      (adsData || []).forEach(ad => {
-        if (ad.product_id && ad.product) {
-          const productId = ad.product_id;
-          const productName = (ad.product as any)?.name || 'Unknown';
-          const usdAmount = ad.amount || 0; // amount is in USD
+      (adsData || []).forEach((ad: any) => {
+        const productId: string | null = ad?.product_id ?? null;
+        if (!productId) return;
 
-          if (!productAdsSpend[productId]) {
-            productAdsSpend[productId] = {
-              product_id: productId,
-              product_name: productName,
-              total_usd: 0,
-            };
+        const nextSpendDate = (ad?.spend_date as string | null) ?? null;
+        const nextUpdatedAt = (ad?.updated_at as string | null) ?? null;
+        const nextDailyUsd = Number(ad?.amount ?? 0);
+
+        const prev = latestDailySpendByProduct[productId];
+        if (!prev) {
+          latestDailySpendByProduct[productId] = { product_id: productId, daily_usd: nextDailyUsd, spend_date: nextSpendDate, updated_at: nextUpdatedAt };
+          return;
+        }
+
+        // Compare spend_date first (ISO date string sorts lexicographically)
+        const prevSpendDate = prev.spend_date ?? '';
+        const currSpendDate = nextSpendDate ?? '';
+        if (currSpendDate > prevSpendDate) {
+          latestDailySpendByProduct[productId] = { product_id: productId, daily_usd: nextDailyUsd, spend_date: nextSpendDate, updated_at: nextUpdatedAt };
+          return;
+        }
+
+        // If spend_date ties or missing, compare updated_at
+        if (currSpendDate === prevSpendDate) {
+          const prevUpdated = prev.updated_at ?? '';
+          const currUpdated = nextUpdatedAt ?? '';
+          if (currUpdated > prevUpdated) {
+            latestDailySpendByProduct[productId] = { product_id: productId, daily_usd: nextDailyUsd, spend_date: nextSpendDate, updated_at: nextUpdatedAt };
           }
-          productAdsSpend[productId].total_usd += usdAmount;
         }
       });
 
-      // Now fetch actual revenue from orders for these products in the date range
-      const productIds = Object.keys(productAdsSpend);
-      if (productIds.length === 0) {
-        return [] as ProductRevenueTarget[];
+      const productIds = Object.keys(latestDailySpendByProduct);
+      if (productIds.length === 0) return [] as ProductRevenueTarget[];
+
+      // Fetch product names separately (avoids join/RLS issues returning null relations)
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('id, name')
+        .in('id', productIds);
+
+      if (productsError) {
+        // Don't fail the whole widget if product names can't be fetched; show IDs as Unknown.
+        console.warn('Failed to fetch product names for revenue targets:', productsError);
       }
+
+      const productNameById = new Map<string, string>();
+      (productsData || []).forEach((p: any) => {
+        if (p?.id) productNameById.set(p.id, p?.name ?? 'Unknown');
+      });
+
+      // Build per-product spend (total spend for range = daily_usd * dayCount)
+      const productAdsSpend: Record<string, { product_id: string; product_name: string; total_usd: number }> = {};
+      productIds.forEach((pid) => {
+        const dailyUsd = latestDailySpendByProduct[pid]?.daily_usd ?? 0;
+        productAdsSpend[pid] = {
+          product_id: pid,
+          product_name: productNameById.get(pid) ?? 'Unknown',
+          total_usd: dailyUsd * dayCount,
+        };
+      });
+
+      // Now fetch actual revenue from orders for these products in the date range
+      // (productIds already validated above)
 
       // Fetch CONFIRMED/DISPATCHED/DELIVERED orders
       const { data: ordersData, error: ordersError } = await supabase
