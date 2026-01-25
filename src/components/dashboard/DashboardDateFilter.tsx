@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { CalendarIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDateMode } from '@/contexts/DateModeContext';
 import { formatBSDate } from '@/lib/nepaliDate';
+import { Label } from '@/components/ui/label';
 
 export interface DateRange {
   from: Date;
@@ -40,7 +41,9 @@ const presetLabels: Record<PresetKey, string> = {
 
 export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProps) {
   const [activePreset, setActivePreset] = useState<PresetKey>('today');
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
   const { dateMode } = useDateMode();
 
   const handlePresetClick = (preset: PresetKey) => {
@@ -50,23 +53,27 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
     switch (preset) {
       case 'today':
         setActivePreset('today');
+        setShowCustom(false);
         onChange({ from: startOfDay(today), to: endOfDay(today) });
         break;
       case 'yesterday':
         setActivePreset('yesterday');
+        setShowCustom(false);
         onChange({ from: startOfDay(yesterday), to: endOfDay(yesterday) });
         break;
       case '7days':
         setActivePreset('7days');
+        setShowCustom(false);
         onChange({ from: startOfDay(subDays(today, 6)), to: endOfDay(today) });
         break;
       case '30days':
         setActivePreset('30days');
+        setShowCustom(false);
         onChange({ from: startOfDay(subDays(today, 29)), to: endOfDay(today) });
         break;
       case 'custom':
-        // Open calendar picker
-        setTimeout(() => setShowCalendar(true), 100);
+        setActivePreset('custom');
+        setShowCustom(true);
         break;
     }
   };
@@ -87,41 +94,91 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
     return presetLabels[activePreset];
   };
 
-  // If calendar is open, show the calendar popover
-  if (showCalendar) {
+  // If custom mode, show From-To date pickers
+  if (showCustom) {
     return (
-      <Popover open={showCalendar} onOpenChange={setShowCalendar}>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 gap-2 text-xs font-medium min-w-[120px] justify-between"
-          >
-            <CalendarIcon className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[180px]">{getDisplayLabel()}</span>
-            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-[100] bg-popover" align="start" sideOffset={4}>
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={value?.from}
-            selected={{ from: value?.from, to: value?.to }}
-            onSelect={(range) => {
-              if (range?.from && range?.to) {
-                onChange({ from: startOfDay(range.from), to: endOfDay(range.to) });
-                setActivePreset('custom');
-                setShowCalendar(false);
-              } else if (range?.from) {
-                onChange({ from: startOfDay(range.from), to: endOfDay(range.from) });
-              }
-            }}
-            numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : 2}
-            className="pointer-events-auto p-3"
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* From Date */}
+        <div className="flex items-center gap-1.5">
+          <Label className="text-xs text-muted-foreground">From:</Label>
+          <Popover open={fromOpen} onOpenChange={setFromOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-2 text-xs font-medium min-w-[100px] justify-between"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <span className="truncate">{formatDateDisplay(value.from)}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[100] bg-popover" align="start" sideOffset={4}>
+              <Calendar
+                mode="single"
+                selected={value.from}
+                onSelect={(date) => {
+                  if (date) {
+                    const newFrom = startOfDay(date);
+                    // Ensure from is not after to
+                    const newTo = newFrom > value.to ? endOfDay(date) : value.to;
+                    onChange({ from: newFrom, to: newTo });
+                    setFromOpen(false);
+                  }
+                }}
+                initialFocus
+                className="pointer-events-auto p-3"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* To Date */}
+        <div className="flex items-center gap-1.5">
+          <Label className="text-xs text-muted-foreground">To:</Label>
+          <Popover open={toOpen} onOpenChange={setToOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-2 text-xs font-medium min-w-[100px] justify-between"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <span className="truncate">{formatDateDisplay(value.to)}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[100] bg-popover" align="start" sideOffset={4}>
+              <Calendar
+                mode="single"
+                selected={value.to}
+                onSelect={(date) => {
+                  if (date) {
+                    const newTo = endOfDay(date);
+                    // Ensure to is not before from
+                    const newFrom = newTo < value.from ? startOfDay(date) : value.from;
+                    onChange({ from: newFrom, to: newTo });
+                    setToOpen(false);
+                  }
+                }}
+                initialFocus
+                className="pointer-events-auto p-3"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Back to presets button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 text-xs"
+          onClick={() => {
+            setShowCustom(false);
+            handlePresetClick('today');
+          }}
+        >
+          Reset
+        </Button>
+      </div>
     );
   }
 
