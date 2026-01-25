@@ -6,7 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStaff } from '@/hooks/useStaff';
 import { useStaffLeaderboard } from '@/hooks/useStaffLeaderboard';
 import { useLeadDashboardStats, useOrderDashboardStats, getNepalDate } from '@/hooks/useDashboardStats';
-import { useAdSpendReference } from '@/hooks/useAdSpendReference';
+import { useProductRevenueTargets } from '@/hooks/useProductRevenueTargets';
 import { 
   useMonthlySalesChart, 
   useMonthlyPLData,
@@ -88,44 +88,13 @@ export default function AdminDashboard() {
   })), [products]);
   const { data: productDaybook = [] } = useProductDaybookByDateRange(dateRange, productList);
   
-  // Fetch ad spend reference targets - fetch all to use carry-forward logic for targets
-  const { data: adSpendRefData = [] } = useAdSpendReference();
+  // Fetch revenue-based targets from ads spend
+  const { data: productRevenueTargets = [] } = useProductRevenueTargets(dateRange);
 
   // Sort product daybook by orders (sales) descending
   const sortedProductDaybook = useMemo(() => {
     return [...productDaybook].sort((a, b) => b.sales - a.sales);
   }, [productDaybook]);
-
-  // Build product targets from ad_spend_reference using carry-forward logic
-  const productDaybookWithTargets = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    
-    // Create a map of product_id -> latest target (carry-forward: latest entry <= today)
-    const targetMap = new Map<string, number>();
-    
-    // Sort by date descending and pick the first (latest) entry for each product <= today
-    const sortedRefs = [...adSpendRefData]
-      .filter(ref => ref.spend_date <= todayStr)
-      .sort((a, b) => b.spend_date.localeCompare(a.spend_date));
-    
-    sortedRefs.forEach(ref => {
-      if (!targetMap.has(ref.product_id) && ref.target_orders && ref.target_orders > 0) {
-        targetMap.set(ref.product_id, ref.target_orders);
-      }
-    });
-
-    // Map products with targets from reference spend
-    return sortedProductDaybook
-      .map(p => {
-        const productId = products.find(prod => prod.name === p.name)?.id;
-        const refTarget = productId ? (targetMap.get(productId) || 0) : 0;
-        return {
-          ...p,
-          target: refTarget, // Use target from ad_spend_reference (carry-forward)
-        };
-      })
-      .filter(p => p.target > 0); // Only show products with targets
-  }, [sortedProductDaybook, adSpendRefData, products]);
 
   // Default lead stats if not loaded yet
   const stats = leadStats || {
@@ -391,7 +360,7 @@ export default function AdminDashboard() {
       {/* Product Target Progress & Staff Leaderboard - Stack on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <ProductTargetProgress 
-          products={productDaybookWithTargets} 
+          products={productRevenueTargets} 
           periodLabel={getPeriodLabel()} 
           isToday={isToday} 
         />
