@@ -45,32 +45,49 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
       const dateFromStart = `${options.dateFrom}T00:00:00+05:45`;
       const dateToEnd = `${options.dateTo}T23:59:59+05:45`;
 
-      let query = supabase
-        .from('lead_transfers')
-        .select(`
-          id,
-          lead_id,
-          to_user_id,
-          transferred_at,
-          transferred_by_user_id,
-          store_id,
-          from_team,
-          lead_type
-        `)
-        .eq('store_id', storeId)
-        .gte('transferred_at', dateFromStart)
-        .lte('transferred_at', dateToEnd)
-        .not('to_user_id', 'is', null);
+      // Fetch ALL lead_transfers using pagination to overcome 1000-row limit
+      const allTransfers: any[] = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
 
-      // Filter by specific staff if provided
-      if (options.staffId) {
-        query = query.eq('to_user_id', options.staffId);
+      while (hasMore) {
+        let query = supabase
+          .from('lead_transfers')
+          .select(`
+            id,
+            lead_id,
+            to_user_id,
+            transferred_at,
+            transferred_by_user_id,
+            store_id,
+            from_team,
+            lead_type
+          `)
+          .eq('store_id', storeId)
+          .gte('transferred_at', dateFromStart)
+          .lte('transferred_at', dateToEnd)
+          .not('to_user_id', 'is', null)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        // Filter by specific staff if provided
+        if (options.staffId) {
+          query = query.eq('to_user_id', options.staffId);
+        }
+
+        const { data: transfers, error } = await query;
+        if (error) throw error;
+
+        if (transfers && transfers.length > 0) {
+          allTransfers.push(...transfers);
+          hasMore = transfers.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data: transfers, error } = await query;
-      if (error) throw error;
-
-      let filteredTransfers = transfers || [];
+      let filteredTransfers = allTransfers;
 
       // We always need to fetch lead info to get the lead date
       // Also used for excludeSelfCreated check
@@ -78,12 +95,23 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
       let leadDataMap = new Map<string, { creatorId: string | null; date: string | null }>();
       
       if (leadIds.length > 0) {
-        const { data: leads } = await supabase
-          .from('leads')
-          .select('id, created_by_user_id, date')
-          .in('id', leadIds);
+        // Fetch leads in batches to handle large numbers of IDs
+        const BATCH_SIZE = 500; // Postgres IN clause limit consideration
+        const allLeads: any[] = [];
         
-        leadDataMap = new Map(leads?.map(l => [l.id, { creatorId: l.created_by_user_id, date: l.date }]) || []);
+        for (let i = 0; i < leadIds.length; i += BATCH_SIZE) {
+          const batchIds = leadIds.slice(i, i + BATCH_SIZE);
+          const { data: leads } = await supabase
+            .from('leads')
+            .select('id, created_by_user_id, date')
+            .in('id', batchIds);
+          
+          if (leads) {
+            allLeads.push(...leads);
+          }
+        }
+        
+        leadDataMap = new Map(allLeads.map(l => [l.id, { creatorId: l.created_by_user_id, date: l.date }]));
       }
 
       // For excludeSelfCreated, filter out self-created transfers
