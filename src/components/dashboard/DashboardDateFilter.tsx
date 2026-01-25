@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { CalendarIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,8 +15,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useDateMode } from '@/contexts/DateModeContext';
-import { formatBSDate } from '@/lib/nepaliDate';
+import { formatBSDate, getBSYears, getBSMonths, getDaysInBSMonth, bsToAd, adToBS } from '@/lib/nepaliDate';
 import { Label } from '@/components/ui/label';
 
 export interface DateRange {
@@ -38,6 +45,90 @@ const presetLabels: Record<PresetKey, string> = {
   '30days': 'Last 30 Days',
   custom: 'Custom Range',
 };
+
+// BS Date Picker Component
+function BSDatePicker({ 
+  value, 
+  onChange, 
+  label 
+}: { 
+  value: Date; 
+  onChange: (date: Date) => void; 
+  label: string;
+}) {
+  const bs = adToBS(value);
+  const [year, setYear] = useState(bs.year);
+  const [month, setMonth] = useState(bs.month);
+  const [day, setDay] = useState(bs.day);
+
+  const years = getBSYears();
+  const months = getBSMonths();
+  const daysInMonth = useMemo(() => getDaysInBSMonth(year, month), [year, month]);
+  const days = useMemo(() => 
+    Array.from({ length: daysInMonth }, (_, i) => i + 1), 
+    [daysInMonth]
+  );
+
+  const handleChange = (newYear: number, newMonth: number, newDay: number) => {
+    // Adjust day if it exceeds the days in the new month
+    const maxDays = getDaysInBSMonth(newYear, newMonth);
+    const adjustedDay = Math.min(newDay, maxDays);
+    
+    setYear(newYear);
+    setMonth(newMonth);
+    setDay(adjustedDay);
+    
+    const adDate = bsToAd(newYear, newMonth, adjustedDay);
+    onChange(adDate);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label className="text-xs text-muted-foreground whitespace-nowrap">{label}:</Label>
+      <div className="flex gap-1">
+        <Select 
+          value={year.toString()} 
+          onValueChange={(v) => handleChange(parseInt(v), month, day)}
+        >
+          <SelectTrigger className="w-[70px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((y) => (
+              <SelectItem key={y.value} value={y.value.toString()}>{y.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select 
+          value={month.toString()} 
+          onValueChange={(v) => handleChange(year, parseInt(v), day)}
+        >
+          <SelectTrigger className="w-[90px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select 
+          value={day.toString()} 
+          onValueChange={(v) => handleChange(year, month, parseInt(v))}
+        >
+          <SelectTrigger className="w-[60px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {days.map((d) => (
+              <SelectItem key={d} value={d.toString()}>{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
 
 export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProps) {
   const [activePreset, setActivePreset] = useState<PresetKey>('today');
@@ -96,6 +187,44 @@ export function DashboardDateFilter({ value, onChange }: DashboardDateFilterProp
 
   // If custom mode, show From-To date pickers
   if (showCustom) {
+    // Use BS date pickers if dateMode is BS
+    if (dateMode === 'BS') {
+      return (
+        <div className="flex items-center gap-3 flex-wrap">
+          <BSDatePicker 
+            value={value.from} 
+            onChange={(date) => {
+              const newFrom = startOfDay(date);
+              const newTo = newFrom > value.to ? endOfDay(date) : value.to;
+              onChange({ from: newFrom, to: newTo });
+            }}
+            label="From"
+          />
+          <BSDatePicker 
+            value={value.to} 
+            onChange={(date) => {
+              const newTo = endOfDay(date);
+              const newFrom = newTo < value.from ? startOfDay(date) : value.from;
+              onChange({ from: newFrom, to: newTo });
+            }}
+            label="To"
+          />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-xs"
+            onClick={() => {
+              setShowCustom(false);
+              handlePresetClick('today');
+            }}
+          >
+            Reset
+          </Button>
+        </div>
+      );
+    }
+
+    // AD mode - show calendar pickers
     return (
       <div className="flex items-center gap-2 flex-wrap">
         {/* From Date */}
