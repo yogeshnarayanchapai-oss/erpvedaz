@@ -204,47 +204,36 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         });
       });
 
-      // Sort by transaction_code descending (newest/highest code first)
+      // Sort by date ascending first for running balance calculation
       entries.sort((a, b) => {
-        // Opening balance always at bottom
-        if (a.id === 'opening-balance') return 1;
-        if (b.id === 'opening-balance') return -1;
+        // Opening balance always at top (first entry chronologically)
+        if (a.id === 'opening-balance') return -1;
+        if (b.id === 'opening-balance') return 1;
         
-        // Extract numeric part from transaction codes for proper sorting
+        // Sort by date ascending
+        const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateCompare !== 0) return dateCompare;
+        
+        // Same date: sort by transaction_code ascending
         const getCodeNum = (code?: string) => {
           if (!code) return 0;
           const match = code.match(/\d+/);
           return match ? parseInt(match[0], 10) : 0;
         };
         
-        const aNum = getCodeNum(a.transaction_code);
-        const bNum = getCodeNum(b.transaction_code);
-        
-        // If both have codes, sort by code descending
-        if (aNum > 0 && bNum > 0) {
-          return bNum - aNum;
-        }
-        
-        // If only one has code, the one with code comes first
-        if (aNum > 0) return -1;
-        if (bNum > 0) return 1;
-        
-        // Fall back to date descending for entries without codes
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return getCodeNum(a.transaction_code) - getCodeNum(b.transaction_code);
       });
 
-      // Calculate running balance (only PENDING/unsettled transactions affect running balance)
-      // Cleared/settled transactions are already accounted for
+      // Calculate running balance chronologically (all transactions affect balance)
       let runningBalance = 0;
       entries.forEach(entry => {
-        // Only unsettled/pending transactions affect the running balance (what's still owed)
-        const isPending = entry.is_pending === true || (entry.type === 'TRANSACTION' && entry.is_settled !== true);
-        if (isPending) {
-          // Credit = receivable (party owes us), Debit = payable (we owe party)
-          runningBalance += entry.credit - entry.debit;
-        }
+        // Credit = receivable (party owes us), Debit = payable (we owe party)
+        runningBalance += entry.credit - entry.debit;
         entry.balance = runningBalance;
       });
+
+      // Now reverse to show newest first in display (but balance is correctly calculated)
+      entries.reverse();
 
       return entries;
     },
