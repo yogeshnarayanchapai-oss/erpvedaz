@@ -33,13 +33,13 @@ export function useProductRevenueTargets(dateRange: DateRange) {
     queryFn: async () => {
       if (!storeId) return [] as ProductRevenueTarget[];
 
-      // Fetch ad spend reference for the date range (amount is in USD)
+      // Fetch ALL ad spend references for this store (not date-filtered)
+      // because ad campaigns are ongoing and we want to show all products with active spend
       const { data: adsData, error: adsError } = await supabase
         .from('ad_spend_reference')
         .select('product_id, amount, spend_date, product:products(id, name)')
         .eq('store_id', storeId)
-        .gte('spend_date', fromDate)
-        .lte('spend_date', toDate);
+        .gt('amount', 0);
 
       if (adsError) throw adsError;
 
