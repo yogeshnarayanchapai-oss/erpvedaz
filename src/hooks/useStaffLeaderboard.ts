@@ -32,32 +32,50 @@ export function useStaffLeaderboard(dateRange: DateRange) {
   return useQuery({
     queryKey: ['staff-leaderboard', dateFrom, dateTo, storeId, JSON.stringify(leadCounts?.countsByStaff || {})],
     queryFn: async () => {
-      // Fetch all orders with sales person info, filtered by store
-      let ordersQuery = supabase
-        .from('orders')
-        .select(`
-          id,
-          amount,
-          order_status,
-          sales_person_id,
-          order_date,
-          store_id,
-          delivery_location,
-          inside_delivery_status
-        `)
-        .eq('is_deleted', false)
-        .gte('order_date', `${dateFrom}T00:00:00`)
-        .lte('order_date', `${dateTo}T23:59:59`)
-        .not('sales_person_id', 'is', null);
+      // Fetch ALL orders using pagination to overcome 1000-row limit
+      const allOrders: any[] = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
 
-      // Filter by store_id
-      if (storeId) {
-        ordersQuery = ordersQuery.eq('store_id', storeId);
+      while (hasMore) {
+        let ordersQuery = supabase
+          .from('orders')
+          .select(`
+            id,
+            amount,
+            order_status,
+            sales_person_id,
+            order_date,
+            store_id,
+            delivery_location,
+            inside_delivery_status
+          `)
+          .eq('is_deleted', false)
+          .gte('order_date', `${dateFrom}T00:00:00`)
+          .lte('order_date', `${dateTo}T23:59:59`)
+          .not('sales_person_id', 'is', null)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        // Filter by store_id
+        if (storeId) {
+          ordersQuery = ordersQuery.eq('store_id', storeId);
+        }
+
+        const { data: orders, error: ordersError } = await ordersQuery;
+
+        if (ordersError) throw ordersError;
+
+        if (orders && orders.length > 0) {
+          allOrders.push(...orders);
+          hasMore = orders.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data: orders, error: ordersError } = await ordersQuery;
-
-      if (ordersError) throw ordersError;
+      const orders = allOrders;
 
       // Fetch only CALLING staff profiles
       const { data: profiles, error: profilesError } = await supabase
