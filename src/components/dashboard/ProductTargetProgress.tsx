@@ -20,9 +20,11 @@ interface ProductTargetProgressProps {
   isToday: boolean;
 }
 
-export function ProductTargetProgress({ products, periodLabel, isToday }: ProductTargetProgressProps) {
+export function ProductTargetProgress({ products = [], periodLabel, isToday }: ProductTargetProgressProps) {
   const sortedProducts = useMemo(() => {
-    return [...products].sort((a, b) => b.achievement_percent - a.achievement_percent);
+    return [...products]
+      .filter(p => p && typeof p.achievement_percent === 'number')
+      .sort((a, b) => (b.achievement_percent || 0) - (a.achievement_percent || 0));
   }, [products]);
 
   const getProgressColor = (percentage: number) => {
@@ -37,8 +39,9 @@ export function ProductTargetProgress({ products, periodLabel, isToday }: Produc
     return 'bg-red-500/20';
   };
 
-  const formatCurrency = (amount: number) => {
-    return `Rs. ${amount.toLocaleString('en-NP', { maximumFractionDigits: 0 })}`;
+  const formatCurrency = (amount: number | undefined | null) => {
+    const safeAmount = amount ?? 0;
+    return `Rs. ${safeAmount.toLocaleString('en-NP', { maximumFractionDigits: 0 })}`;
   };
 
   const title = isToday 
@@ -81,7 +84,7 @@ export function ProductTargetProgress({ products, periodLabel, isToday }: Produc
                   <TableRow key={product.product_name}>
                     <TableCell className="font-medium">{product.product_name}</TableCell>
                     <TableCell className="text-right">
-                      <span className="text-muted-foreground">${product.ads_spent_usd.toFixed(2)}</span>
+                      <span className="text-muted-foreground">${(product.ads_spent_usd ?? 0).toFixed(2)}</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="text-blue-600 font-medium">{formatCurrency(product.target_revenue)}</span>
