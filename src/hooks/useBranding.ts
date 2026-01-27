@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
-import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 export interface Branding {
   id: string;
@@ -28,10 +27,19 @@ export const PRESET_COLORS = [
   { name: 'Indigo', value: '243.4 75.4% 58.6%' },
 ];
 
+// Helper to safely get store ID from localStorage (for when context is not available)
+function getStoredStoreId(): string | null {
+  try {
+    return localStorage.getItem('currentStoreId');
+  } catch {
+    return null;
+  }
+}
+
 export function useBranding() {
   const queryClient = useQueryClient();
-  const { currentStore } = useCurrentStore();
-  const storeId = currentStore?.id;
+  // Get store ID from localStorage as fallback when outside CurrentStoreProvider
+  const storeId = getStoredStoreId();
 
   const { data: branding, isLoading, error } = useQuery({
     queryKey: ['combined-branding', storeId],
@@ -64,7 +72,7 @@ export function useBranding() {
         // Use store logo/favicon if available, otherwise fall back to system
         logo_url: storeBranding?.logo_url || systemBranding?.logo_url || null,
         favicon_url: storeBranding?.favicon_url || systemBranding?.favicon_url || null,
-        brand_name: currentStore?.name || systemBranding?.brand_name || 'ERP Software',
+        brand_name: systemBranding?.brand_name || 'ERP Software',
         default_theme: systemBranding?.default_theme || 'light',
         primary_color: systemBranding?.primary_color || null,
         custom_css: systemBranding?.custom_css || null,
