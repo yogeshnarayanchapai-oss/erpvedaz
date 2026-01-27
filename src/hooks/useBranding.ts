@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
 export interface Branding {
   id: string;
@@ -29,17 +30,48 @@ export const PRESET_COLORS = [
 
 export function useBranding() {
   const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
 
   const { data: branding, isLoading, error } = useQuery({
-    queryKey: ['system-branding'],
+    queryKey: ['combined-branding', storeId],
     queryFn: async () => {
-      const { data, error } = await (supabase
+      // First try to get store-specific branding if we have a store
+      let storeBranding = null;
+      if (storeId) {
+        const { data: storeData } = await supabase
+          .from('branding')
+          .select('*')
+          .eq('store_id', storeId)
+          .maybeSingle();
+        
+        storeBranding = storeData;
+      }
+
+      // Get system branding as fallback
+      const { data: systemData, error: systemError } = await (supabase
         .from('system_branding' as any)
         .select('*')
         .single() as any);
       
-      if (error) throw error;
-      return data as Branding;
+      if (systemError && !storeBranding) throw systemError;
+      
+      const systemBranding = systemData as Branding;
+      
+      // Merge: store branding takes priority for logo/favicon, system for rest
+      const mergedBranding: Branding = {
+        id: systemBranding?.id || storeBranding?.id || '',
+        // Use store logo/favicon if available, otherwise fall back to system
+        logo_url: storeBranding?.logo_url || systemBranding?.logo_url || null,
+        favicon_url: storeBranding?.favicon_url || systemBranding?.favicon_url || null,
+        brand_name: currentStore?.name || systemBranding?.brand_name || 'ERP Software',
+        default_theme: systemBranding?.default_theme || 'light',
+        primary_color: systemBranding?.primary_color || null,
+        custom_css: systemBranding?.custom_css || null,
+        updated_at: storeBranding?.updated_at || systemBranding?.updated_at || new Date().toISOString(),
+      };
+      
+      return mergedBranding;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -131,6 +163,7 @@ export function useBranding() {
       return data as Branding;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['combined-branding'] });
       queryClient.invalidateQueries({ queryKey: ['system-branding'] });
     },
   });
