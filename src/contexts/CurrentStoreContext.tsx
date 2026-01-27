@@ -54,14 +54,14 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         setIsLoading(false);
       }, TIMEOUT_MS);
 
-      // Fetch user's store access with store_role
+      // Fetch user's store access with store_role and branding
       const { data: userStoreAccess, error: accessError } = await supabase
         .from('user_store_access')
         .select(`
           store_id,
           access_level,
           store_role,
-          store:stores(*)
+          store:stores(*, branding(*))
         `)
         .eq('user_id', user.id)
         .eq('is_active', true);
@@ -71,7 +71,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
       if (isOwner) {
         const { data: allStores } = await supabase
           .from('stores')
-          .select('*')
+          .select('*, branding(*)')
           .eq('is_active', true)
           .order('name');
         allStoresData = allStores || [];
@@ -83,6 +83,22 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         return;
       }
 
+      // Helper to merge store with branding logo
+      const mergeStoreWithBranding = (store: any, access_level: string, store_role: AppRole | null): Store => {
+        const branding = Array.isArray(store.branding) ? store.branding[0] : store.branding;
+        return {
+          id: store.id,
+          name: store.name,
+          slug: store.slug,
+          // Use branding logo if available, fall back to store logo
+          logo_url: branding?.logo_url || store.logo_url || null,
+          primary_color: store.primary_color,
+          is_active: store.is_active,
+          access_level,
+          store_role,
+        };
+      };
+
       // Build stores list
       const storesWithAccess: Store[] = [];
       
@@ -90,11 +106,9 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
       if (userStoreAccess) {
         userStoreAccess.forEach((access: any) => {
           if (access.store && access.store.is_active) {
-            storesWithAccess.push({
-              ...access.store,
-              access_level: access.access_level || 'staff',
-              store_role: access.store_role,
-            });
+            storesWithAccess.push(
+              mergeStoreWithBranding(access.store, access.access_level || 'staff', access.store_role)
+            );
           }
         });
       }
@@ -103,7 +117,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
       if (isOwner && allStoresData.length > 0) {
         allStoresData.forEach(store => {
           if (!storesWithAccess.find(s => s.id === store.id)) {
-            storesWithAccess.push({ ...store, access_level: 'admin', store_role: 'OWNER' });
+            storesWithAccess.push(mergeStoreWithBranding(store, 'admin', 'OWNER'));
           }
         });
       }
