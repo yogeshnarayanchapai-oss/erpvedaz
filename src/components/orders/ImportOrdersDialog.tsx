@@ -275,11 +275,21 @@ export function ImportOrdersDialog({ open, onOpenChange, portalType }: ImportOrd
 
       toast.success(`${leadsToInsert.length} leads imported successfully`);
       
-      // Invalidate and immediately refetch to ensure creator sees their new leads
-      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
-      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
-      await queryClient.invalidateQueries({ queryKey: ['orders'], refetchType: 'active' });
-      await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
+      // Invalidate ALL leads queries with any query key starting with 'leads'
+      await queryClient.invalidateQueries({ 
+        queryKey: ['leads'], 
+        exact: false,
+        refetchType: 'all'
+      });
+      await queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
+      await queryClient.refetchQueries({ 
+        queryKey: ['leads'], 
+        exact: false,
+        type: 'all' 
+      });
+      
+      await queryClient.invalidateQueries({ queryKey: ['orders'], refetchType: 'all' });
+      await queryClient.refetchQueries({ queryKey: ['orders'], type: 'all' });
       
       setImportComplete(true);
       
