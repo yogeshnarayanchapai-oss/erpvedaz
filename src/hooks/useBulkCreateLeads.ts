@@ -133,9 +133,23 @@ export function useBulkCreateLeads() {
       return allInsertedLeads;
     },
     onSuccess: async (data) => {
-      // Invalidate and immediately refetch to ensure creator sees their new leads
-      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
-      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
+      // Invalidate ALL leads queries with any query key starting with 'leads'
+      // Use exact: false to ensure partial matching works correctly
+      await queryClient.invalidateQueries({ 
+        queryKey: ['leads'], 
+        exact: false,
+        refetchType: 'all' // Refetch all matching queries, not just active ones
+      });
+      
+      // Also invalidate related queries that might show lead counts
+      await queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
+      
+      // Force immediate refetch of all lead queries
+      await queryClient.refetchQueries({ 
+        queryKey: ['leads'], 
+        exact: false,
+        type: 'all' 
+      });
       
       const duplicateCount = data.filter(l => l.is_duplicate).length;
       if (duplicateCount > 0) {
