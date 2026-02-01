@@ -60,7 +60,32 @@ export default function LeadsAll() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [reassignStaffId, setReassignStaffId] = useState<string>('');
 
-  const { data: allLeads = [], isLoading, refetch } = useLeads();
+  // IMPORTANT: Apply date/product/status filtering at the database level.
+  // Without this, the page fetches the entire store's leads and frequently times out.
+  const serverFilters = useMemo(() => {
+    const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
+    const dateTo = format(dateRange.to, 'yyyy-MM-dd');
+
+    const status =
+      statusFilter !== 'ALL' && statusFilter !== 'DUPLICATE'
+        ? (statusFilter as any)
+        : undefined;
+
+    const assignedTo =
+      assignedToFilter !== 'ALL' && assignedToFilter !== 'UNASSIGNED'
+        ? assignedToFilter
+        : undefined;
+
+    return {
+      dateFrom,
+      dateTo,
+      productId: productFilter !== 'ALL' ? productFilter : undefined,
+      status,
+      assignedTo,
+    };
+  }, [dateRange, productFilter, statusFilter, assignedToFilter]);
+
+  const { data: allLeads = [], isLoading, refetch } = useLeads(serverFilters);
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const transferLeads = useTransferLeads();
