@@ -25,6 +25,10 @@ export function useBulkCreateLeads() {
     mutationFn: async (leads: BulkLeadInput[]) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      if (!currentStore?.id) {
+        throw new Error('Store not selected');
+      }
       
       // Fetch user profile for notification
       const { data: profile } = await supabase
@@ -62,7 +66,7 @@ export function useBulkCreateLeads() {
           current_team: 'LEADS' as const,
           lead_bucket: 'NEW' as const,
           pool_status: 'IN_POOL' as const,
-          store_id: currentStore?.id || null,
+          store_id: currentStore.id,
           is_duplicate: isDuplicate,
           entry_type: 'BULK',
         };
@@ -143,24 +147,16 @@ export function useBulkCreateLeads() {
       
       return allInsertedLeads;
     },
-    onSuccess: async (data) => {
-      // Invalidate ALL leads queries with any query key starting with 'leads'
-      // Use exact: false to ensure partial matching works correctly
-      await queryClient.invalidateQueries({ 
-        queryKey: ['leads'], 
+    onSuccess: (data) => {
+      // Do not block UI on heavy refetches.
+      // Invalidate active lead queries so the current screen refreshes quickly.
+      void queryClient.invalidateQueries({
+        queryKey: ['leads'],
         exact: false,
-        refetchType: 'all' // Refetch all matching queries, not just active ones
+        refetchType: 'active',
       });
-      
-      // Also invalidate related queries that might show lead counts
-      await queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
-      
-      // Force immediate refetch of all lead queries
-      await queryClient.refetchQueries({ 
-        queryKey: ['leads'], 
-        exact: false,
-        type: 'all' 
-      });
+
+      void queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
       
       const duplicateCount = data.filter(l => l.is_duplicate).length;
       if (duplicateCount > 0) {
