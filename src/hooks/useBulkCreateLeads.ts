@@ -72,17 +72,28 @@ export function useBulkCreateLeads() {
       let allInsertedLeads: any[] = [];
       
       if (leadsToInsert.length <= BATCH_SIZE) {
-        // Small batch - insert all at once
-        const { data, error } = await supabase.from('leads').insert(leadsToInsert).select();
-        if (error) throw error;
+        // Small batch - insert all at once (faster for typical use case)
+        const { data, error } = await supabase.from('leads').insert(leadsToInsert).select('id, is_duplicate, contact_number');
+        if (error) {
+          console.error('Bulk insert error:', error);
+          throw new Error(`Failed to create leads: ${error.message}`);
+        }
         allInsertedLeads = data || [];
       } else {
-        // Large batch - split into chunks
+        // Large batch - split into chunks with small delay to prevent timeout
         for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
           const batch = leadsToInsert.slice(i, i + BATCH_SIZE);
-          const { data, error } = await supabase.from('leads').insert(batch).select();
-          if (error) throw error;
+          const { data, error } = await supabase.from('leads').insert(batch).select('id, is_duplicate, contact_number');
+          if (error) {
+            console.error(`Batch ${i / BATCH_SIZE + 1} insert error:`, error);
+            throw new Error(`Failed at batch ${i / BATCH_SIZE + 1}: ${error.message}`);
+          }
           allInsertedLeads.push(...(data || []));
+          
+          // Small delay between batches to avoid rate limiting
+          if (i + BATCH_SIZE < leadsToInsert.length) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         }
       }
       
