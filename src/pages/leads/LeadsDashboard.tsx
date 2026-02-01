@@ -42,6 +42,7 @@ export default function LeadsDashboard() {
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER';
   const currentUserId = user?.id;
   
+  // IMPORTANT: Wait for user ID before fetching leads for proper filtering
   const { data: allLeads = [], isLoading } = useLeads();
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
@@ -52,9 +53,13 @@ export default function LeadsDashboard() {
   const { data: allLeadsForTransferSummary = [] } = useLeadsForTransferSummary();
   
   // Filter leads based on role: Admin/Owner sees all, LEADS role sees only their own created/handled leads
+  // RLS already filters leads at database level, but we apply additional client-side filter for LEADS role
   const filteredLeads = useMemo(() => {
+    // If user ID isn't loaded yet, return empty to prevent showing wrong data
+    if (!currentUserId) return [];
+    
     if (isAdminOrOwner) return allLeads;
-    // LEADS role: only show leads they created
+    // LEADS role: only show leads they created (RLS already filters, this is extra safety)
     return allLeads.filter(l => l.created_by_user_id === currentUserId);
   }, [allLeads, isAdminOrOwner, currentUserId]);
   

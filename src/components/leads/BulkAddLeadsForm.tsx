@@ -178,17 +178,34 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
     toast.success('Draft cleared');
   };
 
-  const handleSubmit = async () => {
-    const invalidRows = rows.filter(
-      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id || !row.source
-    );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
 
-    if (invalidRows.length > 0) {
-      toast.error(`Please fill required fields (${invalidRows.length} incomplete)`);
+  const handleSubmit = async () => {
+    // Prevent double-submit
+    if (isSubmitting) {
+      toast.error('Already processing, please wait...');
       return;
     }
 
-    const leadsToCreate: BulkLeadInput[] = rows.map(row => ({
+    const validRows = rows.filter(
+      row => row.client_name.trim() && row.contact_number.trim() && row.product_id && row.source
+    );
+
+    if (validRows.length === 0) {
+      toast.error('Please fill at least one complete row (name, phone, product, source)');
+      return;
+    }
+
+    const invalidCount = rows.length - validRows.length;
+    if (invalidCount > 0) {
+      toast.warning(`${invalidCount} incomplete row(s) will be skipped`);
+    }
+
+    setIsSubmitting(true);
+    setProgress({ current: 0, total: validRows.length });
+
+    const leadsToCreate: BulkLeadInput[] = validRows.map(row => ({
       date: row.date,
       client_name: row.client_name.trim(),
       contact_number: row.contact_number.trim(),
@@ -198,11 +215,20 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
       remark: row.remark.trim() || undefined,
     }));
 
-    await bulkCreateLeads.mutateAsync(leadsToCreate);
-    clearDraft();
-    setLastSelectedProduct('');
-    onOpenChange(false);
-    setRows([createEmptyRow()]);
+    try {
+      const result = await bulkCreateLeads.mutateAsync(leadsToCreate);
+      setProgress({ current: result.length, total: result.length });
+      clearDraft();
+      setLastSelectedProduct('');
+      onOpenChange(false);
+      setRows([createEmptyRow()]);
+    } catch (error: any) {
+      console.error('Bulk create error:', error);
+      // Error toast is already handled by mutation's onError
+    } finally {
+      setIsSubmitting(false);
+      setProgress({ current: 0, total: 0 });
+    }
   };
 
   const filledCount = rows.filter(r => r.client_name.trim() || r.contact_number.trim()).length;
@@ -329,21 +355,34 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t flex-row justify-between bg-muted/30">
+          <DialogFooter className="px-6 py-4 border-t flex-col sm:flex-row justify-between gap-3 bg-muted/30">
+            {isSubmitting && progress.total > 0 && (
+              <div className="w-full sm:w-auto flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                  />
+                </div>
+                <span>Creating {progress.current}/{progress.total}...</span>
+              </div>
+            )}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}>
+              <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)} disabled={isSubmitting}>
                 <Plus className="w-4 h-4 mr-1" />
                 Add 1
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => addRows(5)}>
+              <Button type="button" variant="outline" size="sm" onClick={() => addRows(5)} disabled={isSubmitting}>
                 <Plus className="w-4 h-4 mr-1" />
                 Add 5
               </Button>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => handleCloseAttempt(true)}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={bulkCreateLeads.isPending}>
-                {bulkCreateLeads.isPending ? 'Creating...' : `Create ${rows.length}`}
+              <Button variant="outline" onClick={() => handleCloseAttempt(true)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting || bulkCreateLeads.isPending}>
+                {isSubmitting ? `Creating ${progress.current}/${progress.total}...` : `Create ${rows.length}`}
               </Button>
             </div>
           </DialogFooter>
