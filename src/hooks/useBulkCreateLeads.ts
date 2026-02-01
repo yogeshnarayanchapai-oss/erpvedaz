@@ -132,8 +132,11 @@ export function useBulkCreateLeads() {
       
       return allInsertedLeads;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: async (data) => {
+      // Invalidate and immediately refetch to ensure creator sees their new leads
+      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
+      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
+      
       const duplicateCount = data.filter(l => l.is_duplicate).length;
       if (duplicateCount > 0) {
         toast.warning(`${data.length} lead${data.length > 1 ? 's' : ''} created. ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''} detected!`);

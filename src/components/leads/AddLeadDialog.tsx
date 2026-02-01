@@ -186,7 +186,11 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
       } else {
         toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
       }
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      
+      // Invalidate and immediately refetch to ensure creator sees their new leads
+      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
+      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
+      
       onOpenChange(false);
       setRows([createEmptyRow()]);
     } catch (error: any) {

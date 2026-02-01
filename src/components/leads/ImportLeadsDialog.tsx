@@ -293,7 +293,11 @@ export function ImportLeadsDialog({ open, onOpenChange, portalType }: ImportLead
       }
 
       toast.success(`${leadsToInsert.length} leads imported successfully`);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      
+      // Invalidate and immediately refetch to ensure creator sees their new leads
+      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
+      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
+      
       setImportComplete(true);
       
       // Reset after short delay

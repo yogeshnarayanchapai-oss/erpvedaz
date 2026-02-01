@@ -219,7 +219,11 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
       }
 
       toast.success(`${rows.length} lead${rows.length > 1 ? 's' : ''} created`);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      
+      // Invalidate and immediately refetch to ensure creator sees their new leads
+      await queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'active' });
+      await queryClient.refetchQueries({ queryKey: ['leads'], type: 'active' });
+      
       clearDraft();
       onOpenChange(false);
       setRows([createEmptyRow()]);
