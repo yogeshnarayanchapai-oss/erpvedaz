@@ -92,6 +92,11 @@ export function useLeads(filters?: {
   dateFrom?: string;
   dateTo?: string;
   leadBucket?: LeadBucket;
+  /**
+   * When provided, fetch only leads created by this user.
+   * Use `null` to explicitly pause the query until the caller has a user id.
+   */
+  createdByUserId?: string | null;
   storeId?: string;
 }) {
   const currentStoreId = useCurrentStoreId();
@@ -115,6 +120,11 @@ export function useLeads(filters?: {
       // Filter by store_id
       if (storeId) {
         query = query.eq('store_id', storeId);
+      }
+
+      // Optional: limit to a specific creator (used by LEADS dashboard to avoid huge pool fetch)
+      if (filters?.createdByUserId) {
+        query = query.eq('created_by_user_id', filters.createdByUserId);
       }
 
       if (filters?.status) {
@@ -144,7 +154,7 @@ export function useLeads(filters?: {
       if (error) throw error;
       return data as Lead[];
     },
-    enabled: !!storeId,
+    enabled: !!storeId && filters?.createdByUserId !== null,
   });
 }
 
@@ -193,6 +203,7 @@ export function useCreateLead() {
     mutationFn: async (input: CreateLeadInput) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+      if (!storeId) throw new Error('Store not selected');
 
       const { data, error } = await supabase
         .from('leads')
@@ -211,19 +222,14 @@ export function useCreateLead() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      // Invalidate ALL leads queries with any query key starting with 'leads'
-      await queryClient.invalidateQueries({ 
-        queryKey: ['leads'], 
+    onSuccess: () => {
+      // Refresh the currently-visible lists without blocking the UI.
+      void queryClient.invalidateQueries({
+        queryKey: ['leads'],
         exact: false,
-        refetchType: 'all'
+        refetchType: 'active',
       });
-      await queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
-      await queryClient.refetchQueries({ 
-        queryKey: ['leads'], 
-        exact: false,
-        type: 'all' 
-      });
+      void queryClient.invalidateQueries({ queryKey: ['leads-transfer-summary'] });
       toast.success('Lead created successfully');
     },
     onError: (error) => {

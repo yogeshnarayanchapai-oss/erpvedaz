@@ -42,8 +42,14 @@ export default function LeadsDashboard() {
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER';
   const currentUserId = user?.id;
   
-  // IMPORTANT: Wait for user ID before fetching leads for proper filtering
-  const { data: allLeads = [], isLoading } = useLeads();
+  // IMPORTANT: For non-admin users, avoid fetching the entire store lead pool (can be huge).
+  // We fetch creator-scoped leads at the DB level and pause until we have a user id.
+  const leadsQueryFilters = useMemo(
+    () => (isAdminOrOwner ? undefined : { createdByUserId: currentUserId ?? null }),
+    [isAdminOrOwner, currentUserId]
+  );
+
+  const { data: allLeads = [], isLoading } = useLeads(leadsQueryFilters);
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const { data: orders = [] } = useOrders({ dateFrom: today, dateTo: today });
