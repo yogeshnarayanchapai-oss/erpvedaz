@@ -190,7 +190,7 @@ export default function DailyPL() {
     setCostSettingsOpen(false);
   };
 
-  const formatCurrency = (val: number) => `Rs ${val.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+  const formatCurrency = (val: number) => `Rs ${Math.round(val).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
   const chartData = useMemo(
     () =>
@@ -343,7 +343,7 @@ export default function DailyPL() {
                 <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold">{U}</div>
+                <div className="text-sm md:text-lg font-bold">{U}</div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">
                   From stock movements
                 </p>
@@ -355,7 +355,7 @@ export default function DailyPL() {
                 <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(GS)}</div>
+                <div className="text-sm md:text-lg font-bold truncate">{formatCurrency(GS)}</div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">
                   From stock movements
                 </p>
@@ -367,7 +367,7 @@ export default function DailyPL() {
                 <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500 shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold text-green-600 truncate">
+                <div className="text-sm md:text-lg font-bold text-green-600 truncate">
                   {formatCurrency(actualSales)}
                 </div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">After {R}% RTO</p>
@@ -379,7 +379,7 @@ export default function DailyPL() {
                 <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-destructive shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold text-destructive truncate">
+                <div className="text-sm md:text-lg font-bold text-destructive truncate">
                   {formatCurrency(totalExpense)}
                 </div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">Office management</p>
@@ -391,7 +391,7 @@ export default function DailyPL() {
                 <Percent className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className={`text-lg md:text-2xl font-bold truncate ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                <div className={`text-sm md:text-lg font-bold truncate ${actualProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                   {formatCurrency(actualProfit)}
                 </div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">Margin: {profitMargin}%</p>
@@ -403,7 +403,7 @@ export default function DailyPL() {
                 <Target className="h-3 w-3 md:h-4 md:w-4 text-blue-500 shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className={`text-lg md:text-2xl font-bold ${roiAds >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                <div className={`text-sm md:text-lg font-bold ${roiAds >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
                   {roiAds.toFixed(2)}x
                 </div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">
