@@ -11,7 +11,7 @@ export function TaskStatusBadge({ status, className }: TaskStatusBadgeProps) {
   const config = {
     PENDING: {
       label: 'Pending',
-      className: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+      className: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
     },
     IN_PROGRESS: {
       label: 'In Progress',

@@ -6618,6 +6618,7 @@ export type Database = {
           assigned_by_user_id: string | null
           assigned_to_user_id: string | null
           attachment_url: string | null
+          completed_date: string | null
           created_at: string | null
           description: string | null
           due_date: string
@@ -6632,6 +6633,7 @@ export type Database = {
           assigned_by_user_id?: string | null
           assigned_to_user_id?: string | null
           attachment_url?: string | null
+          completed_date?: string | null
           created_at?: string | null
           description?: string | null
           due_date: string
@@ -6646,6 +6648,7 @@ export type Database = {
           assigned_by_user_id?: string | null
           assigned_to_user_id?: string | null
           attachment_url?: string | null
+          completed_date?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,13 +34,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus, TaskStatus, TaskPriority, Task } from '@/hooks/useTasks';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus, getTaskPerformance, getTaskPerformanceScore, TaskStatus, TaskPriority, Task, TaskPerformance } from '@/hooks/useTasks';
 import { useStaff } from '@/hooks/useStaff';
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
+import { TaskPerformanceBadge } from '@/components/tasks/TaskPerformanceBadge';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { AddRemarkDialog } from '@/components/tasks/AddRemarkDialog';
+import { FormattedDate } from '@/components/FormattedDate';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { cn } from '@/lib/utils';
@@ -57,26 +61,41 @@ import {
   Pencil,
   Trash2,
   MessageSquare,
+  Zap,
+  Timer,
+  AlertTriangle,
+  TrendingUp,
+  Award,
 } from 'lucide-react';
+
+function getRowBgClass(perf: TaskPerformance): string {
+  switch (perf) {
+    case 'OVERDUE': return 'bg-red-50/60 dark:bg-red-950/20';
+    case 'LATE': return 'bg-orange-50/60 dark:bg-orange-950/20';
+    case 'ON_TIME':
+    case 'EARLY': return 'bg-emerald-50/40 dark:bg-emerald-950/15';
+    case 'ON_TRACK': return 'bg-blue-50/40 dark:bg-blue-950/15';
+    default: return '';
+  }
+}
 
 export default function HRMTasks() {
   const { user } = useAuth();
   const { effectiveRole } = useEffectiveRole();
   const isManager = effectiveRole === 'MANAGER';
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
-  // Allow Admin, Manager, and Owner to update status of their assigned tasks
   const canUpdateOwnTaskStatus = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
   
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [remarkDialogTaskId, setRemarkDialogTaskId] = useState<string>('');
   const [remarkDialogDefaultIsIssue, setRemarkDialogDefaultIsIssue] = useState(false);
-
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('active');
   const [filters, setFilters] = useState({
     status: 'ALL' as TaskStatus | 'ALL',
     priority: 'ALL' as TaskPriority | 'ALL',
@@ -86,106 +105,92 @@ export default function HRMTasks() {
   });
 
   const { data: tasksRaw, isLoading } = useTasks(filters);
-  
-  // Sort tasks: Manager's pending tasks first, then others
-  const tasks = tasksRaw ? [...tasksRaw].sort((a, b) => {
-    const aIsMyPending = a.assigned_to?.id === user?.id && a.status !== 'COMPLETED';
-    const bIsMyPending = b.assigned_to?.id === user?.id && b.status !== 'COMPLETED';
-    if (aIsMyPending && !bIsMyPending) return -1;
-    if (!aIsMyPending && bIsMyPending) return 1;
-    return 0;
-  }) : [];
   const { data: stats } = useTaskStats(filters.dateFrom, filters.dateTo);
   const { data: staff } = useStaff();
   const deleteTaskMutation = useDeleteTask();
   const updateTaskStatus = useUpdateTaskStatus();
 
-  // Check if task is assigned to current user and not completed
-  const isMyPendingTask = (task: Task) => {
-    return task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
-  };
+  // Sort tasks: Manager's pending tasks first
+  const allTasks = useMemo(() => {
+    if (!tasksRaw) return [];
+    return [...tasksRaw].sort((a, b) => {
+      const aIsMyPending = a.assigned_to?.id === user?.id && a.status !== 'COMPLETED';
+      const bIsMyPending = b.assigned_to?.id === user?.id && b.status !== 'COMPLETED';
+      if (aIsMyPending && !bIsMyPending) return -1;
+      if (!aIsMyPending && bIsMyPending) return 1;
+      return 0;
+    });
+  }, [tasksRaw, user?.id]);
 
-  // Handle status change for manager's own tasks
+  const activeTasks = useMemo(() => allTasks.filter(t => t.status !== 'COMPLETED'), [allTasks]);
+  const completedTasks = useMemo(() => allTasks.filter(t => t.status === 'COMPLETED'), [allTasks]);
+  const currentTasks = activeTab === 'active' ? activeTasks : completedTasks;
+
+  // Staff performance scoring
+  const staffPerformance = useMemo(() => {
+    if (!allTasks.length) return [];
+    const staffMap = new Map<string, { name: string; totalPoints: number; totalTasks: number; completed: number }>();
+    
+    allTasks.forEach(task => {
+      const staffId = task.assigned_to_user_id;
+      const staffName = task.assigned_to?.name || 'Unknown';
+      if (!staffId) return;
+      
+      if (!staffMap.has(staffId)) {
+        staffMap.set(staffId, { name: staffName, totalPoints: 0, totalTasks: 0, completed: 0 });
+      }
+      const entry = staffMap.get(staffId)!;
+      entry.totalTasks++;
+      
+      if (task.status === 'COMPLETED') {
+        entry.completed++;
+        const perf = getTaskPerformance(task);
+        entry.totalPoints += getTaskPerformanceScore(perf.type);
+      }
+    });
+
+    return Array.from(staffMap.entries())
+      .map(([id, data]) => ({
+        id,
+        name: data.name,
+        totalTasks: data.totalTasks,
+        completed: data.completed,
+        totalPoints: data.totalPoints,
+        maxPoints: data.totalTasks * 10,
+        percentage: data.totalTasks > 0 ? Math.round((data.totalPoints / (data.totalTasks * 10)) * 100) : 0,
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
+  }, [allTasks]);
+
+  const isMyPendingTask = (task: Task) => task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
+
   const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
     await updateTaskStatus.mutateAsync({ taskId: task.id, newStatus });
   };
 
-  const getAvailableStatuses = (currentStatus: TaskStatus): TaskStatus[] => {
-    switch (currentStatus) {
-      case 'PENDING':
-        return ['IN_PROGRESS'];
-      case 'IN_PROGRESS':
-        return ['COMPLETED'];
-      default:
-        return [];
-    }
-  };
-
-  const handleViewTask = (task: Task) => {
-    setSelectedTask(task);
-    setSheetOpen(true);
-  };
-
+  const handleViewTask = (task: Task) => { setSelectedTask(task); setSheetOpen(true); };
   const openRemarkDialog = (taskId: string, defaultIsIssue = false) => {
-    setRemarkDialogTaskId(taskId);
-    setRemarkDialogDefaultIsIssue(defaultIsIssue);
-    setRemarkDialogOpen(true);
+    setRemarkDialogTaskId(taskId); setRemarkDialogDefaultIsIssue(defaultIsIssue); setRemarkDialogOpen(true);
   };
-
-  const handleEditTask = (task: Task) => {
-    setEditTask(task);
-    setEditDialogOpen(true);
-  };
-
-  const handleDeleteTask = (task: Task) => {
-    setDeleteTask(task);
-    setDeleteDialogOpen(true);
-  };
-
+  const handleEditTask = (task: Task) => { setEditTask(task); setEditDialogOpen(true); };
+  const handleDeleteTask = (task: Task) => { setDeleteTask(task); setDeleteDialogOpen(true); };
   const confirmDelete = async () => {
-    if (deleteTask) {
-      await deleteTaskMutation.mutateAsync(deleteTask.id);
-      setDeleteDialogOpen(false);
-      setDeleteTask(null);
-    }
+    if (deleteTask) { await deleteTaskMutation.mutateAsync(deleteTask.id); setDeleteDialogOpen(false); setDeleteTask(null); }
   };
 
   const statCards = [
-    {
-      title: 'Total Tasks',
-      value: stats?.total || 0,
-      icon: ClipboardList,
-      color: 'text-primary',
-      bg: 'bg-primary/10',
-    },
-    {
-      title: 'Pending',
-      value: stats?.pending || 0,
-      icon: Clock,
-      color: 'text-amber-600',
-      bg: 'bg-amber-500/10',
-    },
-    {
-      title: 'In Progress',
-      value: stats?.inProgress || 0,
-      icon: Loader2,
-      color: 'text-blue-600',
-      bg: 'bg-blue-500/10',
-    },
-    {
-      title: 'Completed',
-      value: stats?.completed || 0,
-      icon: CheckCircle2,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-500/10',
-    },
-    {
-      title: 'Issues',
-      value: stats?.issueCount || 0,
-      icon: AlertCircle,
-      color: 'text-red-600',
-      bg: 'bg-red-500/10',
-    },
+    { title: 'Total Tasks', value: stats?.total || 0, icon: ClipboardList, color: 'text-primary', bg: 'bg-primary/10' },
+    { title: 'Pending', value: stats?.pending || 0, icon: Clock, color: 'text-slate-600', bg: 'bg-slate-500/10' },
+    { title: 'In Progress', value: stats?.inProgress || 0, icon: Loader2, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { title: 'Completed', value: stats?.completed || 0, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { title: 'Issues', value: stats?.issueCount || 0, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' },
+  ];
+
+  const performanceCards = [
+    { title: 'On Time', value: (stats?.onTime || 0) + (stats?.early || 0), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { title: 'Late', value: stats?.late || 0, icon: Timer, color: 'text-orange-600', bg: 'bg-orange-500/10' },
+    { title: 'Overdue', value: stats?.overdue || 0, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10' },
+    { title: 'On Track', value: stats?.onTrack || 0, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-500/10' },
   ];
 
   return (
@@ -194,9 +199,7 @@ export default function HRMTasks() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Task Management</h1>
-          <p className="text-sm text-muted-foreground">
-            Create and monitor tasks for your team
-          </p>
+          <p className="text-sm text-muted-foreground">Create and monitor tasks for your team</p>
         </div>
         <CreateTaskDialog />
       </div>
@@ -211,9 +214,7 @@ export default function HRMTasks() {
                   <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    {stat.title}
-                  </p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{stat.title}</p>
                   <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
                 </div>
               </div>
@@ -221,6 +222,55 @@ export default function HRMTasks() {
           </Card>
         ))}
       </div>
+
+      {/* Performance Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {performanceCards.map((stat) => (
+          <Card key={stat.title}>
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{stat.title}</p>
+                  <p className="text-lg font-bold">{stat.value}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Staff Performance Scores */}
+      {staffPerformance.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Staff Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {staffPerformance.map((sp) => (
+                <div key={sp.id} className="border rounded-lg p-3 text-center space-y-1">
+                  <p className="text-sm font-medium truncate">{sp.name}</p>
+                  <p className={cn(
+                    "text-2xl font-bold",
+                    sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
+                  )}>
+                    {sp.percentage}%
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {sp.completed}/{sp.totalTasks} tasks • {sp.totalPoints}pts
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -232,15 +282,8 @@ export default function HRMTasks() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <Select
-              value={filters.status}
-              onValueChange={(value) =>
-                setFilters({ ...filters, status: value as TaskStatus | 'ALL' })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
+            <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as TaskStatus | 'ALL' })}>
+              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
@@ -249,15 +292,8 @@ export default function HRMTasks() {
               </SelectContent>
             </Select>
 
-            <Select
-              value={filters.priority}
-              onValueChange={(value) =>
-                setFilters({ ...filters, priority: value as TaskPriority | 'ALL' })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
+            <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value as TaskPriority | 'ALL' })}>
+              <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Priority</SelectItem>
                 <SelectItem value="LOW">Low</SelectItem>
@@ -266,220 +302,73 @@ export default function HRMTasks() {
               </SelectContent>
             </Select>
 
-            <Select
-              value={filters.assignedTo || 'all'}
-              onValueChange={(value) =>
-                setFilters({ ...filters, assignedTo: value === 'all' ? '' : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Assigned To" />
-              </SelectTrigger>
+            <Select value={filters.assignedTo || 'all'} onValueChange={(value) => setFilters({ ...filters, assignedTo: value === 'all' ? '' : value })}>
+              <SelectTrigger><SelectValue placeholder="Assigned To" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Staff</SelectItem>
                 {staff?.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
-              <Input
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) =>
-                  setFilters({ ...filters, dateFrom: e.target.value })
-                }
-                className="text-sm"
-              />
+              <Input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} className="text-sm" />
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground hidden sm:block">to</span>
-              <Input
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) =>
-                  setFilters({ ...filters, dateTo: e.target.value })
-                }
-                className="text-sm"
-              />
+              <Input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} className="text-sm" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Task Table */}
+      {/* Tabs + Task Table */}
       <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : tasks?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <ClipboardList className="h-10 w-10 mb-2" />
-              <p>No tasks found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead className="hidden sm:table-cell">Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Due Date</TableHead>
-                    <TableHead className="hidden lg:table-cell">Created</TableHead>
-                    <TableHead className="hidden md:table-cell">Issue</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks?.map((task) => (
-                    <TableRow 
-                      key={task.id}
-                      className={cn(
-                        isMyPendingTask(task) && 'bg-amber-50 dark:bg-amber-950/30 border-l-4 border-l-amber-500'
-                      )}
-                    >
-                      <TableCell className="font-medium max-w-[120px] sm:max-w-[200px] truncate">
-                        <div className="flex items-center gap-2">
-                          {task.title}
-                          {isMyPendingTask(task) && (
-                            <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">
-                              Assigned to you
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[80px] sm:max-w-[120px] truncate">
-                        {task.assigned_to?.name || 'N/A'}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <TaskPriorityBadge priority={task.priority} />
-                      </TableCell>
-                      <TableCell>
-                        {/* Admin/Manager/Owner can update status of their assigned tasks */}
-                        {canUpdateOwnTaskStatus && isMyPendingTask(task) ? (
-                          <Select
-                            value={task.status}
-                            onValueChange={(value) => handleStatusChange(task, value as TaskStatus)}
-                            disabled={updateTaskStatus.isPending}
-                          >
-                            <SelectTrigger className="w-[130px] h-8">
-                              <TaskStatusBadge status={task.status} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="PENDING">
-                                <TaskStatusBadge status="PENDING" />
-                              </SelectItem>
-                              <SelectItem value="IN_PROGRESS">
-                                <TaskStatusBadge status="IN_PROGRESS" />
-                              </SelectItem>
-                              <SelectItem value="COMPLETED">
-                                <TaskStatusBadge status="COMPLETED" />
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <TaskStatusBadge status={task.status} />
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {format(new Date(task.due_date), 'MMM dd')}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {format(new Date(task.created_at), 'MMM dd')}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openRemarkDialog(task.id, true)}
-                          title={task.has_issues ? 'View / add issue' : 'Report issue'}
-                          className={cn(
-                            'h-8 w-8 p-0',
-                            task.has_issues ? 'text-destructive' : 'text-muted-foreground'
-                          )}
-                        >
-                          <AlertCircle className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openRemarkDialog(task.id, false)}>
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Add remark
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openRemarkDialog(task.id, true)}>
-                              <AlertCircle className="h-4 w-4 mr-2" />
-                              Report issue
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleViewTask(task)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditTask(task)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteTask(task)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="px-4 pt-4">
+            <TabsList>
+              <TabsTrigger value="active" className="gap-2">
+                Active
+                <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">{activeTasks.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="gap-2">
+                Completed
+                <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">{completedTasks.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="active" className="m-0">
+            <TaskTable tasks={activeTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+              isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
+              openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
+          </TabsContent>
+          <TabsContent value="completed" className="m-0">
+            <TaskTable tasks={completedTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+              isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
+              openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
+          </TabsContent>
+        </Tabs>
       </Card>
 
-      <TaskDetailSheet
-        task={selectedTask}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
+      <TaskDetailSheet task={selectedTask} open={sheetOpen} onOpenChange={setSheetOpen} />
 
       <AddRemarkDialog
         taskId={remarkDialogTaskId}
         open={remarkDialogOpen}
-        onOpenChange={(open) => {
-          setRemarkDialogOpen(open);
-          if (!open) setRemarkDialogTaskId('');
-        }}
+        onOpenChange={(open) => { setRemarkDialogOpen(open); if (!open) setRemarkDialogTaskId(''); }}
         defaultIsIssue={remarkDialogDefaultIsIssue}
       />
 
-      {/* Edit Task Dialog */}
       <CreateTaskDialog
         editTask={editTask}
         open={editDialogOpen}
-        onOpenChange={(open) => {
-          setEditDialogOpen(open);
-          if (!open) setEditTask(null);
-        }}
+        onOpenChange={(open) => { setEditDialogOpen(open); if (!open) setEditTask(null); }}
       />
 
-      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -490,15 +379,156 @@ export default function HRMTasks() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// Extracted table component to avoid duplication
+function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPendingTask, handleStatusChange, updateTaskStatus, openRemarkDialog, handleViewTask, handleEditTask, handleDeleteTask }: {
+  tasks: Task[];
+  isLoading: boolean;
+  user: any;
+  canUpdateOwnTaskStatus: boolean;
+  isMyPendingTask: (task: Task) => boolean;
+  handleStatusChange: (task: Task, newStatus: TaskStatus) => Promise<void>;
+  updateTaskStatus: any;
+  openRemarkDialog: (taskId: string, isIssue?: boolean) => void;
+  handleViewTask: (task: Task) => void;
+  handleEditTask: (task: Task) => void;
+  handleDeleteTask: (task: Task) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+        <ClipboardList className="h-10 w-10 mb-2" />
+        <p>No tasks found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead>Assigned To</TableHead>
+            <TableHead className="hidden sm:table-cell">Priority</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="hidden md:table-cell">Due Date</TableHead>
+            <TableHead className="hidden lg:table-cell">Created</TableHead>
+            <TableHead className="hidden lg:table-cell">Completed</TableHead>
+            <TableHead className="hidden sm:table-cell">Performance</TableHead>
+            <TableHead className="hidden md:table-cell">Issue</TableHead>
+            <TableHead className="text-right">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tasks.map((task) => {
+            const perf = getTaskPerformance(task);
+            return (
+              <TableRow
+                key={task.id}
+                className={cn(
+                  getRowBgClass(perf.type),
+                  'hover:opacity-80 transition-opacity',
+                  isMyPendingTask(task) && 'border-l-4 border-l-amber-500'
+                )}
+              >
+                <TableCell className="font-medium max-w-[120px] sm:max-w-[200px] truncate">
+                  <div className="flex items-center gap-2">
+                    {task.title}
+                    {isMyPendingTask(task) && (
+                      <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                        You
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[80px] sm:max-w-[120px] truncate">
+                  {task.assigned_to?.name || 'N/A'}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <TaskPriorityBadge priority={task.priority} />
+                </TableCell>
+                <TableCell>
+                  {canUpdateOwnTaskStatus && isMyPendingTask(task) ? (
+                    <Select value={task.status} onValueChange={(value) => handleStatusChange(task, value as TaskStatus)} disabled={updateTaskStatus.isPending}>
+                      <SelectTrigger className="w-[130px] h-8">
+                        <TaskStatusBadge status={task.status} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PENDING"><TaskStatusBadge status="PENDING" /></SelectItem>
+                        <SelectItem value="IN_PROGRESS"><TaskStatusBadge status="IN_PROGRESS" /></SelectItem>
+                        <SelectItem value="COMPLETED"><TaskStatusBadge status="COMPLETED" /></SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <TaskStatusBadge status={task.status} />
+                  )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <FormattedDate date={task.due_date} />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <FormattedDate date={task.created_at} />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {task.completed_date ? <FormattedDate date={task.completed_date} /> : '-'}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <TaskPerformanceBadge type={perf.type} label={perf.label} />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, true)}
+                    title={task.has_issues ? 'View / add issue' : 'Report issue'}
+                    className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
+                    <AlertCircle className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openRemarkDialog(task.id, false)}>
+                        <MessageSquare className="h-4 w-4 mr-2" />Add remark
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openRemarkDialog(task.id, true)}>
+                        <AlertCircle className="h-4 w-4 mr-2" />Report issue
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewTask(task)}>
+                        <Eye className="h-4 w-4 mr-2" />View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditTask(task)}>
+                        <Pencil className="h-4 w-4 mr-2" />Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteTask(task)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 }
