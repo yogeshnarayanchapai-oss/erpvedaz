@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
+export type TaskPerformance = 'ON_TIME' | 'EARLY' | 'LATE' | 'OVERDUE' | 'ON_TRACK';
+
 export interface Task {
   id: string;
   title: string;
@@ -14,6 +16,7 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   due_date: string;
+  completed_date: string | null;
   assigned_to_user_id: string | null;
   assigned_by_user_id: string | null;
   attachment_url: string | null;
@@ -23,6 +26,47 @@ export interface Task {
   assigned_to?: { id: string; name: string } | null;
   assigned_by?: { id: string; name: string } | null;
   has_issues?: boolean;
+}
+
+export function getTaskPerformance(task: Task): { label: string; type: TaskPerformance; days?: number } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(task.due_date);
+  dueDate.setHours(0, 0, 0, 0);
+
+  if (task.status === 'COMPLETED' && task.completed_date) {
+    const completedDate = new Date(task.completed_date);
+    completedDate.setHours(0, 0, 0, 0);
+    if (completedDate < dueDate) {
+      const days = Math.ceil((dueDate.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
+      return { label: `Early (${days}d)`, type: 'EARLY', days };
+    }
+    if (completedDate.getTime() <= dueDate.getTime()) {
+      return { label: 'On Time', type: 'ON_TIME' };
+    }
+    const days = Math.ceil((completedDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    return { label: `Late (${days}d)`, type: 'LATE', days };
+  }
+
+  if (task.status !== 'COMPLETED') {
+    if (today > dueDate) {
+      const days = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      return { label: `Overdue (${days}d)`, type: 'OVERDUE', days };
+    }
+    return { label: 'On Track', type: 'ON_TRACK' };
+  }
+
+  return { label: 'On Track', type: 'ON_TRACK' };
+}
+
+export function getTaskPerformanceScore(perf: TaskPerformance): number {
+  switch (perf) {
+    case 'EARLY': return 12;
+    case 'ON_TIME': return 10;
+    case 'LATE': return 5;
+    case 'OVERDUE': return 0;
+    default: return 0;
+  }
 }
 
 export interface TaskRemark {
@@ -159,7 +203,7 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
   return useQuery({
     queryKey: ['task-stats', storeId, dateFrom, dateTo],
     queryFn: async () => {
-      let query = supabase.from('tasks').select('id, status');
+      let query = supabase.from('tasks').select('id, status, due_date, completed_date');
 
       if (storeId) {
         query = query.eq('store_id', storeId);
@@ -189,12 +233,34 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
         issueCount = count || 0;
       }
 
+      // Calculate performance stats
+      const allTasks = (data || []) as Array<{ id: string; status: string; due_date: string; completed_date: string | null }>;
+      let onTime = 0, early = 0, late = 0, overdue = 0, onTrack = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      allTasks.forEach(t => {
+        const perf = getTaskPerformance(t as Task);
+        switch (perf.type) {
+          case 'ON_TIME': onTime++; break;
+          case 'EARLY': early++; break;
+          case 'LATE': late++; break;
+          case 'OVERDUE': overdue++; break;
+          case 'ON_TRACK': onTrack++; break;
+        }
+      });
+
       const stats = {
         total: data?.length || 0,
         pending: data?.filter((t) => t.status === 'PENDING').length || 0,
         inProgress: data?.filter((t) => t.status === 'IN_PROGRESS').length || 0,
         completed: data?.filter((t) => t.status === 'COMPLETED').length || 0,
         issueCount,
+        onTime,
+        early,
+        late,
+        overdue,
+        onTrack,
       };
 
       return stats;
@@ -349,10 +415,12 @@ export function useUpdateTaskStatus() {
 
       if (fetchError) throw fetchError;
 
-      // Update task status
+      // Update task status (completed_date is auto-set by trigger)
       const { error: updateError } = await supabase
         .from('tasks')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+        })
         .eq('id', taskId);
 
       if (updateError) throw updateError;
