@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { useState, useMemo, useRef } from 'react';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useTasks, useTaskStats, useDeleteTask, useUpdateTaskStatus, getTaskPerformance, getTaskPerformanceScore, TaskStatus, TaskPriority, Task, TaskPerformance } from '@/hooks/useTasks';
@@ -68,6 +73,20 @@ import {
   Award,
 } from 'lucide-react';
 
+type DatePreset = 'this_month' | 'last_month' | 'custom';
+
+function getDateRange(preset: DatePreset): { from: string; to: string } {
+  const now = new Date();
+  if (preset === 'this_month') {
+    return { from: format(startOfMonth(now), 'yyyy-MM-dd'), to: format(endOfMonth(now), 'yyyy-MM-dd') };
+  }
+  if (preset === 'last_month') {
+    const last = subMonths(now, 1);
+    return { from: format(startOfMonth(last), 'yyyy-MM-dd'), to: format(endOfMonth(last), 'yyyy-MM-dd') };
+  }
+  return { from: '', to: '' };
+}
+
 function getRowBgClass(perf: TaskPerformance): string {
   switch (perf) {
     case 'OVERDUE': return 'bg-red-50/60 dark:bg-red-950/20';
@@ -96,12 +115,16 @@ export default function HRMTasks() {
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
+  const [datePreset, setDatePreset] = useState<DatePreset>('this_month');
+  const defaultRange = getDateRange('this_month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [filters, setFilters] = useState({
     status: 'ALL' as TaskStatus | 'ALL',
     priority: 'ALL' as TaskPriority | 'ALL',
     assignedTo: '',
-    dateFrom: '',
-    dateTo: '',
+    dateFrom: defaultRange.from,
+    dateTo: defaultRange.to,
   });
 
   const { data: tasksRaw, isLoading } = useTasks(filters);
@@ -109,6 +132,20 @@ export default function HRMTasks() {
   const { data: staff } = useStaff();
   const deleteTaskMutation = useDeleteTask();
   const updateTaskStatus = useUpdateTaskStatus();
+
+  const handleDatePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const range = getDateRange(preset);
+      setFilters(f => ({ ...f, dateFrom: range.from, dateTo: range.to }));
+    } else {
+      setFilters(f => ({ ...f, dateFrom: customFrom, dateTo: customTo }));
+    }
+  };
+
+  const handleCustomDateApply = () => {
+    setFilters(f => ({ ...f, dateFrom: customFrom, dateTo: customTo }));
+  };
 
   // Sort tasks: Manager's pending tasks first
   const allTasks = useMemo(() => {
@@ -126,10 +163,10 @@ export default function HRMTasks() {
   const completedTasks = useMemo(() => allTasks.filter(t => t.status === 'COMPLETED'), [allTasks]);
   const currentTasks = activeTab === 'active' ? activeTasks : completedTasks;
 
-  // Staff performance scoring
+  // Staff performance scoring with breakdown
   const staffPerformance = useMemo(() => {
     if (!allTasks.length) return [];
-    const staffMap = new Map<string, { name: string; totalPoints: number; totalTasks: number; completed: number }>();
+    const staffMap = new Map<string, { name: string; totalPoints: number; totalTasks: number; completed: number; onTime: number; early: number; late: number; overdue: number; onTrack: number }>();
     
     allTasks.forEach(task => {
       const staffId = task.assigned_to_user_id;
@@ -137,14 +174,22 @@ export default function HRMTasks() {
       if (!staffId) return;
       
       if (!staffMap.has(staffId)) {
-        staffMap.set(staffId, { name: staffName, totalPoints: 0, totalTasks: 0, completed: 0 });
+        staffMap.set(staffId, { name: staffName, totalPoints: 0, totalTasks: 0, completed: 0, onTime: 0, early: 0, late: 0, overdue: 0, onTrack: 0 });
       }
       const entry = staffMap.get(staffId)!;
       entry.totalTasks++;
       
+      const perf = getTaskPerformance(task);
+      switch (perf.type) {
+        case 'ON_TIME': entry.onTime++; break;
+        case 'EARLY': entry.early++; break;
+        case 'LATE': entry.late++; break;
+        case 'OVERDUE': entry.overdue++; break;
+        case 'ON_TRACK': entry.onTrack++; break;
+      }
+
       if (task.status === 'COMPLETED') {
         entry.completed++;
-        const perf = getTaskPerformance(task);
         entry.totalPoints += getTaskPerformanceScore(perf.type);
       }
     });
@@ -152,10 +197,7 @@ export default function HRMTasks() {
     return Array.from(staffMap.entries())
       .map(([id, data]) => ({
         id,
-        name: data.name,
-        totalTasks: data.totalTasks,
-        completed: data.completed,
-        totalPoints: data.totalPoints,
+        ...data,
         maxPoints: data.totalTasks * 10,
         percentage: data.totalTasks > 0 ? Math.round((data.totalPoints / (data.totalTasks * 10)) * 100) : 0,
       }))
@@ -186,13 +228,6 @@ export default function HRMTasks() {
     { title: 'Issues', value: stats?.issueCount || 0, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' },
   ];
 
-  const performanceCards = [
-    { title: 'On Time', value: (stats?.onTime || 0) + (stats?.early || 0), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { title: 'Late', value: stats?.late || 0, icon: Timer, color: 'text-orange-600', bg: 'bg-orange-500/10' },
-    { title: 'Overdue', value: stats?.overdue || 0, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10' },
-    { title: 'On Track', value: stats?.onTrack || 0, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-  ];
-
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
@@ -202,6 +237,28 @@ export default function HRMTasks() {
           <p className="text-sm text-muted-foreground">Create and monitor tasks for your team</p>
         </div>
         <CreateTaskDialog />
+      </div>
+
+      {/* Date Filter Presets */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('this_month')}>
+          This Month
+        </Button>
+        <Button size="sm" variant={datePreset === 'last_month' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('last_month')}>
+          Last Month
+        </Button>
+        <Button size="sm" variant={datePreset === 'custom' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('custom')}>
+          Custom
+        </Button>
+        {datePreset === 'custom' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="text-sm w-[150px] h-8" placeholder="From" />
+            <span className="text-muted-foreground text-sm">to</span>
+            <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="text-sm w-[150px] h-8" placeholder="Till" />
+            <Button size="sm" variant="secondary" onClick={handleCustomDateApply}>Apply</Button>
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -223,26 +280,7 @@ export default function HRMTasks() {
         ))}
       </div>
 
-      {/* Performance Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {performanceCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${stat.bg}`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{stat.title}</p>
-                  <p className="text-lg font-bold">{stat.value}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Staff Performance Scores */}
+      {/* Staff Performance Scores with Tooltip */}
       {staffPerformance.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -254,18 +292,31 @@ export default function HRMTasks() {
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {staffPerformance.map((sp) => (
-                <div key={sp.id} className="border rounded-lg p-3 text-center space-y-1">
-                  <p className="text-sm font-medium truncate">{sp.name}</p>
-                  <p className={cn(
-                    "text-2xl font-bold",
-                    sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
-                  )}>
-                    {sp.percentage}%
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {sp.completed}/{sp.totalTasks} tasks • {sp.totalPoints}pts
-                  </p>
-                </div>
+                <Popover key={sp.id}>
+                  <PopoverTrigger asChild>
+                    <div className="border rounded-lg p-3 text-center space-y-1 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <p className="text-sm font-medium truncate">{sp.name}</p>
+                      <p className={cn(
+                        "text-2xl font-bold",
+                        sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
+                      )}>
+                        {sp.percentage}%
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {sp.completed}/{sp.totalTasks} tasks • {sp.totalPoints}pts
+                      </p>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-52 p-3" side="top">
+                    <p className="text-sm font-semibold mb-2">{sp.name}</p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between"><span className="text-emerald-600">✓ On Time</span><span className="font-medium">{sp.onTime + sp.early}</span></div>
+                      <div className="flex justify-between"><span className="text-orange-600">⏱ Late</span><span className="font-medium">{sp.late}</span></div>
+                      <div className="flex justify-between"><span className="text-red-600">⚠ Overdue</span><span className="font-medium">{sp.overdue}</span></div>
+                      <div className="flex justify-between"><span className="text-blue-600">📈 On Track</span><span className="font-medium">{sp.onTrack}</span></div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               ))}
             </div>
           </CardContent>
@@ -281,7 +332,7 @@ export default function HRMTasks() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as TaskStatus | 'ALL' })}>
               <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -311,16 +362,6 @@ export default function HRMTasks() {
                 ))}
               </SelectContent>
             </Select>
-
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
-              <Input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} className="text-sm" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground hidden sm:block">to</span>
-              <Input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} className="text-sm" />
-            </div>
           </div>
         </CardContent>
       </Card>
