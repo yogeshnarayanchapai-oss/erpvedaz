@@ -60,7 +60,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  // Calendar removed - unused
   Filter,
   MoreHorizontal,
   Pencil,
@@ -71,6 +70,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Award,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 type DatePreset = 'this_month' | 'last_month' | 'custom';
@@ -99,6 +99,7 @@ function getRowBgClass(perf: TaskPerformance): string {
 }
 
 export default function HRMTasks() {
+  const [showStaffPerf, setShowStaffPerf] = useState(false);
   const { user } = useAuth();
   const { effectiveRole } = useEffectiveRole();
   const isManager = effectiveRole === 'MANAGER';
@@ -230,9 +231,8 @@ export default function HRMTasks() {
 
   return (
     <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-      {/* Header Row: Title + Date Filter + Create Task */}
+      {/* Header Row: Date Filter (left) + Title (center) + Create Task (right) */}
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-lg font-bold mr-auto">Task Management</h1>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('this_month')}>
             This Month
@@ -252,68 +252,77 @@ export default function HRMTasks() {
             </>
           )}
         </div>
+        <h1 className="text-lg font-bold mr-auto">Task Management</h1>
         <CreateTaskDialog />
       </div>
 
-      {/* Stats Cards - Compact */}
-      <div className="grid grid-cols-3 lg:grid-cols-5 gap-2">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-2.5">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-md ${stat.bg}`}>
-                  <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{stat.title}</p>
-                  <p className="text-base font-bold leading-tight">{stat.value}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Stats Cards with toggle to Staff Performance */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 grid grid-cols-3 lg:grid-cols-5 gap-2">
+          {!showStaffPerf ? (
+            statCards.map((stat) => (
+              <Card key={stat.title}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-lg ${stat.bg}`}>
+                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground leading-tight">{stat.title}</p>
+                      <p className="text-xl font-bold leading-tight">{stat.value}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            staffPerformance.length > 0 ? staffPerformance.map((sp) => (
+              <Popover key={sp.id}>
+                <PopoverTrigger asChild>
+                  <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Award className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground truncate leading-tight">{sp.name}</p>
+                          <p className={cn(
+                            "text-xl font-bold leading-tight",
+                            sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
+                          )}>
+                            {sp.percentage}%
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </PopoverTrigger>
+                <PopoverContent className="w-52 p-3" side="bottom">
+                  <p className="text-xs font-semibold mb-2">{sp.name} — {sp.completed}/{sp.totalTasks} tasks</p>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-emerald-600">✓ On Time</span><span className="font-medium">{sp.onTime + sp.early}</span></div>
+                    <div className="flex justify-between"><span className="text-orange-600">⏱ Late</span><span className="font-medium">{sp.late}</span></div>
+                    <div className="flex justify-between"><span className="text-red-600">⚠ Overdue</span><span className="font-medium">{sp.overdue}</span></div>
+                    <div className="flex justify-between"><span className="text-blue-600">📈 On Track</span><span className="font-medium">{sp.onTrack}</span></div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )) : (
+              <div className="col-span-full text-center text-xs text-muted-foreground py-3">No staff performance data</div>
+            )
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={() => setShowStaffPerf(!showStaffPerf)}
+          title={showStaffPerf ? 'Show Stats' : 'Show Staff Performance'}
+        >
+          <ArrowLeftRight className="h-4 w-4" />
+        </Button>
       </div>
-
-      {/* Staff Performance - Compact */}
-      {staffPerformance.length > 0 && (
-        <Card>
-          <CardContent className="p-2.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Award className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold">Staff Performance</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-1.5">
-              {staffPerformance.map((sp) => (
-                <Popover key={sp.id}>
-                  <PopoverTrigger asChild>
-                    <div className="border rounded-md px-2 py-1.5 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <p className="text-[11px] font-medium truncate leading-tight">{sp.name}</p>
-                      <p className={cn(
-                        "text-lg font-bold leading-tight",
-                        sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
-                      )}>
-                        {sp.percentage}%
-                      </p>
-                      <p className="text-[9px] text-muted-foreground leading-tight">
-                        {sp.completed}/{sp.totalTasks} • {sp.totalPoints}pts
-                      </p>
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-2.5" side="top">
-                    <p className="text-xs font-semibold mb-1.5">{sp.name}</p>
-                    <div className="space-y-1 text-[11px]">
-                      <div className="flex justify-between"><span className="text-emerald-600">✓ On Time</span><span className="font-medium">{sp.onTime + sp.early}</span></div>
-                      <div className="flex justify-between"><span className="text-orange-600">⏱ Late</span><span className="font-medium">{sp.late}</span></div>
-                      <div className="flex justify-between"><span className="text-red-600">⚠ Overdue</span><span className="font-medium">{sp.overdue}</span></div>
-                      <div className="flex justify-between"><span className="text-blue-600">📈 On Track</span><span className="font-medium">{sp.onTrack}</span></div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Filters - Compact inline */}
       <div className="flex flex-wrap items-center gap-2">
