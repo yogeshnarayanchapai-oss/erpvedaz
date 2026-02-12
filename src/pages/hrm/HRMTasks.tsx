@@ -60,7 +60,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  Calendar,
+  // Calendar removed - unused
   Filter,
   MoreHorizontal,
   Pencil,
@@ -229,50 +229,44 @@ export default function HRMTasks() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Task Management</h1>
-          <p className="text-sm text-muted-foreground">Create and monitor tasks for your team</p>
+    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
+      {/* Header Row: Title + Date Filter + Create Task */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-lg font-bold mr-auto">Task Management</h1>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('this_month')}>
+            This Month
+          </Button>
+          <Button size="sm" variant={datePreset === 'last_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('last_month')}>
+            Last Month
+          </Button>
+          <Button size="sm" variant={datePreset === 'custom' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('custom')}>
+            Custom
+          </Button>
+          {datePreset === 'custom' && (
+            <>
+              <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="text-xs w-[120px] h-7" />
+              <span className="text-muted-foreground text-xs">–</span>
+              <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="text-xs w-[120px] h-7" />
+              <Button size="sm" variant="secondary" className="h-7 text-xs px-2" onClick={handleCustomDateApply}>Apply</Button>
+            </>
+          )}
         </div>
         <CreateTaskDialog />
       </div>
 
-      {/* Date Filter Presets */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
-        <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('this_month')}>
-          This Month
-        </Button>
-        <Button size="sm" variant={datePreset === 'last_month' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('last_month')}>
-          Last Month
-        </Button>
-        <Button size="sm" variant={datePreset === 'custom' ? 'default' : 'outline'} onClick={() => handleDatePresetChange('custom')}>
-          Custom
-        </Button>
-        {datePreset === 'custom' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="text-sm w-[150px] h-8" placeholder="From" />
-            <span className="text-muted-foreground text-sm">to</span>
-            <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="text-sm w-[150px] h-8" placeholder="Till" />
-            <Button size="sm" variant="secondary" onClick={handleCustomDateApply}>Apply</Button>
-          </div>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* Stats Cards - Compact */}
+      <div className="grid grid-cols-3 lg:grid-cols-5 gap-2">
         {statCards.map((stat) => (
           <Card key={stat.title}>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 sm:p-3 rounded-lg ${stat.bg}`}>
-                  <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+            <CardContent className="p-2.5">
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-md ${stat.bg}`}>
+                  <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{stat.title}</p>
+                  <p className="text-base font-bold leading-tight">{stat.value}</p>
                 </div>
               </div>
             </CardContent>
@@ -280,36 +274,34 @@ export default function HRMTasks() {
         ))}
       </div>
 
-      {/* Staff Performance Scores with Tooltip */}
+      {/* Staff Performance - Compact */}
       {staffPerformance.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Staff Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <CardContent className="p-2.5">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Award className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold">Staff Performance</span>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-1.5">
               {staffPerformance.map((sp) => (
                 <Popover key={sp.id}>
                   <PopoverTrigger asChild>
-                    <div className="border rounded-lg p-3 text-center space-y-1 cursor-pointer hover:bg-muted/50 transition-colors">
-                      <p className="text-sm font-medium truncate">{sp.name}</p>
+                    <div className="border rounded-md px-2 py-1.5 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+                      <p className="text-[11px] font-medium truncate leading-tight">{sp.name}</p>
                       <p className={cn(
-                        "text-2xl font-bold",
+                        "text-lg font-bold leading-tight",
                         sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
                       )}>
                         {sp.percentage}%
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {sp.completed}/{sp.totalTasks} tasks • {sp.totalPoints}pts
+                      <p className="text-[9px] text-muted-foreground leading-tight">
+                        {sp.completed}/{sp.totalTasks} • {sp.totalPoints}pts
                       </p>
                     </div>
                   </PopoverTrigger>
-                  <PopoverContent className="w-52 p-3" side="top">
-                    <p className="text-sm font-semibold mb-2">{sp.name}</p>
-                    <div className="space-y-1.5 text-xs">
+                  <PopoverContent className="w-48 p-2.5" side="top">
+                    <p className="text-xs font-semibold mb-1.5">{sp.name}</p>
+                    <div className="space-y-1 text-[11px]">
                       <div className="flex justify-between"><span className="text-emerald-600">✓ On Time</span><span className="font-medium">{sp.onTime + sp.early}</span></div>
                       <div className="flex justify-between"><span className="text-orange-600">⏱ Late</span><span className="font-medium">{sp.late}</span></div>
                       <div className="flex justify-between"><span className="text-red-600">⚠ Overdue</span><span className="font-medium">{sp.overdue}</span></div>
@@ -323,48 +315,39 @@ export default function HRMTasks() {
         </Card>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as TaskStatus | 'ALL' })}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Status</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Filters - Compact inline */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+        <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as TaskStatus | 'ALL' })}>
+          <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+          </SelectContent>
+        </Select>
 
-            <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value as TaskPriority | 'ALL' })}>
-              <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Priority</SelectItem>
-                <SelectItem value="LOW">Low</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-              </SelectContent>
-            </Select>
+        <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value as TaskPriority | 'ALL' })}>
+          <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue placeholder="Priority" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Priority</SelectItem>
+            <SelectItem value="LOW">Low</SelectItem>
+            <SelectItem value="MEDIUM">Medium</SelectItem>
+            <SelectItem value="HIGH">High</SelectItem>
+          </SelectContent>
+        </Select>
 
-            <Select value={filters.assignedTo || 'all'} onValueChange={(value) => setFilters({ ...filters, assignedTo: value === 'all' ? '' : value })}>
-              <SelectTrigger><SelectValue placeholder="Assigned To" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staff?.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+        <Select value={filters.assignedTo || 'all'} onValueChange={(value) => setFilters({ ...filters, assignedTo: value === 'all' ? '' : value })}>
+          <SelectTrigger className="w-[130px] h-7 text-xs"><SelectValue placeholder="Assigned To" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Staff</SelectItem>
+            {staff?.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Tabs + Task Table */}
       <Card>
