@@ -173,15 +173,15 @@ export function useTasks(filters?: TaskFilters) {
   });
 }
 
-export function useMyTasks() {
+export function useMyTasks(dateFrom?: string, dateTo?: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['my-tasks', user?.id],
+    queryKey: ['my-tasks', user?.id, dateFrom, dateTo],
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('tasks')
         .select(`
           *,
@@ -190,6 +190,10 @@ export function useMyTasks() {
         .eq('assigned_to_user_id', user.id)
         .order('due_date', { ascending: true });
 
+      if (dateFrom) query = query.gte('due_date', dateFrom);
+      if (dateTo) query = query.lte('due_date', dateTo);
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Task[];
     },
@@ -269,19 +273,23 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
   });
 }
 
-export function useMyTaskStats() {
+export function useMyTaskStats(dateFrom?: string, dateTo?: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['my-task-stats', user?.id],
+    queryKey: ['my-task-stats', user?.id, dateFrom, dateTo],
     queryFn: async () => {
       if (!user?.id) return { total: 0, pending: 0, inProgress: 0, completed: 0 };
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('tasks')
         .select('status')
         .eq('assigned_to_user_id', user.id);
 
+      if (dateFrom) query = query.gte('due_date', dateFrom);
+      if (dateTo) query = query.lte('due_date', dateTo);
+
+      const { data, error } = await query;
       if (error) throw error;
 
       return {
