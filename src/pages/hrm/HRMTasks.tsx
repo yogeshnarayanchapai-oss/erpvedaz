@@ -230,10 +230,11 @@ export default function HRMTasks() {
   ];
 
   return (
-    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-      {/* Header Row: Date Filter (left) + Title (center) + Create Task (right) */}
+    <div className="space-y-3 p-3 sm:p-4">
+      {/* Header Row: Title + Date Filter (middle) + Create Task (right) */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <h1 className="text-lg font-bold">Task Management</h1>
+        <div className="flex flex-wrap items-center gap-1.5 ml-2">
           <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('this_month')}>
             This Month
           </Button>
@@ -252,24 +253,25 @@ export default function HRMTasks() {
             </>
           )}
         </div>
-        <h1 className="text-lg font-bold mr-auto">Task Management</h1>
-        <CreateTaskDialog />
+        <div className="ml-auto">
+          <CreateTaskDialog />
+        </div>
       </div>
 
       {/* Stats Cards with toggle to Staff Performance */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 grid grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="flex-1 grid grid-cols-3 lg:grid-cols-5 gap-2.5">
           {!showStaffPerf ? (
             statCards.map((stat) => (
               <Card key={stat.title}>
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`p-2 rounded-lg ${stat.bg}`}>
-                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-lg ${stat.bg}`}>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground leading-tight">{stat.title}</p>
-                      <p className="text-xl font-bold leading-tight">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.title}</p>
+                      <p className="text-2xl font-bold">{stat.value}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -280,15 +282,15 @@ export default function HRMTasks() {
               <Popover key={sp.id}>
                 <PopoverTrigger asChild>
                   <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Award className="h-4 w-4 text-primary" />
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-lg bg-primary/10">
+                          <Award className="h-5 w-5 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground truncate leading-tight">{sp.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{sp.name}</p>
                           <p className={cn(
-                            "text-xl font-bold leading-tight",
+                            "text-2xl font-bold",
                             sp.percentage >= 80 ? 'text-emerald-600' : sp.percentage >= 50 ? 'text-amber-600' : 'text-red-600'
                           )}>
                             {sp.percentage}%
@@ -309,14 +311,14 @@ export default function HRMTasks() {
                 </PopoverContent>
               </Popover>
             )) : (
-              <div className="col-span-full text-center text-xs text-muted-foreground py-3">No staff performance data</div>
+              <div className="col-span-full text-center text-xs text-muted-foreground py-4">No staff performance data</div>
             )
           )}
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-9 w-9 shrink-0"
           onClick={() => setShowStaffPerf(!showStaffPerf)}
           title={showStaffPerf ? 'Show Stats' : 'Show Staff Performance'}
         >
@@ -324,8 +326,8 @@ export default function HRMTasks() {
         </Button>
       </div>
 
-      {/* Filters - Compact inline */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Filters - Right aligned */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Filter className="h-3.5 w-3.5 text-muted-foreground" />
         <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as TaskStatus | 'ALL' })}>
           <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
