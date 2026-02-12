@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,20 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+type DatePreset = 'this_month' | 'last_month' | 'custom';
+
+function getDateRange(preset: DatePreset): { from: string; to: string } {
+  const now = new Date();
+  if (preset === 'this_month') {
+    return { from: format(startOfMonth(now), 'yyyy-MM-dd'), to: format(endOfMonth(now), 'yyyy-MM-dd') };
+  }
+  if (preset === 'last_month') {
+    const last = subMonths(now, 1);
+    return { from: format(startOfMonth(last), 'yyyy-MM-dd'), to: format(endOfMonth(last), 'yyyy-MM-dd') };
+  }
+  return { from: '', to: '' };
+}
+
 export default function MyTasks() {
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
@@ -54,11 +68,34 @@ export default function MyTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
+  const [datePreset, setDatePreset] = useState<DatePreset>('this_month');
+  const defaultRange = getDateRange('this_month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(defaultRange.from);
+  const [dateTo, setDateTo] = useState(defaultRange.to);
 
-  const { data: tasks, isLoading } = useMyTasks();
-  const { data: stats } = useMyTaskStats();
+  const { data: tasks, isLoading } = useMyTasks(dateFrom, dateTo);
+  const { data: stats } = useMyTaskStats(dateFrom, dateTo);
   const updateStatus = useUpdateTaskStatus();
   const addAttachment = useAddTaskAttachment();
+
+  const handleDatePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const range = getDateRange(preset);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    } else {
+      setDateFrom(customFrom);
+      setDateTo(customTo);
+    }
+  };
+
+  const handleCustomDateApply = () => {
+    setDateFrom(customFrom);
+    setDateTo(customTo);
+  };
 
   const activeTasks = useMemo(() => tasks?.filter(t => t.status !== 'COMPLETED') || [], [tasks]);
   const completedTasks = useMemo(() => tasks?.filter(t => t.status === 'COMPLETED') || [], [tasks]);
@@ -219,10 +256,28 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div>
+      {/* Header with Date Filter */}
+      <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-xl sm:text-2xl font-bold">My Tasks</h1>
-        <p className="text-sm text-muted-foreground">Manage and update your assigned tasks</p>
+        <div className="flex flex-wrap items-center gap-1.5 ml-2">
+          <Button size="sm" variant={datePreset === 'this_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('this_month')}>
+            This Month
+          </Button>
+          <Button size="sm" variant={datePreset === 'last_month' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('last_month')}>
+            Last Month
+          </Button>
+          <Button size="sm" variant={datePreset === 'custom' ? 'default' : 'outline'} className="h-7 text-xs px-2" onClick={() => handleDatePresetChange('custom')}>
+            Custom
+          </Button>
+          {datePreset === 'custom' && (
+            <>
+              <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="text-xs w-[120px] h-7" />
+              <span className="text-muted-foreground text-xs">–</span>
+              <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="text-xs w-[120px] h-7" />
+              <Button size="sm" variant="secondary" className="h-7 text-xs px-2" onClick={handleCustomDateApply}>Apply</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
