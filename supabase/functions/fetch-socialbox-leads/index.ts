@@ -25,9 +25,8 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -60,6 +59,8 @@ serve(async (req) => {
     if (limit) params.set('limit', String(limit));
 
     const apiUrl = `${config.api_base_url}${params.toString() ? '?' + params.toString() : ''}`;
+    
+    console.log('Fetching from SocialBox API:', apiUrl);
 
     // Fetch leads from SocialBox API
     const response = await fetch(apiUrl, {
@@ -79,6 +80,36 @@ serve(async (req) => {
     }
 
     const leads = await response.json();
+    console.log('SocialBox returned', Array.isArray(leads) ? leads.length : 'non-array', 'leads');
+
+    // Get already pulled lead IDs for this store
+    const { data: pulledLeads } = await supabase
+      .from('socialbox_pulled_leads')
+      .select('socialbox_lead_id, is_transferred')
+      .eq('store_id', storeId);
+
+    const pulledMap = new Map<string, boolean>();
+    (pulledLeads || []).forEach((pl: any) => {
+      pulledMap.set(pl.socialbox_lead_id, pl.is_transferred);
+    });
+
+    // Filter out already pulled leads
+    const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
+    const newLeads = leadsArray.filter((lead: any) => !pulledMap.has(String(lead.id)));
+
+    // Mark new leads as pulled
+    if (newLeads.length > 0) {
+      const pullRecords = newLeads.map((lead: any) => ({
+        store_id: storeId,
+        socialbox_lead_id: String(lead.id),
+        phone: lead.phone || null,
+        full_name: lead.full_name || lead.name || null,
+      }));
+
+      await supabase
+        .from('socialbox_pulled_leads')
+        .upsert(pullRecords, { onConflict: 'store_id,socialbox_lead_id' });
+    }
 
     // Update last_synced_at
     await supabase
@@ -86,7 +117,12 @@ serve(async (req) => {
       .update({ last_synced_at: new Date().toISOString() })
       .eq('id', config.id);
 
-    return new Response(JSON.stringify({ leads, synced_at: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ 
+      leads: newLeads, 
+      total_from_api: leadsArray.length,
+      filtered_duplicates: leadsArray.length - newLeads.length,
+      synced_at: new Date().toISOString() 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Download, ArrowRight, RefreshCw, Brain, AlertCircle } from 'lucide-react';
-import { useFetchSocialBoxLeads, useSocialBoxConfig, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
+import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { useProducts } from '@/hooks/useProducts';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 export default function AILeads() {
   const { data: config, isLoading: configLoading } = useSocialBoxConfig();
   const fetchLeads = useFetchSocialBoxLeads();
+  const markTransferred = useMarkLeadsTransferred();
   const { data: products = [] } = useProducts();
   const [leads, setLeads] = useState<SocialBoxLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -21,16 +22,20 @@ export default function AILeads() {
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
 
   const handleFetch = async () => {
-    const result = await fetchLeads.mutateAsync({
-      status: statusFilter !== 'all' ? statusFilter : undefined,
-      limit: 100,
-    });
-    setLeads(result || []);
-    setSelectedIds(new Set());
-    if (result?.length) {
-      toast.success(`${result.length} leads fetched from SocialBox`);
-    } else {
-      toast.info('No leads found matching the criteria');
+    try {
+      const result = await fetchLeads.mutateAsync({
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        limit: 100,
+      });
+      setLeads(result || []);
+      setSelectedIds(new Set());
+      if (result?.length) {
+        toast.success(`${result.length} new leads fetched from SocialBox`);
+      } else {
+        toast.info('No new leads found (already pulled or no leads available)');
+      }
+    } catch (err) {
+      // error already handled by hook's onError
     }
   };
 
@@ -51,7 +56,7 @@ export default function AILeads() {
     }
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     const selected = leads.filter(l => selectedIds.has(l.id));
     if (selected.length === 0) {
       toast.error('Please select at least one lead to transfer');
@@ -74,8 +79,20 @@ export default function AILeads() {
         product_id: matchedProduct?.id || '',
         source: 'SocialBox',
         remark: [lead.notes, lead.product ? `Product: ${lead.product}` : ''].filter(Boolean).join(' | '),
+        _socialbox_id: lead.id, // track for marking transferred
       };
     });
+
+    // Mark as transferred in DB
+    try {
+      await markTransferred.mutateAsync(selected.map(l => l.id));
+    } catch (err) {
+      console.error('Failed to mark transferred:', err);
+    }
+
+    // Remove transferred leads from list
+    setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+    setSelectedIds(new Set());
 
     setPrefillLeads(mappedLeads);
     setShowBulkForm(true);
