@@ -215,6 +215,7 @@ const salesItems: MenuItem[] = [
   { title: 'Products', url: '/admin/products', icon: Package },
   { title: 'Branches', url: '/admin/branches', icon: Building2 },
   { title: 'Leads', url: '/admin/leads', icon: Phone },
+  { title: 'AI Leads', url: '/admin/ai-leads', icon: Brain },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
   { title: 'Customers', url: '/admin/customers', icon: Users },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
@@ -414,6 +415,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
   LEADS: [
     { title: 'Dashboard', url: '/leads/dashboard', icon: LayoutDashboard },
     { title: 'Leads', url: '/leads/all', icon: Phone },
+    { title: 'AI Leads', url: '/admin/ai-leads', icon: Brain },
     { title: 'Follow-up Queue', url: '/leads/followup', icon: UserCheck },
     { title: 'Reports', url: '/leads/reports', icon: FileText },
     {

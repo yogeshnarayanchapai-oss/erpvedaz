@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.create-saturday-records]
 verify_jwt = false
+
+[functions.fetch-socialbox-leads]
+verify_jwt = false

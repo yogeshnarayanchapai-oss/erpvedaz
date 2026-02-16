@@ -69,6 +69,7 @@ import MarketingReports from "./pages/admin/marketing/MarketingReports";
 
 // AI Insights
 import AIInsights from "./pages/admin/AIInsights";
+import AILeads from "./pages/admin/AILeads";
 
 // Accounting pages
 import AccountingDashboard from "./pages/admin/accounting/AccountingDashboard";
@@ -279,6 +280,7 @@ const App = () => (
                 <Route path="/admin/marketing/content-calendar" element={<ContentCalendar />} />
                 <Route path="/admin/marketing/reports" element={<MarketingReports />} />
                 <Route path="/admin/ai-insights" element={<AIInsights />} />
+                <Route path="/admin/ai-leads" element={<AILeads />} />
                 <Route path="/admin/inventory/stock-summary" element={<StockSummary />} />
                 <Route path="/admin/inventory/movements" element={<StockMovements />} />
                 <Route path="/admin/inventory/activity-log" element={<InventoryActivityLog />} />
