@@ -6041,6 +6041,47 @@ export type Database = {
           },
         ]
       }
+      socialbox_pulled_leads: {
+        Row: {
+          full_name: string | null
+          id: string
+          is_transferred: boolean
+          phone: string | null
+          pulled_at: string
+          socialbox_lead_id: string
+          store_id: string
+          transferred_at: string | null
+        }
+        Insert: {
+          full_name?: string | null
+          id?: string
+          is_transferred?: boolean
+          phone?: string | null
+          pulled_at?: string
+          socialbox_lead_id: string
+          store_id: string
+          transferred_at?: string | null
+        }
+        Update: {
+          full_name?: string | null
+          id?: string
+          is_transferred?: boolean
+          phone?: string | null
+          pulled_at?: string
+          socialbox_lead_id?: string
+          store_id?: string
+          transferred_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "socialbox_pulled_leads_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_daily_summary: {
         Row: {
           called_leads: number | null
