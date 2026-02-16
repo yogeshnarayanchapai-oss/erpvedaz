@@ -20,7 +20,7 @@ export default function AILeads() {
   const { data: products = [] } = useProducts();
   const [leads, setLeads] = useState<SocialBoxLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -28,19 +28,15 @@ export default function AILeads() {
   const doFetch = useCallback(async (silent = false) => {
     try {
       const result = await fetchLeads.mutateAsync({
-        status: statusFilter !== 'all' ? statusFilter : undefined,
         limit: 200,
       });
       setLeads(result || []);
-      if (!silent && result?.length) {
-        // Only show toast on manual refresh, not auto
-      }
     } catch {
       // handled by hook
     } finally {
       setInitialLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   // Auto-fetch on mount and when config becomes available
   useEffect(() => {
@@ -58,12 +54,9 @@ export default function AILeads() {
     return () => clearInterval(interval);
   }, [config, doFetch]);
 
-  // Re-fetch when filter changes
-  useEffect(() => {
-    if (config) {
-      doFetch(true);
-    }
-  }, [statusFilter]);
+  // Derive unique sources for filter
+  const availableSources = Array.from(new Set(leads.map(l => l.source || 'SocialBox').filter(Boolean)));
+  const filteredLeads = sourceFilter === 'all' ? leads : leads.filter(l => (l.source || 'SocialBox') === sourceFilter);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -75,10 +68,10 @@ export default function AILeads() {
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === leads.length) {
+    if (selectedIds.size === filteredLeads.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(leads.map(l => l.id)));
+      setSelectedIds(new Set(filteredLeads.map(l => l.id)));
     }
   };
 
@@ -90,10 +83,11 @@ export default function AILeads() {
     }
 
     const mappedLeads = selected.map(lead => {
-      const matchedProduct = products.find(p =>
-        p.name.toLowerCase().includes(lead.product?.toLowerCase() || '') ||
-        lead.product?.toLowerCase().includes(p.name.toLowerCase())
-      );
+      // Match product by first word of the AI lead's product name
+      const leadProductFirstWord = (lead.product || '').trim().split(/\s+/)[0]?.toLowerCase();
+      const matchedProduct = leadProductFirstWord
+        ? products.find(p => p.name.toLowerCase().split(/\s+/)[0] === leadProductFirstWord)
+        : undefined;
 
       return {
         id: crypto.randomUUID(),
@@ -185,16 +179,15 @@ export default function AILeads() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Filter status" />
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter source" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="hot">Hot</SelectItem>
-              <SelectItem value="follow_up">Follow Up</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="all">All Sources</SelectItem>
+              {availableSources.map(src => (
+                <SelectItem key={src} value={src}>{src}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={() => doFetch(false)} disabled={fetchLeads.isPending} title="Refresh now">
@@ -203,12 +196,12 @@ export default function AILeads() {
         </div>
       </div>
 
-      {leads.length > 0 ? (
+      {filteredLeads.length > 0 ? (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">SocialBox Leads ({leads.length})</CardTitle>
+                <CardTitle className="text-base">AI Leads ({filteredLeads.length}{sourceFilter !== 'all' ? ` · ${sourceFilter}` : ''})</CardTitle>
                 <CardDescription>Select leads to Transfer or Delete</CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -233,7 +226,7 @@ export default function AILeads() {
                   <tr className="border-b text-left">
                     <th className="p-2 w-10">
                       <Checkbox
-                        checked={selectedIds.size === leads.length && leads.length > 0}
+                        checked={selectedIds.size === filteredLeads.length && filteredLeads.length > 0}
                         onCheckedChange={toggleAll}
                       />
                     </th>
@@ -247,7 +240,7 @@ export default function AILeads() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map(lead => (
+                  {filteredLeads.map(lead => (
                     <tr key={lead.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => toggleSelect(lead.id)}>
                       <td className="p-2">
                         <Checkbox
