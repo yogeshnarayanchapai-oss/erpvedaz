@@ -17,6 +17,7 @@ interface BulkAddLeadsFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prefillData?: LeadRow[];
+  onSuccess?: () => void;
 }
 
 interface LeadRow {
@@ -28,11 +29,12 @@ interface LeadRow {
   product_id: string;
   source: string;
   remark: string;
+  _socialbox_id?: string;
 }
 
 const DRAFT_KEY_PREFIX = 'bulk-leads-draft-';
 
-export function BulkAddLeadsForm({ open, onOpenChange, prefillData }: BulkAddLeadsFormProps) {
+export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }: BulkAddLeadsFormProps) {
   const { currentStore } = useCurrentStore();
   const { data: products = [] } = useProducts();
   const { data: leadSources = [] } = useLeadSources();
@@ -230,6 +232,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData }: BulkAddLea
       setLastSelectedProduct('');
       onOpenChange(false);
       setRows([createEmptyRow()]);
+      onSuccess?.();
     } catch (error: any) {
       console.error('Bulk create error:', error);
       // Error toast is already handled by mutation's onError

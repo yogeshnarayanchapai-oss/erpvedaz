@@ -75,10 +75,12 @@ export default function AILeads() {
     }
   };
 
+  const [pendingTransferIds, setPendingTransferIds] = useState<string[]>([]);
+
   const handleTransfer = async () => {
     const selected = leads.filter(l => selectedIds.has(l.id));
     if (selected.length === 0) {
-      toast.error('Please select at least one lead to transfer');
+      toast.error('Please select at least one lead to refill');
       return;
     }
 
@@ -96,21 +98,28 @@ export default function AILeads() {
         contact_number: lead.phone || '',
         alt_phone: '',
         product_id: matchedProduct?.id || '',
-        source: 'SocialBox',
+        source: lead.source || 'SocialBox',
         remark: [lead.notes, lead.product ? `Product: ${lead.product}` : ''].filter(Boolean).join(' | '),
         _socialbox_id: lead.id,
       };
     });
 
-    try {
-      await markTransferred.mutateAsync(selected.map(l => l.id));
-      // Remove transferred leads from list
-      setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
-      setSelectedIds(new Set());
-      setPrefillLeads(mappedLeads);
-      setShowBulkForm(true);
-    } catch (err) {
-      console.error('Failed to mark transferred:', err);
+    // Don't mark as transferred yet — just open bulk form with prefill
+    setPendingTransferIds(selected.map(l => l.id));
+    setSelectedIds(new Set());
+    setPrefillLeads(mappedLeads);
+    setShowBulkForm(true);
+  };
+
+  const handleBulkCreateSuccess = async () => {
+    if (pendingTransferIds.length > 0) {
+      try {
+        await markTransferred.mutateAsync(pendingTransferIds);
+        setLeads(prev => prev.filter(l => !pendingTransferIds.includes(l.id)));
+      } catch (err) {
+        console.error('Failed to mark transferred:', err);
+      }
+      setPendingTransferIds([]);
     }
   };
 
@@ -202,7 +211,7 @@ export default function AILeads() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">AI Leads ({filteredLeads.length}{sourceFilter !== 'all' ? ` · ${sourceFilter}` : ''})</CardTitle>
-                <CardDescription>Select leads to Transfer or Delete</CardDescription>
+                <CardDescription>Select leads to Refill or Delete</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 {selectedIds.size > 0 && (
@@ -214,7 +223,7 @@ export default function AILeads() {
                 </Button>
                 <Button onClick={handleTransfer} disabled={selectedIds.size === 0} size="sm">
                   <ArrowRight className="h-4 w-4 mr-1" />
-                  Transfer ({selectedIds.size})
+                  Refill ({selectedIds.size})
                 </Button>
               </div>
             </div>
@@ -284,6 +293,7 @@ export default function AILeads() {
         open={showBulkForm}
         onOpenChange={setShowBulkForm}
         prefillData={prefillLeads}
+        onSuccess={handleBulkCreateSuccess}
       />
     </div>
   );
