@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 interface BulkAddLeadsFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prefillData?: LeadRow[];
 }
 
 interface LeadRow {
@@ -31,7 +32,7 @@ interface LeadRow {
 
 const DRAFT_KEY_PREFIX = 'bulk-leads-draft-';
 
-export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) {
+export function BulkAddLeadsForm({ open, onOpenChange, prefillData }: BulkAddLeadsFormProps) {
   const { currentStore } = useCurrentStore();
   const { data: products = [] } = useProducts();
   const { data: leadSources = [] } = useLeadSources();
@@ -79,9 +80,16 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
     setIsDraftRestored(false);
   }, [draftKey]);
 
-  // Load draft or reset when dialog opens
+  // Load prefill data, draft, or reset when dialog opens
   useEffect(() => {
     if (open) {
+      // If prefillData is provided, use it directly
+      if (prefillData && prefillData.length > 0) {
+        setRows(prefillData);
+        setIsDraftRestored(false);
+        return;
+      }
+
       const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
         try {
@@ -109,7 +117,7 @@ export function BulkAddLeadsForm({ open, onOpenChange }: BulkAddLeadsFormProps) 
       }]);
       setIsDraftRestored(false);
     }
-  }, [open, draftKey, leadSources]);
+  }, [open, draftKey, leadSources, prefillData]);
 
   const addRows = (count: number) => {
     // Use the last selected product as default for new rows

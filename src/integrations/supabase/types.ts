@@ -6000,6 +6000,47 @@ export type Database = {
           },
         ]
       }
+      socialbox_config: {
+        Row: {
+          api_base_url: string
+          api_token: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          api_base_url?: string
+          api_token: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          api_base_url?: string
+          api_token?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "socialbox_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_daily_summary: {
         Row: {
           called_leads: number | null

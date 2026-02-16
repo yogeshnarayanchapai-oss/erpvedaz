@@ -1,0 +1,132 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
+
+interface SocialBoxLead {
+  id: string;
+  full_name: string;
+  phone: string;
+  product: string;
+  source: string;
+  status: string;
+  notes: string;
+  created_at: string;
+  page_id?: string;
+  page_name?: string;
+}
+
+interface SocialBoxConfig {
+  id: string;
+  store_id: string;
+  api_token: string;
+  api_base_url: string;
+  is_active: boolean;
+  last_synced_at: string | null;
+}
+
+export function useSocialBoxConfig() {
+  const { currentStore } = useCurrentStore();
+
+  return useQuery({
+    queryKey: ['socialbox-config', currentStore?.id],
+    queryFn: async () => {
+      if (!currentStore?.id) return null;
+      const { data, error } = await supabase
+        .from('socialbox_config')
+        .select('*')
+        .eq('store_id', currentStore.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as SocialBoxConfig | null;
+    },
+    enabled: !!currentStore?.id,
+  });
+}
+
+export function useSaveSocialBoxConfig() {
+  const queryClient = useQueryClient();
+  const { currentStore } = useCurrentStore();
+
+  return useMutation({
+    mutationFn: async ({ apiToken, apiBaseUrl }: { apiToken: string; apiBaseUrl?: string }) => {
+      if (!currentStore?.id) throw new Error('No store selected');
+
+      const { data: existing } = await supabase
+        .from('socialbox_config')
+        .select('id')
+        .eq('store_id', currentStore.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('socialbox_config')
+          .update({
+            api_token: apiToken,
+            ...(apiBaseUrl ? { api_base_url: apiBaseUrl } : {}),
+            is_active: true,
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('socialbox_config')
+          .insert({
+            store_id: currentStore.id,
+            api_token: apiToken,
+            ...(apiBaseUrl ? { api_base_url: apiBaseUrl } : {}),
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success('SocialBox API connected successfully');
+      queryClient.invalidateQueries({ queryKey: ['socialbox-config'] });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to save config', { description: error.message });
+    },
+  });
+}
+
+export function useFetchSocialBoxLeads() {
+  const { currentStore } = useCurrentStore();
+
+  return useMutation({
+    mutationFn: async ({ status, limit }: { status?: string; limit?: number } = {}) => {
+      if (!currentStore?.id) throw new Error('No store selected');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-socialbox-leads`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            storeId: currentStore.id,
+            status,
+            limit: limit || 100,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch leads: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.leads as SocialBoxLead[];
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to fetch SocialBox leads', { description: error.message });
+    },
+  });
+}
+
+export type { SocialBoxLead };

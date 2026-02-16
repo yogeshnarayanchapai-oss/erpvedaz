@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Settings, Palette, Bell, Database, BookOpen, Calendar as CalendarIcon, Building2 } from 'lucide-react';
+import { Settings, Palette, Bell, Database, BookOpen, Calendar as CalendarIcon, Building2, Link2 } from 'lucide-react';
 import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 
@@ -18,6 +18,7 @@ import { OrderCopyFormatEditor } from '@/components/admin/OrderCopyFormatEditor'
 import BrandingSettingsTab from '@/components/settings/BrandingSettingsTab';
 import DataToolsSettingsTab from '@/components/settings/DataToolsSettingsTab';
 import KnowledgeSettingsTab from '@/components/settings/KnowledgeSettingsTab';
+import SocialBoxSettingsTab from '@/components/settings/SocialBoxSettingsTab';
 
 // Import HRM Settings component
 import HRMSettings from '@/pages/hrm/HRMSettings';
@@ -100,7 +101,14 @@ function GeneralSettingsTab() {
 
 export default function AdminSettings() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState('general');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'general';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
   
   const isOwner = profile?.role === 'OWNER';
   const isAdmin = profile?.role && ADMIN_ROLES.includes(profile.role);
@@ -144,6 +152,10 @@ export default function AdminSettings() {
             <BookOpen className="h-4 w-4" />
             Knowledge
           </TabsTrigger>
+          <TabsTrigger value="ai-connect" className="gap-2">
+            <Link2 className="h-4 w-4" />
+            AI Connect
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-6">
@@ -167,6 +179,10 @@ export default function AdminSettings() {
 
         <TabsContent value="knowledge" className="mt-6">
           <KnowledgeSettingsTab />
+        </TabsContent>
+
+        <TabsContent value="ai-connect" className="mt-6">
+          <SocialBoxSettingsTab />
         </TabsContent>
       </Tabs>
     </div>
