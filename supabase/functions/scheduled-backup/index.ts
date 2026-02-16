@@ -306,7 +306,7 @@ async function backupStore(
           continue;
         }
         
-        const { data, error } = await query.limit(50000);
+        const { data, error } = await query.limit(10000);
 
         if (error) {
           console.warn(`⚠️ Error exporting ${tableName}:`, error.message);

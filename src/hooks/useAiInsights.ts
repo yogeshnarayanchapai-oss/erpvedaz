@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AiInsightsMetrics {
@@ -47,10 +47,14 @@ interface AiInsightsResponse {
   error?: string;
 }
 
-export function useAiInsights(storeId: string | undefined, date?: string) {
-  return useQuery({
-    queryKey: ['ai-insights', storeId, date],
-    queryFn: async () => {
+interface AiInsightsParams {
+  storeId: string;
+  date?: string;
+}
+
+export function useAiInsights() {
+  return useMutation({
+    mutationFn: async ({ storeId, date }: AiInsightsParams) => {
       if (!storeId) {
         throw new Error('Store ID is required');
       }
@@ -80,8 +84,5 @@ export function useAiInsights(storeId: string | undefined, date?: string) {
       const data: AiInsightsResponse = await response.json();
       return data;
     },
-    enabled: !!storeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1
   });
 }

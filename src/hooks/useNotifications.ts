@@ -111,7 +111,7 @@ export function useNotifications() {
       return data as Notification[];
     },
     enabled: !!profile?.id,
-    refetchInterval: 60000, // Refetch every minute as backup
+    refetchInterval: 300000, // Refetch every 5 minutes to save Cloud balance
   });
 
   // Calculate unread count

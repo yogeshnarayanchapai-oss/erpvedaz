@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AiStockReorderParams {
-  storeId: string | undefined;
+  storeId: string;
   warehouseId?: string;
   lookbackDays?: number;
 }
@@ -38,10 +38,9 @@ interface AiStockReorderResponse {
   error?: string;
 }
 
-export function useAiStockReorder({ storeId, warehouseId, lookbackDays = 30 }: AiStockReorderParams) {
-  return useQuery({
-    queryKey: ['ai-stock-reorder', storeId, warehouseId, lookbackDays],
-    queryFn: async () => {
+export function useAiStockReorder() {
+  return useMutation({
+    mutationFn: async ({ storeId, warehouseId, lookbackDays = 30 }: AiStockReorderParams) => {
       if (!storeId) {
         throw new Error('Store ID is required');
       }
@@ -65,8 +64,5 @@ export function useAiStockReorder({ storeId, warehouseId, lookbackDays = 30 }: A
 
       return data as AiStockReorderResponse;
     },
-    enabled: !!storeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
   });
 }
