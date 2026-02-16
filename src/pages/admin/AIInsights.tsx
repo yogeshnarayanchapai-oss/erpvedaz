@@ -31,14 +31,11 @@ export default function AIInsights() {
     new Date().toISOString().split('T')[0]
   );
 
-  const { data, isLoading, error, refetch } = useAiInsights(
-    selectedStoreId || undefined,
-    selectedDate
-  );
+  const { mutate, data, isPending: isLoading, error } = useAiInsights();
 
   const handleGenerate = () => {
     if (selectedStoreId) {
-      refetch();
+      mutate({ storeId: selectedStoreId, date: selectedDate });
     }
   };
 

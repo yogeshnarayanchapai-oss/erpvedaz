@@ -27,16 +27,17 @@ const AIStockReorder = () => {
   const [lookbackDays] = useState(30);
 
   const { data: warehouses } = useWarehouses();
-  const {
-    data: reorderData,
-    isLoading,
-    error,
-    refetch,
-  } = useAiStockReorder({
-    storeId: selectedStoreId || undefined,
-    warehouseId: selectedWarehouse === 'all' ? undefined : selectedWarehouse,
-    lookbackDays,
-  });
+  const { mutate, data: reorderData, isPending: isLoading, error } = useAiStockReorder();
+
+  const handleAnalyze = () => {
+    if (selectedStoreId) {
+      mutate({
+        storeId: selectedStoreId,
+        warehouseId: selectedWarehouse === 'all' ? undefined : selectedWarehouse,
+        lookbackDays,
+      });
+    }
+  };
 
   const getUrgencyBadge = (urgency: string) => {
     switch (urgency) {
@@ -72,7 +73,7 @@ const AIStockReorder = () => {
             Smart reorder suggestions based on sales velocity and stock levels
           </p>
         </div>
-        <Button onClick={() => refetch()} disabled={isLoading}>
+        <Button onClick={handleAnalyze} disabled={isLoading || !selectedStoreId}>
           <Brain className="w-4 h-4 mr-2" />
           {isLoading ? 'Analyzing...' : 'Run AI Analysis'}
         </Button>
@@ -251,7 +252,7 @@ const AIStockReorder = () => {
               <p className="text-muted-foreground mb-4">
                 {searchTerm
                   ? 'Try adjusting your search filters'
-                  : 'Click "Run AI Analysis" to generate reorder suggestions'}
+                  : 'Select a store and click "Run AI Analysis" to generate reorder suggestions'}
               </p>
             </div>
           </CardContent>

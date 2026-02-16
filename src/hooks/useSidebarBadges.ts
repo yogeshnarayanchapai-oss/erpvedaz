@@ -360,6 +360,6 @@ export function useSidebarBadges() {
       return badges;
     },
     enabled: !!profile?.id && !!storeId,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // Refetch every 5 minutes to save Cloud balance
   });
 }
