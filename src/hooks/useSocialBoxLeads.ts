@@ -110,7 +110,7 @@ export function useFetchSocialBoxLeads() {
           body: JSON.stringify({
             storeId: currentStore.id,
             status,
-            limit: limit || 100,
+            limit: limit || 200,
           }),
         }
       );
@@ -141,6 +141,28 @@ export function useMarkLeadsTransferred() {
         socialbox_lead_id: String(id),
         is_transferred: true,
         transferred_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from('socialbox_pulled_leads')
+        .upsert(updates, { onConflict: 'store_id,socialbox_lead_id' });
+
+      if (error) throw error;
+    },
+  });
+}
+
+export function useDeleteSocialBoxLeads() {
+  const { currentStore } = useCurrentStore();
+
+  return useMutation({
+    mutationFn: async (socialboxLeadIds: string[]) => {
+      if (!currentStore?.id) throw new Error('No store selected');
+
+      const updates = socialboxLeadIds.map(id => ({
+        store_id: currentStore.id!,
+        socialbox_lead_id: String(id),
+        is_deleted: true,
       }));
 
       const { error } = await supabase

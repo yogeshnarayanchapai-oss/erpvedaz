@@ -48,7 +48,7 @@ serve(async (req) => {
       .single();
 
     if (configError || !config) {
-      return new Response(JSON.stringify({ error: 'SocialBox not configured for this store. Go to Settings > AI Connect to set up.' }), {
+      return new Response(JSON.stringify({ error: 'SocialBox not configured for this store.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -56,10 +56,9 @@ serve(async (req) => {
     // Build query params
     const params = new URLSearchParams();
     if (status) params.set('status', status);
-    if (limit) params.set('limit', String(limit));
+    if (limit) params.set('limit', String(limit || 200));
 
     const apiUrl = `${config.api_base_url}${params.toString() ? '?' + params.toString() : ''}`;
-    
     console.log('Fetching from SocialBox API:', apiUrl);
 
     // Fetch leads from SocialBox API
@@ -80,35 +79,56 @@ serve(async (req) => {
     }
 
     const leads = await response.json();
-    console.log('SocialBox returned', Array.isArray(leads) ? leads.length : 'non-array', 'leads');
+    const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
+    console.log('SocialBox returned', leadsArray.length, 'leads from API');
 
-    // Get already pulled lead IDs for this store
+    // Get all pulled leads for this store (including transferred ones)
     const { data: pulledLeads } = await supabase
       .from('socialbox_pulled_leads')
-      .select('socialbox_lead_id, is_transferred')
+      .select('socialbox_lead_id, is_transferred, is_deleted')
       .eq('store_id', storeId);
 
-    const pulledMap = new Map<string, boolean>();
+    const pulledMap = new Map<string, { is_transferred: boolean; is_deleted: boolean }>();
     (pulledLeads || []).forEach((pl: any) => {
-      pulledMap.set(pl.socialbox_lead_id, pl.is_transferred);
+      pulledMap.set(pl.socialbox_lead_id, { 
+        is_transferred: pl.is_transferred || false,
+        is_deleted: pl.is_deleted || false 
+      });
     });
 
-    // Filter out already pulled leads
-    const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
+    // Find truly new leads (not yet in our tracking table)
     const newLeads = leadsArray.filter((lead: any) => !pulledMap.has(String(lead.id)));
 
-    // Mark new leads as pulled
+    // Save new leads to tracking table
     if (newLeads.length > 0) {
       const pullRecords = newLeads.map((lead: any) => ({
         store_id: storeId,
         socialbox_lead_id: String(lead.id),
         phone: lead.phone || null,
         full_name: lead.full_name || lead.name || null,
+        lead_data: lead, // store full lead data for persistence
       }));
 
       await supabase
         .from('socialbox_pulled_leads')
         .upsert(pullRecords, { onConflict: 'store_id,socialbox_lead_id' });
+    }
+
+    // Now return ALL leads that are NOT transferred and NOT deleted
+    // Combine: new leads from API + existing non-transferred from DB
+    const activeLeads: any[] = [];
+
+    // Add new leads directly
+    for (const lead of newLeads) {
+      activeLeads.push(lead);
+    }
+
+    // Add previously pulled but not transferred/deleted leads from API data
+    for (const lead of leadsArray) {
+      const pulled = pulledMap.get(String(lead.id));
+      if (pulled && !pulled.is_transferred && !pulled.is_deleted) {
+        activeLeads.push(lead);
+      }
     }
 
     // Update last_synced_at
@@ -118,9 +138,9 @@ serve(async (req) => {
       .eq('id', config.id);
 
     return new Response(JSON.stringify({ 
-      leads: newLeads, 
-      total_from_api: leadsArray.length,
-      filtered_duplicates: leadsArray.length - newLeads.length,
+      leads: activeLeads, 
+      new_count: newLeads.length,
+      total_active: activeLeads.length,
       synced_at: new Date().toISOString() 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

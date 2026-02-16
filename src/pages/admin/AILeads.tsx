@@ -1,43 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Download, ArrowRight, RefreshCw, Brain, AlertCircle } from 'lucide-react';
-import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
+import { Loader2, ArrowRight, RefreshCw, Brain, AlertCircle, Trash2 } from 'lucide-react';
+import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, useDeleteSocialBoxLeads, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { useProducts } from '@/hooks/useProducts';
 import { toast } from 'sonner';
+
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function AILeads() {
   const { data: config, isLoading: configLoading } = useSocialBoxConfig();
   const fetchLeads = useFetchSocialBoxLeads();
   const markTransferred = useMarkLeadsTransferred();
+  const deleteLeads = useDeleteSocialBoxLeads();
   const { data: products = [] } = useProducts();
   const [leads, setLeads] = useState<SocialBoxLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const handleFetch = async () => {
+  const doFetch = useCallback(async (silent = false) => {
     try {
       const result = await fetchLeads.mutateAsync({
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        limit: 100,
+        limit: 200,
       });
       setLeads(result || []);
-      setSelectedIds(new Set());
-      if (result?.length) {
-        toast.success(`${result.length} new leads fetched from SocialBox`);
-      } else {
-        toast.info('No new leads found (already pulled or no leads available)');
+      if (!silent && result?.length) {
+        // Only show toast on manual refresh, not auto
       }
-    } catch (err) {
-      // error already handled by hook's onError
+    } catch {
+      // handled by hook
+    } finally {
+      setInitialLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  // Auto-fetch on mount and when config becomes available
+  useEffect(() => {
+    if (config) {
+      doFetch(true);
+    } else {
+      setInitialLoading(false);
+    }
+  }, [config]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!config) return;
+    const interval = setInterval(() => doFetch(true), AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [config, doFetch]);
+
+  // Re-fetch when filter changes
+  useEffect(() => {
+    if (config) {
+      doFetch(true);
+    }
+  }, [statusFilter]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -63,9 +89,8 @@ export default function AILeads() {
       return;
     }
 
-    // Find matching product by name
     const mappedLeads = selected.map(lead => {
-      const matchedProduct = products.find(p => 
+      const matchedProduct = products.find(p =>
         p.name.toLowerCase().includes(lead.product?.toLowerCase() || '') ||
         lead.product?.toLowerCase().includes(p.name.toLowerCase())
       );
@@ -79,26 +104,40 @@ export default function AILeads() {
         product_id: matchedProduct?.id || '',
         source: 'SocialBox',
         remark: [lead.notes, lead.product ? `Product: ${lead.product}` : ''].filter(Boolean).join(' | '),
-        _socialbox_id: lead.id, // track for marking transferred
+        _socialbox_id: lead.id,
       };
     });
 
-    // Mark as transferred in DB
     try {
       await markTransferred.mutateAsync(selected.map(l => l.id));
+      // Remove transferred leads from list
+      setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+      setSelectedIds(new Set());
+      setPrefillLeads(mappedLeads);
+      setShowBulkForm(true);
     } catch (err) {
       console.error('Failed to mark transferred:', err);
     }
-
-    // Remove transferred leads from list
-    setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
-    setSelectedIds(new Set());
-
-    setPrefillLeads(mappedLeads);
-    setShowBulkForm(true);
   };
 
-  if (configLoading) {
+  const handleDelete = async () => {
+    const selected = leads.filter(l => selectedIds.has(l.id));
+    if (selected.length === 0) {
+      toast.error('Please select leads to delete');
+      return;
+    }
+
+    try {
+      await deleteLeads.mutateAsync(selected.map(l => l.id));
+      setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+      setSelectedIds(new Set());
+      toast.success(`${selected.length} lead(s) deleted`);
+    } catch (err) {
+      toast.error('Failed to delete leads');
+    }
+  };
+
+  if (configLoading || initialLoading) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -114,7 +153,7 @@ export default function AILeads() {
             <Brain className="h-6 w-6" />
             AI Leads
           </h1>
-          <p className="text-muted-foreground">Pull leads from SocialBox automatically</p>
+          <p className="text-muted-foreground">Auto-sync leads from SocialBox</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -140,7 +179,10 @@ export default function AILeads() {
             <Brain className="h-6 w-6" />
             AI Leads
           </h1>
-          <p className="text-muted-foreground">Pull & transfer leads from SocialBox</p>
+          <p className="text-muted-foreground">
+            Auto-syncing from SocialBox
+            {fetchLeads.isPending && <Loader2 className="h-3 w-3 ml-2 inline animate-spin" />}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -155,29 +197,28 @@ export default function AILeads() {
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleFetch} disabled={fetchLeads.isPending}>
-            {fetchLeads.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Pull Leads
+          <Button variant="outline" size="icon" onClick={() => doFetch(false)} disabled={fetchLeads.isPending} title="Refresh now">
+            <RefreshCw className={`h-4 w-4 ${fetchLeads.isPending ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
-      {leads.length > 0 && (
+      {leads.length > 0 ? (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">SocialBox Leads ({leads.length})</CardTitle>
-                <CardDescription>Select leads and click Transfer to import them</CardDescription>
+                <CardDescription>Select leads to Transfer or Delete</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 {selectedIds.size > 0 && (
                   <Badge variant="secondary">{selectedIds.size} selected</Badge>
                 )}
+                <Button variant="destructive" onClick={handleDelete} disabled={selectedIds.size === 0} size="sm">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
                 <Button onClick={handleTransfer} disabled={selectedIds.size === 0} size="sm">
                   <ArrowRight className="h-4 w-4 mr-1" />
                   Transfer ({selectedIds.size})
@@ -236,19 +277,16 @@ export default function AILeads() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {leads.length === 0 && !fetchLeads.isPending && (
+      ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <RefreshCw className="h-10 w-10 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Leads Fetched Yet</h3>
-            <p className="text-muted-foreground">Click "Pull Leads" button to fetch leads from SocialBox</p>
+            <h3 className="text-lg font-semibold mb-2">No Active Leads</h3>
+            <p className="text-muted-foreground">New leads from SocialBox will appear here automatically</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Bulk Entry Form with prefilled data */}
       <BulkAddLeadsForm
         open={showBulkForm}
         onOpenChange={setShowBulkForm}
