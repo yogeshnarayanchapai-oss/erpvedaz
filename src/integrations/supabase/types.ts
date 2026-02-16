@@ -6045,7 +6045,9 @@ export type Database = {
         Row: {
           full_name: string | null
           id: string
+          is_deleted: boolean | null
           is_transferred: boolean
+          lead_data: Json | null
           phone: string | null
           pulled_at: string
           socialbox_lead_id: string
@@ -6055,7 +6057,9 @@ export type Database = {
         Insert: {
           full_name?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_transferred?: boolean
+          lead_data?: Json | null
           phone?: string | null
           pulled_at?: string
           socialbox_lead_id: string
@@ -6065,7 +6069,9 @@ export type Database = {
         Update: {
           full_name?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_transferred?: boolean
+          lead_data?: Json | null
           phone?: string | null
           pulled_at?: string
           socialbox_lead_id?: string
