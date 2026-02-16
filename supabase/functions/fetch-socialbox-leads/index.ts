@@ -82,17 +82,18 @@ serve(async (req) => {
     const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
     console.log('SocialBox returned', leadsArray.length, 'leads from API');
 
-    // Get all pulled leads for this store (including transferred ones)
+    // Get all pulled leads for this store
     const { data: pulledLeads } = await supabase
       .from('socialbox_pulled_leads')
-      .select('socialbox_lead_id, is_transferred, is_deleted')
+      .select('socialbox_lead_id, is_transferred, is_deleted, lead_data')
       .eq('store_id', storeId);
 
-    const pulledMap = new Map<string, { is_transferred: boolean; is_deleted: boolean }>();
+    const pulledMap = new Map<string, { is_transferred: boolean; is_deleted: boolean; lead_data: any }>();
     (pulledLeads || []).forEach((pl: any) => {
       pulledMap.set(pl.socialbox_lead_id, { 
         is_transferred: pl.is_transferred || false,
-        is_deleted: pl.is_deleted || false 
+        is_deleted: pl.is_deleted || false,
+        lead_data: pl.lead_data,
       });
     });
 
@@ -106,7 +107,7 @@ serve(async (req) => {
         socialbox_lead_id: String(lead.id),
         phone: lead.phone || null,
         full_name: lead.full_name || lead.name || null,
-        lead_data: lead, // store full lead data for persistence
+        lead_data: lead,
       }));
 
       await supabase
@@ -114,20 +115,18 @@ serve(async (req) => {
         .upsert(pullRecords, { onConflict: 'store_id,socialbox_lead_id' });
     }
 
-    // Now return ALL leads that are NOT transferred and NOT deleted
-    // Combine: new leads from API + existing non-transferred from DB
+    // Build active leads from DB (source of truth) + new API leads
     const activeLeads: any[] = [];
 
-    // Add new leads directly
+    // Add new leads from API
     for (const lead of newLeads) {
       activeLeads.push(lead);
     }
 
-    // Add previously pulled but not transferred/deleted leads from API data
-    for (const lead of leadsArray) {
-      const pulled = pulledMap.get(String(lead.id));
-      if (pulled && !pulled.is_transferred && !pulled.is_deleted) {
-        activeLeads.push(lead);
+    // Add ALL previously pulled, non-transferred, non-deleted leads from DB stored data
+    for (const [leadId, info] of pulledMap.entries()) {
+      if (!info.is_transferred && !info.is_deleted && info.lead_data) {
+        activeLeads.push(info.lead_data);
       }
     }
 
