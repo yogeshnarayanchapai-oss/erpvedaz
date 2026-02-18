@@ -10,7 +10,7 @@ import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { useProducts } from '@/hooks/useProducts';
 import { toast } from 'sonner';
 
-const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+// Auto-refresh disabled to save Cloud balance - manual refresh only
 
 export default function AILeads() {
   const { data: config, isLoading: configLoading } = useSocialBoxConfig();
@@ -47,12 +47,8 @@ export default function AILeads() {
     }
   }, [config]);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!config) return;
-    const interval = setInterval(() => doFetch(true), AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [config, doFetch]);
+  // Auto-refresh disabled to save Cloud balance - manual refresh only
+  // useEffect removed - users can click Refresh button to fetch new leads
 
   // Derive unique sources for filter
   const availableSources = Array.from(new Set(leads.map(l => l.source || 'SocialBox').filter(Boolean)));

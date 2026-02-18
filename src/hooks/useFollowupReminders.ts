@@ -82,8 +82,8 @@ export function useFollowupReminders({ userId, leads, onReminderTriggered }: Use
     // Initial check
     checkReminders();
 
-    // Check every minute
-    const interval = setInterval(checkReminders, 60000);
+    // Check every 5 minutes to save Cloud balance
+    const interval = setInterval(checkReminders, 300000);
 
     return () => clearInterval(interval);
   }, [userId, leads, dueFollowups, markAsReminded, onReminderTriggered]);
