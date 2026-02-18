@@ -174,4 +174,39 @@ export function useDeleteSocialBoxLeads() {
   });
 }
 
+export function useStoredSocialBoxLeads() {
+  const { currentStore } = useCurrentStore();
+
+  return useQuery({
+    queryKey: ['socialbox-stored-leads', currentStore?.id],
+    queryFn: async () => {
+      if (!currentStore?.id) return [];
+      const { data, error } = await supabase
+        .from('socialbox_pulled_leads')
+        .select('*')
+        .eq('store_id', currentStore.id)
+        .eq('is_transferred', false)
+        .or('is_deleted.is.null,is_deleted.eq.false')
+        .order('pulled_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map((row: any) => {
+        const ld = row.lead_data || {};
+        return {
+          id: row.socialbox_lead_id || row.id,
+          full_name: row.full_name || ld.full_name || '',
+          phone: row.phone || ld.phone || '',
+          product: ld.product || '',
+          source: ld.source || 'SocialBox',
+          status: ld.status || 'new',
+          notes: ld.notes || '',
+          created_at: row.pulled_at,
+          page_id: ld.page_id,
+          page_name: ld.page_name,
+        };
+      }) as SocialBoxLead[];
+    },
+    enabled: !!currentStore?.id,
+  });
+}
+
 export type { SocialBoxLead };

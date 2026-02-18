@@ -5,50 +5,47 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ArrowRight, RefreshCw, Brain, AlertCircle, Trash2 } from 'lucide-react';
-import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, useDeleteSocialBoxLeads, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
+import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, useDeleteSocialBoxLeads, useStoredSocialBoxLeads, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
 import { useProducts } from '@/hooks/useProducts';
 import { toast } from 'sonner';
-
-// Auto-refresh disabled to save Cloud balance - manual refresh only
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AILeads() {
   const { data: config, isLoading: configLoading } = useSocialBoxConfig();
+  const { data: storedLeads = [], isLoading: storedLoading } = useStoredSocialBoxLeads();
   const fetchLeads = useFetchSocialBoxLeads();
   const markTransferred = useMarkLeadsTransferred();
   const deleteLeads = useDeleteSocialBoxLeads();
   const { data: products = [] } = useProducts();
+  const queryClient = useQueryClient();
   const [leads, setLeads] = useState<SocialBoxLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
 
-  const doFetch = useCallback(async (silent = false) => {
+  // Load leads from DB (no API call)
+  useEffect(() => {
+    if (storedLeads.length > 0 || !storedLoading) {
+      setLeads(storedLeads);
+    }
+  }, [storedLeads, storedLoading]);
+
+  // Manual pull from SocialBox API
+  const handleManualPull = useCallback(async () => {
     try {
-      const result = await fetchLeads.mutateAsync({
-        limit: 200,
-      });
-      setLeads(result || []);
+      const result = await fetchLeads.mutateAsync({ limit: 200 });
+      if (result) {
+        setLeads(result);
+        // Refresh stored leads cache
+        queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
+        toast.success(`${result.length} leads pulled from SocialBox`);
+      }
     } catch {
       // handled by hook
-    } finally {
-      setInitialLoading(false);
     }
-  }, []);
-
-  // Auto-fetch on mount and when config becomes available
-  useEffect(() => {
-    if (config) {
-      doFetch(true);
-    } else {
-      setInitialLoading(false);
-    }
-  }, [config]);
-
-  // Auto-refresh disabled to save Cloud balance - manual refresh only
-  // useEffect removed - users can click Refresh button to fetch new leads
+  }, [fetchLeads, queryClient]);
 
   // Derive unique sources for filter
   const availableSources = Array.from(new Set(leads.map(l => l.source || 'SocialBox').filter(Boolean)));
@@ -136,7 +133,7 @@ export default function AILeads() {
     }
   };
 
-  if (configLoading || initialLoading) {
+  if (configLoading || storedLoading) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -179,7 +176,7 @@ export default function AILeads() {
             AI Leads
           </h1>
           <p className="text-muted-foreground">
-            Auto-syncing from SocialBox
+            Manual pull from SocialBox
             {fetchLeads.isPending && <Loader2 className="h-3 w-3 ml-2 inline animate-spin" />}
           </p>
         </div>
@@ -195,8 +192,9 @@ export default function AILeads() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={() => doFetch(false)} disabled={fetchLeads.isPending} title="Refresh now">
-            <RefreshCw className={`h-4 w-4 ${fetchLeads.isPending ? 'animate-spin' : ''}`} />
+          <Button variant="outline" onClick={handleManualPull} disabled={fetchLeads.isPending} title="Pull new leads from SocialBox">
+            <RefreshCw className={`h-4 w-4 mr-1 ${fetchLeads.isPending ? 'animate-spin' : ''}`} />
+            Pull
           </Button>
         </div>
       </div>
