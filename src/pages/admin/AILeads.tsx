@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,26 +19,20 @@ export default function AILeads() {
   const deleteLeads = useDeleteSocialBoxLeads();
   const { data: products = [] } = useProducts();
   const queryClient = useQueryClient();
-  const [leads, setLeads] = useState<SocialBoxLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
 
-  // Load leads from DB (no API call)
-  useEffect(() => {
-    if (storedLeads.length > 0 || !storedLoading) {
-      setLeads(storedLeads);
-    }
-  }, [storedLeads, storedLoading]);
+  // Use stored leads directly - no local state copy needed
+  const leads = storedLeads;
 
   // Manual pull from SocialBox API
   const handleManualPull = useCallback(async () => {
     try {
       const result = await fetchLeads.mutateAsync({ limit: 200 });
       if (result) {
-        setLeads(result);
-        // Refresh stored leads cache
+        // Refresh stored leads cache from DB
         queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
         toast.success(`${result.length} leads pulled from SocialBox`);
       }
@@ -108,7 +102,7 @@ export default function AILeads() {
     if (pendingTransferIds.length > 0) {
       try {
         await markTransferred.mutateAsync(pendingTransferIds);
-        setLeads(prev => prev.filter(l => !pendingTransferIds.includes(l.id)));
+        queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
       } catch (err) {
         console.error('Failed to mark transferred:', err);
       }
@@ -125,7 +119,7 @@ export default function AILeads() {
 
     try {
       await deleteLeads.mutateAsync(selected.map(l => l.id));
-      setLeads(prev => prev.filter(l => !selectedIds.has(l.id)));
+      queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
       setSelectedIds(new Set());
       toast.success(`${selected.length} lead(s) deleted`);
     } catch (err) {

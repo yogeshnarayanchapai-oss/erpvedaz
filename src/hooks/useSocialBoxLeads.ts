@@ -206,6 +206,11 @@ export function useStoredSocialBoxLeads() {
       }) as SocialBoxLead[];
     },
     enabled: !!currentStore?.id,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
