@@ -35,40 +35,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
     const MAX_RETRIES = 2;
-    const TIMEOUT_MS = 5000;
+    const TIMEOUT_MS = 10000; // Increased timeout for slow DB
     
     try {
-      // Create timeout promise
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS)
       );
       
-      // Create fetch promise
       const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
       
-      // Race between fetch and timeout
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
       
       if (data && !error) {
         setProfile(data as Profile);
       } else if (error && retryCount < MAX_RETRIES) {
-        // Retry on error
         console.warn(`Profile fetch failed, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-        setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+        // Exponential backoff to reduce DB pressure
+        setTimeout(() => fetchProfile(userId, retryCount + 1), 3000 * (retryCount + 1));
       } else {
         console.error('Profile fetch failed after retries:', error);
-        // Set profile to null to allow app to handle gracefully
         setProfile(null);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
       if (retryCount < MAX_RETRIES) {
         console.warn(`Profile fetch error, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-        setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+        setTimeout(() => fetchProfile(userId, retryCount + 1), 3000 * (retryCount + 1));
       } else {
         setProfile(null);
       }

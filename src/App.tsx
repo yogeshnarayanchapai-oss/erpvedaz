@@ -191,9 +191,12 @@ import MyProfile from "./pages/settings/MyProfile";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2, // 2 minutes - fresher data
-      gcTime: 1000 * 60 * 10, // 10 minutes garbage collection - less memory
+      staleTime: 1000 * 60 * 5, // 5 minutes - reduce DB load from RLS-heavy queries
+      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1, // Only 1 retry to prevent cascading DB load
+      retryDelay: (attemptIndex) => Math.min(3000 * (attemptIndex + 1), 10000), // Backoff: 3s, 6s, 10s
     },
   },
 });
