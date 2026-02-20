@@ -195,6 +195,7 @@ const queryClient = new QueryClient({
       gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      refetchIntervalInBackground: false, // Stop ALL polling when tab is hidden — huge cost savings
       retry: 1, // Only 1 retry to prevent cascading DB load
       retryDelay: (attemptIndex) => Math.min(3000 * (attemptIndex + 1), 10000), // Backoff: 3s, 6s, 10s
     },
