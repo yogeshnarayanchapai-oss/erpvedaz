@@ -93,7 +93,7 @@ export function TodayQuickStats() {
         pendingInsideValley: pendingInsideValley || 0,
       };
     },
-    refetchInterval: 300000, // Refresh every 5 minutes to save Cloud balance
+    refetchInterval: 600000, // Refresh every 10 minutes to save Cloud balance
   });
 
   const items = [

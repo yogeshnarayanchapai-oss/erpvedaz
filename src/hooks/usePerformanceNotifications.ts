@@ -119,6 +119,6 @@ export function usePerformanceNotifications() {
 
       return insights;
     },
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    refetchInterval: 900000, // Refetch every 15 minutes (non-critical)
   });
 }
