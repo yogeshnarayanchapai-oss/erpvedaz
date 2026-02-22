@@ -224,15 +224,11 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         return getCodeNum(a.transaction_code) - getCodeNum(b.transaction_code);
       });
 
-      // Calculate running balance chronologically
-      // Only cleared (non-pending) transactions affect the running balance
+      // Calculate running balance chronologically (all transactions affect balance)
       let runningBalance = 0;
       entries.forEach(entry => {
-        const isPending = entry.is_pending === true || (entry.type === 'TRANSACTION' && entry.is_settled === false);
-        if (!isPending) {
-          // Credit = receivable (party owes us), Debit = payable (we owe party)
-          runningBalance += entry.credit - entry.debit;
-        }
+        // Credit = receivable (party owes us), Debit = payable (we owe party)
+        runningBalance += entry.credit - entry.debit;
         entry.balance = runningBalance;
       });
 
