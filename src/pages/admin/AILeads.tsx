@@ -53,6 +53,7 @@ export default function AILeads() {
     }
     return acc;
   }, {});
+  const duplicateCount = Object.values(phoneCounts).filter(c => c > 1).reduce((sum, c) => sum + c, 0);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -182,6 +183,12 @@ export default function AILeads() {
             Manual pull from SocialBox
             {fetchLeads.isPending && <Loader2 className="h-3 w-3 ml-2 inline animate-spin" />}
           </p>
+          {duplicateCount > 0 && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Double: {duplicateCount} leads
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
