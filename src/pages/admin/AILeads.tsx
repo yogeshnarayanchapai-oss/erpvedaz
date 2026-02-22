@@ -45,6 +45,15 @@ export default function AILeads() {
   const availableSources = Array.from(new Set(leads.map(l => l.source || 'SocialBox').filter(Boolean)));
   const filteredLeads = sourceFilter === 'all' ? leads : leads.filter(l => (l.source || 'SocialBox') === sourceFilter);
 
+  // Build phone duplicate count map
+  const phoneCounts = filteredLeads.reduce<Record<string, number>>((acc, l) => {
+    const phone = (l.phone || '').replace(/\D/g, '');
+    if (phone.length >= 10) {
+      acc[phone] = (acc[phone] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -246,7 +255,18 @@ export default function AILeads() {
                         />
                       </td>
                       <td className="p-2 font-medium">{lead.full_name}</td>
-                      <td className="p-2">{lead.phone}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        {lead.phone}
+                        {(() => {
+                          const cleanPhone = (lead.phone || '').replace(/\D/g, '');
+                          const count = cleanPhone.length >= 10 ? (phoneCounts[cleanPhone] || 0) : 0;
+                          return count > 1 ? (
+                            <Badge variant="destructive" className="ml-1.5 text-[10px] px-1.5 py-0">
+                              Double{count > 2 ? ` ×${count}` : ''}
+                            </Badge>
+                          ) : null;
+                        })()}
+                      </td>
                       <td className="p-2">{lead.product || '-'}</td>
                       <td className="p-2">
                         <Badge variant="outline" className="text-xs">{lead.source || 'SocialBox'}</Badge>
