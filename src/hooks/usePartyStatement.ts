@@ -184,6 +184,26 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         const isIncome = t.type === 'income';
         const isPending = !t.is_cleared;
         
+        // Detect payment/settlement transactions - these should show as OPPOSITE
+        // because receiving payment REDUCES outstanding (debit), paying REDUCES payable (credit)
+        const isPaymentReceived = desc.startsWith('Partial Payment Received') || desc.startsWith('Settlement:');
+        const isPaymentMade = desc.startsWith('Partial Payment Made');
+        const isPaymentEntry = isPaymentReceived || isPaymentMade;
+        
+        let debit = 0;
+        let credit = 0;
+        
+        if (isPaymentEntry) {
+          // Payment received from party = debit (reduces what they owe us)
+          // Payment made to party = credit (reduces what we owe them)
+          debit = isPaymentReceived ? t.amount : 0;
+          credit = isPaymentMade ? t.amount : 0;
+        } else {
+          // Normal mapping: Income = Credit, Expense = Debit
+          debit = !isIncome ? t.amount : 0;
+          credit = isIncome ? t.amount : 0;
+        }
+        
         entries.push({
           date: t.date,
           type: 'PENDING' as const,
@@ -192,9 +212,8 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
             : `${t.description}${categoryName ? ` - ${categoryName}` : ''}${accountName ? ` (${accountName})` : ''}`,
           qty: null,
           rate: null,
-          // Income (received) = Credit, Expense (paid) = Debit
-          debit: !isIncome ? t.amount : 0,
-          credit: isIncome ? t.amount : 0,
+          debit,
+          credit,
           balance: 0,
           remarks: t.note,
           id: t.id,
