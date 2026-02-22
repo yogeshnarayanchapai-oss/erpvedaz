@@ -810,8 +810,8 @@ export default function PartyStatement() {
                     </TableCell>
                     <TableCell className="text-right">{entry.qty || '-'}</TableCell>
                     <TableCell className="text-right">{entry.rate ? `₹${entry.rate.toFixed(2)}` : '-'}</TableCell>
-                    <TableCell className="text-right text-red-600">{entry.debit > 0 ? `₹${entry.debit.toFixed(2)}` : '-'}</TableCell>
-                    <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
+                    <TableCell className="text-right text-red-600">{!entry.is_pending && entry.debit > 0 ? `₹${entry.debit.toFixed(2)}` : '-'}</TableCell>
+                    <TableCell className="text-right text-green-600">{!entry.is_pending && entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
