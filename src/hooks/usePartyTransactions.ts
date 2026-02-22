@@ -13,7 +13,7 @@ export interface PartyTransaction {
   rate: number | null;
   amount: number;
   direction: 'RECEIVABLE' | 'PAYABLE';
-  source: 'STOCK_IN' | 'WHOLESALE_OUT' | 'ADJUSTMENT' | 'INCOME' | 'EXPENSE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'SALE_IN' | 'SALE_OUT';
+  source: 'STOCK_IN' | 'WHOLESALE_OUT' | 'ADJUSTMENT';
   reference: string | null;
   remarks: string | null;
   created_at: string;

@@ -546,41 +546,57 @@ export default function PartyStatement() {
           remainingPayment -= entryAmount;
           fullyCleared++;
         } else {
-          // Partial payment - DO NOT mutate original transaction
-          // Create a new payment entry for the paid portion only
+          // Partial payment - update amount to remaining, add remark
           const paidAmount = remainingPayment;
-          const paymentRemark = `Rs ${paidAmount.toLocaleString()} partial payment from Rs ${entryAmount.toLocaleString()} on ${today}`;
-          const isReceiving = entry.credit > 0;
+          const remainingAmount = entryAmount - paidAmount;
+          const paymentRemark = `Rs ${paidAmount.toLocaleString()} paid from Rs ${entryAmount.toLocaleString()} on ${today}`;
           
-          // Add remark to original transaction noting the partial payment (no amount change)
           if (entry.type === 'PENDING') {
             await supabase
               .from('transactions')
               .update({ 
+                amount: remainingAmount,
                 note: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
               })
               .eq('id', entry.id);
+            
+            // Create cleared transaction for the paid portion
+            const isReceiving = entry.credit > 0;
+            await supabase.from('transactions').insert({
+              date: today,
+              type: isReceiving ? 'income' : 'expense',
+              account_id: selectedAccountId,
+              party_id: selectedPartyId,
+              amount: paidAmount,
+              description: `Partial: ${entry.particulars}`,
+              note: paymentRemark,
+              is_cleared: true,
+              store_id: selectedParty?.store_id,
+            });
           } else if (entry.type === 'TRANSACTION') {
             await supabase
               .from('party_transactions')
               .update({
+                amount: remainingAmount,
                 remarks: entry.remarks ? `${entry.remarks} | ${paymentRemark}` : paymentRemark
               })
               .eq('id', entry.id);
+            
+            // Create a transaction record for the paid portion
+            // Credit entries are Receivables (WHOLESALE_OUT = they owe us) → settling = income
+            const isReceiving = entry.credit > 0;
+            await supabase.from('transactions').insert({
+              date: today,
+              type: isReceiving ? 'income' : 'expense',
+              account_id: selectedAccountId,
+              party_id: selectedPartyId,
+              amount: paidAmount,
+              description: `Partial Settlement: ${entry.particulars}`,
+              note: paymentRemark,
+              is_cleared: true,
+              store_id: selectedParty?.store_id,
+            });
           }
-
-          // Create new payment transaction for the paid amount (debit entry to offset credit, or vice versa)
-          await supabase.from('transactions').insert({
-            date: today,
-            type: isReceiving ? 'income' : 'expense',
-            account_id: selectedAccountId,
-            party_id: selectedPartyId,
-            amount: paidAmount,
-            description: `Partial ${isReceiving ? 'Payment Received' : 'Payment Made'}: ${entry.particulars}`,
-            note: paymentRemark,
-            is_cleared: true,
-            store_id: selectedParty?.store_id,
-          });
           
           remainingPayment = 0;
           partiallyCleared++;
