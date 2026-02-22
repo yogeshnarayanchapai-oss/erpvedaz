@@ -812,7 +812,13 @@ export default function PartyStatement() {
                     <TableCell className="text-right">{entry.rate ? `₹${entry.rate.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className="text-right text-red-600">{entry.debit > 0 ? `₹${entry.debit.toFixed(2)}` : '-'}</TableCell>
                     <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}</TableCell>
-                    <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{entry.balance.toFixed(2)}</TableCell>
+                    <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {entry.balance === 0 
+                        ? 'Settled' 
+                        : entry.balance > 0 
+                          ? `लिनु Rs ${Math.abs(entry.balance).toLocaleString('en-NP')}` 
+                          : `दिनु Rs ${Math.abs(entry.balance).toLocaleString('en-NP')}`}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 items-center">
