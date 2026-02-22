@@ -125,9 +125,9 @@ export default function PartyStatement() {
     const pendingDebit = pendingEntries.reduce((sum, entry) => sum + entry.debit, 0);
     const pendingCredit = pendingEntries.reduce((sum, entry) => sum + entry.credit, 0);
     
-    // Balance = pending receivable - pending payable (what's still owed to us net)
-    // If positive = party owes us, if negative = we owe party
-    const balance = pendingCredit - pendingDebit;
+    // Balance = latest running balance from the table (first entry since reversed)
+    // This matches the Balance column in the Transaction Ledger
+    const balance = statement.length > 0 ? statement[0].balance : 0;
     
     // Pending = count of not settled transactions
     const pendingCount = pendingEntries.length;
