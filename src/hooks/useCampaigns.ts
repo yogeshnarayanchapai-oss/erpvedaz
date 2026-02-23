@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCurrentStoreId } from "@/hooks/useCurrentStoreId";
+import { useIsModuleStoreWise } from "@/hooks/useModuleStoreSettings";
 
 export interface Campaign {
   id: string;
@@ -28,9 +29,10 @@ export type CampaignInput = Omit<Campaign, "id" | "created_at" | "updated_at" | 
 
 export const useCampaigns = (filters?: { status?: string }) => {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('marketing');
 
   return useQuery({
-    queryKey: ["campaigns", filters, storeId],
+    queryKey: ["campaigns", filters, storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from("campaigns")
@@ -41,7 +43,7 @@ export const useCampaigns = (filters?: { status?: string }) => {
         query = query.eq("status", filters.status);
       }
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq("store_id", storeId);
       }
 

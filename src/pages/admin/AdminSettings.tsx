@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Settings, Palette, Bell, Database, BookOpen, Calendar as CalendarIcon, Building2, Link2 } from 'lucide-react';
 import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
+import ModuleStoreToggle from '@/components/settings/ModuleStoreToggle';
 
 // Import existing components
 import { NotificationSettings } from '@/components/notifications/NotificationSettings';
@@ -26,7 +27,7 @@ import HRMSettings from '@/pages/hrm/HRMSettings';
 const ADMIN_ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'HR'];
 
 // General Settings Tab Content
-function GeneralSettingsTab() {
+function GeneralSettingsTab({ isOwner }: { isOwner: boolean }) {
   const { dateMode, setDateMode } = useDateMode();
   const bsDate = getCurrentBSDate();
   
@@ -95,6 +96,9 @@ function GeneralSettingsTab() {
           <HRMSettings />
         </CardContent>
       </Card>
+
+      {/* Module Store Toggle - OWNER only */}
+      {isOwner && <ModuleStoreToggle />}
     </div>
   );
 }
@@ -159,7 +163,7 @@ export default function AdminSettings() {
         </TabsList>
 
         <TabsContent value="general" className="mt-6">
-          <GeneralSettingsTab />
+          <GeneralSettingsTab isOwner={isOwner} />
         </TabsContent>
 
         <TabsContent value="branding" className="mt-6">

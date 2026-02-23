@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from './useCurrentStoreId';
+import { useIsModuleStoreWise } from './useModuleStoreSettings';
 
 export interface TransactionCategory {
   id: string;
@@ -14,6 +15,7 @@ export interface TransactionCategory {
 
 export function useTransactionCategories(nature?: 'income' | 'expense') {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('accounting');
   
   return useQuery({
     queryKey: ['transaction-categories', storeId, nature],

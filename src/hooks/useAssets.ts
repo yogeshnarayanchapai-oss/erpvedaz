@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 export interface Asset {
   id: string;
@@ -34,13 +35,14 @@ export interface AssetAssignment {
 
 export function useAssets(status?: string, category?: string) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['assets', storeId, status, category],
+    queryKey: ['assets', storeId, filterByStore, status, category],
     queryFn: async () => {
       let query = supabase.from('assets' as any).select('*').order('created_at', { ascending: false });
 
-      if (storeId) query = query.eq('store_id', storeId);
+      if (filterByStore && storeId) query = query.eq('store_id', storeId);
       if (status) query = query.eq('status', status);
       if (category) query = query.eq('category', category);
 
@@ -54,16 +56,17 @@ export function useAssets(status?: string, category?: string) {
 
 export function useAssetAssignments(employeeId?: string) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['asset-assignments', storeId, employeeId],
+    queryKey: ['asset-assignments', storeId, filterByStore, employeeId],
     queryFn: async () => {
       let query = supabase
         .from('asset_assignments' as any)
         .select('*, assets(*), employees(full_name)')
         .order('assigned_on', { ascending: false });
 
-      if (storeId) query = query.eq('store_id', storeId);
+      if (filterByStore && storeId) query = query.eq('store_id', storeId);
       if (employeeId) query = query.eq('employee_id', employeeId);
 
       const { data, error } = await query;

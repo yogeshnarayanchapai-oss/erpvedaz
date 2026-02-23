@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 export interface InventoryActivityLog {
   id: string;
@@ -30,9 +31,10 @@ interface Filters {
 
 export function useInventoryActivityLogs(filters: Filters = {}) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('inventory');
 
   return useQuery({
-    queryKey: ['inventory_activity_logs', storeId, filters],
+    queryKey: ['inventory_activity_logs', storeId, filterByStore, filters],
     queryFn: async () => {
       let query = supabase
         .from('inventory_activity_logs')
@@ -40,7 +42,7 @@ export function useInventoryActivityLogs(filters: Filters = {}) {
         .order('performed_at', { ascending: false })
         .limit(500);
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 

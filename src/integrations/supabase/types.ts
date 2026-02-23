@@ -4074,6 +4074,30 @@ export type Database = {
           },
         ]
       }
+      module_store_settings: {
+        Row: {
+          id: string
+          is_store_wise: boolean
+          module_name: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          is_store_wise?: boolean
+          module_name: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          is_store_wise?: boolean
+          module_name?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       notice_dismissals: {
         Row: {
           dismissed_at: string

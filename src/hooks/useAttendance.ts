@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { sendHRMEmail, getAdminTeamEmails } from '@/lib/hrmEmailService';
 
 export interface AttendanceRecord {
@@ -20,9 +21,10 @@ export interface AttendanceRecord {
 
 export function useAttendanceRecords(employeeId?: string, dateRange?: { from: string; to: string }) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['attendance', storeId, employeeId, dateRange],
+    queryKey: ['attendance', storeId, filterByStore, employeeId, dateRange],
     queryFn: async () => {
       let query = supabase
         .from('attendance_records')
@@ -30,7 +32,7 @@ export function useAttendanceRecords(employeeId?: string, dateRange?: { from: st
         .order('date', { ascending: false })
         .order('check_in_time', { ascending: false, nullsFirst: false });
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       if (employeeId) {
