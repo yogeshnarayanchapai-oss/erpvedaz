@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 // Banks
 export function useBanks() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('accounting');
 
   return useQuery({
-    queryKey: ['accounting-banks', storeId],
+    queryKey: ['accounting-banks', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from('accounting_banks')
@@ -16,7 +18,7 @@ export function useBanks() {
         .eq('is_active', true)
         .order('bank_name');
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 

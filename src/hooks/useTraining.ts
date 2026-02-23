@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 export type CourseLevel = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
 export type QuestionType = 'MCQ' | 'TRUE_FALSE';
@@ -99,16 +100,17 @@ export interface LessonCompletion {
 // Courses hooks
 export function useTrainingCourses(activeOnly = false) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['training-courses', storeId, activeOnly],
+    queryKey: ['training-courses', storeId, filterByStore, activeOnly],
     queryFn: async () => {
       let query = supabase
         .from('training_courses')
         .select('*')
         .order('created_at', { ascending: false }) as any;
       
-      if (storeId) query = query.eq('store_id', storeId);
+      if (filterByStore && storeId) query = query.eq('store_id', storeId);
       if (activeOnly) query = query.eq('is_active', true);
       
       const { data, error } = await query;

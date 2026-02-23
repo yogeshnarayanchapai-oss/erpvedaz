@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from './useCurrentStoreId';
+import { useIsModuleStoreWise } from './useModuleStoreSettings';
 
 export interface ActivityLog {
   id: string;
@@ -20,16 +21,17 @@ export interface ActivityLog {
 
 export function useAccountingActivityLogs(filters?: { startDate?: string; endDate?: string; actionType?: string }) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('accounting');
   
   return useQuery({
-    queryKey: ['accounting-activity-logs', storeId, filters],
+    queryKey: ['accounting-activity-logs', storeId, filterByStore, filters],
     queryFn: async () => {
       let query = supabase
         .from('accounting_activity_logs')
         .select('*')
         .order('performed_at', { ascending: false });
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       if (filters?.startDate) {

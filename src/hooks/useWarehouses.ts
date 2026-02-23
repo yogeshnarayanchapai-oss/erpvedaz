@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 export interface Warehouse {
   id: string;
@@ -17,16 +18,17 @@ export interface Warehouse {
 
 export function useWarehouses() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('inventory');
 
   return useQuery({
-    queryKey: ['warehouses', storeId],
+    queryKey: ['warehouses', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from('warehouses')
         .select('*')
         .order('name');
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 
 export interface Ad {
   id: string;

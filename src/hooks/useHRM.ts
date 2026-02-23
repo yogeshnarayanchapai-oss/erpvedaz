@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 import { sendHRMEmail, getAdminTeamEmails, getEmployeeEmail } from '@/lib/hrmEmailService';
 
@@ -142,12 +143,13 @@ export interface CompanyInfo {
 // Departments
 export function useDepartments() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['departments', storeId],
+    queryKey: ['departments', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase.from('departments').select('*').order('name');
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
@@ -210,12 +212,13 @@ export function useDeleteDepartment() {
 // Bank Accounts
 export function useBankAccounts() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['hr_bank_accounts', storeId],
+    queryKey: ['hr_bank_accounts', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase.from('hr_bank_accounts').select('*').order('bank_name');
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
@@ -278,15 +281,16 @@ export function useDeleteBankAccount() {
 // Employees
 export function useEmployees() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['employees', storeId],
+    queryKey: ['employees', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from('employees')
         .select(`*, departments:department_id(name), hr_bank_accounts:bank_account_id(bank_name, account_number), profiles:user_id(id, name, email)`)
         .order('full_name');
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
@@ -299,16 +303,17 @@ export function useEmployees() {
 
 export function useUserEmployeeLink(userId: string | null) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['user_employee_link', userId, storeId],
+    queryKey: ['user_employee_link', userId, storeId, filterByStore],
     queryFn: async () => {
       if (!userId) return null;
       let query = supabase
         .from('employees')
         .select('id, full_name')
         .eq('user_id', userId);
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query.maybeSingle();
@@ -371,15 +376,16 @@ export function useDeleteEmployee() {
 // Payroll
 export function usePayrollRecords(month?: string) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['payroll_records', month, storeId],
+    queryKey: ['payroll_records', month, storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from('payroll_records')
         .select(`*, employees:employee_id(full_name)`)
         .order('month', { ascending: false });
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       if (month) query = query.eq('month', month);
@@ -489,6 +495,7 @@ export function useDeletePayrollRecord() {
 export function useGenerateMonthlyPayroll() {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useMutation({
     mutationFn: async (month: string) => {
@@ -496,7 +503,7 @@ export function useGenerateMonthlyPayroll() {
         .from('employees')
         .select('id, base_salary')
         .eq('status', 'Active');
-      if (storeId) {
+      if (filterByStore && storeId) {
         empQuery = empQuery.eq('store_id', storeId);
       }
       const { data: employees, error: empError } = await empQuery;
@@ -506,7 +513,7 @@ export function useGenerateMonthlyPayroll() {
         .from('payroll_records')
         .select('employee_id')
         .eq('month', month);
-      if (storeId) {
+      if (filterByStore && storeId) {
         existQuery = existQuery.eq('store_id', storeId);
       }
       const { data: existing } = await existQuery;
@@ -541,12 +548,13 @@ export function useGenerateMonthlyPayroll() {
 // HR Policies
 export function useHRPolicies() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['hr_policies', storeId],
+    queryKey: ['hr_policies', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase.from('hr_policies').select('*').order('title');
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
@@ -609,12 +617,13 @@ export function useDeleteHRPolicy() {
 // Office Holidays
 export function useOfficeHolidays() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['office_holidays', storeId],
+    queryKey: ['office_holidays', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase.from('office_holidays').select('*').order('date', { ascending: false });
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
@@ -677,16 +686,16 @@ export function useDeleteOfficeHoliday() {
 // Leave Types
 export function useLeaveTypes() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['leave_types', storeId],
+    queryKey: ['leave_types', storeId, filterByStore],
     queryFn: async () => {
-      // Fetch store-specific leave types AND shared/global leave types (store_id IS NULL)
-      const { data, error } = await supabase
-        .from('leave_types')
-        .select('*')
-        .or(`store_id.eq.${storeId},store_id.is.null`)
-        .order('name');
+      let query = supabase.from('leave_types').select('*').order('name');
+      if (filterByStore && storeId) {
+        query = query.or(`store_id.eq.${storeId},store_id.is.null`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as LeaveType[];
     },
@@ -776,15 +785,16 @@ export function useSeedDefaultLeaveTypes() {
 // Leave Requests
 export function useLeaveRequests(filters?: { status?: string; employeeId?: string }) {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['leave_requests', filters, storeId],
+    queryKey: ['leave_requests', filters, storeId, filterByStore],
     queryFn: async () => {
       let query = supabase
         .from('leave_requests')
         .select(`*, employees:employees!leave_requests_employee_id_fkey(full_name), leave_types:leave_type_id(name)`)
         .order('created_at', { ascending: false });
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       if (filters?.status) query = query.eq('status', filters.status);
@@ -973,12 +983,13 @@ export function useUpdateLeaveRequest() {
 // Notices
 export function useNotices() {
   const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['notices', storeId],
+    queryKey: ['notices', storeId, filterByStore],
     queryFn: async () => {
       let query = supabase.from('notices').select('*').order('start_date', { ascending: false }) as any;
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
       const { data, error } = await query;
