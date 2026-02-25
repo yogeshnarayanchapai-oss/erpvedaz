@@ -44,27 +44,31 @@ export function NewPaymentInDialog({ open, onOpenChange, onSwitchType }: Props) 
         <DialogHeader>
           <DialogTitle>Payment In (Received)</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <InlineTypeSelector
             currentType="PAYMENT_IN"
             allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
             onSelect={(type) => { if (type !== 'PAYMENT_IN' && onSwitchType) onSwitchType(type); }}
           />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
-            <div className="space-y-2"><Label>Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-xs">Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>
           </div>
-          <div className="space-y-2">
-            <Label>Receive in Account *</Label>
-            <Select value={formData.account_id} onValueChange={v => setFormData({ ...formData, account_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-              <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.type})</SelectItem>)}</SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Receive in Account *</Label>
+              <Select value={formData.account_id} onValueChange={v => setFormData({ ...formData, account_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label className="text-xs">Party (Optional)</Label><SearchablePartySelect value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })} placeholder="Select party..." /></div>
           </div>
-          <div className="space-y-2"><Label>Party (Optional)</Label><SearchablePartySelect value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })} placeholder="Select party..." /></div>
-          <div className="space-y-2"><Label>Reference</Label><Input placeholder="Cheque No., UTR..." value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
-          <div className="space-y-2"><Label>Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
-          <div className="flex gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-xs">Reference</Label><Input placeholder="Cheque No., UTR..." value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
+          </div>
+          <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Payment In'}</Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           </div>
