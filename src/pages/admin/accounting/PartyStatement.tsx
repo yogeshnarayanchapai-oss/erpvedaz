@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { FileSpreadsheet, ArrowLeft, Eye, Trash2, EyeOff, FileText, Plus } from 'lucide-react';
+import { format, subDays } from 'date-fns';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { format } from 'date-fns';
+
 import { toast } from 'sonner';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
 import { NewPaymentInDialog } from '@/components/accounting/NewPaymentInDialog';
@@ -37,9 +38,9 @@ export default function PartyStatement() {
   const isOwner = effectiveRole === 'OWNER';
 
   const [selectedPartyId, setSelectedPartyId] = useState(partyIdFromUrl || '');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState('');
+  const [datePreset, setDatePreset] = useState('7days');
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [statementSearch, setStatementSearch] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [balanceFilter, setBalanceFilter] = useState<string>('');
@@ -53,10 +54,30 @@ export default function PartyStatement() {
 
   const { data: parties = [], isLoading: partiesLoading } = usePartiesWithBalances();
   const { data: products = [] } = useProducts();
+  // When search is active, bypass date filter
+  const effectiveStartDate = statementSearch ? undefined : startDate || undefined;
+  const effectiveEndDate = statementSearch ? undefined : endDate || undefined;
   const { data: statement = [], isLoading: statementLoading } = usePartyStatement(
     selectedPartyId,
-    { startDate: startDate || undefined, endDate: endDate || undefined, productId: selectedProduct || undefined }
+    { startDate: effectiveStartDate, endDate: effectiveEndDate }
   );
+
+  const handleDatePreset = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    switch (preset) {
+      case 'today':
+        setStartDate(format(today, 'yyyy-MM-dd'));
+        setEndDate(format(today, 'yyyy-MM-dd'));
+        break;
+      case '7days':
+        setStartDate(format(subDays(today, 6), 'yyyy-MM-dd'));
+        setEndDate(format(today, 'yyyy-MM-dd'));
+        break;
+      case 'custom':
+        break;
+    }
+  };
 
   const selectedParty = parties.find(p => p.id === selectedPartyId);
 
@@ -234,18 +255,26 @@ export default function PartyStatement() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2"><Label>Search</Label><Input placeholder="Search particulars/remarks..." value={statementSearch} onChange={e => setStatementSearch(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-              <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
               <div className="space-y-2">
-                <Label>Product</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger><SelectValue placeholder="All products" /></SelectTrigger>
-                  <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                <Label>Date Range</Label>
+                <Select value={datePreset} onValueChange={handleDatePreset}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end"><Button variant="outline" onClick={() => { setStartDate(''); setEndDate(''); setSelectedProduct(''); setStatementSearch(''); }} className="w-full">Clear</Button></div>
+              {datePreset === 'custom' && (
+                <>
+                  <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+                </>
+              )}
+              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('7days'); handleDatePreset('7days'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
             </div>
           </CardContent>
         </Card>
