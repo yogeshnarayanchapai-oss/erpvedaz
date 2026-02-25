@@ -6,6 +6,8 @@ interface TransactionTypeSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (type: TransactionType) => void;
+  filterTypes?: TransactionType[];
+  title?: string;
 }
 
 export const TRANSACTION_TYPE_META: { type: TransactionType; label: string; shortDesc: string; icon: React.ReactNode; color: string; badgeClass: string }[] = [
@@ -21,15 +23,19 @@ export function getTypeMeta(type: TransactionType) {
   return TRANSACTION_TYPE_META.find(t => t.type === type);
 }
 
-export function TransactionTypeSelector({ open, onOpenChange, onSelect }: TransactionTypeSelectorProps) {
+export function TransactionTypeSelector({ open, onOpenChange, onSelect, filterTypes, title }: TransactionTypeSelectorProps) {
+  const items = filterTypes 
+    ? TRANSACTION_TYPE_META.filter(t => filterTypes.includes(t.type))
+    : TRANSACTION_TYPE_META;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-sm font-medium">Select Transaction Type</DialogTitle>
+          <DialogTitle className="text-sm font-medium">{title || 'Select Transaction Type'}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-2">
-          {TRANSACTION_TYPE_META.map(({ type, label, shortDesc, icon, color }) => (
+        <div className={`grid gap-2 ${items.length <= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {items.map(({ type, label, shortDesc, icon, color }) => (
             <button
               key={type}
               className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${color}`}
