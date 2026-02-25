@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useTransactions, Transaction, useDeleteTransaction } from '@/hooks/useTransactions';
+import { useTransactions, Transaction, useDeleteTransaction, TransactionType } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
@@ -18,9 +18,14 @@ import { EditTransactionDialog } from '@/components/accounting/EditTransactionDi
 import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
 import { NewExpenseDialog } from '@/components/accounting/NewExpenseDialog';
 import { NewTransferDialog } from '@/components/accounting/NewTransferDialog';
+import { NewPaymentInDialog } from '@/components/accounting/NewPaymentInDialog';
+import { NewPaymentOutDialog } from '@/components/accounting/NewPaymentOutDialog';
+import { NewSalesInDialog } from '@/components/accounting/NewSalesInDialog';
+import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
+import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays } from 'date-fns';
-import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, Receipt, DollarSign, MoreHorizontal, Eye } from 'lucide-react';
+import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,10 +48,16 @@ export default function ViewTransactions() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
-  // Dialog states
+  // Two-button system dialog states
+  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  // Individual type dialogs
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [paymentInDialogOpen, setPaymentInDialogOpen] = useState(false);
+  const [paymentOutDialogOpen, setPaymentOutDialogOpen] = useState(false);
+  const [salesInDialogOpen, setSalesInDialogOpen] = useState(false);
+  const [salesOutDialogOpen, setSalesOutDialogOpen] = useState(false);
 
   const { data: transactions = [], isLoading } = useTransactions(filters);
   const { data: accounts = [] } = useActiveAccounts();
@@ -68,6 +79,17 @@ export default function ViewTransactions() {
     );
   });
 
+  const handleTypeSelected = (type: TransactionType) => {
+    switch (type) {
+      case 'INCOME': setDepositDialogOpen(true); break;
+      case 'EXPENSE': setExpenseDialogOpen(true); break;
+      case 'PAYMENT_IN': setPaymentInDialogOpen(true); break;
+      case 'PAYMENT_OUT': setPaymentOutDialogOpen(true); break;
+      case 'SALES_IN': setSalesInDialogOpen(true); break;
+      case 'SALES_OUT': setSalesOutDialogOpen(true); break;
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredTransactions.length) {
       setSelectedIds([]);
@@ -86,58 +108,6 @@ export default function ViewTransactions() {
     if (selectedIds.length === 0) return;
     setIsDeleting(true);
     try {
-      // Get transaction codes for selected transactions to delete linked party_transactions
-      const selectedTransactions = filteredTransactions.filter(t => selectedIds.includes(t.id));
-      const transactionCodes = selectedTransactions
-        .map(t => t.transaction_code)
-        .filter((code): code is string => !!code);
-
-      // Detect transactions that originated from party payments so we can also delete those payments
-      const paymentLikeTransactions = selectedTransactions.filter(t => {
-        if (!t.party_id || !t.account_id || !t.amount || !t.description) return false;
-        return (
-          t.description.startsWith('Payment received from') ||
-          t.description.startsWith('Payment made to')
-        );
-      });
-
-      let partyPaymentIdsToDelete: string[] = [];
-      if (paymentLikeTransactions.length > 0) {
-        const partyIds = Array.from(
-          new Set(paymentLikeTransactions.map(t => t.party_id as string))
-        );
-
-        const { data: candidatePayments, error: paymentFetchError } = await supabase
-          .from('party_payments')
-          .select('id, party_id, date, amount, payment_type, bank_account_id')
-          .in('party_id', partyIds);
-
-        if (paymentFetchError) throw paymentFetchError;
-
-        if (candidatePayments) {
-          for (const tx of paymentLikeTransactions) {
-            const desc = tx.description as string;
-            const isPaymentReceived = desc.startsWith('Payment received from');
-            const isPaymentMade = desc.startsWith('Payment made to');
-            const paymentType = isPaymentReceived ? 'RECEIVED' : isPaymentMade ? 'PAID' : null;
-            if (!paymentType) continue;
-
-            const matches = candidatePayments.filter((p: any) =>
-              p.party_id === tx.party_id &&
-              p.bank_account_id === tx.account_id &&
-              p.amount === tx.amount &&
-              p.payment_type === paymentType &&
-              p.date === tx.date
-            );
-            partyPaymentIdsToDelete.push(...matches.map((p: any) => p.id as string));
-          }
-        }
-
-        // Remove duplicates
-        partyPaymentIdsToDelete = Array.from(new Set(partyPaymentIdsToDelete));
-      }
-      
-      // Delete from transactions table
       const { error } = await supabase
         .from('transactions')
         .delete()
@@ -145,25 +115,11 @@ export default function ViewTransactions() {
       
       if (error) throw error;
       
-      // Also delete linked party_transactions by transaction_code
-      if (transactionCodes.length > 0) {
-        await supabase.from('party_transactions').delete().in('transaction_code', transactionCodes);
-      }
-
-      // Also delete any linked party_payments found above
-      if (partyPaymentIdsToDelete.length > 0) {
-        await supabase
-          .from('party_payments')
-          .delete()
-          .in('id', partyPaymentIdsToDelete);
-      }
-      
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounting-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
-      queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       toast.success(`${selectedIds.length} transactions deleted`);
       setSelectedIds([]);
       setBulkDeleteOpen(false);
@@ -175,33 +131,30 @@ export default function ViewTransactions() {
   };
 
   const exportCSV = () => {
-    // Export only selected if there's a selection, otherwise export all filtered
     const dataToExport = selectedIds.length > 0 
       ? filteredTransactions.filter(t => selectedIds.includes(t.id))
       : filteredTransactions;
       
-    const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Cleared', 'Note'];
+    const headers = ['Code', 'Date', 'Type', 'Account', 'Category', 'Party', 'Amount', 'Reference', 'Note'];
     const rows = dataToExport.map(t => {
-      // For transfers show both accounts, for income/expense use account field
       let accountName = 'N/A';
-      if (t.type === 'transfer') {
+      if (t.transaction_type === 'TRANSFER') {
         const fromName = t.from_account?.name || '';
         const toName = t.to_account?.name || '';
         accountName = fromName && toName ? `${fromName} → ${toName}` : fromName || toName || 'N/A';
       } else {
-        accountName = t.account?.name || t.from_account?.name || t.to_account?.name || 'N/A';
+        accountName = t.account?.name || 'N/A';
       }
       
       return [
         t.transaction_code || '',
         t.date,
-        t.type,
+        t.transaction_type,
         accountName,
         t.transaction_categories?.name || 'N/A',
         t.parties?.name || 'N/A',
         t.amount.toString(),
         t.reference_no || '',
-        t.is_cleared ? 'Yes' : 'No',
         t.note || '',
       ];
     });
@@ -217,16 +170,27 @@ export default function ViewTransactions() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'income':
-      case 'invoice_receipt':
-        return 'bg-green-100 text-green-800';
-      case 'expense':
-      case 'bill_payment':
-        return 'bg-red-100 text-red-800';
-      case 'transfer':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'INCOME': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'EXPENSE': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'TRANSFER': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'SALES_OUT': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400';
+      case 'SALES_IN': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
+      case 'PAYMENT_IN': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
+      case 'PAYMENT_OUT': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'INCOME': return 'Income';
+      case 'EXPENSE': return 'Expense';
+      case 'TRANSFER': return 'Transfer';
+      case 'SALES_OUT': return 'Sales Out';
+      case 'SALES_IN': return 'Sales In';
+      case 'PAYMENT_IN': return 'Payment In';
+      case 'PAYMENT_OUT': return 'Payment Out';
+      default: return type;
     }
   };
 
@@ -239,13 +203,9 @@ export default function ViewTransactions() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
-            <Button onClick={() => setDepositDialogOpen(true)} variant="outline">
-              <DollarSign className="w-4 h-4 mr-2" />
-              New Deposit
-            </Button>
-            <Button onClick={() => setExpenseDialogOpen(true)} variant="outline">
-              <Receipt className="w-4 h-4 mr-2" />
-              New Expense
+            <Button onClick={() => setTypeSelectorOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Transaction
             </Button>
             <Button onClick={() => setTransferDialogOpen(true)} variant="outline">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -283,18 +243,20 @@ export default function ViewTransactions() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
+              <Label htmlFor="type">Transaction Type</Label>
               <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                  <SelectItem value="transfer">Transfer</SelectItem>
-                  <SelectItem value="invoice_receipt">Invoice Receipt</SelectItem>
-                  <SelectItem value="bill_payment">Bill Payment</SelectItem>
+                  <SelectItem value="INCOME">Income</SelectItem>
+                  <SelectItem value="EXPENSE">Expense</SelectItem>
+                  <SelectItem value="TRANSFER">Transfer</SelectItem>
+                  <SelectItem value="SALES_OUT">Sales Out</SelectItem>
+                  <SelectItem value="SALES_IN">Sales In</SelectItem>
+                  <SelectItem value="PAYMENT_IN">Payment In</SelectItem>
+                  <SelectItem value="PAYMENT_OUT">Payment Out</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -366,42 +328,50 @@ export default function ViewTransactions() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
-            {selectedIds.length > 0 && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {selectedIds.length > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={exportCSV}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export ({selectedIds.length})
+                  </Button>
+                  {canDelete && (
+                    <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete ({selectedIds.length})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the selected transactions and recalculate account balances.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleBulkDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isDeleting ? 'Deleting...' : 'Delete All'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
+              )}
+              {!selectedIds.length && (
                 <Button variant="outline" size="sm" onClick={exportCSV}>
                   <Download className="w-4 h-4 mr-2" />
-                  Export ({selectedIds.length})
+                  Export All
                 </Button>
-                {canDelete && (
-                  <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete ({selectedIds.length})
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {selectedIds.length} Transactions?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete the selected transactions. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleBulkDelete}
-                          disabled={isDeleting}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isDeleting ? 'Deleting...' : 'Delete All'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -418,25 +388,24 @@ export default function ViewTransactions() {
                 )}
                 <TableHead>Code</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Transaction Type</TableHead>
                 <TableHead>Account</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Remark</TableHead>
-                <TableHead>Cleared</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
@@ -454,14 +423,14 @@ export default function ViewTransactions() {
                   <TableCell className="font-mono text-sm font-medium">{transaction.transaction_code || '-'}</TableCell>
                   <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
-                    <Badge className={getTypeColor(transaction.type)}>
-                      {transaction.type.replace('_', ' ')}
+                    <Badge className={getTypeColor(transaction.transaction_type)}>
+                      {getTypeLabel(transaction.transaction_type)}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {transaction.type === 'transfer'
+                    {transaction.transaction_type === 'TRANSFER'
                       ? `${transaction.from_account?.name || 'N/A'} → ${transaction.to_account?.name || 'N/A'}`
-                      : transaction.account?.name || transaction.from_account?.name || transaction.to_account?.name || 'N/A'}
+                      : transaction.account?.name || 'N/A'}
                   </TableCell>
                   <TableCell>{transaction.transaction_categories?.name || '-'}</TableCell>
                   <TableCell>{transaction.parties?.name || '-'}</TableCell>
@@ -470,11 +439,6 @@ export default function ViewTransactions() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.is_cleared ? 'default' : 'secondary'}>
-                      {transaction.is_cleared ? 'Cleared' : 'Pending'}
-                    </Badge>
                   </TableCell>
                   {(canEdit || canDelete) && (
                     <TableCell>
@@ -515,24 +479,27 @@ export default function ViewTransactions() {
         </CardContent>
       </Card>
 
+      {/* Type Selector Modal */}
+      <TransactionTypeSelector
+        open={typeSelectorOpen}
+        onOpenChange={setTypeSelectorOpen}
+        onSelect={handleTypeSelected}
+      />
+
+      {/* Transaction Dialogs */}
       <EditTransactionDialog
         transaction={editingTransaction}
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
       
-      <NewDepositDialog 
-        open={depositDialogOpen} 
-        onOpenChange={setDepositDialogOpen} 
-      />
-      <NewExpenseDialog 
-        open={expenseDialogOpen} 
-        onOpenChange={setExpenseDialogOpen} 
-      />
-      <NewTransferDialog 
-        open={transferDialogOpen} 
-        onOpenChange={setTransferDialogOpen} 
-      />
+      <NewDepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} />
+      <NewExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} />
+      <NewTransferDialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen} />
+      <NewPaymentInDialog open={paymentInDialogOpen} onOpenChange={setPaymentInDialogOpen} />
+      <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} />
+      <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} />
+      <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
@@ -581,29 +548,25 @@ export default function ViewTransactions() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground text-xs">Type</Label>
+                  <Label className="text-muted-foreground text-xs">Transaction Type</Label>
                   <div className="mt-1">
-                    <Badge className={getTypeColor(viewingTransaction.type)}>
-                      {viewingTransaction.type.replace('_', ' ')}
+                    <Badge className={getTypeColor(viewingTransaction.transaction_type)}>
+                      {getTypeLabel(viewingTransaction.transaction_type)}
                     </Badge>
                   </div>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground text-xs">Status</Label>
-                  <div className="mt-1">
-                    <Badge variant={viewingTransaction.is_cleared ? 'default' : 'secondary'}>
-                      {viewingTransaction.is_cleared ? 'Cleared' : 'Pending'}
-                    </Badge>
-                  </div>
+                  <Label className="text-muted-foreground text-xs">Amount</Label>
+                  <p className="font-bold text-lg">NPR {viewingTransaction.amount.toLocaleString()}</p>
                 </div>
               </div>
 
               <div>
                 <Label className="text-muted-foreground text-xs">Account</Label>
                 <p className="font-medium">
-                  {viewingTransaction.type === 'transfer'
+                  {viewingTransaction.transaction_type === 'TRANSFER'
                     ? `${viewingTransaction.from_account?.name || 'N/A'} → ${viewingTransaction.to_account?.name || 'N/A'}`
-                    : viewingTransaction.account?.name || viewingTransaction.from_account?.name || viewingTransaction.to_account?.name || 'N/A'}
+                    : viewingTransaction.account?.name || 'N/A'}
                 </p>
               </div>
 
@@ -618,15 +581,9 @@ export default function ViewTransactions() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Amount</Label>
-                  <p className="font-bold text-lg">NPR {viewingTransaction.amount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Reference No</Label>
-                  <p className="font-medium">{viewingTransaction.reference_no || '-'}</p>
-                </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Reference No</Label>
+                <p className="font-medium">{viewingTransaction.reference_no || '-'}</p>
               </div>
 
               {viewingTransaction.note && (

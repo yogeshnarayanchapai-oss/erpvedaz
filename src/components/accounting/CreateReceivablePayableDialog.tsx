@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
@@ -28,7 +27,6 @@ export function CreateReceivablePayableDialog({ type, open, onOpenChange }: Crea
     account_id: '',
     reference_no: '',
     note: '',
-    is_cleared: false,
   });
 
   const { data: accounts = [] } = useActiveAccounts();
@@ -69,7 +67,6 @@ export function CreateReceivablePayableDialog({ type, open, onOpenChange }: Crea
       account_id: '',
       reference_no: '',
       note: '',
-      is_cleared: false,
     });
     onOpenChange(false);
   };
@@ -180,22 +177,6 @@ export function CreateReceivablePayableDialog({ type, open, onOpenChange }: Crea
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               placeholder="Additional notes (optional)"
               rows={2}
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-            <div>
-              <Label htmlFor="cleared">Mark as Cleared</Label>
-              <p className="text-xs text-muted-foreground">
-                {formData.is_cleared 
-                  ? 'Will affect account balance immediately' 
-                  : 'Will remain pending until cleared'}
-              </p>
-            </div>
-            <Switch
-              id="cleared"
-              checked={formData.is_cleared}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_cleared: checked })}
             />
           </div>
 
