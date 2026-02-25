@@ -58,20 +58,18 @@ export default function PartyStatement() {
     return parties.filter(party => {
       const matchesType = !partyTypeFilter || partyTypeFilter === 'all' || party.party_type === partyTypeFilter || party.party_type === 'BOTH';
       const matchesSearch = !searchTerm || party.name.toLowerCase().includes(searchTerm.toLowerCase()) || party.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-      const partyReceivable = Math.max(0, party.net_receivable + party.pending_receivable_amount);
-      const partyPayable = Math.max(0, party.net_payable + party.pending_payable_amount);
       const matchesBalance = !balanceFilter || balanceFilter === 'all' ||
-        (balanceFilter === 'receivable' && partyReceivable > 0) ||
-        (balanceFilter === 'payable' && partyPayable > 0);
-      const hasBalance = partyReceivable > 0 || partyPayable > 0;
+        (balanceFilter === 'receivable' && party.net_receivable > 0) ||
+        (balanceFilter === 'payable' && party.net_payable > 0);
+      const hasBalance = party.net_receivable > 0 || party.net_payable > 0;
       const matchesZeroBalance = !hideZeroBalance || hasBalance;
       return matchesType && matchesSearch && matchesBalance && matchesZeroBalance;
     });
   }, [parties, partyTypeFilter, searchTerm, balanceFilter, hideZeroBalance]);
 
   const summaryStats = useMemo(() => {
-    const totalReceivable = parties.reduce((sum, p) => sum + Math.max(0, p.net_receivable + p.pending_receivable_amount), 0);
-    const totalPayable = parties.reduce((sum, p) => sum + Math.max(0, p.net_payable + p.pending_payable_amount), 0);
+    const totalReceivable = parties.reduce((sum, p) => sum + p.net_receivable, 0);
+    const totalPayable = parties.reduce((sum, p) => sum + p.net_payable, 0);
     return { totalReceivable, totalPayable, totalBalance: totalReceivable - totalPayable, partyCount: parties.length };
   }, [parties]);
 
@@ -373,15 +371,13 @@ export default function PartyStatement() {
               {partiesLoading && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
               {!partiesLoading && filteredParties.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No parties found</TableCell></TableRow>}
               {filteredParties.map(party => {
-                const partyReceivable = Math.max(0, party.net_receivable + party.pending_receivable_amount);
-                const partyPayable = Math.max(0, party.net_payable + party.pending_payable_amount);
-                const partyBalance = partyReceivable - partyPayable;
+                const partyBalance = party.net_receivable - party.net_payable;
                 return (
                   <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
                     <TableCell className="font-medium">{party.name}</TableCell>
                     <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
-                    <TableCell className="text-right text-green-600">{partyReceivable > 0 ? `₹${partyReceivable.toLocaleString()}` : '-'}</TableCell>
-                    <TableCell className="text-right text-red-600">{partyPayable > 0 ? `₹${partyPayable.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right text-green-600">{party.net_receivable > 0 ? `₹${party.net_receivable.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right text-red-600">{party.net_payable > 0 ? `₹${party.net_payable.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(partyBalance).toLocaleString()}</TableCell>
                     <TableCell><Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
                   </TableRow>
