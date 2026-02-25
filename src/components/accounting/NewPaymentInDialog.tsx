@@ -47,7 +47,7 @@ export function NewPaymentInDialog({ open, onOpenChange, onSwitchType }: Props) 
         <form onSubmit={handleSubmit} className="space-y-3">
           <InlineTypeSelector
             currentType="PAYMENT_IN"
-            allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
+            allowedTypes={['PAYMENT_IN', 'PAYMENT_OUT']}
             onSelect={(type) => { if (type !== 'PAYMENT_IN' && onSwitchType) onSwitchType(type); }}
           />
           <div className="grid grid-cols-2 gap-3">
