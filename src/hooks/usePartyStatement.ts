@@ -59,8 +59,8 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           particulars: 'Opening Balance',
           qty: null,
           rate: null,
-          debit: party.opening_balance_type === 'PAYABLE' ? party.opening_balance : 0,
-          credit: party.opening_balance_type === 'RECEIVABLE' ? party.opening_balance : 0,
+          debit: party.opening_balance_type === 'RECEIVABLE' ? party.opening_balance : 0,
+          credit: party.opening_balance_type === 'PAYABLE' ? party.opening_balance : 0,
           balance: 0,
           remarks: 'Opening Balance',
           id: 'opening-balance',
@@ -77,40 +77,36 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         let credit = 0;
         let particulars = t.description || txType;
 
-        // Debit/Credit mapping per spec:
-        // SALES_OUT → Credit (they owe us)
-        // PAYMENT_IN → Debit (they paid us, reduces what they owe)
-        // SALES_IN → Debit (we owe them / purchase)
-        // PAYMENT_OUT → Credit (we paid them, reduces what we owe)
-        // INCOME with party → Credit
-        // EXPENSE with party → Debit
+        // DR/CR mapping:
+        // DR (we gave/spent) = EXPENSE, PAYMENT_OUT, SALES_OUT → Receivable
+        // CR (we received) = INCOME, PAYMENT_IN, SALES_IN → Payable
         switch (txType) {
-          case 'SALES_OUT':
-            credit = t.amount;
-            break;
-          case 'PAYMENT_IN':
+          case 'EXPENSE':
             debit = t.amount;
-            if (accountName) particulars += ` (${accountName})`;
-            break;
-          case 'SALES_IN':
-            debit = t.amount;
+            if (categoryName) particulars += ` - ${categoryName}`;
             break;
           case 'PAYMENT_OUT':
-            credit = t.amount;
+            debit = t.amount;
             if (accountName) particulars += ` (${accountName})`;
+            break;
+          case 'SALES_OUT':
+            debit = t.amount;
             break;
           case 'INCOME':
             credit = t.amount;
             if (categoryName) particulars += ` - ${categoryName}`;
             break;
-          case 'EXPENSE':
-            debit = t.amount;
-            if (categoryName) particulars += ` - ${categoryName}`;
+          case 'PAYMENT_IN':
+            credit = t.amount;
+            if (accountName) particulars += ` (${accountName})`;
+            break;
+          case 'SALES_IN':
+            credit = t.amount;
             break;
           default:
             // Fallback for legacy data
-            if (t.type === 'income') credit = t.amount;
-            else debit = t.amount;
+            if (t.type === 'expense') debit = t.amount;
+            else credit = t.amount;
         }
 
         entries.push({
@@ -145,11 +141,11 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         return getCodeNum(a.transaction_code) - getCodeNum(b.transaction_code);
       });
 
-      // Calculate running balance: Credit - Debit
-      // > 0 = Receivable (party owes us), < 0 = Payable (we owe party)
+      // Calculate running balance: Debit - Credit (DR = Receivable, CR = Payable)
+      // > 0 = Net Receivable, < 0 = Net Payable
       let runningBalance = 0;
       entries.forEach(entry => {
-        runningBalance += entry.credit - entry.debit;
+        runningBalance += entry.debit - entry.credit;
         entry.balance = runningBalance;
       });
 
