@@ -211,12 +211,7 @@ export default function PartyStatement() {
             <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
           </Button>
           <div className="flex items-center gap-2">
-           {canEdit && (
-              <div className="flex items-center gap-2">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment In</Button>
-                <Button size="sm" variant="destructive" onClick={() => setPaymentOutOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment Out</Button>
-              </div>
-            )}
+           {canEdit && <Button size="sm" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
             {selectedIds.length > 0 && (
               <>
                 <Button variant="outline" size="sm" onClick={exportToCSV}><FileSpreadsheet className="w-4 h-4 mr-2" />Excel ({selectedIds.length})</Button>
@@ -349,12 +344,7 @@ export default function PartyStatement() {
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">Party Statement</h1><p className="text-muted-foreground">View all party balances and statements</p></div>
         <div className="flex items-center gap-2">
-          {canEdit && (
-            <>
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment In</Button>
-              <Button variant="destructive" onClick={() => setPaymentOutOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment Out</Button>
-            </>
-          )}
+          {canEdit && <Button onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
           {canEdit && <AddPartyDialog />}
         </div>
       </div>
