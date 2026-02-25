@@ -99,10 +99,13 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
       const partyIds = parties.map(p => p.id);
 
       // Fetch all transactions linked to these parties (new 7-type model)
-      const { data: transactions } = await supabase
+      const { data: transactions, error: txError } = await supabase
         .from('transactions')
         .select('party_id, transaction_type, amount')
-        .in('party_id', partyIds);
+        .in('party_id', partyIds)
+        .limit(5000);
+      
+      if (txError) console.error('Failed to fetch party transactions:', txError);
 
       const partiesWithBalances: PartyWithBalances[] = parties.map(party => {
         const typedParty = party as Party;
@@ -116,17 +119,18 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
         let totalDebit = 0;
 
         partyTxns.forEach(t => {
-          const txType = (t as any).transaction_type || '';
+          const txType = t.transaction_type || '';
+          const amt = Number(t.amount) || 0;
           switch (txType) {
             case 'SALES_OUT':
             case 'INCOME':
             case 'PAYMENT_OUT':
-              totalCredit += t.amount || 0;
+              totalCredit += amt;
               break;
             case 'PAYMENT_IN':
             case 'SALES_IN':
             case 'EXPENSE':
-              totalDebit += t.amount || 0;
+              totalDebit += amt;
               break;
           }
         });
