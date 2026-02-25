@@ -442,7 +442,7 @@ export default function ViewTransactions() {
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
+                
                 <TableHead>Remark</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
@@ -473,7 +473,12 @@ export default function ViewTransactions() {
                   <TableCell className="font-mono text-sm font-medium">{transaction.transaction_code || '-'}</TableCell>
                   <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
-                    <Badge className={getTypeColor(transaction.transaction_type)}>
+                    <Badge className={`${getTypeColor(transaction.transaction_type)} inline-flex items-center gap-1.5`}>
+                      {transaction.approval_status === 'APPROVED' ? (
+                        <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                      ) : transaction.approval_status === 'PENDING' ? (
+                        <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" />
+                      ) : null}
                       {getTypeLabel(transaction.transaction_type)}
                     </Badge>
                   </TableCell>
@@ -487,17 +492,7 @@ export default function ViewTransactions() {
                   <TableCell className="text-right font-medium">
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
-                  <TableCell>
-                    {transaction.approval_status === 'APPROVED' ? (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        <CheckCircle className="w-3 h-3 mr-1" /> Approved
-                      </Badge>
-                    ) : transaction.approval_status === 'PENDING' ? (
-                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                        <Clock className="w-3 h-3 mr-1" /> Pending
-                      </Badge>
-                    ) : null}
-                  </TableCell>
+                  
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
                   </TableCell>
@@ -527,12 +522,7 @@ export default function ViewTransactions() {
                               Set Pending
                             </DropdownMenuItem>
                           )}
-                          {transaction.approval_status !== 'NONE' && (
-                            <DropdownMenuItem onClick={() => setHistoryTxId(transaction.id)}>
-                              <History className="w-4 h-4 mr-2" />
-                              Approval History
-                            </DropdownMenuItem>
-                          )}
+                          
                           {canEdit && (
                             <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
                               <Pencil className="w-4 h-4 mr-2" />
