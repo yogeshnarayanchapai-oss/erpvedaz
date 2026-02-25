@@ -493,13 +493,13 @@ export default function ViewTransactions() {
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
       
-      <NewDepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} />
-      <NewExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} />
+      <NewDepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
+      <NewExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
       <NewTransferDialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen} />
-      <NewPaymentInDialog open={paymentInDialogOpen} onOpenChange={setPaymentInDialogOpen} />
-      <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} />
-      <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} />
-      <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} />
+      <NewPaymentInDialog open={paymentInDialogOpen} onOpenChange={setPaymentInDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
+      <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
+      <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
+      <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} onChangeType={() => setTypeSelectorOpen(true)} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>

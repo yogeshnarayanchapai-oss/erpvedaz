@@ -11,10 +11,11 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
+import { TransactionTypeBadge } from './TransactionTypeBadge';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onChangeType?: () => void; }
 
-export function NewSalesOutDialog({ open, onOpenChange }: Props) {
+export function NewSalesOutDialog({ open, onOpenChange, onChangeType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [isCash, setIsCash] = useState(false);
@@ -27,13 +28,9 @@ export function NewSalesOutDialog({ open, onOpenChange }: Props) {
     if (isCash && !formData.account_id) { toast.error('Account required for cash sale'); return; }
     try {
       await createTransaction.mutateAsync({
-        date: formData.date,
-        transaction_type: 'SALES_OUT',
-        amount: parseFloat(formData.amount),
-        account_id: isCash ? formData.account_id : null,
-        party_id: formData.party_id || null,
-        note: formData.note || null,
-        description: formData.note || 'Sale (Sales Out)',
+        date: formData.date, transaction_type: 'SALES_OUT', amount: parseFloat(formData.amount),
+        account_id: isCash ? formData.account_id : null, party_id: formData.party_id || null,
+        note: formData.note || null, description: formData.note || 'Sale (Sales Out)',
       });
       resetForm();
       onOpenChange(false);
@@ -45,7 +42,12 @@ export function NewSalesOutDialog({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Sales Out (Wholesale Sale)</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Sales Out (Wholesale Sale)</DialogTitle>
+            <TransactionTypeBadge type="SALES_OUT" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
+          </div>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>

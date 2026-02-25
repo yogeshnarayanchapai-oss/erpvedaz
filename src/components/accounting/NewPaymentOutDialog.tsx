@@ -10,10 +10,11 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
+import { TransactionTypeBadge } from './TransactionTypeBadge';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onChangeType?: () => void; }
 
-export function NewPaymentOutDialog({ open, onOpenChange }: Props) {
+export function NewPaymentOutDialog({ open, onOpenChange, onChangeType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
@@ -25,13 +26,9 @@ export function NewPaymentOutDialog({ open, onOpenChange }: Props) {
     if (!formData.account_id) { toast.error('Account is required'); return; }
     try {
       await createTransaction.mutateAsync({
-        date: formData.date,
-        transaction_type: 'PAYMENT_OUT',
-        amount: parseFloat(formData.amount),
-        account_id: formData.account_id,
-        party_id: formData.party_id || null,
-        reference_no: formData.reference_no || null,
-        note: formData.note || null,
+        date: formData.date, transaction_type: 'PAYMENT_OUT', amount: parseFloat(formData.amount),
+        account_id: formData.account_id, party_id: formData.party_id || null,
+        reference_no: formData.reference_no || null, note: formData.note || null,
         description: formData.note || 'Payment Made',
       });
       resetForm();
@@ -44,7 +41,12 @@ export function NewPaymentOutDialog({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Payment Out (Paid)</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Payment Out (Paid)</DialogTitle>
+            <TransactionTypeBadge type="PAYMENT_OUT" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
+          </div>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
