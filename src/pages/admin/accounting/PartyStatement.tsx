@@ -13,11 +13,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { FileSpreadsheet, ArrowLeft, Eye, Trash2, EyeOff, FileText } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Eye, Trash2, EyeOff, FileText, Plus } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
+import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
+import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
+import { NewExpenseDialog } from '@/components/accounting/NewExpenseDialog';
+import { NewPaymentInDialog } from '@/components/accounting/NewPaymentInDialog';
+import { NewPaymentOutDialog } from '@/components/accounting/NewPaymentOutDialog';
+import { NewSalesInDialog } from '@/components/accounting/NewSalesInDialog';
+import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -44,6 +52,16 @@ export default function PartyStatement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
+  const [selectedTxType, setSelectedTxType] = useState<string | null>(null);
+
+  const txDialogOpen = selectedTxType !== null;
+  const closeTxDialog = () => setSelectedTxType(null);
+
+  const handleTypeSelected = (type: string) => {
+    setTypeSelectorOpen(false);
+    setSelectedTxType(type);
+  };
 
   const { data: parties = [], isLoading: partiesLoading } = usePartiesWithBalances();
   const { data: products = [] } = useProducts();
@@ -205,6 +223,7 @@ export default function PartyStatement() {
             <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
           </Button>
           <div className="flex items-center gap-2">
+            {canEdit && <Button size="sm" onClick={() => setTypeSelectorOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
             {selectedIds.length > 0 && (
               <>
                 <Button variant="outline" size="sm" onClick={exportToCSV}><FileSpreadsheet className="w-4 h-4 mr-2" />Excel ({selectedIds.length})</Button>
@@ -334,7 +353,10 @@ export default function PartyStatement() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">Party Statement</h1><p className="text-muted-foreground">View all party balances and statements</p></div>
-        <div className="flex items-center gap-2">{canEdit && <AddPartyDialog />}</div>
+        <div className="flex items-center gap-2">
+          {canEdit && <Button onClick={() => setTypeSelectorOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
+          {canEdit && <AddPartyDialog />}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Parties</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold">{summaryStats.partyCount}</span></CardContent></Card>
@@ -387,6 +409,21 @@ export default function PartyStatement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Transaction Type Selector */}
+      <TransactionTypeSelector
+        open={typeSelectorOpen}
+        onOpenChange={setTypeSelectorOpen}
+        onSelect={handleTypeSelected}
+      />
+
+      {/* Transaction Dialogs */}
+      <NewDepositDialog open={selectedTxType === 'INCOME'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewExpenseDialog open={selectedTxType === 'EXPENSE'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewPaymentInDialog open={selectedTxType === 'PAYMENT_IN'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewPaymentOutDialog open={selectedTxType === 'PAYMENT_OUT'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewSalesInDialog open={selectedTxType === 'SALES_IN'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewSalesOutDialog open={selectedTxType === 'SALES_OUT'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
     </div>
   );
 }

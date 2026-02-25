@@ -112,42 +112,44 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
         const partyTxns = transactions?.filter(t => t.party_id === party.id) || [];
         const transaction_count = partyTxns.length;
 
-        // Use same debit/credit logic as usePartyStatement:
-        // Credit (receivable): SALES_OUT, INCOME, PAYMENT_OUT
-        // Debit (payable/paid): PAYMENT_IN, SALES_IN, EXPENSE
-        let totalCredit = 0;
+        // DR/CR logic:
+        // DR (we gave/spent) = EXPENSE, PAYMENT_OUT, SALES_OUT → Receivable (they owe us)
+        // CR (we received) = INCOME, PAYMENT_IN, SALES_IN → Payable (we owe them)
         let totalDebit = 0;
+        let totalCredit = 0;
 
         partyTxns.forEach(t => {
           const txType = t.transaction_type || '';
           const amt = Number(t.amount) || 0;
           switch (txType) {
-            case 'SALES_OUT':
-            case 'INCOME':
+            case 'EXPENSE':
             case 'PAYMENT_OUT':
-              totalCredit += amt;
+            case 'SALES_OUT':
+              totalDebit += amt;
               break;
+            case 'INCOME':
             case 'PAYMENT_IN':
             case 'SALES_IN':
-            case 'EXPENSE':
-              totalDebit += amt;
+              totalCredit += amt;
               break;
           }
         });
 
         // Opening balance
-        let openingCredit = 0;
         let openingDebit = 0;
+        let openingCredit = 0;
         if (typedParty.opening_balance > 0) {
           if (typedParty.opening_balance_type === 'RECEIVABLE') {
-            openingCredit = typedParty.opening_balance;
-          } else if (typedParty.opening_balance_type === 'PAYABLE') {
             openingDebit = typedParty.opening_balance;
+          } else if (typedParty.opening_balance_type === 'PAYABLE') {
+            openingCredit = typedParty.opening_balance;
           }
         }
 
-        const netBalance = (openingCredit + totalCredit) - (openingDebit + totalDebit);
-        // Positive = receivable, Negative = payable
+        // Balance = Receivable - Payable. Positive = Net Receivable, Negative = Net Payable
+        const totalReceivable = openingDebit + totalDebit;
+        const totalPayable = openingCredit + totalCredit;
+        const netBalance = totalReceivable - totalPayable;
         const net_receivable = Math.max(0, netBalance);
         const net_payable = Math.max(0, -netBalance);
 
