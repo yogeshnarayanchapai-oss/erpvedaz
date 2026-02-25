@@ -96,114 +96,70 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
 
       if (!parties || parties.length === 0) return [];
 
-      // Fetch transactions and payments for all parties
       const partyIds = parties.map(p => p.id);
 
-      const [{ data: transactions }, { data: payments }, { data: pendingTxns }] = await Promise.all([
-        supabase
-          .from('party_transactions')
-          .select('party_id, direction, amount, is_settled')
-          .in('party_id', partyIds),
-        supabase
-          .from('party_payments')
-          .select('party_id, payment_type, amount')
-          .in('party_id', partyIds),
-        // Fetch pending transactions from transactions table where party_id is set
-        supabase
-          .from('transactions')
-          .select('id, date, type, amount, description, note, transaction_code, party_id, account_id, accounts:account_id(name)')
-          .in('party_id', partyIds)
-          .eq('is_cleared', false),
-      ]);
+      // Fetch all transactions linked to these parties (new 7-type model)
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('party_id, transaction_type, amount')
+        .in('party_id', partyIds);
 
-      // Calculate balances for each party
       const partiesWithBalances: PartyWithBalances[] = parties.map(party => {
         const typedParty = party as Party;
-        const partyTransactions = transactions?.filter(t => t.party_id === party.id) || [];
-        const partyPayments = payments?.filter(p => p.party_id === party.id) || [];
-        const transaction_count = partyTransactions.length + partyPayments.length;
-        const partyPendingTxns = pendingTxns?.filter(t => t.party_id === party.id) || [];
+        const partyTxns = transactions?.filter(t => t.party_id === party.id) || [];
+        const transaction_count = partyTxns.length;
 
-        // Only count unsettled transactions for balance
-        const unsettledTransactions = partyTransactions.filter(t => !t.is_settled);
+        // Use same debit/credit logic as usePartyStatement:
+        // Credit (receivable): SALES_OUT, INCOME, PAYMENT_OUT
+        // Debit (payable/paid): PAYMENT_IN, SALES_IN, EXPENSE
+        let totalCredit = 0;
+        let totalDebit = 0;
 
-        const total_receivable = unsettledTransactions
-          .filter(t => t.direction === 'RECEIVABLE')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
+        partyTxns.forEach(t => {
+          const txType = (t as any).transaction_type || '';
+          switch (txType) {
+            case 'SALES_OUT':
+            case 'INCOME':
+            case 'PAYMENT_OUT':
+              totalCredit += t.amount || 0;
+              break;
+            case 'PAYMENT_IN':
+            case 'SALES_IN':
+            case 'EXPENSE':
+              totalDebit += t.amount || 0;
+              break;
+          }
+        });
 
-        const total_payable = unsettledTransactions
-          .filter(t => t.direction === 'PAYABLE')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-        const total_received = partyPayments
-          .filter(p => p.payment_type === 'RECEIVED')
-          .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-        const total_paid = partyPayments
-          .filter(p => p.payment_type === 'PAID')
-          .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-        const net_receivable = total_receivable - total_received;
-        const net_payable = total_payable - total_paid;
-
-        // Pending transactions from manual entries
-        const pending_receivable_transactions: PendingTransaction[] = partyPendingTxns
-          .filter(t => t.type === 'income')
-          .map(t => ({
-            id: t.id,
-            date: t.date,
-            type: t.type,
-            amount: t.amount,
-            description: t.description,
-            note: t.note,
-            transaction_code: t.transaction_code,
-            account_id: t.account_id,
-            account_name: (t.accounts as any)?.name || null,
-          }));
-
-        const pending_payable_transactions: PendingTransaction[] = partyPendingTxns
-          .filter(t => t.type === 'expense')
-          .map(t => ({
-            id: t.id,
-            date: t.date,
-            type: t.type,
-            amount: t.amount,
-            description: t.description,
-            note: t.note,
-            transaction_code: t.transaction_code,
-            account_id: t.account_id,
-            account_name: (t.accounts as any)?.name || null,
-          }));
-
-        const pending_receivable_amount = pending_receivable_transactions.reduce((sum, t) => sum + t.amount, 0);
-        const pending_payable_amount = pending_payable_transactions.reduce((sum, t) => sum + t.amount, 0);
-
-        // Current balance calculation
-        let current_balance = 0;
-        if (typedParty.opening_balance_type === 'RECEIVABLE') {
-          current_balance = typedParty.opening_balance + net_receivable - net_payable;
-        } else if (typedParty.opening_balance_type === 'PAYABLE') {
-          current_balance = -typedParty.opening_balance + net_receivable - net_payable;
-        } else if (typedParty.opening_balance_type === 'BOTH') {
-          // BOTH means the opening balance can be either - treat as neutral starting point
-          current_balance = net_receivable - net_payable;
-        } else {
-          current_balance = net_receivable - net_payable;
+        // Opening balance
+        let openingCredit = 0;
+        let openingDebit = 0;
+        if (typedParty.opening_balance > 0) {
+          if (typedParty.opening_balance_type === 'RECEIVABLE') {
+            openingCredit = typedParty.opening_balance;
+          } else if (typedParty.opening_balance_type === 'PAYABLE') {
+            openingDebit = typedParty.opening_balance;
+          }
         }
+
+        const netBalance = (openingCredit + totalCredit) - (openingDebit + totalDebit);
+        // Positive = receivable, Negative = payable
+        const net_receivable = Math.max(0, netBalance);
+        const net_payable = Math.max(0, -netBalance);
 
         return {
           ...typedParty,
-          total_receivable,
-          total_payable,
-          total_received,
-          total_paid,
+          total_receivable: totalCredit,
+          total_payable: totalDebit,
+          total_received: 0,
+          total_paid: 0,
           net_receivable,
           net_payable,
-          current_balance,
-          pending_receivable_transactions,
-          pending_payable_transactions,
-          pending_receivable_amount,
-          pending_payable_amount,
+          current_balance: netBalance,
+          pending_receivable_transactions: [],
+          pending_payable_transactions: [],
+          pending_receivable_amount: 0,
+          pending_payable_amount: 0,
           transaction_count,
         };
       });
