@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search, AlertTriangle } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { CompactProductSelect } from '@/components/ui/compact-product-select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -24,6 +24,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import DateQuickFilters, { DateRange } from '@/components/inventory/DateQuickFilters';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useAvailableStock } from '@/hooks/useAvailableStock';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO_IN'] as const;
 
@@ -92,6 +95,22 @@ export default function StockMovements() {
   }>({ show: false, availableStock: 0, requiredQty: 0, productName: '', warehouseName: '' });
   const { effectiveRole } = useEffectiveRole();
   const canEdit = ['ADMIN', 'OWNER', 'MANAGER', 'WAREHOUSE'].includes(effectiveRole || '');
+  
+  // Fetch approval status for stock movements linked to transactions
+  const { data: approvalMap = {} } = useQuery({
+    queryKey: ['stock-movement-approvals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('reference_id, approval_status')
+        .eq('reference_type', 'stock_movement')
+        .in('approval_status', ['PENDING', 'APPROVED']);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((t: any) => { if (t.reference_id) map[t.reference_id] = t.approval_status; });
+      return map;
+    },
+  });
   const [form, setForm] = useState<{
     product_id: string;
     warehouse_id: string;
@@ -608,21 +627,31 @@ export default function StockMovements() {
                   <Textarea value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} />
                 </div>
                 {/* Related to Accounting checkbox - shown for IN and WHOLESALE_OUT movements */}
-                {(form.movement_type === 'IN' || form.movement_type === 'WHOLESALE_OUT') && (
+                {(form.movement_type === 'IN' || form.movement_type === 'WHOLESALE_OUT') && (() => {
+                  const isApprovedInAccounting = editingMovement ? approvalMap[editingMovement.id] === 'APPROVED' : false;
+                  return (
                   <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
                     <Checkbox
                       id="related_to_accounting"
                       checked={form.related_to_accounting}
+                      disabled={isApprovedInAccounting}
                       onCheckedChange={(checked) => setForm({ ...form, related_to_accounting: !!checked })}
                     />
                     <Label htmlFor="related_to_accounting" className="text-sm font-medium cursor-pointer">
                       Related to Accounting
                     </Label>
-                    <span className="text-xs text-muted-foreground">
-                      (Creates party ledger entry when checked)
-                    </span>
+                    {isApprovedInAccounting ? (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <ShieldCheck className="h-3 w-3" /> Approved — set to pending in accounting to change
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        (Creates party ledger entry when checked)
+                      </span>
+                    )}
                   </div>
-                )}
+                  );
+                })()}
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); setEditingMovement(null); }}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={
@@ -797,34 +826,68 @@ export default function StockMovements() {
                     <TableCell className="text-right">{formatCurrency(m.total_value)}</TableCell>
                     <TableCell>{m.remark || '-'}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setViewingMovement(m)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          {canEdit && (
-                            <DropdownMenuItem onClick={() => handleEdit(m)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {canEdit && (
-                            <DropdownMenuItem 
-                              onClick={() => deleteMovement.mutate(m.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {(() => {
+                        const status = approvalMap[m.id];
+                        const isApproved = status === 'APPROVED';
+                        return (
+                          <div className="flex items-center gap-2">
+                            {status === 'APPROVED' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <ShieldCheck className="h-4 w-4 text-green-600" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Approved in accounting - cannot edit</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {status === 'PENDING' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Clock className="h-4 w-4 text-yellow-600" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Pending approval in accounting</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setViewingMovement(m)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </DropdownMenuItem>
+                                {canEdit && !isApproved && (
+                                  <DropdownMenuItem onClick={() => handleEdit(m)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {canEdit && isApproved && (
+                                  <DropdownMenuItem disabled className="text-muted-foreground">
+                                    <ShieldCheck className="h-4 w-4 mr-2" />
+                                    Approved (locked)
+                                  </DropdownMenuItem>
+                                )}
+                                {canEdit && !isApproved && (
+                                  <DropdownMenuItem 
+                                    onClick={() => deleteMovement.mutate(m.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                   );

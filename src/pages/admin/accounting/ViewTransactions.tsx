@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useTransactions, Transaction, useDeleteTransaction, TransactionType } from '@/hooks/useTransactions';
+import { useTransactions, Transaction, useDeleteTransaction, TransactionType, useUpdateApprovalStatus, useApprovalHistory, ApprovalStatus } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
@@ -25,7 +25,7 @@ import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
 import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays, startOfDay } from 'date-fns';
-import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye } from 'lucide-react';
+import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye, CheckCircle, Clock, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -68,6 +68,7 @@ export default function ViewTransactions() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [historyTxId, setHistoryTxId] = useState<string | null>(null);
   
   // Button dialog states
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -89,6 +90,8 @@ export default function ViewTransactions() {
   const { data: parties = [] } = usePartiesWithBalances();
   const { canEdit } = useAccountingEditAccess();
   const deleteTransaction = useDeleteTransaction();
+  const updateApproval = useUpdateApprovalStatus();
+  const { data: approvalHistory = [] } = useApprovalHistory(historyTxId || undefined);
   
   const canDelete = canEdit;
 
@@ -439,6 +442,7 @@ export default function ViewTransactions() {
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Remark</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
@@ -483,6 +487,17 @@ export default function ViewTransactions() {
                   <TableCell className="text-right font-medium">
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
+                  <TableCell>
+                    {transaction.approval_status === 'APPROVED' ? (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <CheckCircle className="w-3 h-3 mr-1" /> Approved
+                      </Badge>
+                    ) : transaction.approval_status === 'PENDING' ? (
+                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <Clock className="w-3 h-3 mr-1" /> Pending
+                      </Badge>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
                   </TableCell>
@@ -499,6 +514,25 @@ export default function ViewTransactions() {
                             <Eye className="w-4 h-4 mr-2" />
                             View
                           </DropdownMenuItem>
+                          {/* Approve/Pending toggle for stock_movement transactions */}
+                          {canEdit && transaction.approval_status === 'PENDING' && (
+                            <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'APPROVED' })}>
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                              Approve
+                            </DropdownMenuItem>
+                          )}
+                          {canEdit && transaction.approval_status === 'APPROVED' && (
+                            <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'PENDING' })}>
+                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                              Set Pending
+                            </DropdownMenuItem>
+                          )}
+                          {transaction.approval_status !== 'NONE' && (
+                            <DropdownMenuItem onClick={() => setHistoryTxId(transaction.id)}>
+                              <History className="w-4 h-4 mr-2" />
+                              Approval History
+                            </DropdownMenuItem>
+                          )}
                           {canEdit && (
                             <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
                               <Pencil className="w-4 h-4 mr-2" />
@@ -635,6 +669,41 @@ export default function ViewTransactions() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval History Dialog */}
+      <Dialog open={!!historyTxId} onOpenChange={(open) => !open && setHistoryTxId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" /> Approval History
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {approvalHistory.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No history yet</p>
+            )}
+            {approvalHistory.map((h: any) => (
+              <div key={h.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">{h.from_status}</Badge>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <Badge className={h.to_status === 'APPROVED' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}>
+                      {h.to_status}
+                    </Badge>
+                  </div>
+                  {h.note && <p className="text-xs text-muted-foreground mt-1">{h.note}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(h.changed_at), 'dd/MM/yyyy HH:mm')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

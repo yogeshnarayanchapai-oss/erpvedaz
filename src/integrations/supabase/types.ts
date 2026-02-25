@@ -7130,6 +7130,44 @@ export type Database = {
           },
         ]
       }
+      transaction_approval_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_status: string
+          id: string
+          note: string | null
+          to_status: string
+          transaction_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_status: string
+          id?: string
+          note?: string | null
+          to_status: string
+          transaction_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_status?: string
+          id?: string
+          note?: string | null
+          to_status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_approval_history_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_categories: {
         Row: {
           created_at: string | null
@@ -7169,6 +7207,9 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           category_id: string | null
           created_at: string | null
           created_by: string | null
@@ -7194,6 +7235,9 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount: number
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -7219,6 +7263,9 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category_id?: string | null
           created_at?: string | null
           created_by?: string | null
