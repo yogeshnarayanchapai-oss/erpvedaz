@@ -6,6 +6,8 @@ interface TransactionTypeSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (type: TransactionType) => void;
+  filterTypes?: TransactionType[];
+  title?: string;
 }
 
 export const TRANSACTION_TYPE_META: { type: TransactionType; label: string; shortDesc: string; icon: React.ReactNode; color: string; badgeClass: string }[] = [
