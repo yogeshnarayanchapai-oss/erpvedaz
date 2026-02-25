@@ -48,8 +48,9 @@ export default function ViewTransactions() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
-  // Two-button system dialog states
-  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
+  // Three-button system dialog states
+  const [depositSelectorOpen, setDepositSelectorOpen] = useState(false);
+  const [expenseSelectorOpen, setExpenseSelectorOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   // Individual type dialogs
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
