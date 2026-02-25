@@ -66,6 +66,10 @@ export default function PartyStatement() {
     setDatePreset(preset);
     const today = new Date();
     switch (preset) {
+      case 'all':
+        setStartDate('2020-01-01');
+        setEndDate('2099-12-31');
+        break;
       case 'today':
         setStartDate(format(today, 'yyyy-MM-dd'));
         setEndDate(format(today, 'yyyy-MM-dd'));
@@ -262,6 +266,7 @@ export default function PartyStatement() {
                 <Select value={datePreset} onValueChange={handleDatePreset}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="7days">Last 7 Days</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>

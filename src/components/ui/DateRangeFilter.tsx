@@ -28,6 +28,7 @@ interface DateRangeFilterProps {
 }
 
 const presets = [
+  { label: 'All', value: 'all' },
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last 7 days', value: '7days' },
@@ -43,6 +44,9 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
     const today = new Date();
     
     switch (newPreset) {
+      case 'all':
+        onChange({ from: new Date('2020-01-01'), to: endOfDay(new Date('2099-12-31')) });
+        break;
       case 'today':
         onChange({ from: startOfDay(today), to: endOfDay(today) });
         break;
