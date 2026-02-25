@@ -210,14 +210,8 @@ export default function PartyStatement() {
           <Button variant="ghost" size="sm" onClick={() => { setSelectedPartyId(''); setSelectedIds([]); }}>
             <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
           </Button>
-          <div className="flex items-center gap-2">
-           {canEdit && <Button size="sm" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
-            {selectedIds.length > 0 && (
-              <>
-                <Button variant="outline" size="sm" onClick={exportToCSV}><FileSpreadsheet className="w-4 h-4 mr-2" />Excel ({selectedIds.length})</Button>
-                <Button variant="outline" size="sm" onClick={generatePDF}><FileText className="w-4 h-4 mr-2" />PDF ({selectedIds.length})</Button>
-              </>
-            )}
+           <div className="flex items-center gap-2">
+            {canEdit && <Button size="sm" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
             {isOwner && selectedIds.length > 0 && (
               <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
                 <AlertDialogTrigger asChild>
@@ -268,8 +262,12 @@ export default function PartyStatement() {
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Export</CardTitle></CardHeader>
             <CardContent>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportToCSV} className="flex-1"><FileSpreadsheet className="w-4 h-4 mr-1" />CSV</Button>
-                <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1"><FileText className="w-4 h-4 mr-1" />PDF</Button>
+                <Button variant="outline" size="sm" onClick={exportToCSV} className="flex-1">
+                  <FileSpreadsheet className="w-4 h-4 mr-1" />{selectedIds.length > 0 ? `CSV (${selectedIds.length})` : 'CSV'}
+                </Button>
+                <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1">
+                  <FileText className="w-4 h-4 mr-1" />{selectedIds.length > 0 ? `PDF (${selectedIds.length})` : 'PDF'}
+                </Button>
               </div>
             </CardContent></Card>
         </div>
