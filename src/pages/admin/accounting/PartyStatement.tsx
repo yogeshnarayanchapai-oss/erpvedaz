@@ -19,13 +19,9 @@ import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AddPartyDialog } from '@/components/accounting/AddPartyDialog';
-import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
-import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
-import { NewExpenseDialog } from '@/components/accounting/NewExpenseDialog';
 import { NewPaymentInDialog } from '@/components/accounting/NewPaymentInDialog';
 import { NewPaymentOutDialog } from '@/components/accounting/NewPaymentOutDialog';
-import { NewSalesInDialog } from '@/components/accounting/NewSalesInDialog';
-import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
+
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -52,16 +48,8 @@ export default function PartyStatement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
-  const [selectedTxType, setSelectedTxType] = useState<string | null>(null);
-
-  const txDialogOpen = selectedTxType !== null;
-  const closeTxDialog = () => setSelectedTxType(null);
-
-  const handleTypeSelected = (type: string) => {
-    setTypeSelectorOpen(false);
-    setSelectedTxType(type);
-  };
+  const [paymentInOpen, setPaymentInOpen] = useState(false);
+  const [paymentOutOpen, setPaymentOutOpen] = useState(false);
 
   const { data: parties = [], isLoading: partiesLoading } = usePartiesWithBalances();
   const { data: products = [] } = useProducts();
@@ -223,7 +211,12 @@ export default function PartyStatement() {
             <ArrowLeft className="w-4 h-4 mr-2" />Back to All Parties
           </Button>
           <div className="flex items-center gap-2">
-            {canEdit && <Button size="sm" onClick={() => setTypeSelectorOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
+           {canEdit && (
+              <div className="flex items-center gap-2">
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment In</Button>
+                <Button size="sm" variant="destructive" onClick={() => setPaymentOutOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment Out</Button>
+              </div>
+            )}
             {selectedIds.length > 0 && (
               <>
                 <Button variant="outline" size="sm" onClick={exportToCSV}><FileSpreadsheet className="w-4 h-4 mr-2" />Excel ({selectedIds.length})</Button>
@@ -345,6 +338,8 @@ export default function PartyStatement() {
             </Table>
           </CardContent>
         </Card>
+        <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
+        <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
       </div>
     );
   }
@@ -354,7 +349,12 @@ export default function PartyStatement() {
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">Party Statement</h1><p className="text-muted-foreground">View all party balances and statements</p></div>
         <div className="flex items-center gap-2">
-          {canEdit && <Button onClick={() => setTypeSelectorOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
+          {canEdit && (
+            <>
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment In</Button>
+              <Button variant="destructive" onClick={() => setPaymentOutOpen(true)}><Plus className="w-4 h-4 mr-2" />Payment Out</Button>
+            </>
+          )}
           {canEdit && <AddPartyDialog />}
         </div>
       </div>
@@ -410,20 +410,8 @@ export default function PartyStatement() {
         </CardContent>
       </Card>
 
-      {/* Transaction Type Selector */}
-      <TransactionTypeSelector
-        open={typeSelectorOpen}
-        onOpenChange={setTypeSelectorOpen}
-        onSelect={handleTypeSelected}
-      />
-
-      {/* Transaction Dialogs */}
-      <NewDepositDialog open={selectedTxType === 'INCOME'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
-      <NewExpenseDialog open={selectedTxType === 'EXPENSE'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
-      <NewPaymentInDialog open={selectedTxType === 'PAYMENT_IN'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
-      <NewPaymentOutDialog open={selectedTxType === 'PAYMENT_OUT'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
-      <NewSalesInDialog open={selectedTxType === 'SALES_IN'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
-      <NewSalesOutDialog open={selectedTxType === 'SALES_OUT'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
+      <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
     </div>
   );
 }

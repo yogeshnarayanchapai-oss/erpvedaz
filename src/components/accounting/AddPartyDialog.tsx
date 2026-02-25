@@ -66,55 +66,53 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Party</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label htmlFor="name">Party Name *</Label>
-            <Input
-              id="name"
-              placeholder="Enter party name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Party Type *</Label>
-            <Select
-              value={formData.party_type}
-              onValueChange={(value: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') =>
-                setFormData({ ...formData, party_type: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SUPPLIER">Supplier</SelectItem>
-                <SelectItem value="CUSTOMER">Customer</SelectItem>
-                <SelectItem value="BOTH">Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Party Name *</Label>
               <Input
-                id="phone"
+                placeholder="Enter party name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Party Type *</Label>
+              <Select
+                value={formData.party_type}
+                onValueChange={(value: 'SUPPLIER' | 'CUSTOMER' | 'BOTH') =>
+                  setFormData({ ...formData, party_type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SUPPLIER">Supplier</SelectItem>
+                  <SelectItem value="CUSTOMER">Customer</SelectItem>
+                  <SelectItem value="BOTH">Both</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Phone</Label>
+              <Input
                 placeholder="Phone number"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
               <Input
-                id="email"
                 type="email"
                 placeholder="Email address"
                 value={formData.email}
@@ -123,22 +121,31 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              placeholder="Enter address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              rows={2}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Address</Label>
+              <Textarea
+                placeholder="Enter address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Remarks</Label>
+              <Textarea
+                placeholder="Additional notes..."
+                value={formData.remarks}
+                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                rows={2}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="opening_balance">Opening Balance</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Opening Balance</Label>
               <Input
-                id="opening_balance"
                 type="number"
                 step="0.01"
                 placeholder="0.00"
@@ -148,8 +155,8 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label>Balance Type</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Balance Type</Label>
               <Select
                 value={formData.opening_balance_type || 'none'}
                 onValueChange={(value) =>
@@ -172,22 +179,11 @@ export function AddPartyDialog({ trigger, onSuccess }: AddPartyDialogProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="remarks">Remarks</Label>
-            <Textarea
-              id="remarks"
-              placeholder="Additional notes..."
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              rows={2}
-            />
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={createParty.isPending || !formData.name.trim()}>
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" disabled={createParty.isPending || !formData.name.trim()} className="flex-1">
               {createParty.isPending ? 'Adding...' : 'Add Party'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="flex-1">
               Cancel
             </Button>
           </div>
