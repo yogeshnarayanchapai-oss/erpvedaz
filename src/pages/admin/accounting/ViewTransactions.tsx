@@ -24,7 +24,7 @@ import { NewSalesInDialog } from '@/components/accounting/NewSalesInDialog';
 import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
 import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,8 +32,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function ViewTransactions() {
   const queryClient = useQueryClient();
+  const [datePreset, setDatePreset] = useState<string>('today');
   const [filters, setFilters] = useState({
-    startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
     type: 'all',
     accountId: '',
@@ -41,6 +42,26 @@ export default function ViewTransactions() {
     categoryId: '',
     search: '',
   });
+
+  const handleDatePreset = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    switch (preset) {
+      case 'today':
+        setFilters(f => ({ ...f, startDate: format(today, 'yyyy-MM-dd'), endDate: format(today, 'yyyy-MM-dd') }));
+        break;
+      case 'yesterday': {
+        const y = subDays(today, 1);
+        setFilters(f => ({ ...f, startDate: format(y, 'yyyy-MM-dd'), endDate: format(y, 'yyyy-MM-dd') }));
+        break;
+      }
+      case '30days':
+        setFilters(f => ({ ...f, startDate: format(subDays(today, 29), 'yyyy-MM-dd'), endDate: format(today, 'yyyy-MM-dd') }));
+        break;
+      case 'custom':
+        break;
+    }
+  };
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -58,7 +79,11 @@ export default function ViewTransactions() {
   const [salesInDialogOpen, setSalesInDialogOpen] = useState(false);
   const [salesOutDialogOpen, setSalesOutDialogOpen] = useState(false);
 
-  const { data: transactions = [], isLoading } = useTransactions(filters);
+  // When search is active, bypass date filter
+  const effectiveFilters = filters.search
+    ? { ...filters, startDate: undefined, endDate: undefined }
+    : filters;
+  const { data: transactions = [], isLoading } = useTransactions(effectiveFilters as any);
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
@@ -226,24 +251,42 @@ export default function ViewTransactions() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              />
+              <Label>Date Range</Label>
+              <Select value={datePreset} onValueChange={handleDatePreset}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="30days">Last 30 Days</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              />
-            </div>
+            {datePreset === 'custom' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="type">Transaction Type</Label>
