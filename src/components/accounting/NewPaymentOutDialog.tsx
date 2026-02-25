@@ -9,58 +9,42 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
-import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
+import { SearchablePartySelect } from './SearchablePartySelect';
 
-interface NewExpenseDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
 
-export function NewExpenseDialog({ open, onOpenChange }: NewExpenseDialogProps) {
+export function NewPaymentOutDialog({ open, onOpenChange }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
+  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
 
-  const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    amount: '',
-    account_id: '',
-    category_id: '',
-    party_id: '',
-    reference_no: '',
-    note: '',
-  });
-
-  const resetForm = () => {
-    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', category_id: '', party_id: '', reference_no: '', note: '' });
-  };
+  const resetForm = () => setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.account_id) { toast.error('Account is required'); return; }
     try {
       await createTransaction.mutateAsync({
         date: formData.date,
-        transaction_type: 'EXPENSE',
+        transaction_type: 'PAYMENT_OUT',
         amount: parseFloat(formData.amount),
-        account_id: formData.account_id || null,
-        category_id: formData.category_id || null,
+        account_id: formData.account_id,
         party_id: formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
-        description: formData.note || 'Expense',
+        description: formData.note || 'Payment Made',
       });
-      toast.success('Expense created successfully');
       resetForm();
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(`Failed to create expense: ${error.message}`);
+      toast.error(`Failed: ${error.message}`);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New Expense</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Payment Out (Paid)</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
@@ -73,12 +57,11 @@ export function NewExpenseDialog({ open, onOpenChange }: NewExpenseDialogProps) 
               <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.type})</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-2"><Label>Category *</Label><SearchableCategorySelect value={formData.category_id} onValueChange={v => setFormData({ ...formData, category_id: v })} nature="expense" placeholder="Select expense category..." /></div>
-          <div className="space-y-2"><Label>Party (Optional)</Label><SearchablePartySelect value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })} placeholder="Select or add party..." /></div>
-          <div className="space-y-2"><Label>Reference</Label><Input placeholder="Reference number" value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Party (Optional)</Label><SearchablePartySelect value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })} placeholder="Select party..." /></div>
+          <div className="space-y-2"><Label>Reference</Label><Input placeholder="Cheque No., UTR..." value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
           <div className="space-y-2"><Label>Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Expense'}</Button>
+            <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Payment Out'}</Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           </div>
         </form>

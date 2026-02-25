@@ -7181,10 +7181,13 @@ export type Database = {
           note: string | null
           order_id: string | null
           party_id: string | null
+          reference_id: string | null
           reference_no: string | null
+          reference_type: string | null
           store_id: string | null
           to_account_id: string | null
           transaction_code: string | null
+          transaction_type: string
           type: string
           updated_at: string | null
         }
@@ -7203,10 +7206,13 @@ export type Database = {
           note?: string | null
           order_id?: string | null
           party_id?: string | null
+          reference_id?: string | null
           reference_no?: string | null
+          reference_type?: string | null
           store_id?: string | null
           to_account_id?: string | null
           transaction_code?: string | null
+          transaction_type: string
           type: string
           updated_at?: string | null
         }
@@ -7225,10 +7231,13 @@ export type Database = {
           note?: string | null
           order_id?: string | null
           party_id?: string | null
+          reference_id?: string | null
           reference_no?: string | null
+          reference_type?: string | null
           store_id?: string | null
           to_account_id?: string | null
           transaction_code?: string | null
+          transaction_type?: string
           type?: string
           updated_at?: string | null
         }
@@ -7684,7 +7693,14 @@ export type Database = {
       task_priority: "LOW" | "MEDIUM" | "HIGH"
       task_status: "PENDING" | "IN_PROGRESS" | "COMPLETED"
       team_type: "LEADS" | "CALLING" | "FOLLOWUP"
-      transaction_type: "INCOME" | "EXPENSE" | "TRANSFER"
+      transaction_type:
+        | "INCOME"
+        | "EXPENSE"
+        | "TRANSFER"
+        | "SALES_IN"
+        | "SALES_OUT"
+        | "PAYMENT_IN"
+        | "PAYMENT_OUT"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7925,7 +7941,15 @@ export const Constants = {
       task_priority: ["LOW", "MEDIUM", "HIGH"],
       task_status: ["PENDING", "IN_PROGRESS", "COMPLETED"],
       team_type: ["LEADS", "CALLING", "FOLLOWUP"],
-      transaction_type: ["INCOME", "EXPENSE", "TRANSFER"],
+      transaction_type: [
+        "INCOME",
+        "EXPENSE",
+        "TRANSFER",
+        "SALES_IN",
+        "SALES_OUT",
+        "PAYMENT_IN",
+        "PAYMENT_OUT",
+      ],
     },
   },
 } as const
