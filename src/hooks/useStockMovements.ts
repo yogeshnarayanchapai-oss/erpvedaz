@@ -172,6 +172,8 @@ export function useCreateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
+      // Sync accounting transactions
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Movement recorded');
     },
     onError: (error) => toast.error(`Failed: ${error.message}`),
@@ -205,6 +207,8 @@ export function useUpdateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      // Sync accounting transactions
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Movement updated');
     },
     onError: (error) => {
@@ -241,6 +245,8 @@ export function useDeleteStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['party-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['parties-balances'] });
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
+      // Sync accounting transactions
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Movement deleted');
     },
     onError: (error) => {
