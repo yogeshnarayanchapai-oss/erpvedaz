@@ -38,7 +38,7 @@ export default function NewExpense() {
     
     await createTransaction.mutateAsync({
       date: formData.date,
-      type: 'expense',
+      transaction_type: 'EXPENSE',
       amount: parseFloat(formData.amount),
       currency: 'NPR',
       account_id: formData.account_id || null,
@@ -47,7 +47,6 @@ export default function NewExpense() {
       reference_no: formData.reference_no || null,
       note: formData.note || null,
       description: formData.note || 'Expense',
-      is_cleared: formData.is_cleared,
       created_by: null,
       from_account_id: null,
       to_account_id: null,

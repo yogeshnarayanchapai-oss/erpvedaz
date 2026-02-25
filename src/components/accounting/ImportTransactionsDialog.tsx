@@ -295,7 +295,7 @@ export function ImportTransactionsDialog({ type, trigger }: ImportTransactionsDi
 
         await createTransaction.mutateAsync({
           date: row.date,
-          type,
+          transaction_type: type === 'income' ? 'INCOME' : 'EXPENSE',
           amount: row.amount,
           currency: 'NPR',
           account_id: matchedAccount?.id || null,
@@ -304,7 +304,6 @@ export function ImportTransactionsDialog({ type, trigger }: ImportTransactionsDi
           reference_no: row.reference || null,
           note: row.note || null,
           description: row.note || (type === 'income' ? 'Imported Deposit' : 'Imported Expense'),
-          is_cleared: false,
           created_by: null,
           from_account_id: null,
           to_account_id: null,

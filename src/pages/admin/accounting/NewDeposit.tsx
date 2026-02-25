@@ -38,7 +38,7 @@ export default function NewDeposit() {
     
     await createTransaction.mutateAsync({
       date: formData.date,
-      type: 'income',
+      transaction_type: 'INCOME',
       amount: parseFloat(formData.amount),
       currency: 'NPR',
       account_id: formData.account_id || null,
@@ -47,7 +47,6 @@ export default function NewDeposit() {
       reference_no: formData.reference_no || null,
       note: formData.note || null,
       description: formData.note || 'Deposit',
-      is_cleared: formData.is_cleared,
       created_by: null,
       from_account_id: null,
       to_account_id: null,

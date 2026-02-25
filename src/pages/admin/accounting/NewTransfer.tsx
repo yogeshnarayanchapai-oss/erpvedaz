@@ -42,7 +42,7 @@ export default function NewTransfer() {
     
     await createTransaction.mutateAsync({
       date: formData.date,
-      type: 'transfer',
+      transaction_type: 'TRANSFER',
       amount: parseFloat(formData.amount),
       currency: 'NPR',
       from_account_id: formData.from_account_id,
@@ -53,7 +53,6 @@ export default function NewTransfer() {
       reference_no: formData.reference_no || null,
       note: formData.note || null,
       description: formData.note || `Transfer from ${fromAccount?.name || 'Unknown'} to ${toAccount?.name || 'Unknown'}`,
-      is_cleared: formData.is_cleared,
       created_by: null,
       order_id: null,
     });

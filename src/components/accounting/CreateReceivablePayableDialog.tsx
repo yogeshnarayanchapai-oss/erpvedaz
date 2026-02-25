@@ -44,7 +44,7 @@ export function CreateReceivablePayableDialog({ type, open, onOpenChange }: Crea
     
     await createTransaction.mutateAsync({
       date: formData.date,
-      type: transactionType,
+      transaction_type: transactionType === 'income' ? 'INCOME' : 'EXPENSE',
       amount: parseFloat(formData.amount) || 0,
       description: formData.description || (type === 'receivable' ? 'Custom Receivable' : 'Custom Payable'),
       party_id: formData.party_id || null,
@@ -55,7 +55,6 @@ export function CreateReceivablePayableDialog({ type, open, onOpenChange }: Crea
       order_id: null,
       reference_no: formData.reference_no || null,
       note: formData.note || null,
-      is_cleared: formData.is_cleared,
       currency: 'NPR',
       created_by: null,
     });
