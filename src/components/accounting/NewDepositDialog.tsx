@@ -11,13 +11,15 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
+import { TransactionTypeBadge } from '@/components/accounting/TransactionTypeBadge';
 
 interface NewDepositDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChangeType?: () => void;
 }
 
-export function NewDepositDialog({ open, onOpenChange }: NewDepositDialogProps) {
+export function NewDepositDialog({ open, onOpenChange, onChangeType }: NewDepositDialogProps) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
 
@@ -60,7 +62,12 @@ export function NewDepositDialog({ open, onOpenChange }: NewDepositDialogProps) 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New Income</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>New Income</DialogTitle>
+            <TransactionTypeBadge type="INCOME" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
+          </div>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>

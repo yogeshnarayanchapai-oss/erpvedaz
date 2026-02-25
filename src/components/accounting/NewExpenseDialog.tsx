@@ -11,24 +11,20 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
+import { TransactionTypeBadge } from '@/components/accounting/TransactionTypeBadge';
 
 interface NewExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChangeType?: () => void;
 }
 
-export function NewExpenseDialog({ open, onOpenChange }: NewExpenseDialogProps) {
+export function NewExpenseDialog({ open, onOpenChange, onChangeType }: NewExpenseDialogProps) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    amount: '',
-    account_id: '',
-    category_id: '',
-    party_id: '',
-    reference_no: '',
-    note: '',
+    date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', category_id: '', party_id: '', reference_no: '', note: '',
   });
 
   const resetForm = () => {
@@ -39,15 +35,10 @@ export function NewExpenseDialog({ open, onOpenChange }: NewExpenseDialogProps) 
     e.preventDefault();
     try {
       await createTransaction.mutateAsync({
-        date: formData.date,
-        transaction_type: 'EXPENSE',
-        amount: parseFloat(formData.amount),
-        account_id: formData.account_id || null,
-        category_id: formData.category_id || null,
-        party_id: formData.party_id || null,
-        reference_no: formData.reference_no || null,
-        note: formData.note || null,
-        description: formData.note || 'Expense',
+        date: formData.date, transaction_type: 'EXPENSE', amount: parseFloat(formData.amount),
+        account_id: formData.account_id || null, category_id: formData.category_id || null,
+        party_id: formData.party_id || null, reference_no: formData.reference_no || null,
+        note: formData.note || null, description: formData.note || 'Expense',
       });
       toast.success('Expense created successfully');
       resetForm();
@@ -60,7 +51,12 @@ export function NewExpenseDialog({ open, onOpenChange }: NewExpenseDialogProps) 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New Expense</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>New Expense</DialogTitle>
+            <TransactionTypeBadge type="EXPENSE" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
+          </div>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
