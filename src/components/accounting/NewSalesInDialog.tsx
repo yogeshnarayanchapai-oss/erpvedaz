@@ -7,15 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveAccounts } from '@/hooks/useAccounts';
-import { useCreateTransaction } from '@/hooks/useTransactions';
+import { useCreateTransaction, TransactionType } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
-import { TransactionTypeBadge } from './TransactionTypeBadge';
+import { InlineTypeSelector } from './InlineTypeSelector';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; onChangeType?: () => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; }
 
-export function NewSalesInDialog({ open, onOpenChange, onChangeType }: Props) {
+export function NewSalesInDialog({ open, onOpenChange, onSwitchType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [isCash, setIsCash] = useState(false);
@@ -43,12 +43,14 @@ export function NewSalesInDialog({ open, onOpenChange, onChangeType }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Sales In (Purchase)</DialogTitle>
-            <TransactionTypeBadge type="SALES_IN" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
-          </div>
+          <DialogTitle>Sales In (Purchase)</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <InlineTypeSelector
+            currentType="SALES_IN"
+            allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
+            onSelect={(type) => { if (type !== 'SALES_IN' && onSwitchType) onSwitchType(type); }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>

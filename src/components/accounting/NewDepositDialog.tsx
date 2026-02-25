@@ -6,31 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveAccounts } from '@/hooks/useAccounts';
-import { useCreateTransaction } from '@/hooks/useTransactions';
+import { useCreateTransaction, TransactionType } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
-import { TransactionTypeBadge } from '@/components/accounting/TransactionTypeBadge';
+import { InlineTypeSelector } from '@/components/accounting/InlineTypeSelector';
 
 interface NewDepositDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onChangeType?: () => void;
+  onSwitchType?: (type: TransactionType) => void;
 }
 
-export function NewDepositDialog({ open, onOpenChange, onChangeType }: NewDepositDialogProps) {
+export function NewDepositDialog({ open, onOpenChange, onSwitchType }: NewDepositDialogProps) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    amount: '',
-    account_id: '',
-    category_id: '',
-    party_id: '',
-    reference_no: '',
-    note: '',
+    date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', category_id: '', party_id: '', reference_no: '', note: '',
   });
 
   const resetForm = () => {
@@ -41,15 +35,10 @@ export function NewDepositDialog({ open, onOpenChange, onChangeType }: NewDeposi
     e.preventDefault();
     try {
       await createTransaction.mutateAsync({
-        date: formData.date,
-        transaction_type: 'INCOME',
-        amount: parseFloat(formData.amount),
-        account_id: formData.account_id || null,
-        category_id: formData.category_id || null,
-        party_id: formData.party_id || null,
-        reference_no: formData.reference_no || null,
-        note: formData.note || null,
-        description: formData.note || 'Deposit',
+        date: formData.date, transaction_type: 'INCOME', amount: parseFloat(formData.amount),
+        account_id: formData.account_id || null, category_id: formData.category_id || null,
+        party_id: formData.party_id || null, reference_no: formData.reference_no || null,
+        note: formData.note || null, description: formData.note || 'Deposit',
       });
       toast.success('Income created successfully');
       resetForm();
@@ -63,12 +52,14 @@ export function NewDepositDialog({ open, onOpenChange, onChangeType }: NewDeposi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>New Income</DialogTitle>
-            <TransactionTypeBadge type="INCOME" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
-          </div>
+          <DialogTitle>New Income</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <InlineTypeSelector
+            currentType="INCOME"
+            allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
+            onSelect={(type) => { if (type !== 'INCOME' && onSwitchType) onSwitchType(type); }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>
