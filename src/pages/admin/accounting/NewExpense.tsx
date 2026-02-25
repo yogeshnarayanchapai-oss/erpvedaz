@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
@@ -30,7 +29,6 @@ export default function NewExpense() {
     party_id: '',
     reference_no: '',
     note: '',
-    is_cleared: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,22 +181,6 @@ export default function NewExpense() {
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
-              <div>
-                <Label htmlFor="is_cleared" className="font-medium">Mark as Cleared</Label>
-                <p className="text-sm text-muted-foreground">
-                  {formData.is_cleared 
-                    ? 'Amount will be deducted from account balance immediately' 
-                    : 'Will appear as Pending in Payables until cleared'}
-                </p>
-              </div>
-              <Switch
-                id="is_cleared"
-                checked={formData.is_cleared}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_cleared: checked })}
               />
             </div>
 

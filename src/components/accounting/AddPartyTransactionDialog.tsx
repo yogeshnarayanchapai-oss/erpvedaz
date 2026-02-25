@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,7 +32,6 @@ export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [accountId, setAccountId] = useState('');
-  const [isCleared, setIsCleared] = useState(false);
   const [notes, setNotes] = useState('');
 
   const { data: accounts = [] } = useAccounts();
@@ -46,7 +44,6 @@ export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }
     setDescription('');
     setCategoryId('');
     setAccountId('');
-    setIsCleared(false);
     setNotes('');
   };
 
@@ -61,10 +58,6 @@ export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }
     }
     if (!description.trim()) {
       toast.error('Please enter a description');
-      return;
-    }
-    if (isCleared && !accountId) {
-      toast.error('Please select an account for cleared transaction');
       return;
     }
 
@@ -169,33 +162,21 @@ export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Mark as Cleared</Label>
-              <p className="text-xs text-muted-foreground">
-                {isCleared ? 'Will update account balance' : 'Will stay as pending'}
-              </p>
-            </div>
-            <Switch checked={isCleared} onCheckedChange={setIsCleared} />
+          <div className="space-y-2">
+            <Label>Account (Optional)</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account..." />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.name} (₹{acc.current_balance?.toLocaleString()})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          {isCleared && (
-            <div className="space-y-2">
-              <Label>Account</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name} (₹{acc.current_balance?.toLocaleString()})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label>Notes (Optional)</Label>
