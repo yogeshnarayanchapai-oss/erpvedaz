@@ -72,16 +72,15 @@ export function AddPartyTransactionDialog({ partyId: initialPartyId, partyName }
     try {
       const { error } = await supabase.from('transactions').insert({
         date,
-        type: transactionType,
+        transaction_type: (transactionType === 'income' ? 'INCOME' : 'EXPENSE') as any,
         amount: parseFloat(amount),
         description: description.trim(),
         category_id: categoryId || null,
-        account_id: isCleared ? accountId : null,
+        account_id: accountId || null,
         party_id: selectedPartyId,
-        is_cleared: isCleared,
-        notes: notes.trim() || null,
+        note: notes.trim() || null,
         store_id: storeId,
-      });
+      } as any);
 
       if (error) throw error;
 
