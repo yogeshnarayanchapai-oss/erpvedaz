@@ -69,7 +69,28 @@ export default function HRMAttendanceLeave() {
 // Attendance Section (inlined from HRMAttendance)
 function AttendanceSection() {
   const today = new Date().toISOString().split('T')[0];
-  const [filter, setFilter] = useState({ employee_id: '', from: '', to: '' });
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const [datePreset, setDatePreset] = useState<'today' | 'yesterday' | 'custom'>('today');
+  const [filter, setFilter] = useState({ employee_id: '', from: today, to: today, status: '' });
+
+  // Compute effective date range based on preset
+  const effectiveDateRange = useMemo(() => {
+    if (datePreset === 'today') return { from: today, to: today };
+    if (datePreset === 'yesterday') return { from: yesterday, to: yesterday };
+    return { from: filter.from, to: filter.to };
+  }, [datePreset, today, yesterday, filter.from, filter.to]);
+
+  const { data: rawRecords, isLoading } = useAttendanceRecords(
+    filter.employee_id || undefined,
+    effectiveDateRange.from || effectiveDateRange.to ? effectiveDateRange : undefined
+  );
+
+  // Filter by status client-side
+  const records = useMemo(() => {
+    if (!rawRecords) return [];
+    if (!filter.status) return rawRecords;
+    return rawRecords.filter(r => r.status === filter.status);
+  }, [rawRecords, filter.status]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<AttendanceRecord | null>(null);
   const [form, setForm] = useState({
@@ -80,11 +101,6 @@ function AttendanceSection() {
     status: 'Present' as 'Present' | 'Absent' | 'Half-day' | 'Work From Home' | 'Leave' | 'Late',
     notes: '',
   });
-
-  const { data: records, isLoading } = useAttendanceRecords(
-    filter.employee_id || undefined,
-    filter.from || filter.to ? { from: filter.from, to: filter.to } : undefined
-  );
   const { data: employees } = useEmployees();
   const createAttendance = useCreateAttendance();
   const updateAttendance = useUpdateAttendance();
@@ -221,10 +237,20 @@ function AttendanceSection() {
           <NepaliCalendar events={calendarEvents} selectedDate={selectedDate} onDateClick={(_, adDate) => setSelectedDate(adDate)} />
         </TabsContent>
         <TabsContent value="list" className="mt-4">
-          <div className="flex flex-wrap gap-4 mb-4">
-            <Select value={filter.employee_id} onValueChange={v => setFilter({ ...filter, employee_id: v === 'all' ? '' : v })}><SelectTrigger className="w-60"><SelectValue placeholder="All Employees" /></SelectTrigger><SelectContent><SelectItem value="all">All Employees</SelectItem>{employees?.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>)}</SelectContent></Select>
-            <NepaliDatePicker value={filter.from} onChange={v => setFilter({ ...filter, from: v })} placeholder="From date" className="w-48" />
-            <NepaliDatePicker value={filter.to} onChange={v => setFilter({ ...filter, to: v })} placeholder="To date" className="w-48" />
+          <div className="flex flex-wrap gap-3 mb-4 items-end">
+            <Select value={filter.employee_id} onValueChange={v => setFilter({ ...filter, employee_id: v === 'all' ? '' : v })}><SelectTrigger className="w-52"><SelectValue placeholder="All Employees" /></SelectTrigger><SelectContent><SelectItem value="all">All Employees</SelectItem>{employees?.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>)}</SelectContent></Select>
+            <div className="flex gap-1">
+              <Button size="sm" variant={datePreset === 'today' ? 'default' : 'outline'} onClick={() => setDatePreset('today')}>Today</Button>
+              <Button size="sm" variant={datePreset === 'yesterday' ? 'default' : 'outline'} onClick={() => setDatePreset('yesterday')}>Yesterday</Button>
+              <Button size="sm" variant={datePreset === 'custom' ? 'default' : 'outline'} onClick={() => setDatePreset('custom')}>Custom</Button>
+            </div>
+            {datePreset === 'custom' && (
+              <>
+                <NepaliDatePicker value={filter.from} onChange={v => setFilter({ ...filter, from: v })} placeholder="From date" className="w-44" />
+                <NepaliDatePicker value={filter.to} onChange={v => setFilter({ ...filter, to: v })} placeholder="To date" className="w-44" />
+              </>
+            )}
+            <Select value={filter.status || 'all'} onValueChange={v => setFilter({ ...filter, status: v === 'all' ? '' : v })}><SelectTrigger className="w-40"><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Present">Present</SelectItem><SelectItem value="Late">Late</SelectItem><SelectItem value="Absent">Absent</SelectItem><SelectItem value="Half-day">Half-day</SelectItem><SelectItem value="Work From Home">WFH</SelectItem><SelectItem value="Leave">Leave</SelectItem></SelectContent></Select>
           </div>
           <Card>
             <CardHeader><CardTitle>Attendance Records ({records?.length || 0})</CardTitle></CardHeader>
