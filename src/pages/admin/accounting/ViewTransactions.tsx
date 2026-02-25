@@ -204,9 +204,13 @@ export default function ViewTransactions() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
-            <Button onClick={() => setTypeSelectorOpen(true)}>
+            <Button onClick={() => { setDepositSelectorOpen(true); }} className="bg-green-600 hover:bg-green-700">
               <Plus className="w-4 h-4 mr-2" />
-              Add Transaction
+              New Deposit
+            </Button>
+            <Button onClick={() => { setExpenseSelectorOpen(true); }} variant="destructive">
+              <Plus className="w-4 h-4 mr-2" />
+              New Expense
             </Button>
             <Button onClick={() => setTransferDialogOpen(true)} variant="outline">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
