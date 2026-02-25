@@ -5,6 +5,8 @@ import { useCurrentStoreId } from './useCurrentStoreId';
 
 export type TransactionType = 'INCOME' | 'EXPENSE' | 'SALES_IN' | 'SALES_OUT' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'TRANSFER';
 
+export type ApprovalStatus = 'NONE' | 'PENDING' | 'APPROVED';
+
 export interface Transaction {
   id: string;
   date: string;
@@ -27,6 +29,9 @@ export interface Transaction {
   created_by: string | null;
   store_id: string | null;
   transaction_code: string | null;
+  approval_status: ApprovalStatus;
+  approved_by: string | null;
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
   from_account?: { id: string; name: string } | null;
@@ -265,5 +270,78 @@ export function useDeleteTransaction() {
     onError: (error: Error) => {
       toast.error(`Failed to delete transaction: ${error.message}`);
     },
+  });
+}
+
+export function useUpdateApprovalStatus() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, status, note }: { id: string; status: ApprovalStatus; note?: string }) => {
+      const userId = (await supabase.auth.getUser()).data.user?.id || null;
+      
+      // Get current status for history
+      const { data: current } = await supabase
+        .from('transactions')
+        .select('approval_status')
+        .eq('id', id)
+        .single();
+      
+      const fromStatus = (current as any)?.approval_status || 'NONE';
+      
+      // Update transaction
+      const updateData: any = { approval_status: status };
+      if (status === 'APPROVED') {
+        updateData.approved_by = userId;
+        updateData.approved_at = new Date().toISOString();
+      } else {
+        updateData.approved_by = null;
+        updateData.approved_at = null;
+      }
+      
+      const { error } = await supabase
+        .from('transactions')
+        .update(updateData)
+        .eq('id', id);
+      if (error) throw error;
+      
+      // Log history
+      await supabase.from('transaction_approval_history').insert({
+        transaction_id: id,
+        from_status: fromStatus,
+        to_status: status,
+        changed_by: userId,
+        note: note || null,
+      });
+      
+      return { id, status };
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-history'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movement-approvals'] });
+      toast.success(vars.status === 'APPROVED' ? 'Transaction approved' : 'Transaction set to pending');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed: ${error.message}`);
+    },
+  });
+}
+
+export function useApprovalHistory(transactionId?: string) {
+  return useQuery({
+    queryKey: ['approval-history', transactionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transaction_approval_history')
+        .select('*')
+        .eq('transaction_id', transactionId!)
+        .order('changed_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!transactionId,
   });
 }

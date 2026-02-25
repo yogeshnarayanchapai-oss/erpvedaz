@@ -174,6 +174,7 @@ export function useCreateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
       // Sync accounting transactions
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movement-approvals'] });
       toast.success('Movement recorded');
     },
     onError: (error) => toast.error(`Failed: ${error.message}`),
@@ -209,11 +210,12 @@ export function useUpdateStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       // Sync accounting transactions
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movement-approvals'] });
       toast.success('Movement updated');
     },
     onError: (error) => {
       // Show specific error message for cleared transactions
-      if (error.message.includes('already cleared')) {
+      if (error.message.includes('approved') || error.message.includes('already cleared')) {
         toast.error(error.message);
       } else {
         toast.error(`Failed: ${error.message}`);
@@ -247,11 +249,12 @@ export function useDeleteStockMovement() {
       queryClient.invalidateQueries({ queryKey: ['party-statement'] });
       // Sync accounting transactions
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movement-approvals'] });
       toast.success('Movement deleted');
     },
     onError: (error) => {
       // Show specific error message for cleared transactions
-      if (error.message.includes('already cleared')) {
+      if (error.message.includes('approved') || error.message.includes('already cleared')) {
         toast.error(error.message);
       } else {
         toast.error(`Failed: ${error.message}`);
