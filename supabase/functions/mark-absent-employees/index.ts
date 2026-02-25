@@ -15,23 +15,13 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
-
-    // Check current time - only run after 10 PM (22:00)
-    const currentHour = today.getHours();
-    if (currentHour < 22) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Too early to mark absent. Current hour: ${currentHour}. Will mark at 22:00 or later.`,
-          markedAbsent: 0,
-          employees: [],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Nepal time: UTC+5:45
+    const nowUtc = new Date();
+    const nepalOffsetMs = (5 * 60 + 45) * 60 * 1000;
+    const nepalNow = new Date(nowUtc.getTime() + nepalOffsetMs);
+    const todayStr = nepalNow.toISOString().split("T")[0];
+    const dayOfWeek = nepalNow.getDay(); // 0=Sun, 6=Sat
+    const currentNepalMinutes = nepalNow.getHours() * 60 + nepalNow.getMinutes();
 
     // Get all active employees with their store and office time settings
     const { data: employees, error: empError } = await supabase
@@ -41,7 +31,7 @@ Deno.serve(async (req) => {
 
     if (empError) throw empError;
 
-    // Get today's attendance records
+    // Get today's existing attendance records
     const { data: existingRecords, error: recError } = await supabase
       .from("attendance_records")
       .select("employee_id")
@@ -51,10 +41,7 @@ Deno.serve(async (req) => {
 
     const checkedInEmployeeIds = new Set(existingRecords?.map((r) => r.employee_id) || []);
 
-    // Get all store IDs from employees
-    const storeIds = [...new Set(employees?.map((e) => e.store_id).filter(Boolean) || [])];
-
-    // Fetch office holidays for today across all stores
+    // Fetch office holidays for today
     const { data: holidays, error: holError } = await supabase
       .from("office_holidays")
       .select("store_id")
@@ -77,7 +64,8 @@ Deno.serve(async (req) => {
 
     const employeesOnLeave = new Set(approvedLeaves?.map((l) => l.employee_id) || []);
 
-    // Build records to insert with appropriate status
+    const isSaturday = dayOfWeek === 6;
+
     const recordsToInsert: Array<{
       employee_id: string;
       date: string;
@@ -86,16 +74,14 @@ Deno.serve(async (req) => {
       notes: string;
     }> = [];
 
-    const isSaturday = dayOfWeek === 6;
-
     for (const emp of employees || []) {
-      // Skip if already has an attendance record
+      // Skip if already has an attendance record (checked in, or already marked)
       if (checkedInEmployeeIds.has(emp.id)) continue;
 
       let status: string;
       let notes: string;
 
-      // 1. Saturday (weekly off)
+      // 1. Saturday
       if (isSaturday) {
         status = "Saturday";
         notes = "Weekly off (Saturday)";
@@ -105,15 +91,28 @@ Deno.serve(async (req) => {
         status = "Leave";
         notes = "Approved leave";
       }
-      // 3. Global holiday or store-specific holiday
+      // 3. Holiday
       else if (hasGlobalHoliday || (emp.store_id && holidayStoreIds.has(emp.store_id))) {
         status = "Holiday";
         notes = "Office holiday";
       }
-      // 4. No check-in = Absent
+      // 4. Check if grace period has passed for this employee
       else {
+        const officeStart = emp.office_start_time || "09:00:00";
+        const graceMins = emp.grace_minutes ?? 30;
+
+        // Parse office start time to minutes since midnight
+        const [h, m] = officeStart.split(":").map(Number);
+        const deadlineMinutes = h * 60 + m + graceMins;
+
+        // Only mark absent if current Nepal time has passed the deadline
+        if (currentNepalMinutes < deadlineMinutes) {
+          // Grace period hasn't passed yet for this employee, skip
+          continue;
+        }
+
         status = "Absent";
-        notes = "Auto-marked absent (no check-in by 10 PM)";
+        notes = `Auto-marked absent (no check-in by ${officeStart} + ${graceMins}min grace)`;
       }
 
       recordsToInsert.push({
@@ -131,7 +130,7 @@ Deno.serve(async (req) => {
       statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
     });
 
-    // Insert records
+    // Insert records (upsert to avoid duplicates)
     if (recordsToInsert.length > 0) {
       const { error: insertError } = await supabase
         .from("attendance_records")
@@ -143,6 +142,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        nepalTime: nepalNow.toISOString(),
         totalRecords: recordsToInsert.length,
         statusBreakdown: statusCounts,
         employees: recordsToInsert.map((r) => {
