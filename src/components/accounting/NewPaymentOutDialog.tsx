@@ -6,15 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveAccounts } from '@/hooks/useAccounts';
-import { useCreateTransaction } from '@/hooks/useTransactions';
+import { useCreateTransaction, TransactionType } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
-import { TransactionTypeBadge } from './TransactionTypeBadge';
+import { InlineTypeSelector } from './InlineTypeSelector';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; onChangeType?: () => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; }
 
-export function NewPaymentOutDialog({ open, onOpenChange, onChangeType }: Props) {
+export function NewPaymentOutDialog({ open, onOpenChange, onSwitchType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
@@ -42,12 +42,14 @@ export function NewPaymentOutDialog({ open, onOpenChange, onChangeType }: Props)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Payment Out (Paid)</DialogTitle>
-            <TransactionTypeBadge type="PAYMENT_OUT" onChangeType={onChangeType ? () => { onOpenChange(false); onChangeType(); } : undefined} />
-          </div>
+          <DialogTitle>Payment Out (Paid)</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <InlineTypeSelector
+            currentType="PAYMENT_OUT"
+            allowedTypes={['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT']}
+            onSelect={(type) => { if (type !== 'PAYMENT_OUT' && onSwitchType) onSwitchType(type); }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>

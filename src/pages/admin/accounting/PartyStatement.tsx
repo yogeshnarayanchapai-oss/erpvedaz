@@ -418,12 +418,12 @@ export default function PartyStatement() {
       />
 
       {/* Transaction Dialogs */}
-      <NewDepositDialog open={selectedTxType === 'INCOME'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
-      <NewExpenseDialog open={selectedTxType === 'EXPENSE'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
-      <NewPaymentInDialog open={selectedTxType === 'PAYMENT_IN'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
-      <NewPaymentOutDialog open={selectedTxType === 'PAYMENT_OUT'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
-      <NewSalesInDialog open={selectedTxType === 'SALES_IN'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
-      <NewSalesOutDialog open={selectedTxType === 'SALES_OUT'} onOpenChange={open => !open && closeTxDialog()} onChangeType={() => { closeTxDialog(); setTypeSelectorOpen(true); }} />
+      <NewDepositDialog open={selectedTxType === 'INCOME'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewExpenseDialog open={selectedTxType === 'EXPENSE'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewPaymentInDialog open={selectedTxType === 'PAYMENT_IN'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewPaymentOutDialog open={selectedTxType === 'PAYMENT_OUT'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewSalesInDialog open={selectedTxType === 'SALES_IN'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
+      <NewSalesOutDialog open={selectedTxType === 'SALES_OUT'} onOpenChange={open => !open && closeTxDialog()} onSwitchType={(type) => { closeTxDialog(); handleTypeSelected(type); }} />
     </div>
   );
 }

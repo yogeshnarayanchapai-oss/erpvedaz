@@ -48,9 +48,7 @@ export default function ViewTransactions() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
-  // Three-button system dialog states
-  const [depositSelectorOpen, setDepositSelectorOpen] = useState(false);
-  const [expenseSelectorOpen, setExpenseSelectorOpen] = useState(false);
+  // Button dialog states
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   // Individual type dialogs
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -204,11 +202,11 @@ export default function ViewTransactions() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
-            <Button onClick={() => { setDepositSelectorOpen(true); }} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={() => setDepositDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
               <Plus className="w-4 h-4 mr-2" />
               New Deposit
             </Button>
-            <Button onClick={() => { setExpenseSelectorOpen(true); }} variant="destructive">
+            <Button onClick={() => setExpenseDialogOpen(true)} variant="destructive">
               <Plus className="w-4 h-4 mr-2" />
               New Expense
             </Button>
@@ -484,24 +482,6 @@ export default function ViewTransactions() {
         </CardContent>
       </Card>
 
-      {/* Deposit Type Selector (Income types only) */}
-      <TransactionTypeSelector
-        open={depositSelectorOpen}
-        onOpenChange={setDepositSelectorOpen}
-        onSelect={handleTypeSelected}
-        filterTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
-        title="Select Deposit Type"
-      />
-
-      {/* Expense Type Selector (Expense types only) */}
-      <TransactionTypeSelector
-        open={expenseSelectorOpen}
-        onOpenChange={setExpenseSelectorOpen}
-        onSelect={handleTypeSelected}
-        filterTypes={['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT']}
-        title="Select Expense Type"
-      />
-
       {/* Transaction Dialogs */}
       <EditTransactionDialog
         transaction={editingTransaction}
@@ -509,13 +489,13 @@ export default function ViewTransactions() {
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
       
-      <NewDepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} onChangeType={() => setDepositSelectorOpen(true)} />
-      <NewExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onChangeType={() => setExpenseSelectorOpen(true)} />
+      <NewDepositDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen} onSwitchType={(type) => { setDepositDialogOpen(false); handleTypeSelected(type); }} />
+      <NewExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSwitchType={(type) => { setExpenseDialogOpen(false); handleTypeSelected(type); }} />
       <NewTransferDialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen} />
-      <NewPaymentInDialog open={paymentInDialogOpen} onOpenChange={setPaymentInDialogOpen} onChangeType={() => setDepositSelectorOpen(true)} />
-      <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} onChangeType={() => setExpenseSelectorOpen(true)} />
-      <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} onChangeType={() => setDepositSelectorOpen(true)} />
-      <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} onChangeType={() => setExpenseSelectorOpen(true)} />
+      <NewPaymentInDialog open={paymentInDialogOpen} onOpenChange={setPaymentInDialogOpen} onSwitchType={(type) => { setPaymentInDialogOpen(false); handleTypeSelected(type); }} />
+      <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} onSwitchType={(type) => { setPaymentOutDialogOpen(false); handleTypeSelected(type); }} />
+      <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} onSwitchType={(type) => { setSalesInDialogOpen(false); handleTypeSelected(type); }} />
+      <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} onSwitchType={(type) => { setSalesOutDialogOpen(false); handleTypeSelected(type); }} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
