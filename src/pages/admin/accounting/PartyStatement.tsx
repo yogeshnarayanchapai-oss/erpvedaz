@@ -237,7 +237,7 @@ export default function PartyStatement() {
           </Button>
            <div className="flex items-center gap-2">
             {canEdit && <Button size="sm" onClick={() => setPaymentInOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>}
-            {isOwner && selectedIds.length > 0 && (
+            {canEdit && selectedIds.length > 0 && (
               <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm"><Trash2 className="w-4 h-4 mr-2" />Delete ({selectedIds.length})</Button>
@@ -321,7 +321,7 @@ export default function PartyStatement() {
                   <TableHead className="text-right">Credit</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead>Remarks</TableHead>
-                  {isOwner && <TableHead className="w-16">Action</TableHead>}
+                  {canEdit && <TableHead className="w-16">Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -344,7 +344,7 @@ export default function PartyStatement() {
                     <TableCell className="text-right text-green-600">{entry.credit > 0 ? `₹${entry.credit.toLocaleString()}` : '-'}</TableCell>
                     <TableCell className={`text-right font-medium ${entry.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(entry.balance).toLocaleString()}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{entry.remarks || '-'}</TableCell>
-                    {isOwner && (
+                    {canEdit && (
                       <TableCell>
                         {entry.id !== 'opening-balance' && (
                           <AlertDialog>
