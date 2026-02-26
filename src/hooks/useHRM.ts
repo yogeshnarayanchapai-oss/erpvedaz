@@ -1050,12 +1050,31 @@ export function useDeleteNotice() {
   });
 }
 
-// Company Info
-export function useCompanyInfo() {
+// Company Info - store-aware
+export function useCompanyInfo(overrideStoreId?: string) {
+  const currentStoreId = useCurrentStoreId();
+  const storeId = overrideStoreId || currentStoreId;
+  
   return useQuery({
-    queryKey: ['company_info'],
+    queryKey: ['company_info', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('company_info').select('*').limit(1).maybeSingle();
+      if (storeId) {
+        // Try store-specific first
+        const { data, error } = await supabase
+          .from('company_info')
+          .select('*')
+          .eq('store_id', storeId)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) return data as CompanyInfo | null;
+      }
+      // Fallback to global (no store_id)
+      const { data, error } = await supabase
+        .from('company_info')
+        .select('*')
+        .is('store_id', null)
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data as CompanyInfo | null;
     },
@@ -1064,15 +1083,34 @@ export function useCompanyInfo() {
 
 export function useUpdateCompanyInfo() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  
   return useMutation({
     mutationFn: async (updates: Partial<CompanyInfo>) => {
-      const { data: existing } = await supabase.from('company_info').select('id').limit(1).maybeSingle();
+      if (!storeId) throw new Error('No store selected');
+      
+      // Check for existing store-specific record
+      const { data: existing } = await supabase
+        .from('company_info')
+        .select('id')
+        .eq('store_id', storeId)
+        .maybeSingle();
+      
       if (existing) {
-        const { data, error } = await supabase.from('company_info').update(updates).eq('id', existing.id).select().single();
+        const { data, error } = await supabase
+          .from('company_info')
+          .update(updates)
+          .eq('id', existing.id)
+          .select()
+          .single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('company_info').insert({ company_name: 'Company', ...updates }).select().single();
+        const { data, error } = await supabase
+          .from('company_info')
+          .insert({ company_name: 'Company', ...updates, store_id: storeId })
+          .select()
+          .single();
         if (error) throw error;
         return data;
       }

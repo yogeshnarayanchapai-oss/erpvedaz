@@ -1834,6 +1834,7 @@ export type Database = {
           other_details: string | null
           phone: string | null
           registration_no: string | null
+          store_id: string | null
           updated_at: string
           website: string | null
         }
@@ -1846,6 +1847,7 @@ export type Database = {
           other_details?: string | null
           phone?: string | null
           registration_no?: string | null
+          store_id?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1858,10 +1860,19 @@ export type Database = {
           other_details?: string | null
           phone?: string | null
           registration_no?: string | null
+          store_id?: string | null
           updated_at?: string
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_info_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_settings: {
         Row: {
