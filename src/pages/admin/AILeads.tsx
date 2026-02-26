@@ -33,8 +33,12 @@ export default function AILeads() {
       const result = await fetchLeads.mutateAsync({ limit: 200 });
       if (result) {
         // Refresh stored leads cache from DB
-        queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
-        toast.success(`${result.length} leads pulled from SocialBox`);
+        await queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
+        if (result.new_count > 0) {
+          toast.success(`${result.new_count} new leads pulled from SocialBox`);
+        } else {
+          toast.info('No new leads found from SocialBox');
+        }
       }
     } catch {
       // handled by hook

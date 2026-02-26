@@ -121,7 +121,7 @@ export function useFetchSocialBoxLeads() {
       }
 
       const data = await response.json();
-      return data.leads as SocialBoxLead[];
+      return { leads: data.leads as SocialBoxLead[], new_count: data.new_count || 0, total_active: data.total_active || 0 };
     },
     onError: (error: Error) => {
       toast.error('Failed to fetch SocialBox leads', { description: error.message });
@@ -206,11 +206,8 @@ export function useStoredSocialBoxLeads() {
       }) as SocialBoxLead[];
     },
     enabled: !!currentStore?.id,
-    staleTime: Infinity,
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
   });
 }
 
