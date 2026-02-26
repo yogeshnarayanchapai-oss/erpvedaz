@@ -1,0 +1,3 @@
+-- Add ADJUSTMENT_PLUS and ADJUSTMENT_MINUS to transaction_type enum
+ALTER TYPE public.transaction_type ADD VALUE IF NOT EXISTS 'ADJUSTMENT_PLUS';
+ALTER TYPE public.transaction_type ADD VALUE IF NOT EXISTS 'ADJUSTMENT_MINUS';

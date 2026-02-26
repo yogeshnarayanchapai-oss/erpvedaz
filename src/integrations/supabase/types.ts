@@ -7748,6 +7748,8 @@ export type Database = {
         | "SALES_OUT"
         | "PAYMENT_IN"
         | "PAYMENT_OUT"
+        | "ADJUSTMENT_PLUS"
+        | "ADJUSTMENT_MINUS"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7996,6 +7998,8 @@ export const Constants = {
         "SALES_OUT",
         "PAYMENT_IN",
         "PAYMENT_OUT",
+        "ADJUSTMENT_PLUS",
+        "ADJUSTMENT_MINUS",
       ],
     },
   },

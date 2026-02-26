@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
 import { InlineTypeSelector } from '@/components/accounting/InlineTypeSelector';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface NewExpenseDialogProps {
   open: boolean;
@@ -22,6 +23,11 @@ interface NewExpenseDialogProps {
 export function NewExpenseDialog({ open, onOpenChange, onSwitchType }: NewExpenseDialogProps) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
+  const { effectiveRole } = useEffectiveRole();
+  const isOwner = effectiveRole === 'OWNER';
+  const expenseAllowedTypes: TransactionType[] = isOwner 
+    ? ['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT', 'ADJUSTMENT_MINUS' as TransactionType] 
+    : ['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT'];
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', category_id: '', party_id: '', reference_no: '', note: '',
@@ -57,7 +63,7 @@ export function NewExpenseDialog({ open, onOpenChange, onSwitchType }: NewExpens
         <form onSubmit={handleSubmit} className="space-y-3">
           <InlineTypeSelector
             currentType="EXPENSE"
-            allowedTypes={['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT']}
+            allowedTypes={expenseAllowedTypes}
             onSelect={(type) => { if (type !== 'EXPENSE' && onSwitchType) onSwitchType(type); }}
           />
           <div className="grid grid-cols-2 gap-3">
