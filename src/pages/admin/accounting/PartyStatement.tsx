@@ -365,8 +365,8 @@ export default function PartyStatement() {
             </Table>
           </CardContent>
         </Card>
-        <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
-        <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
+        <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} defaultPartyId={selectedPartyId} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
+        <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} defaultPartyId={selectedPartyId} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
       </div>
     );
   }
@@ -432,8 +432,8 @@ export default function PartyStatement() {
         </CardContent>
       </Card>
 
-      <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
-      <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
+      <NewPaymentInDialog open={paymentInOpen} onOpenChange={setPaymentInOpen} defaultPartyId={selectedPartyId} onSwitchType={(type) => { setPaymentInOpen(false); if (type === 'PAYMENT_OUT') setPaymentOutOpen(true); }} />
+      <NewPaymentOutDialog open={paymentOutOpen} onOpenChange={setPaymentOutOpen} defaultPartyId={selectedPartyId} onSwitchType={(type) => { setPaymentOutOpen(false); if (type === 'PAYMENT_IN') setPaymentInOpen(true); }} />
     </div>
   );
 }
