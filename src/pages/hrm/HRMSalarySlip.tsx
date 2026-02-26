@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePayrollRecords, useCompanyInfo, useEmployees, useBankAccounts, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Trash2 } from 'lucide-react';
+import { FileText, Download, Trash2, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
@@ -49,6 +49,17 @@ export default function HRMSalarySlip() {
   const [viewSlip, setViewSlip] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [slipToDelete, setSlipToDelete] = useState<any>(null);
+  const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
+
+  // Sort records
+  const sortedRecords = useMemo(() => {
+    const sorted = [...records];
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => (a.employees?.full_name || '').localeCompare(b.employees?.full_name || ''));
+    }
+    // 'newest' is default from API (created_at desc)
+    return sorted;
+  }, [records, sortBy]);
 
   const canDelete = isAdminOrManager(effectiveRole);
 
@@ -388,10 +399,22 @@ export default function HRMSalarySlip() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            Salary Slips for {getCurrentDisplayMonth()}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Salary Slips for {getCurrentDisplayMonth()}
+            </CardTitle>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'newest' | 'name')}>
+              <SelectTrigger className="w-36">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="name">By Name</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -404,7 +427,7 @@ export default function HRMSalarySlip() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {records.map((r) => (
+              {sortedRecords.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
@@ -431,7 +454,7 @@ export default function HRMSalarySlip() {
                   </TableCell>
                 </TableRow>
               ))}
-              {records.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
+              {sortedRecords.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -449,14 +472,14 @@ export default function HRMSalarySlip() {
             <div className="space-y-4" id="salary-slip">
               {/* Company Header */}
               <div className="text-center border-b pb-4">
-                {(branding?.logo_url || currentStore?.logo_url) && (
+                {(company?.logo_url || branding?.logo_url || currentStore?.logo_url) && (
                   <img 
-                    src={branding?.logo_url || currentStore?.logo_url || ''} 
+                    src={company?.logo_url || branding?.logo_url || currentStore?.logo_url || ''} 
                     alt="Logo" 
                     className="h-12 w-auto object-contain mx-auto mb-2"
                   />
                 )}
-                <h2 className="text-xl font-bold text-foreground">{currentStore?.name || company?.company_name || 'Company Name'}</h2>
+                <h2 className="text-xl font-bold text-foreground">{company?.company_name || currentStore?.name || 'Company Name'}</h2>
                 {company?.address && <p className="text-xs text-muted-foreground">{company.address}</p>}
                 {(company?.phone || company?.email) && (
                   <p className="text-xs text-muted-foreground">{[company?.phone, company?.email].filter(Boolean).join(' | ')}</p>

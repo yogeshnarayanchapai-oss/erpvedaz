@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle } from 'lucide-react';
+import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
@@ -53,9 +53,19 @@ export default function HRMPayroll() {
 
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
+  const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
   
   // Payment confirmation state
   const [paymentConfirmRecord, setPaymentConfirmRecord] = useState<any>(null);
+
+  // Sort records
+  const sortedRecords = useMemo(() => {
+    const sorted = [...records];
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => (a.employees?.full_name || '').localeCompare(b.employees?.full_name || ''));
+    }
+    return sorted;
+  }, [records, sortBy]);
 
   const handleGenerate = () => generatePayroll.mutate(selectedMonth);
 
@@ -183,10 +193,22 @@ export default function HRMPayroll() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
-            Payroll for {monthDisplayLabel}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              Payroll for {monthDisplayLabel}
+            </CardTitle>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'newest' | 'name')}>
+              <SelectTrigger className="w-36">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="name">By Name</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -202,7 +224,7 @@ export default function HRMPayroll() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {records.map((r) => (
+              {sortedRecords.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
