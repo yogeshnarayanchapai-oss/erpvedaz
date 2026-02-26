@@ -186,17 +186,8 @@ export function useCheckIn() {
         throw new Error('You are not assigned to any store. Please contact your administrator.');
       }
 
-      // Validate that the current store matches the employee's assigned store
-      if (currentStoreId && currentStoreId !== employeeStoreId) {
-        // Get store name for better error message
-        const { data: employeeStore } = await supabase
-          .from('stores')
-          .select('name')
-          .eq('id', employeeStoreId)
-          .single();
-        
-        throw new Error(`You are not assigned to this store. Your attendance is recorded in "${employeeStore?.name || 'your assigned store'}".`);
-      }
+      // Always use employee's assigned store for attendance, regardless of which store is currently active
+      // This ensures attendance is recorded in the correct store even if the user has access to multiple stores
 
       const today = new Date().toISOString().split('T')[0];
       const now = new Date();
@@ -339,6 +330,23 @@ export function useCheckOut() {
   
   return useMutation({
     mutationFn: async (recordId: string) => {
+      // First verify that check-in exists before allowing check-out
+      const { data: existing, error: fetchError } = await supabase
+        .from('attendance_records')
+        .select('id, check_in_time, check_out_time')
+        .eq('id', recordId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!existing?.check_in_time) {
+        throw new Error('Cannot check out without checking in first. Please check in first.');
+      }
+
+      if (existing?.check_out_time) {
+        throw new Error('You have already checked out for today.');
+      }
+
       const now = new Date().toISOString();
 
       const { data, error } = await supabase

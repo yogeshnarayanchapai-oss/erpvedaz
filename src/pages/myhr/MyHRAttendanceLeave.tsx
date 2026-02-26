@@ -231,6 +231,11 @@ export default function MyHRAttendanceLeave() {
                       <LogIn className="w-4 h-4 mr-2" />
                       Check In
                     </Button>
+                  ) : !todayAttendance.check_in_time ? (
+                    <Button onClick={() => checkIn.mutate()} disabled={checkIn.isPending}>
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Check In
+                    </Button>
                   ) : !todayAttendance.check_out_time ? (
                     <Button onClick={() => checkOut.mutate(todayAttendance.id)} disabled={checkOut.isPending}>
                       <LogOut className="w-4 h-4 mr-2" />
