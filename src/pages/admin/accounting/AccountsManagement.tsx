@@ -173,7 +173,7 @@ export default function AccountsManagement() {
                       />
                     </div>
 
-                    {(!editingAccount || isOwner) && (
+                    {(!editingAccount || canEdit) && (
                       <div className="space-y-2">
                         <Label htmlFor="opening_balance">Opening Balance</Label>
                         <Input
@@ -183,7 +183,7 @@ export default function AccountsManagement() {
                           value={formData.opening_balance}
                           onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value })}
                         />
-                        {editingAccount && isOwner && (
+                        {editingAccount && canEdit && (
                           <p className="text-xs text-muted-foreground">
                             Editing opening balance will recalculate current balance
                           </p>
@@ -290,7 +290,7 @@ export default function AccountsManagement() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            {isOwner && (
+                            {canEdit && (
                               <>
                                 <Button
                                   variant="ghost"
