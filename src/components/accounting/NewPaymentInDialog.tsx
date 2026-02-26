@@ -12,12 +12,19 @@ import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
 import { InlineTypeSelector } from './InlineTypeSelector';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; defaultPartyId?: string; }
 
-export function NewPaymentInDialog({ open, onOpenChange, onSwitchType }: Props) {
+export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPartyId }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
-  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
+  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: defaultPartyId || '', reference_no: '', note: '' });
+
+  // Sync defaultPartyId when dialog opens
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen && defaultPartyId) {
+    setFormData(prev => ({ ...prev, party_id: defaultPartyId }));
+  }
+  if (open !== prevOpen) setPrevOpen(open);
 
   const resetForm = () => setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
 
