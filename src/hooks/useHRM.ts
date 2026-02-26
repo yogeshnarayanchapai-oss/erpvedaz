@@ -384,7 +384,7 @@ export function usePayrollRecords(month?: string) {
       let query = supabase
         .from('payroll_records')
         .select(`*, employees:employee_id(full_name)`)
-        .order('month', { ascending: false });
+        .order('created_at', { ascending: false });
       if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
