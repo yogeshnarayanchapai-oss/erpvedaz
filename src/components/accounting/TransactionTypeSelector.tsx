@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowDownLeft, ArrowUpRight, ShoppingCart, Package, CreditCard, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ShoppingCart, Package, CreditCard, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import type { TransactionType } from '@/hooks/useTransactions';
 
 interface TransactionTypeSelectorProps {
@@ -17,6 +17,8 @@ export const TRANSACTION_TYPE_META: { type: TransactionType; label: string; shor
   { type: 'SALES_IN', label: 'Sales In', shortDesc: 'Purchase in', icon: <Package className="w-4 h-4" />, color: 'text-orange-600 border-orange-200 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50 dark:border-orange-800', badgeClass: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800' },
   { type: 'PAYMENT_IN', label: 'Payment In', shortDesc: 'Received', icon: <Wallet className="w-4 h-4" />, color: 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:border-emerald-800', badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' },
   { type: 'PAYMENT_OUT', label: 'Payment Out', shortDesc: 'Paid out', icon: <CreditCard className="w-4 h-4" />, color: 'text-purple-600 border-purple-200 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-950/50 dark:border-purple-800', badgeClass: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800' },
+  { type: 'ADJUSTMENT_PLUS' as TransactionType, label: 'Adjust +', shortDesc: 'Balance increase', icon: <TrendingUp className="w-4 h-4" />, color: 'text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:border-amber-800', badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' },
+  { type: 'ADJUSTMENT_MINUS' as TransactionType, label: 'Adjust -', shortDesc: 'Balance decrease', icon: <TrendingDown className="w-4 h-4" />, color: 'text-yellow-600 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-950/30 dark:hover:bg-yellow-950/50 dark:border-yellow-800', badgeClass: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950/50 dark:text-yellow-400 dark:border-yellow-800' },
 ];
 
 export function getTypeMeta(type: TransactionType) {

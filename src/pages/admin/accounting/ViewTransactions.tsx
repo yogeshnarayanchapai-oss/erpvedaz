@@ -22,6 +22,8 @@ import { NewPaymentInDialog } from '@/components/accounting/NewPaymentInDialog';
 import { NewPaymentOutDialog } from '@/components/accounting/NewPaymentOutDialog';
 import { NewSalesInDialog } from '@/components/accounting/NewSalesInDialog';
 import { NewSalesOutDialog } from '@/components/accounting/NewSalesOutDialog';
+import { NewAdjustmentPlusDialog } from '@/components/accounting/NewAdjustmentPlusDialog';
+import { NewAdjustmentMinusDialog } from '@/components/accounting/NewAdjustmentMinusDialog';
 import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays, startOfDay } from 'date-fns';
@@ -79,6 +81,8 @@ export default function ViewTransactions() {
   const [paymentOutDialogOpen, setPaymentOutDialogOpen] = useState(false);
   const [salesInDialogOpen, setSalesInDialogOpen] = useState(false);
   const [salesOutDialogOpen, setSalesOutDialogOpen] = useState(false);
+  const [adjustPlusDialogOpen, setAdjustPlusDialogOpen] = useState(false);
+  const [adjustMinusDialogOpen, setAdjustMinusDialogOpen] = useState(false);
 
   // When search is active, bypass date filter
   const effectiveFilters = filters.search
@@ -114,6 +118,8 @@ export default function ViewTransactions() {
       case 'PAYMENT_OUT': setPaymentOutDialogOpen(true); break;
       case 'SALES_IN': setSalesInDialogOpen(true); break;
       case 'SALES_OUT': setSalesOutDialogOpen(true); break;
+      case 'ADJUSTMENT_PLUS' as TransactionType: setAdjustPlusDialogOpen(true); break;
+      case 'ADJUSTMENT_MINUS' as TransactionType: setAdjustMinusDialogOpen(true); break;
     }
   };
 
@@ -204,6 +210,8 @@ export default function ViewTransactions() {
       case 'SALES_IN': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
       case 'PAYMENT_IN': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
       case 'PAYMENT_OUT': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'ADJUSTMENT_PLUS': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+      case 'ADJUSTMENT_MINUS': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -217,6 +225,8 @@ export default function ViewTransactions() {
       case 'SALES_IN': return 'Sales In';
       case 'PAYMENT_IN': return 'Payment In';
       case 'PAYMENT_OUT': return 'Payment Out';
+      case 'ADJUSTMENT_PLUS': return 'Adjust (+)';
+      case 'ADJUSTMENT_MINUS': return 'Adjust (-)';
       default: return type;
     }
   };
@@ -563,6 +573,8 @@ export default function ViewTransactions() {
       <NewPaymentOutDialog open={paymentOutDialogOpen} onOpenChange={setPaymentOutDialogOpen} onSwitchType={(type) => { setPaymentOutDialogOpen(false); handleTypeSelected(type); }} />
       <NewSalesInDialog open={salesInDialogOpen} onOpenChange={setSalesInDialogOpen} onSwitchType={(type) => { setSalesInDialogOpen(false); handleTypeSelected(type); }} />
       <NewSalesOutDialog open={salesOutDialogOpen} onOpenChange={setSalesOutDialogOpen} onSwitchType={(type) => { setSalesOutDialogOpen(false); handleTypeSelected(type); }} />
+      <NewAdjustmentPlusDialog open={adjustPlusDialogOpen} onOpenChange={setAdjustPlusDialogOpen} onSwitchType={(type) => { setAdjustPlusDialogOpen(false); handleTypeSelected(type); }} />
+      <NewAdjustmentMinusDialog open={adjustMinusDialogOpen} onOpenChange={setAdjustMinusDialogOpen} onSwitchType={(type) => { setAdjustMinusDialogOpen(false); handleTypeSelected(type); }} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>

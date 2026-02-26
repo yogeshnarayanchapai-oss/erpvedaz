@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCurrentStoreId } from './useCurrentStoreId';
 
-export type TransactionType = 'INCOME' | 'EXPENSE' | 'SALES_IN' | 'SALES_OUT' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'TRANSFER';
+export type TransactionType = 'INCOME' | 'EXPENSE' | 'SALES_IN' | 'SALES_OUT' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'TRANSFER' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS';
 
 export type ApprovalStatus = 'NONE' | 'PENDING' | 'APPROVED';
 
@@ -124,7 +124,7 @@ export function useCreateTransaction() {
     }) => {
       // Map transaction_type to legacy type field
       const legacyType = transaction.transaction_type === 'TRANSFER' ? 'transfer' 
-        : ['INCOME', 'SALES_OUT', 'PAYMENT_IN'].includes(transaction.transaction_type) ? 'income' 
+        : ['INCOME', 'SALES_OUT', 'PAYMENT_IN', 'ADJUSTMENT_PLUS'].includes(transaction.transaction_type) ? 'income' 
         : 'expense';
 
       const { data, error } = await supabase
