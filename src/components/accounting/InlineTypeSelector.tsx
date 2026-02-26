@@ -8,29 +8,26 @@ interface InlineTypeSelectorProps {
 }
 
 export function InlineTypeSelector({ currentType, allowedTypes, onSelect }: InlineTypeSelectorProps) {
-  const items = TRANSACTION_TYPE_META.filter((t) => allowedTypes.includes(t.type));
+  const items = TRANSACTION_TYPE_META.filter(t => allowedTypes.includes(t.type));
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Transaction Type</label>
-      <div className="grid grid-cols-3 gap-2">
-        {items.map(({ type, label, shortDesc, icon, color }) =>
-        <button
-          key={type}
-          type="button"
-          className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${color} ${
-          currentType === type ? 'ring-2 ring-primary ring-offset-1' : 'opacity-70 hover:opacity-100'}`
-          }
-          onClick={() => onSelect(type)}>
-
-            {icon}
-            <div className="min-w-0 text-accent-foreground">
-              <div className="text-xs font-semibold leading-tight">{label}</div>
-              <div className="text-[10px] opacity-70 leading-tight truncate">{shortDesc}</div>
-            </div>
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">Transaction Type</label>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map(({ type, label, icon, color }) => (
+          <button
+            key={type}
+            type="button"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-left transition-all cursor-pointer ${color} ${
+              currentType === type ? 'ring-2 ring-primary ring-offset-1 opacity-100 shadow-sm' : 'opacity-60 hover:opacity-90'
+            }`}
+            onClick={() => onSelect(type)}
+          >
+            <span className="w-3.5 h-3.5 shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5">{icon}</span>
+            <span className="text-xs font-semibold whitespace-nowrap">{label}</span>
           </button>
-        )}
+        ))}
       </div>
-    </div>);
-
+    </div>
+  );
 }
