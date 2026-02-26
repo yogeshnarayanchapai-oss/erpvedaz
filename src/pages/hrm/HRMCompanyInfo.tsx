@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCompanyInfo, useUpdateCompanyInfo, useBankAccounts, useCreateBankAccount, useUpdateBankAccount, useDeleteBankAccount } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Building, CreditCard, Pencil, Trash2, Save } from 'lucide-react';
+import { Plus, Building, CreditCard, Pencil, Trash2, Save, Upload, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { toast } from 'sonner';
 
 export default function HRMCompanyInfo() {
   const { data: company, isLoading } = useCompanyInfo();
@@ -18,6 +21,9 @@ export default function HRMCompanyInfo() {
   const createBank = useCreateBankAccount();
   const updateBank = useUpdateBankAccount();
   const deleteBank = useDeleteBankAccount();
+  const storeId = useCurrentStoreId();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [companyForm, setCompanyForm] = useState({
     company_name: '',
@@ -54,6 +60,51 @@ export default function HRMCompanyInfo() {
       });
     }
   }, [company]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storeId) return;
+    
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only PNG, JPG, WEBP, SVG files are allowed');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be under 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `company-logos/${storeId}/logo.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('branding')
+        .upload(filePath, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('branding')
+        .getPublicUrl(filePath);
+      
+      // Add cache buster
+      const logoUrl = `${publicUrl}?t=${Date.now()}`;
+      setCompanyForm(prev => ({ ...prev, logo_url: logoUrl }));
+      toast.success('Logo uploaded successfully');
+    } catch (err: any) {
+      toast.error(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setCompanyForm(prev => ({ ...prev, logo_url: '' }));
+  };
 
   const handleCompanySave = async () => {
     await updateCompany.mutateAsync(companyForm);
@@ -129,17 +180,41 @@ export default function HRMCompanyInfo() {
                     <Label>Website</Label>
                     <Input value={companyForm.website} onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Logo URL</Label>
-                    <Input value={companyForm.logo_url} onChange={(e) => setCompanyForm({ ...companyForm, logo_url: e.target.value })} placeholder="https://..." />
+                  <div className="space-y-2 col-span-2">
+                    <Label>Company Logo</Label>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+                    {companyForm.logo_url ? (
+                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                        <img src={companyForm.logo_url} alt="Company Logo" className="h-14 w-14 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Logo uploaded</p>
+                          <p className="text-xs text-muted-foreground">Click change to update</p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploading}>
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Change'}
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={handleRemoveLogo} className="text-destructive">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" className="w-full h-20 border-dashed" onClick={() => logoInputRef.current?.click()} disabled={uploading}>
+                        {uploading ? (
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        ) : (
+                          <Upload className="w-5 h-5 mr-2" />
+                        )}
+                        {uploading ? 'Uploading...' : 'Upload Logo (PNG, JPG, WEBP, SVG)'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {companyForm.logo_url && (
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-                    <img src={companyForm.logo_url} alt="Company Logo" className="h-12 w-12 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <span className="text-sm text-muted-foreground">Logo Preview</span>
-                  </div>
-                )}
                 <div className="space-y-2">
                   <Label>Address</Label>
                   <Textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={2} />
