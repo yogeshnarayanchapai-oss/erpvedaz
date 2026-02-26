@@ -35,7 +35,7 @@ export default function HRMEmployees() {
 
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('Active');
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({
