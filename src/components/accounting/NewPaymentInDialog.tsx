@@ -12,9 +12,9 @@ import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
 import { InlineTypeSelector } from './InlineTypeSelector';
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; defaultPartyId?: string; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; defaultPartyId?: string; context?: 'party' | 'transaction'; }
 
-export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPartyId }: Props) {
+export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPartyId, context = 'transaction' }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: defaultPartyId || '', reference_no: '', note: '' });
@@ -52,11 +52,19 @@ export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPa
           <DialogTitle>Payment In (Received)</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <InlineTypeSelector
-            currentType="PAYMENT_IN"
-            allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
-            onSelect={(type) => { if (type !== 'PAYMENT_IN' && onSwitchType) onSwitchType(type); }}
-          />
+          {context === 'party' ? (
+            <InlineTypeSelector
+              currentType="PAYMENT_IN"
+              allowedTypes={['PAYMENT_IN', 'PAYMENT_OUT']}
+              onSelect={(type) => { if (type !== 'PAYMENT_IN' && onSwitchType) onSwitchType(type); }}
+            />
+          ) : (
+            <InlineTypeSelector
+              currentType="PAYMENT_IN"
+              allowedTypes={['INCOME', 'PAYMENT_IN', 'SALES_IN']}
+              onSelect={(type) => { if (type !== 'PAYMENT_IN' && onSwitchType) onSwitchType(type); }}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
             <div className="space-y-1.5"><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>
