@@ -52,13 +52,11 @@ export function NewPaymentOutDialog({ open, onOpenChange, onSwitchType, defaultP
           <DialogTitle>Payment Out (Paid)</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          {defaultPartyId && onSwitchType && (
-            <InlineTypeSelector
-              currentType="PAYMENT_OUT"
-              allowedTypes={['PAYMENT_IN', 'PAYMENT_OUT']}
-              onSelect={(type) => { if (type !== 'PAYMENT_OUT') onSwitchType(type); }}
-            />
-          )}
+          <InlineTypeSelector
+            currentType="PAYMENT_OUT"
+            allowedTypes={['EXPENSE', 'PAYMENT_OUT', 'SALES_OUT']}
+            onSelect={(type) => { if (type !== 'PAYMENT_OUT' && onSwitchType) onSwitchType(type); }}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Date *</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required /></div>
             <div className="space-y-1.5"><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" placeholder="0.00" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} required /></div>
