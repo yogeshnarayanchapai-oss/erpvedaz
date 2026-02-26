@@ -103,13 +103,33 @@ export default function MyHRDocuments() {
     if (!viewSlip || !employee) return;
 
     const employeeBank = getEmployeeBank(employee?.bank_account_id);
-    const companyName = currentStore?.name || company?.company_name || 'Company';
+    const companyName = company?.company_name || currentStore?.name || 'Company';
     const employeeName = employee.full_name || 'Employee';
     const monthYear = getNepaliMonthYear(viewSlip.month);
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 20;
+
+    // Logo
+    const logoUrl = company?.logo_url || currentStore?.logo_url;
+    if (logoUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            const logoHeight = 15;
+            const logoWidth = (img.width / img.height) * logoHeight;
+            doc.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, y, logoWidth, logoHeight);
+            y += logoHeight + 5;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = logoUrl;
+        });
+      } catch {}
+    }
 
     // Header - Company Name
     doc.setFontSize(20);

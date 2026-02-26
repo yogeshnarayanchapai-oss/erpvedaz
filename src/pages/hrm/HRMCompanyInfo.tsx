@@ -26,6 +26,7 @@ export default function HRMCompanyInfo() {
     phone: '',
     email: '',
     website: '',
+    logo_url: '',
     other_details: '',
   });
 
@@ -48,6 +49,7 @@ export default function HRMCompanyInfo() {
         phone: company.phone || '',
         email: company.email || '',
         website: company.website || '',
+        logo_url: company.logo_url || '',
         other_details: company.other_details || '',
       });
     }
@@ -127,7 +129,17 @@ export default function HRMCompanyInfo() {
                     <Label>Website</Label>
                     <Input value={companyForm.website} onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })} />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Logo URL</Label>
+                    <Input value={companyForm.logo_url} onChange={(e) => setCompanyForm({ ...companyForm, logo_url: e.target.value })} placeholder="https://..." />
+                  </div>
                 </div>
+                {companyForm.logo_url && (
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                    <img src={companyForm.logo_url} alt="Company Logo" className="h-12 w-12 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <span className="text-sm text-muted-foreground">Logo Preview</span>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Address</Label>
                   <Textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={2} />
