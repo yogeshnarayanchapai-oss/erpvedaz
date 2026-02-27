@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
+import { Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Trash2, ShoppingBag, TrendingUp, Package, Pencil, Eye, MoreHorizontal, Search, AlertTriangle, Lock, Unlock } from 'lucide-react';
 import { CompactProductSelect } from '@/components/ui/compact-product-select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -642,7 +642,7 @@ export default function StockMovements() {
                     </Label>
                     {isApprovedInAccounting ? (
                       <span className="text-xs text-green-600 flex items-center gap-1">
-                        <ShieldCheck className="h-3 w-3" /> Approved — set to pending in accounting to change
+                        <Lock className="h-3 w-3" /> Locked — unlock in accounting to change
                       </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">
@@ -835,9 +835,9 @@ export default function StockMovements() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
-                                    <ShieldCheck className="h-4 w-4 text-green-600" />
+                                    <Lock className="h-4 w-4 text-green-600" />
                                   </TooltipTrigger>
-                                  <TooltipContent>Approved in accounting - cannot edit</TooltipContent>
+                                  <TooltipContent>Locked in accounting — cannot edit/delete</TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
@@ -845,9 +845,9 @@ export default function StockMovements() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
-                                    <Clock className="h-4 w-4 text-yellow-600" />
+                                    <Unlock className="h-4 w-4 text-yellow-600" />
                                   </TooltipTrigger>
-                                  <TooltipContent>Pending approval in accounting</TooltipContent>
+                                  <TooltipContent>Unlocked — editable</TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
@@ -870,8 +870,8 @@ export default function StockMovements() {
                                 )}
                                 {canEdit && isApproved && (
                                   <DropdownMenuItem disabled className="text-muted-foreground">
-                                    <ShieldCheck className="h-4 w-4 mr-2" />
-                                    Approved (locked)
+                                    <Lock className="h-4 w-4 mr-2" />
+                                    Locked in Accounting
                                   </DropdownMenuItem>
                                 )}
                                 {canEdit && !isApproved && (

@@ -27,7 +27,7 @@ import { NewAdjustmentMinusDialog } from '@/components/accounting/NewAdjustmentM
 import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays, startOfDay } from 'date-fns';
-import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye, CheckCircle, Clock, History } from 'lucide-react';
+import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye, Lock, Unlock, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -490,9 +490,9 @@ export default function ViewTransactions() {
                   <TableCell>
                     <Badge className={`${getTypeColor(transaction.transaction_type)} inline-flex items-center gap-1.5`}>
                       {transaction.approval_status === 'APPROVED' ? (
-                        <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                        <Lock className="w-3 h-3 text-green-600" />
                       ) : transaction.approval_status === 'PENDING' ? (
-                        <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" />
+                        <Unlock className="w-3 h-3 text-yellow-600" />
                       ) : null}
                       {getTypeLabel(transaction.transaction_type)}
                     </Badge>
@@ -524,17 +524,17 @@ export default function ViewTransactions() {
                             <Eye className="w-4 h-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          {/* Approve/Pending toggle for stock_movement transactions */}
+                          {/* Lock/Unlock toggle for stock_movement transactions */}
                           {canEdit && transaction.approval_status === 'PENDING' && (
                             <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'APPROVED' })}>
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Approve
+                              <Lock className="w-4 h-4 mr-2 text-green-600" />
+                              Lock
                             </DropdownMenuItem>
                           )}
                           {canEdit && transaction.approval_status === 'APPROVED' && (
                             <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'PENDING' })}>
-                              <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                              Set Pending
+                              <Unlock className="w-4 h-4 mr-2 text-yellow-600" />
+                              Unlock
                             </DropdownMenuItem>
                           )}
                           
@@ -695,12 +695,12 @@ export default function ViewTransactions() {
               <div key={h.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-md">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{h.from_status}</Badge>
+                    <Badge variant="outline" className="text-xs">{h.from_status === 'APPROVED' ? 'LOCKED' : h.from_status === 'PENDING' ? 'UNLOCKED' : h.from_status}</Badge>
                     <span className="text-xs text-muted-foreground">→</span>
                     <Badge className={h.to_status === 'APPROVED' 
                       ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
                       : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}>
-                      {h.to_status}
+                      {h.to_status === 'APPROVED' ? 'LOCKED' : h.to_status === 'PENDING' ? 'UNLOCKED' : h.to_status}
                     </Badge>
                   </div>
                   {h.note && <p className="text-xs text-muted-foreground mt-1">{h.note}</p>}
