@@ -92,12 +92,17 @@ export default function ViewTransactions() {
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
-  const { canEdit } = useAccountingEditAccess();
+  const { canEdit, effectiveRole } = useAccountingEditAccess();
   const deleteTransaction = useDeleteTransaction();
   const updateApproval = useUpdateApprovalStatus();
   const { data: approvalHistory = [] } = useApprovalHistory(historyTxId || undefined);
   
   const canDelete = canEdit;
+  
+  // ADJUSTMENT_PLUS/MINUS can only be edited/deleted by OWNER
+  const isAdjustmentType = (type: string) => type === 'ADJUSTMENT_PLUS' || type === 'ADJUSTMENT_MINUS';
+  const canEditTransaction = (type: string) => isAdjustmentType(type) ? effectiveRole === 'OWNER' : canEdit;
+  const canDeleteTransaction = (type: string) => isAdjustmentType(type) ? effectiveRole === 'OWNER' : canDelete;
 
   const filteredTransactions = transactions.filter(t => {
     if (!filters.search) return true;
@@ -533,13 +538,13 @@ export default function ViewTransactions() {
                             </DropdownMenuItem>
                           )}
                           
-                          {canEdit && (
+                          {canEditTransaction(transaction.transaction_type) && (
                             <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                           )}
-                          {canDelete && (
+                          {canDeleteTransaction(transaction.transaction_type) && (
                             <DropdownMenuItem 
                               onClick={() => setDeleteConfirmId(transaction.id)}
                               className="text-destructive focus:text-destructive"
