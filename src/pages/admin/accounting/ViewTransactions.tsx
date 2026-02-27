@@ -27,7 +27,7 @@ import { NewAdjustmentMinusDialog } from '@/components/accounting/NewAdjustmentM
 import { TransactionTypeSelector } from '@/components/accounting/TransactionTypeSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, subDays, startOfDay } from 'date-fns';
-import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye, Lock, Unlock, History } from 'lucide-react';
+import { Download, Search, Pencil, Trash2, Plus, ArrowLeftRight, MoreHorizontal, Eye, Lock, LockOpen, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -492,7 +492,7 @@ export default function ViewTransactions() {
                       {transaction.approval_status === 'APPROVED' ? (
                         <Lock className="w-3 h-3 text-green-600" />
                       ) : transaction.approval_status === 'PENDING' ? (
-                        <Unlock className="w-3 h-3 text-yellow-600" />
+                        <LockOpen className="w-3 h-3 text-muted-foreground" />
                       ) : null}
                       {getTypeLabel(transaction.transaction_type)}
                     </Badge>
@@ -533,7 +533,7 @@ export default function ViewTransactions() {
                           )}
                           {canEdit && transaction.approval_status === 'APPROVED' && (
                             <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'PENDING' })}>
-                              <Unlock className="w-4 h-4 mr-2 text-yellow-600" />
+                              <LockOpen className="w-4 h-4 mr-2 text-muted-foreground" />
                               Unlock
                             </DropdownMenuItem>
                           )}
