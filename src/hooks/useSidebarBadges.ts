@@ -27,8 +27,8 @@ async function fetchHRNotificationsCount(userId: string): Promise<number> {
   const { data } = await supabase
     .from('notifications')
     .select('type')
-    .eq('to_user_id', userId)
-    .eq('is_read', false);
+    .eq('target_user_id', userId)
+    .is('read_at', null);
   
   if (!data) return 0;
   return (data as Array<{ type: string | null }>).filter(n => hrTypes.includes(n.type || '')).length;
