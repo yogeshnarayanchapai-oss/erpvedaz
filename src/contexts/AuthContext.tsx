@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,39 +32,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Prevent duplicate concurrent fetches
+  const fetchingRef = useRef<string | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
-    const MAX_RETRIES = 2;
-    const TIMEOUT_MS = 10000; // Increased timeout for slow DB
+  const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
+    const MAX_RETRIES = 1;
+    
+    // Skip if already fetching for same user
+    if (fetchingRef.current === userId && retryCount === 0) return;
+    fetchingRef.current = userId;
     
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS)
-      );
-      
-      const fetchPromise = supabase
+      // No artificial timeout - let Supabase handle it naturally
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, email, phone, role, is_active, daily_target, default_store_id')
         .eq('id', userId)
         .maybeSingle();
       
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      // Check if we're still interested in this user
+      if (fetchingRef.current !== userId) return;
       
       if (data && !error) {
         setProfile(data as Profile);
       } else if (error && retryCount < MAX_RETRIES) {
         console.warn(`Profile fetch failed, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-        // Exponential backoff to reduce DB pressure
-        setTimeout(() => fetchProfile(userId, retryCount + 1), 3000 * (retryCount + 1));
+        retryTimerRef.current = setTimeout(() => fetchProfile(userId, retryCount + 1), 2000);
       } else {
-        console.error('Profile fetch failed after retries:', error);
+        console.error('Profile fetch failed:', error);
         setProfile(null);
       }
     } catch (err) {
+      if (fetchingRef.current !== userId) return;
       console.error('Error fetching profile:', err);
       if (retryCount < MAX_RETRIES) {
-        console.warn(`Profile fetch error, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-        setTimeout(() => fetchProfile(userId, retryCount + 1), 3000 * (retryCount + 1));
+        retryTimerRef.current = setTimeout(() => fetchProfile(userId, retryCount + 1), 2000);
       } else {
         setProfile(null);
       }
@@ -73,34 +77,36 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
 
   useEffect(() => {
     let mounted = true;
+    let initialSessionHandled = false;
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (!mounted) return;
         
-        // Only update state synchronously
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Defer profile fetch to avoid deadlock
         if (currentSession?.user) {
-          setTimeout(() => {
-            if (mounted) {
-              fetchProfile(currentSession.user.id);
-            }
-          }, 0);
+          // Only fetch if getSession hasn't already handled this
+          if (initialSessionHandled) {
+            setTimeout(() => {
+              if (mounted) fetchProfile(currentSession.user.id);
+            }, 0);
+          }
         } else {
           setProfile(null);
+          fetchingRef.current = null;
         }
         
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session (primary fetch path)
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       if (!mounted) return;
+      initialSessionHandled = true;
       
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
@@ -113,43 +119,38 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
 
     return () => {
       mounted = false;
+      fetchingRef.current = null;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
-  // SECURITY: Role is NOT accepted from client - assigned server-side only
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: {
-          name,
-          // SECURITY: Do NOT pass role - it's assigned by handle_new_user trigger
-        },
+        data: { name },
       },
     });
     return { error };
   };
 
   const signOut = async () => {
-    // Clear local state first
     setProfile(null);
     setUser(null);
     setSession(null);
+    fetchingRef.current = null;
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     
-    // Clear user-specific localStorage to prevent storage bloat
+    // Clear user-specific localStorage
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -171,17 +172,12 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
       console.warn('Failed to clear localStorage:', e);
     }
     
-    // Clear runtime caches (NOT precache for PWA performance)
+    // Clear runtime caches
     try {
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         for (const name of cacheNames) {
-          // Only delete runtime caches, keep precache/workbox intact
-          if (
-            name.includes('supabase') ||
-            name.includes('api') ||
-            name.includes('runtime')
-          ) {
+          if (name.includes('supabase') || name.includes('api') || name.includes('runtime')) {
             await caches.delete(name);
           }
         }
@@ -191,15 +187,11 @@ const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
     }
     
     try {
-      // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      
-      // If session not found error, it's already logged out - that's fine
       if (error && !error.message.includes('session_not_found') && !error.message.includes('Session not found')) {
         console.error('Sign out error:', error);
       }
     } catch (err) {
-      // Handle any network or unexpected errors gracefully
       console.error('Sign out exception:', err);
     }
   };
