@@ -36,12 +36,12 @@ export function useLogisticsStats(dateFrom?: Date, dateTo?: Date, staffId?: stri
     queryFn: async () => {
       let query = supabase
         .from('logistics_orders')
-        .select('*, orders!inner(created_by_user_id)')
+        .select('*, orders!inner(created_by_staff_id)')
         .gte('created_at', format(from, 'yyyy-MM-dd'))
         .lte('created_at', format(to, 'yyyy-MM-dd') + 'T23:59:59');
 
       if (staffId) {
-        query = query.eq('orders.created_by_user_id', staffId);
+        query = query.eq('orders.created_by_staff_id', staffId);
       }
 
       const { data, error } = await query;
@@ -83,12 +83,12 @@ export function useCourierComparison(dateFrom?: Date, dateTo?: Date, staffId?: s
     queryFn: async () => {
       let query = supabase
         .from('logistics_orders')
-        .select('*, orders!inner(created_by_user_id)')
+        .select('*, orders!inner(created_by_staff_id)')
         .gte('created_at', format(from, 'yyyy-MM-dd'))
         .lte('created_at', format(to, 'yyyy-MM-dd') + 'T23:59:59');
 
       if (staffId) {
-        query = query.eq('orders.created_by_user_id', staffId);
+        query = query.eq('orders.created_by_staff_id', staffId);
       }
 
       const { data, error } = await query;
