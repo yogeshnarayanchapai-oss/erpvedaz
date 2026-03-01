@@ -323,19 +323,7 @@ export default function CallingLeads() {
     setCallNotes('');
   }, [activeCall, callDuration, callNotes, createCallLog, formatDuration]);
   
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('calling-leads-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['leads'] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Realtime removed — use manual refresh or polling instead to avoid refetch storms
 
   // Handle leadId URL param to open edit sheet
   useEffect(() => {

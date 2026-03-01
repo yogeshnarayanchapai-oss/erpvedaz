@@ -1,32 +1,15 @@
-import { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getNepalDate, getNepalDayStart, getNepalDayEnd } from '@/hooks/useDashboardStats';
 import { ShoppingCart, Package, AlertTriangle, TrendingUp, Clock, Truck } from 'lucide-react';
 
 export function TodayQuickStats() {
-  const queryClient = useQueryClient();
   // Use Nepal timezone for today's date
   const today = getNepalDate();
 
-  // Set up realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('today-quick-stats-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['today-quick-stats'] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_orders' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['today-quick-stats'] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Realtime removed — polling handles freshness
 
   const { data: stats } = useQuery({
     queryKey: ['today-quick-stats', today],
