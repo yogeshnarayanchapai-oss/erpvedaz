@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyLogisticsStatusUpdate, notifyOrderRedirected } from '@/lib/notificationHelpers';
 
@@ -11,27 +10,7 @@ interface LogisticsOrdersFilters {
 export function useLogisticsPortalOrders(filters: LogisticsOrdersFilters = {}) {
   const queryClient = useQueryClient();
 
-  // Set up realtime subscription for orders
-  useEffect(() => {
-    const channel = supabase
-      .channel('logistics-portal-orders-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Realtime removed — use manual refresh to avoid refetch storms
 
   return useQuery({
     queryKey: ['logistics-portal-orders', filters],
