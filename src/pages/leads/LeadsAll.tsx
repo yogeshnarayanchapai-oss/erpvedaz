@@ -102,7 +102,18 @@ export default function LeadsAll() {
     productId: '',
   });
 
-  // Realtime removed — use manual refresh to avoid refetch storms with 50+ users
+  useEffect(() => {
+    const channel = supabase
+      .channel('leads-all-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Sync bucket filter with URL params
   useEffect(() => {

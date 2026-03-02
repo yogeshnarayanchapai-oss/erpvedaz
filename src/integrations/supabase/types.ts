@@ -7573,10 +7573,6 @@ export type Database = {
       }
       create_verification_otp: { Args: { p_user_id: string }; Returns: string }
       generate_otp: { Args: never; Returns: string }
-      get_accounting_summary: {
-        Args: { p_date_from?: string; p_date_to?: string; p_store_id: string }
-        Returns: Json
-      }
       get_all_public_tables: {
         Args: never
         Returns: {
@@ -7585,16 +7581,6 @@ export type Database = {
         }[]
       }
       get_customer_insight: { Args: { p_phone: string }; Returns: Json }
-      get_dashboard_stats: {
-        Args: { p_date_from: string; p_date_to: string; p_store_id: string }
-        Returns: Json
-      }
-      get_inventory_summary: { Args: { p_store_id: string }; Returns: Json }
-      get_party_balances: { Args: { p_store_id: string }; Returns: Json }
-      get_sidebar_badges: {
-        Args: { p_role: string; p_store_id: string; p_user_id: string }
-        Returns: Json
-      }
       get_user_accessible_stores: {
         Args: { p_user_id: string }
         Returns: {

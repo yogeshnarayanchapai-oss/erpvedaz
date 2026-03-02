@@ -214,13 +214,35 @@ export default function AdminLeads() {
     };
     fetchDateRangeAssignedLeads();
 
-    // Realtime removed — polling handles freshness
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('admin-leads-assigned-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        fetchDateRangeAssignedLeads();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [dateFrom, dateTo, storeId]);
 
   // Mark section as seen when data loads (for badge clearing)
   useAutoMarkSeen('all_leads', isFetched && !isLoading);
 
-  // Realtime removed — use manual refresh to avoid refetch storms with 50+ users
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-leads-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const filteredLeads = leads.filter((lead) => {
     const matchesProduct = selectedProduct === 'ALL' || lead.product_id === selectedProduct;

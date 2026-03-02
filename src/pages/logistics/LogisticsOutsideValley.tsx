@@ -111,7 +111,21 @@ export default function LogisticsOutsideValley() {
   });
   const updateOrderStatus = useUpdateOrderStatus();
 
-  // Realtime removed — use manual refresh to avoid refetch storms
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('outside-valley-orders')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => refetch()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   const filteredOrders = orders.filter(o => {
     // Status filter
