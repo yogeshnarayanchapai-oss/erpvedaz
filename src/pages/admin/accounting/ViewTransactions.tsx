@@ -491,9 +491,9 @@ export default function ViewTransactions() {
                   <TableCell>
                     <Badge className={`${getTypeColor(transaction.transaction_type)} inline-flex items-center gap-1.5`}>
                       {transaction.approval_status === 'APPROVED' ? (
-                        <LockFilledIcon className="w-3 h-3 text-green-600" />
+                        <LockFilledIcon className="w-4 h-4 text-green-600" />
                       ) : transaction.approval_status === 'PENDING' ? (
-                        <UnlockFilledIcon className="w-3 h-3 text-muted-foreground" />
+                        <UnlockFilledIcon className="w-4 h-4 text-muted-foreground" />
                       ) : null}
                       {getTypeLabel(transaction.transaction_type)}
                     </Badge>
