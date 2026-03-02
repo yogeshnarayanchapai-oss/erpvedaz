@@ -491,9 +491,9 @@ export default function ViewTransactions() {
                   <TableCell>
                     <Badge className={`${getTypeColor(transaction.transaction_type)} inline-flex items-center gap-1.5`}>
                       {transaction.approval_status === 'APPROVED' ? (
-                        <LockFilledIcon className="w-4 h-4 text-green-600" />
+                        <LockFilledIcon className="w-[18px] h-[18px] shrink-0" />
                       ) : transaction.approval_status === 'PENDING' ? (
-                        <UnlockFilledIcon className="w-4 h-4 text-muted-foreground" />
+                        <UnlockFilledIcon className="w-[18px] h-[18px] shrink-0 opacity-60" />
                       ) : null}
                       {getTypeLabel(transaction.transaction_type)}
                     </Badge>
@@ -528,7 +528,7 @@ export default function ViewTransactions() {
                           {/* Lock/Unlock toggle for stock_movement transactions */}
                           {canEdit && transaction.approval_status === 'PENDING' && (
                             <DropdownMenuItem onClick={() => updateApproval.mutate({ id: transaction.id, status: 'APPROVED' })}>
-                              <LockFilledIcon className="w-4 h-4 mr-2 text-green-600" />
+                              <LockFilledIcon className="w-4 h-4 mr-2" />
                               Lock
                             </DropdownMenuItem>
                           )}
