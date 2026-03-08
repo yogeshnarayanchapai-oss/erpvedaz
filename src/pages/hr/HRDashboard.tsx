@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useEmployees, useLeaveRequests, useNotices } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -10,6 +11,7 @@ import {
   AlertCircle, Bell, ArrowRight 
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -26,8 +28,24 @@ export default function HRDashboard() {
     .filter(l => l.status === 'Pending')
     .slice(0, 5);
 
+  const birthdayStaffToday = useMemo(() => {
+    const today = new Date();
+    const m = today.getMonth() + 1;
+    const d = today.getDate();
+    return employees
+      .filter(e => {
+        if (!e.birth_date || e.status !== 'Active') return false;
+        const bd = new Date(e.birth_date);
+        return bd.getMonth() + 1 === m && bd.getDate() === d;
+      })
+      .map(e => e.full_name);
+  }, [employees]);
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {birthdayStaffToday.length > 0 && (
+        <BirthdayBanner names={birthdayStaffToday} />
+      )}
       <div>
         <h1 className="text-2xl font-bold">HR Dashboard</h1>
         <p className="text-muted-foreground">Overview of HR activities and employee status</p>

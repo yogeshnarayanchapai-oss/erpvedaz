@@ -39,6 +39,7 @@ export interface Employee {
   base_salary: number | null;
   bank_account_id: string | null;
   notes: string | null;
+  birth_date: string | null;
   created_at: string;
   store_id: string | null;
   // Office time settings for attendance

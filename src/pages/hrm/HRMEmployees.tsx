@@ -56,6 +56,7 @@ export default function HRMEmployees() {
     base_salary: '',
     bank_account_id: '',
     notes: '',
+    birth_date: '',
     office_start_time: '09:00',
     office_end_time: '17:00',
     grace_minutes: '30',
@@ -100,6 +101,7 @@ export default function HRMEmployees() {
       base_salary: '', 
       bank_account_id: '', 
       notes: '',
+      birth_date: '',
       office_start_time: '09:00',
       office_end_time: '17:00',
       grace_minutes: '30',
@@ -145,6 +147,7 @@ export default function HRMEmployees() {
       base_salary: form.base_salary ? parseFloat(form.base_salary) : null,
       bank_account_id: form.bank_account_id || null,
       notes: form.notes || null,
+      birth_date: form.birth_date || null,
       office_start_time: form.office_start_time || '09:00',
       office_end_time: form.office_end_time || '17:00',
       grace_minutes: form.grace_minutes ? parseInt(form.grace_minutes) : 30,
@@ -172,6 +175,7 @@ export default function HRMEmployees() {
       base_salary: emp.base_salary?.toString() || '',
       bank_account_id: emp.bank_account_id || '',
       notes: emp.notes || '',
+      birth_date: emp.birth_date || '',
       office_start_time: emp.office_start_time?.slice(0, 5) || '09:00',
       office_end_time: emp.office_end_time?.slice(0, 5) || '17:00',
       grace_minutes: emp.grace_minutes?.toString() || '30',
@@ -264,6 +268,10 @@ export default function HRMEmployees() {
                 <div className="space-y-2">
                   <Label>Base Salary</Label>
                   <Input type="number" value={form.base_salary} onChange={(e) => setForm({ ...form, base_salary: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Birth Date</Label>
+                  <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Bank Account</Label>

@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -362,8 +363,30 @@ const hrmMetrics = useMemo(() => {
     </Card>
   );
 
+  // Birthday staff today (simple month+day match, no extra query)
+  const birthdayStaffToday = useMemo(() => {
+    if (!employeesData) return [];
+    const today = new Date();
+    const m = today.getMonth() + 1;
+    const d = today.getDate();
+    return employeesData
+      .filter(e => {
+        if (!e.birth_date || e.status !== 'Active') return false;
+        const bd = new Date(e.birth_date);
+        return bd.getMonth() + 1 === m && bd.getDate() === d;
+      })
+      .map(e => e.full_name);
+  }, [employeesData]);
+
   return (
     <div className="min-h-full flex flex-col animate-fade-in px-1 md:px-0">
+      {/* Birthday Banner for Admin/Owner/HR */}
+      {birthdayStaffToday.length > 0 && (
+        <div className="mb-2">
+          <BirthdayBanner names={birthdayStaffToday} />
+        </div>
+      )}
+
       {/* Header with Date Filter and Quick Actions */}
       <div className="flex flex-col gap-1.5 md:gap-2 mb-1.5 md:mb-2">
         {/* Title Row */}
