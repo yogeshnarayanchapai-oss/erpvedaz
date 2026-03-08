@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { Package, TrendingUp, Clock, XCircle, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
@@ -23,8 +25,12 @@ export default function LogisticsDashboardMain() {
   const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
   const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
 
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
+
   return (
     <div className="space-y-6 p-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

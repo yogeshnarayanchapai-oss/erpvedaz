@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useLeads } from '@/hooks/useLeads';
 import { useOrders } from '@/hooks/useOrders';
 import { useStaff } from '@/hooks/useStaff';
@@ -73,8 +75,12 @@ export default function ManagerDashboard() {
     return isSameDay ? format(dateRange.from, 'MMM d, yyyy') : `${fromStr} – ${toStr}`;
   };
 
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       {/* Header with Date Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

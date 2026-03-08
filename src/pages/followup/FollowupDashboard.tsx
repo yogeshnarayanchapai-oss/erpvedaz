@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useLeads, useUpdateLeadStatus } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCreateCallLog } from '@/hooks/useCallLogs';
@@ -27,6 +29,7 @@ type TagFilter = 'ALL' | 'TRF' | 'NO_TAG';
 type ViewFilter = 'ALL' | 'REDIRECTED';
 
 export default function FollowupDashboard() {
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
   const today = new Date();
   const [dateRange, setDateRange] = useState({
     from: startOfDay(today),
@@ -149,6 +152,8 @@ export default function FollowupDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Follow-up Dashboard</h1>
