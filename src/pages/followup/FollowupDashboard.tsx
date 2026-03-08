@@ -152,6 +152,8 @@ export default function FollowupDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Follow-up Dashboard</h1>

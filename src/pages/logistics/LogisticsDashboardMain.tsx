@@ -25,8 +25,12 @@ export default function LogisticsDashboardMain() {
   const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
   const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
 
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
+
   return (
     <div className="space-y-6 p-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
