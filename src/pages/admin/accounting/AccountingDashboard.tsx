@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAccountingDashboard } from '@/hooks/useAccounting';
 import { usePartiesWithBalances } from '@/hooks/useParties';
