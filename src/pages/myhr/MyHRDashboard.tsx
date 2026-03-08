@@ -10,6 +10,10 @@ import { useMyLeaveQuota } from '@/hooks/useLeaveQuota';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { useUserEmployeeLink } from '@/hooks/useHRM';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 
 export default function MyHRDashboard() {
   const { profile } = useAuth();
