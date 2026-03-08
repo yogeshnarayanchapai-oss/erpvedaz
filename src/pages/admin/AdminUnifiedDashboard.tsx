@@ -542,7 +542,7 @@ const hrmMetrics = useMemo(() => {
             { label: 'Leads', value: salesMetrics.totalLeads },
             { label: 'Conversion', value: `${salesMetrics.conversionRate}%`, color: 'text-green-600' },
             { label: 'Confirmed', value: salesMetrics.confirmedOrders },
-            { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
+            { label: 'Total Sales', value: `₹${Math.round(salesMetrics.totalSales).toLocaleString()}` },
           ]}
         />
 
