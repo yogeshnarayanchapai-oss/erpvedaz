@@ -11,6 +11,7 @@ import {
   AlertCircle, Bell, ArrowRight 
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 
 export default function HRDashboard() {
   const navigate = useNavigate();
