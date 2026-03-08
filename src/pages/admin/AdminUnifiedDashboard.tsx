@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
