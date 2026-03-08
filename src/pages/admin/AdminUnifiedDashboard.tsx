@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
