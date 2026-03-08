@@ -45,6 +45,7 @@ import {
 export default function AdminUnifiedDashboard() {
   const navigate = useNavigate();
   const { effectiveRole } = useEffectiveRole();
+  const { profile } = useAuth();
   const storeId = useCurrentStoreId();
 
   // Redirect MANAGER to Sales Dashboard
