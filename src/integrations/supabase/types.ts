@@ -2552,6 +2552,7 @@ export type Database = {
         Row: {
           bank_account_id: string | null
           base_salary: number | null
+          birth_date: string | null
           citizenship_number: string | null
           created_at: string
           daily_target: number | null
@@ -2581,6 +2582,7 @@ export type Database = {
         Insert: {
           bank_account_id?: string | null
           base_salary?: number | null
+          birth_date?: string | null
           citizenship_number?: string | null
           created_at?: string
           daily_target?: number | null
@@ -2610,6 +2612,7 @@ export type Database = {
         Update: {
           bank_account_id?: string | null
           base_salary?: number | null
+          birth_date?: string | null
           citizenship_number?: string | null
           created_at?: string
           daily_target?: number | null
