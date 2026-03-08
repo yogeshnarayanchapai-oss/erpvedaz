@@ -23,7 +23,7 @@ export function useBirthdayCheck() {
       if (!employees) return { selfName: null, others: [] as string[] };
 
       const today = new Date();
-      const m = today.getMonth();
+      const m = today.getMonth() + 1; // 1-based
       const d = today.getDate();
 
       let selfName: string | null = null;
@@ -31,8 +31,11 @@ export function useBirthdayCheck() {
 
       for (const e of employees) {
         if (!e.birth_date) continue;
-        const bd = new Date(e.birth_date);
-        if (bd.getMonth() === m && bd.getDate() === d) {
+        // Parse 'YYYY-MM-DD' directly to avoid UTC timezone shift
+        const parts = e.birth_date.split('-');
+        const bdMonth = parseInt(parts[1], 10);
+        const bdDay = parseInt(parts[2], 10);
+        if (bdMonth === m && bdDay === d) {
           if (e.user_id === profile?.id) {
             selfName = e.full_name;
           } else {
