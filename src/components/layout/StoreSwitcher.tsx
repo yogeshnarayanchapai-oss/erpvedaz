@@ -114,6 +114,8 @@ export function StoreSwitcher() {
                 src={store.logo_url}
                 alt={store.name}
                 className="h-5 w-5 rounded object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div
