@@ -365,7 +365,17 @@ const hrmMetrics = useMemo(() => {
     </Card>
   );
 
-  // Birthday staff today (simple month+day match, no extra query)
+  // Birthday: check if current user (admin/owner/HR) has birthday today
+  const myBirthdayToday = useMemo(() => {
+    if (!employeesData || !profile?.id) return false;
+    const me = employeesData.find(e => e.user_id === profile.id);
+    if (!me?.birth_date) return false;
+    const today = new Date();
+    const bd = new Date(me.birth_date);
+    return bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
+  }, [employeesData, profile?.id]);
+
+  // Birthday staff today (excluding self)
   const birthdayStaffToday = useMemo(() => {
     if (!employeesData) return [];
     const today = new Date();
@@ -374,15 +384,22 @@ const hrmMetrics = useMemo(() => {
     return employeesData
       .filter(e => {
         if (!e.birth_date || e.status !== 'Active') return false;
+        if (e.user_id === profile?.id) return false; // exclude self
         const bd = new Date(e.birth_date);
         return bd.getMonth() + 1 === m && bd.getDate() === d;
       })
       .map(e => e.full_name);
-  }, [employeesData]);
+  }, [employeesData, profile?.id]);
 
   return (
     <div className="min-h-full flex flex-col animate-fade-in px-1 md:px-0">
-      {/* Birthday Banner for Admin/Owner/HR */}
+      {/* Self birthday wish for admin/owner/HR */}
+      {myBirthdayToday && profile?.name && (
+        <div className="mb-2">
+          <BirthdayBanner names={[profile.name]} isSelf />
+        </div>
+      )}
+      {/* Other staff birthdays */}
       {birthdayStaffToday.length > 0 && (
         <div className="mb-2">
           <BirthdayBanner names={birthdayStaffToday} />
