@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { subDays, format } from 'date-fns';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { Package, TrendingUp, Clock, XCircle, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
