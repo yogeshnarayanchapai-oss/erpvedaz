@@ -569,10 +569,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/accounting/dashboard-new"
           isLoading={accountsLoading || partyTxLoading}
           metrics={[
-            { label: 'Total Balance', value: `₹${accountingMetricsComputed.totalAvailableBalance.toLocaleString()}` },
-            { label: 'Daybook', value: `₹${accountingMetricsComputed.daybook.toLocaleString()}`, color: accountingMetricsComputed.daybook >= 0 ? 'text-green-600' : 'text-red-600' },
-            { label: 'Receivable', value: `₹${accountingMetricsComputed.receivables.toLocaleString()}`, color: 'text-blue-600' },
-            { label: 'Payable', value: `₹${accountingMetricsComputed.payables.toLocaleString()}`, color: 'text-orange-600' },
+            { label: 'Total Balance', value: `₹${Math.round(accountingMetricsComputed.totalAvailableBalance).toLocaleString()}` },
+            { label: 'Daybook', value: `₹${Math.round(accountingMetricsComputed.daybook).toLocaleString()}`, color: accountingMetricsComputed.daybook >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: 'Receivable', value: `₹${Math.round(accountingMetricsComputed.receivables).toLocaleString()}`, color: 'text-blue-600' },
+            { label: 'Payable', value: `₹${Math.round(accountingMetricsComputed.payables).toLocaleString()}`, color: 'text-orange-600' },
           ]}
         />
 
