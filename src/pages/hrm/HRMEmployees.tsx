@@ -21,10 +21,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function HRMEmployees() {
-  const { data: employees = [], isLoading } = useEmployees();
+  const [filterStore, setFilterStore] = useState('all');
+  const { data: employees = [], isLoading } = useEmployees(filterStore === 'all' ? undefined : filterStore);
   const { data: departments = [] } = useDepartments();
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: allUsers = [] } = useStaff(undefined, true, undefined, true);
+  const { data: stores = [] } = useStores();
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'OWNER';
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
