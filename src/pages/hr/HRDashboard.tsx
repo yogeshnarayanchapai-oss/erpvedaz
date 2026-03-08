@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useEmployees, useLeaveRequests, useNotices } from '@/hooks/useHRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
