@@ -269,6 +269,10 @@ export default function HRMEmployees() {
                   <Label>Base Salary</Label>
                   <Input type="number" value={form.base_salary} onChange={(e) => setForm({ ...form, base_salary: e.target.value })} />
                 </div>
+                <div className="space-y-2">
+                  <Label>Birth Date</Label>
+                  <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+                </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Bank Account</Label>
                   <Select value={form.bank_account_id} onValueChange={(v) => setForm({ ...form, bank_account_id: v })}>
