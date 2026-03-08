@@ -314,7 +314,16 @@ export default function HRMEmployees() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {isOwner && stores.length > 1 && (
+                <Select value={filterStore} onValueChange={setFilterStore}>
+                  <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Store" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stores</SelectItem>
+                    {stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={filterDept} onValueChange={setFilterDept}>
                 <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Department" /></SelectTrigger>
                 <SelectContent>
