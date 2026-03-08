@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useDepartments, useBankAccounts } from '@/hooks/useHRM';
 import { useStaff } from '@/hooks/useStaff';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useStores } from '@/hooks/useStores';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
