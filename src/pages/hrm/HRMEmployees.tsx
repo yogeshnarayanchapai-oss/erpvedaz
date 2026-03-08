@@ -147,6 +147,7 @@ export default function HRMEmployees() {
       base_salary: form.base_salary ? parseFloat(form.base_salary) : null,
       bank_account_id: form.bank_account_id || null,
       notes: form.notes || null,
+      birth_date: form.birth_date || null,
       office_start_time: form.office_start_time || '09:00',
       office_end_time: form.office_end_time || '17:00',
       grace_minutes: form.grace_minutes ? parseInt(form.grace_minutes) : 30,
