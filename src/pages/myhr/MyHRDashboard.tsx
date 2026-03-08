@@ -38,8 +38,33 @@ export default function MyHRDashboard() {
   const activeAssets = myAssets?.filter(a => !a.returned_on).length || 0;
   const thisMonthPresent = myAttendance?.filter(a => a.status === 'Present').length || 0;
 
+  // Check if today is the employee's birthday
+  const { data: employeeLink } = useUserEmployeeLink(profile?.id || null);
+  const { data: isBirthday } = useQuery({
+    queryKey: ['my-birthday-check', employeeLink?.id],
+    queryFn: async () => {
+      if (!employeeLink?.id) return false;
+      const { data } = await supabase
+        .from('employees')
+        .select('birth_date')
+        .eq('id', employeeLink.id)
+        .single();
+      if (!data?.birth_date) return false;
+      const bd = new Date(data.birth_date);
+      const today = new Date();
+      return bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
+    },
+    enabled: !!employeeLink?.id,
+    staleTime: 1000 * 60 * 60, // cache 1hr
+  });
+
   return (
     <div className="space-y-6">
+        {/* Birthday Wish */}
+        {isBirthday && profile?.name && (
+          <BirthdayBanner names={[profile.name]} isSelf />
+        )}
+
         <div>
           <h1 className="text-2xl font-bold">Welcome, {profile?.name}</h1>
           <p className="text-muted-foreground">Your HR self-service portal</p>
