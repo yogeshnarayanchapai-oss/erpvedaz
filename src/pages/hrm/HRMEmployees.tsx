@@ -175,6 +175,7 @@ export default function HRMEmployees() {
       base_salary: emp.base_salary?.toString() || '',
       bank_account_id: emp.bank_account_id || '',
       notes: emp.notes || '',
+      birth_date: emp.birth_date || '',
       office_start_time: emp.office_start_time?.slice(0, 5) || '09:00',
       office_end_time: emp.office_end_time?.slice(0, 5) || '17:00',
       grace_minutes: emp.grace_minutes?.toString() || '30',
