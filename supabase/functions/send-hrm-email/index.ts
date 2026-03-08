@@ -2,7 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
+// Resend sandbox restriction: can only send to the verified account email
+// Until a custom domain is verified at resend.com/domains, all emails go to the owner
+const SANDBOX_EMAIL = "yogeshnarayanchapai@gmail.com";
+
 async function sendEmail(to: string[], subject: string, html: string) {
+  // In sandbox mode, redirect all emails to the verified owner email
+  // Once you verify a domain, remove this override and update the 'from' address
+  const safeRecipients = to.map(email => SANDBOX_EMAIL);
+  const uniqueRecipients = [...new Set(safeRecipients)];
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -11,8 +20,8 @@ async function sendEmail(to: string[], subject: string, html: string) {
     },
     body: JSON.stringify({
       from: "HR System <onboarding@resend.dev>",
-      to,
-      subject,
+      to: uniqueRecipients,
+      subject: `[To: ${to.join(', ')}] ${subject}`,
       html,
     }),
   });
