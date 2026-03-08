@@ -599,10 +599,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/marketing/ads"
           isLoading={adsLoading}
           metrics={[
-            { label: 'Total Ads (USD)', value: `$${marketingMetrics.totalRefSpendUSD.toLocaleString()}`, color: 'text-purple-600' },
+            { label: 'Total Ads (USD)', value: `$${Math.round(marketingMetrics.totalRefSpendUSD).toLocaleString()}`, color: 'text-purple-600' },
             { label: 'Confirmed Orders', value: salesMetrics.confirmedOrders },
             { label: 'Delivery Queue', value: `${deliveryMetrics.pendingWork} / ${deliveryMetrics.totalWork}` },
-            { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
+            { label: 'Total Sales', value: `₹${Math.round(salesMetrics.totalSales).toLocaleString()}` },
           ]}
         />
 
