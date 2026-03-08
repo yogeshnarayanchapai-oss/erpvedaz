@@ -81,16 +81,21 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      const mergeStore = (store: any, access_level: string, store_role: AppRole | null): Store => ({
-        id: store.id,
-        name: store.name,
-        slug: store.slug,
-        logo_url: store.logo_url || null,
-        primary_color: store.primary_color,
-        is_active: store.is_active,
-        access_level,
-        store_role,
-      });
+      const mergeStore = (store: any, access_level: string, store_role: AppRole | null): Store => {
+        // Prefer branding logo over store logo
+        const brandingLogo = store.branding?.[0]?.logo_url || store.branding?.logo_url || null;
+        const logoUrl = store.logo_url || brandingLogo;
+        return {
+          id: store.id,
+          name: store.name,
+          slug: store.slug,
+          logo_url: logoUrl,
+          primary_color: store.primary_color,
+          is_active: store.is_active,
+          access_level,
+          store_role,
+        };
+      };
 
       const storesWithAccess: Store[] = [];
       
