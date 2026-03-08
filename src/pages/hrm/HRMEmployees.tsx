@@ -56,6 +56,7 @@ export default function HRMEmployees() {
     base_salary: '',
     bank_account_id: '',
     notes: '',
+    birth_date: '',
     office_start_time: '09:00',
     office_end_time: '17:00',
     grace_minutes: '30',
