@@ -279,20 +279,27 @@ export function useDeleteBankAccount() {
 }
 
 // Employees
-export function useEmployees() {
+export function useEmployees(overrideStoreId?: string) {
   const storeId = useCurrentStoreId();
   const filterByStore = useIsModuleStoreWise('hrm');
 
   return useQuery({
-    queryKey: ['employees', storeId, filterByStore],
+    queryKey: ['employees', storeId, filterByStore, overrideStoreId],
     queryFn: async () => {
       let query = supabase
         .from('employees')
         .select(`*, departments:department_id(name), hr_bank_accounts:bank_account_id(bank_name, account_number), profiles:user_id(id, name, email)`)
         .order('full_name');
-      if (filterByStore && storeId) {
+      
+      // If an explicit store filter is provided, use it
+      if (overrideStoreId && overrideStoreId !== 'all') {
+        query = query.eq('store_id', overrideStoreId);
+      } else if (!overrideStoreId && filterByStore && storeId) {
+        // Default behavior: filter by current store if module is store-wise
         query = query.eq('store_id', storeId);
       }
+      // If overrideStoreId === 'all', no store filter applied
+      
       const { data, error } = await query;
       if (error) throw error;
       return data as (Employee & { profiles?: { id: string; name: string; email: string } | null })[];

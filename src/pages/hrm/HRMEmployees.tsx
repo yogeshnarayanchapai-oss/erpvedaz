@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useDepartments, useBankAccounts } from '@/hooks/useHRM';
 import { useStaff } from '@/hooks/useStaff';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useStores } from '@/hooks/useStores';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -19,10 +21,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function HRMEmployees() {
-  const { data: employees = [], isLoading } = useEmployees();
+  const [filterStore, setFilterStore] = useState('all');
+  const { data: employees = [], isLoading } = useEmployees(filterStore === 'all' ? undefined : filterStore);
   const { data: departments = [] } = useDepartments();
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: allUsers = [] } = useStaff(undefined, true, undefined, true);
+  const { data: stores = [] } = useStores();
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'OWNER';
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
@@ -308,7 +314,16 @@ export default function HRMEmployees() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {isOwner && stores.length > 1 && (
+                <Select value={filterStore} onValueChange={setFilterStore}>
+                  <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Store" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stores</SelectItem>
+                    {stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={filterDept} onValueChange={setFilterDept}>
                 <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Department" /></SelectTrigger>
                 <SelectContent>
