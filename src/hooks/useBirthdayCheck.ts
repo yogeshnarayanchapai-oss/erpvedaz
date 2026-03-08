@@ -47,7 +47,7 @@ export function useBirthdayCheck() {
       return { selfName, others };
     },
     enabled: !!storeId && !!profile?.id,
-    staleTime: 1000 * 60 * 60, // 1 hour cache
+    staleTime: 1000 * 60 * 60 * 24, // 24 hour cache – check once per day
   });
 
   return {
