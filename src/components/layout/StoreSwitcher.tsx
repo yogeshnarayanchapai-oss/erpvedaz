@@ -56,6 +56,8 @@ export function StoreSwitcher() {
             src={currentStore.logo_url}
             alt={currentStore.name}
             className="h-5 w-5 rounded object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div
