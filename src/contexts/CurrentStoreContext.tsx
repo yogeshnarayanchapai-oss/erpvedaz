@@ -58,7 +58,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
           store_id,
           access_level,
           store_role,
-          store:stores!inner(id, name, slug, logo_url, primary_color, is_active)
+          store:stores!inner(id, name, slug, logo_url, primary_color, is_active, branding(logo_url))
         `)
         .eq('user_id', user.id)
         .eq('is_active', true);
@@ -68,7 +68,7 @@ export function CurrentStoreProvider({ children }: { children: React.ReactNode }
       if (isOwner) {
         const { data: allStores } = await supabase
           .from('stores')
-          .select('id, name, slug, logo_url, primary_color, is_active')
+          .select('id, name, slug, logo_url, primary_color, is_active, branding(logo_url)')
           .eq('is_active', true)
           .order('name');
         allStoresData = allStores || [];
