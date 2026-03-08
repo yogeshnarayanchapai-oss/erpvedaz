@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useEmployees, useLeaveRequests, useNotices } from '@/hooks/useHRM';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +16,7 @@ import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 
 export default function HRDashboard() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: employees = [] } = useEmployees();
   const { data: leaveRequests = [] } = useLeaveRequests();
   const { data: notices = [] } = useNotices();
@@ -28,6 +30,15 @@ export default function HRDashboard() {
     .filter(l => l.status === 'Pending')
     .slice(0, 5);
 
+  const myBirthdayToday = useMemo(() => {
+    if (!profile?.id) return false;
+    const me = employees.find(e => e.user_id === profile.id);
+    if (!me?.birth_date) return false;
+    const today = new Date();
+    const bd = new Date(me.birth_date);
+    return bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
+  }, [employees, profile?.id]);
+
   const birthdayStaffToday = useMemo(() => {
     const today = new Date();
     const m = today.getMonth() + 1;
@@ -35,14 +46,18 @@ export default function HRDashboard() {
     return employees
       .filter(e => {
         if (!e.birth_date || e.status !== 'Active') return false;
+        if (e.user_id === profile?.id) return false;
         const bd = new Date(e.birth_date);
         return bd.getMonth() + 1 === m && bd.getDate() === d;
       })
       .map(e => e.full_name);
-  }, [employees]);
+  }, [employees, profile?.id]);
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {myBirthdayToday && profile?.name && (
+        <BirthdayBanner names={[profile.name]} isSelf />
+      )}
       {birthdayStaffToday.length > 0 && (
         <BirthdayBanner names={birthdayStaffToday} />
       )}
