@@ -96,9 +96,12 @@ export default function AccountingDashboard() {
     },
   ];
 
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
         <div>
           <h1 className="text-xl md:text-3xl font-bold">Accounting Dashboard</h1>
           <p className="text-sm text-muted-foreground">Complete financial overview</p>

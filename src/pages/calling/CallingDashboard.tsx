@@ -216,8 +216,12 @@ export default function CallingDashboard() {
   };
 
 
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
+
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
+      {isSelfBirthday && <BirthdayBanner names={[selfName]} isSelf />}
+      {otherBirthdayNames.length > 0 && <BirthdayBanner names={otherBirthdayNames} />}
       {/* Mobile-optimized header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

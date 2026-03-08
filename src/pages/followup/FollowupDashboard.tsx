@@ -27,6 +27,7 @@ type TagFilter = 'ALL' | 'TRF' | 'NO_TAG';
 type ViewFilter = 'ALL' | 'REDIRECTED';
 
 export default function FollowupDashboard() {
+  const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
   const today = new Date();
   const [dateRange, setDateRange] = useState({
     from: startOfDay(today),
