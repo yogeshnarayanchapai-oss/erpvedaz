@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useBirthdayCheck } from '@/hooks/useBirthdayCheck';
+import { BirthdayBanner } from '@/components/hrm/BirthdayBanner';
 import { useLeads, useUpdateLeadStatus } from '@/hooks/useLeads';
 import { useProducts } from '@/hooks/useProducts';
 import { useCreateCallLog } from '@/hooks/useCallLogs';
