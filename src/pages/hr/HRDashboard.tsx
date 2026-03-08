@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useEmployees, useLeaveRequests, useNotices } from '@/hooks/useHRM';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
