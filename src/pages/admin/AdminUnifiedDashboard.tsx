@@ -501,7 +501,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Yesterday P/L</p>
                 <p className={`text-sm md:text-base font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
+                  ₹{Math.round(inventoryMetrics.yesterdayProfit).toLocaleString()}
                 </p>
               </div>
             </div>
