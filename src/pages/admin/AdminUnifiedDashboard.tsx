@@ -433,7 +433,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Total Balance</p>
                 <p className="text-sm md:text-base font-bold text-green-600 truncate">
-                  ₹{accountingMetricsComputed.totalAvailableBalance.toLocaleString()}
+                  ₹{Math.round(accountingMetricsComputed.totalAvailableBalance).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -501,7 +501,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Yesterday P/L</p>
                 <p className={`text-sm md:text-base font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ₹{inventoryMetrics.yesterdayProfit.toLocaleString()}
+                  ₹{Math.round(inventoryMetrics.yesterdayProfit).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -542,7 +542,7 @@ const hrmMetrics = useMemo(() => {
             { label: 'Leads', value: salesMetrics.totalLeads },
             { label: 'Conversion', value: `${salesMetrics.conversionRate}%`, color: 'text-green-600' },
             { label: 'Confirmed', value: salesMetrics.confirmedOrders },
-            { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
+            { label: 'Total Sales', value: `₹${Math.round(salesMetrics.totalSales).toLocaleString()}` },
           ]}
         />
 
@@ -569,10 +569,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/accounting/dashboard-new"
           isLoading={accountsLoading || partyTxLoading}
           metrics={[
-            { label: 'Total Balance', value: `₹${accountingMetricsComputed.totalAvailableBalance.toLocaleString()}` },
-            { label: 'Daybook', value: `₹${accountingMetricsComputed.daybook.toLocaleString()}`, color: accountingMetricsComputed.daybook >= 0 ? 'text-green-600' : 'text-red-600' },
-            { label: 'Receivable', value: `₹${accountingMetricsComputed.receivables.toLocaleString()}`, color: 'text-blue-600' },
-            { label: 'Payable', value: `₹${accountingMetricsComputed.payables.toLocaleString()}`, color: 'text-orange-600' },
+            { label: 'Total Balance', value: `₹${Math.round(accountingMetricsComputed.totalAvailableBalance).toLocaleString()}` },
+            { label: 'Daybook', value: `₹${Math.round(accountingMetricsComputed.daybook).toLocaleString()}`, color: accountingMetricsComputed.daybook >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: 'Receivable', value: `₹${Math.round(accountingMetricsComputed.receivables).toLocaleString()}`, color: 'text-blue-600' },
+            { label: 'Payable', value: `₹${Math.round(accountingMetricsComputed.payables).toLocaleString()}`, color: 'text-orange-600' },
           ]}
         />
 
@@ -584,10 +584,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/inventory/stock-summary"
           isLoading={inventoryLoading || plLoading}
           metrics={[
-            { label: 'Stock Units', value: inventoryMetrics.totalStock.toLocaleString() },
-            { label: 'Stock Value', value: `₹${inventoryMetrics.totalValue.toLocaleString()}` },
+            { label: 'Stock Units', value: Math.round(inventoryMetrics.totalStock).toLocaleString() },
+            { label: 'Stock Value', value: `₹${Math.round(inventoryMetrics.totalValue).toLocaleString()}` },
             { label: 'Low Stock', value: inventoryMetrics.lowStock, color: inventoryMetrics.lowStock > 0 ? 'text-orange-600' : undefined },
-            { label: "Yesterday P/L", value: `₹${inventoryMetrics.yesterdayProfit.toLocaleString()}`, color: inventoryMetrics.yesterdayProfit >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: "Yesterday P/L", value: `₹${Math.round(inventoryMetrics.yesterdayProfit).toLocaleString()}`, color: inventoryMetrics.yesterdayProfit >= 0 ? 'text-green-600' : 'text-red-600' },
           ]}
         />
 
@@ -599,10 +599,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/marketing/ads"
           isLoading={adsLoading}
           metrics={[
-            { label: 'Total Ads (USD)', value: `$${marketingMetrics.totalRefSpendUSD.toLocaleString()}`, color: 'text-purple-600' },
+            { label: 'Total Ads (USD)', value: `$${Math.round(marketingMetrics.totalRefSpendUSD).toLocaleString()}`, color: 'text-purple-600' },
             { label: 'Confirmed Orders', value: salesMetrics.confirmedOrders },
             { label: 'Delivery Queue', value: `${deliveryMetrics.pendingWork} / ${deliveryMetrics.totalWork}` },
-            { label: 'Total Sales', value: `₹${salesMetrics.totalSales.toLocaleString()}` },
+            { label: 'Total Sales', value: `₹${Math.round(salesMetrics.totalSales).toLocaleString()}` },
           ]}
         />
 
