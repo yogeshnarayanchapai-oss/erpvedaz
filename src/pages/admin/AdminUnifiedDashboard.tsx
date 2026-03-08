@@ -584,10 +584,10 @@ const hrmMetrics = useMemo(() => {
           navigateTo="/admin/inventory/stock-summary"
           isLoading={inventoryLoading || plLoading}
           metrics={[
-            { label: 'Stock Units', value: inventoryMetrics.totalStock.toLocaleString() },
-            { label: 'Stock Value', value: `₹${inventoryMetrics.totalValue.toLocaleString()}` },
+            { label: 'Stock Units', value: Math.round(inventoryMetrics.totalStock).toLocaleString() },
+            { label: 'Stock Value', value: `₹${Math.round(inventoryMetrics.totalValue).toLocaleString()}` },
             { label: 'Low Stock', value: inventoryMetrics.lowStock, color: inventoryMetrics.lowStock > 0 ? 'text-orange-600' : undefined },
-            { label: "Yesterday P/L", value: `₹${inventoryMetrics.yesterdayProfit.toLocaleString()}`, color: inventoryMetrics.yesterdayProfit >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: "Yesterday P/L", value: `₹${Math.round(inventoryMetrics.yesterdayProfit).toLocaleString()}`, color: inventoryMetrics.yesterdayProfit >= 0 ? 'text-green-600' : 'text-red-600' },
           ]}
         />
 
