@@ -433,7 +433,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Total Balance</p>
                 <p className="text-sm md:text-base font-bold text-green-600 truncate">
-                  ₹{accountingMetricsComputed.totalAvailableBalance.toLocaleString()}
+                  ₹{Math.round(accountingMetricsComputed.totalAvailableBalance).toLocaleString()}
                 </p>
               </div>
             </div>
