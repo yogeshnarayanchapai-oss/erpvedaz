@@ -805,16 +805,15 @@ export default function HRMEmployeeDetail() {
       y += lines.length * 3.5;
     });
 
-    y += 1;
-
-    // ---- SIGNATURE ----
+    // ---- SIGNATURE (positioned near bottom, but not stretching content) ----
+    const sigY = Math.max(y + 20, pageHeight - 30); // at least 20mm gap after remarks, but near page bottom
     doc.setDrawColor(203, 213, 225);
-    doc.line(margin.left, y + 2, 74, y + 2);
-    doc.line(pageWidth - 74, y + 2, pageWidth - margin.left, y + 2);
+    doc.line(margin.left, sigY, 74, sigY);
+    doc.line(pageWidth - 74, sigY, pageWidth - margin.left, sigY);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('Employee Signature', margin.left, y + 6);
-    doc.text('Manager Signature', pageWidth - 74, y + 6);
+    doc.text('Employee Signature', margin.left, sigY + 4);
+    doc.text('Manager Signature', pageWidth - 74, sigY + 4);
 
     // Footer
     doc.setFontSize(6.5);
