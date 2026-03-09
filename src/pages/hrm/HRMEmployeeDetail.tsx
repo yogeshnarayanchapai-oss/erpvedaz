@@ -456,28 +456,31 @@ export default function HRMEmployeeDetail() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Overall Performance Score', 14, y);
+    doc.text('Overall Performance Score', margin.left, y);
     y += 3;
 
     const getRatingColor = (r: string): [number, number, number] => {
       if (r === 'Excellent') return [22, 163, 74];
       if (r === 'Good') return [37, 99, 235];
       if (r === 'Medium') return [234, 179, 8];
+      if (r === 'No Rating') return [148, 163, 184];
       return [220, 38, 38];
     };
 
     const promoColor: [number, number, number] = reportStats.promotionSuggestion === 'Highly Recommended'
       ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : [220, 38, 38];
 
+    const salesLabel = reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)';
+
     autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { ...lightHead },
       styles: { ...lightBody },
-      head: [['Category', 'Rating', 'Score', 'Total (/100)', 'Promotion Suggestion']],
+      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore})`, 'Promotion Suggestion']],
       body: [
         ['Attendance (30)', reportStats.attendanceRating, `${reportStats.attendanceScore}/30`, '', ''],
-        ['Sales (40)', reportStats.salesRating, `${reportStats.conversionScore}/40`, '', ''],
+        [salesLabel, reportStats.salesRating, reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`, '', ''],
         ['Tasks (30)', reportStats.taskRating, `${reportStats.taskScore}/30`, '', ''],
       ],
       didParseCell: (data: any) => {
@@ -485,25 +488,17 @@ export default function HRMEmployeeDetail() {
           data.cell.styles.textColor = getRatingColor(data.cell.raw);
           data.cell.styles.fontStyle = 'bold';
         }
-        // Total score on first row col 3
         if (data.section === 'body' && data.row.index === 0 && data.column.index === 3) {
-          data.cell.text = [`${reportStats.totalScore}/100`];
+          data.cell.text = [`${reportStats.totalScore}/${reportStats.maxScore}`];
           data.cell.styles.fontStyle = 'bold';
         }
-        // Promotion on first row col 4
         if (data.section === 'body' && data.row.index === 0 && data.column.index === 4) {
           data.cell.text = [reportStats.promotionSuggestion];
           data.cell.styles.textColor = promoColor;
           data.cell.styles.fontStyle = 'bold';
         }
       },
-      didDrawCell: (data: any) => {
-        // Merge visual for total/promotion columns
-        if (data.section === 'body' && data.row.index === 0 && (data.column.index === 3 || data.column.index === 4)) {
-          // Already handled above
-        }
-      },
-      margin: { left: 14, right: 14 },
+      margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
