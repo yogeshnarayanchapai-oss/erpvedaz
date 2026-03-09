@@ -482,8 +482,14 @@ export default function AccountsManagement() {
 
           {/* Assets Table */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Asset Transactions</CardTitle>
+              <Input
+                placeholder="Search by description or reference..."
+                value={assetSearch}
+                onChange={(e) => setAssetSearch(e.target.value)}
+                className="max-w-xs"
+              />
             </CardHeader>
             <CardContent>
               {assetsLoading ? (
