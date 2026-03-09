@@ -26,6 +26,7 @@ import {
   getSignedDocumentUrl,
 } from '@/hooks/useEmployeeDocuments';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMyAssets, AssetAssignment } from '@/hooks/useAssets';
 
 const DOC_TYPE_OPTIONS: { value: EmployeeDocType; label: string }[] = [
   { value: 'PROFILE_PHOTO', label: 'Profile Photo' },
