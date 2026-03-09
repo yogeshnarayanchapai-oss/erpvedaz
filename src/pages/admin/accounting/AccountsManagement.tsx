@@ -573,14 +573,30 @@ export default function AccountsManagement() {
                           NPR {asset.amount.toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openAssignDialog(asset)}
-                            title="Assign to Employee"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
+                          {(() => {
+                            const assignment = getAssignmentForAsset(asset.id);
+                            if (assignment) {
+                              return (
+                                <span
+                                  className="cursor-pointer px-2 py-1 rounded bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/80 transition-colors"
+                                  onDoubleClick={() => openAssignDialog(asset)}
+                                  title="Double-click to reassign"
+                                >
+                                  {assignment.employee_name}
+                                </span>
+                              );
+                            }
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openAssignDialog(asset)}
+                                title="Assign to Employee"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            );
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
