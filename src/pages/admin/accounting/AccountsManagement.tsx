@@ -46,6 +46,34 @@ export default function AccountsManagement() {
   const { data: assets = [], isLoading: assetsLoading } = useAccountingAssets();
   const { data: totalAssetValue = 0 } = useAccountingAssetTotal();
 
+  const displayedAccounts = hideZeroBalance
+    ? accounts.filter(a => (a.current_balance ?? 0) !== 0)
+    : accounts;
+
+  const handleExportPDF = () => {
+    const positiveAccounts = accounts.filter(a => (a.current_balance ?? 0) > 0);
+    if (positiveAccounts.length === 0) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Accounts Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy')}`, 14, 22);
+    autoTable(doc, {
+      startY: 28,
+      head: [['Account Name', 'Type', 'Account Number', 'Opening Balance', 'Current Balance', 'Status']],
+      body: positiveAccounts.map(a => [
+        a.name + (a.is_default ? ' (Default)' : ''),
+        a.type,
+        a.account_number || '-',
+        `NPR ${(a.opening_balance ?? 0).toLocaleString()}`,
+        `NPR ${(a.current_balance ?? 0).toLocaleString()}`,
+        a.is_active ? 'Active' : 'Inactive',
+      ]),
+      foot: [['', '', '', 'Total:', `NPR ${positiveAccounts.reduce((s, a) => s + (a.current_balance ?? 0), 0).toLocaleString()}`, '']],
+    });
+    doc.save('accounts-report.pdf');
+  };
+
   const openDialog = (account?: Account) => {
     if (account) {
       setEditingAccount(account);
