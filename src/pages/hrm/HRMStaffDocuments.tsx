@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal, CreditCard } from 'lucide-react';
+import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal, CreditCard, Package } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ import {
   getSignedDocumentUrl,
 } from '@/hooks/useEmployeeDocuments';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMyAssets, AssetAssignment } from '@/hooks/useAssets';
 
 const DOC_TYPE_OPTIONS: { value: EmployeeDocType; label: string }[] = [
   { value: 'PROFILE_PHOTO', label: 'Profile Photo' },
@@ -69,6 +70,7 @@ export default function HRMStaffDocuments() {
   
   const verifyMutation = useVerifyDocument();
   const deleteMutation = useDeleteDocument();
+  const { data: myAssets = [], isLoading: loadingMyAssets } = useMyAssets();
   
   // Get existing doc by type for my documents
   const getMyDocByType = (type: string): EmployeeDocument | undefined => {
@@ -145,6 +147,10 @@ export default function HRMStaffDocuments() {
           <TabsTrigger value="bank" className="gap-2">
             <CreditCard className="h-4 w-4" />
             My Bank
+          </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-2">
+            <Package className="h-4 w-4" />
+            My Assets
           </TabsTrigger>
         </TabsList>
 
@@ -412,6 +418,65 @@ export default function HRMStaffDocuments() {
         {/* My Bank Tab */}
         <TabsContent value="bank" className="space-y-6">
           <MyBankAccountsCard />
+        </TabsContent>
+
+        {/* My Assets Tab */}
+        <TabsContent value="assets" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                My Assigned Assets
+              </CardTitle>
+              <CardDescription>
+                Assets currently assigned to you
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingMyAssets ? (
+                <Skeleton className="h-48" />
+              ) : myAssets.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Assets Assigned</h3>
+                  <p className="text-muted-foreground">You don't have any assets assigned to you yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Asset Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Assigned On</TableHead>
+                      <TableHead>Condition</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {myAssets.map((assignment: any) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell className="font-mono text-sm">{assignment.assets?.asset_code || '-'}</TableCell>
+                        <TableCell className="font-medium">{assignment.assets?.name || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{assignment.assets?.category || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>{assignment.assigned_on ? format(new Date(assignment.assigned_on), 'dd MMM yyyy') : '-'}</TableCell>
+                        <TableCell>{assignment.condition_on_assign || '-'}</TableCell>
+                        <TableCell>
+                          {assignment.returned_on ? (
+                            <Badge variant="secondary">Returned</Badge>
+                          ) : (
+                            <Badge className="bg-primary/10 text-primary border-primary/20">Active</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
