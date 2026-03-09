@@ -424,13 +424,14 @@ export default function HRMEmployeeDetail() {
     // Light theme styles
     const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 9 };
     const lightBody = { fontSize: 9, textColor: [51, 65, 85] as [number, number, number] };
-    const sectionGap = 7;
+    const sectionGap = 8;
+    const margin = { left: 18, right: 18 };
 
     // ---- STAFF INFO ----
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Staff Information', 14, y);
+    doc.text('Staff Information', margin.left, y);
     y += 3;
 
     autoTable(doc, {
@@ -447,7 +448,7 @@ export default function HRMEmployeeDetail() {
         2: { fontStyle: 'bold', cellWidth: 30 },
         3: { cellWidth: 55 },
       },
-      margin: { left: 14, right: 14 },
+      margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
