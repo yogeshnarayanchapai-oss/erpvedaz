@@ -505,7 +505,6 @@ export default function AccountsManagement() {
                       <TableHead>Account</TableHead>
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -521,11 +520,6 @@ export default function AccountsManagement() {
                         <TableCell className="text-muted-foreground">{asset.reference_no || '-'}</TableCell>
                         <TableCell className="text-right font-semibold text-emerald-600">
                           NPR {asset.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={asset.is_cleared ? 'default' : 'secondary'}>
-                            {asset.is_cleared ? 'Cleared' : 'Pending'}
-                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
