@@ -203,14 +203,14 @@ export function useMyTasks(dateFrom?: string, dateTo?: string) {
 }
 
 export function useTaskStats(dateFrom?: string, dateTo?: string) {
-  const storeId = useCurrentStoreId();
+  const { storeId, filterByStore } = useModuleStoreFilter('task_management');
 
   return useQuery({
-    queryKey: ['task-stats', storeId, dateFrom, dateTo],
+    queryKey: ['task-stats', storeId, filterByStore, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase.from('tasks').select('id, status, due_date, completed_date');
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 
