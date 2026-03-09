@@ -180,38 +180,70 @@ export default function HRMEmployeeDetail() {
     enabled: !!employee?.user_id,
   });
 
-  // ---- REPORT DATA: leads/orders for report month (sales & conversion) ----
-  const { data: reportLeads } = useQuery({
-    queryKey: ['employee-report-leads', employee?.user_id, reportDateRange.from, reportDateRange.to],
+  // ---- REPORT DATA: leads via lead_transfers (matching Staff Leaderboard) ----
+  const { data: reportLeadTransfers } = useQuery({
+    queryKey: ['employee-report-lead-transfers', employee?.user_id, reportDateRange.from, reportDateRange.to],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('id, status, order_id')
-        .eq('assigned_to_user_id', employee!.user_id!)
-        .gte('date', reportDateRange.from)
-        .lte('date', reportDateRange.to);
-      if (error) throw error;
-      return data;
+      const dateFromStart = `${reportDateRange.from}T00:00:00+05:45`;
+      const dateToEnd = `${reportDateRange.to}T23:59:59+05:45`;
+      const allTransfers: any[] = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('lead_transfers')
+          .select('id, lead_id, to_user_id, transferred_at')
+          .eq('to_user_id', employee!.user_id!)
+          .gte('transferred_at', dateFromStart)
+          .lte('transferred_at', dateToEnd)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allTransfers.push(...data);
+          hasMore = data.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allTransfers;
     },
     enabled: !!employee?.user_id,
   });
 
+  // ---- REPORT DATA: orders via sales_person_id (matching Staff Leaderboard) ----
   const { data: reportOrders } = useQuery({
     queryKey: ['employee-report-orders', employee?.user_id, reportDateRange.from, reportDateRange.to],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, amount, order_status')
-        .eq('created_by_staff_id', employee!.user_id!)
-        .gte('order_date', reportDateRange.from + 'T00:00:00')
-        .lte('order_date', reportDateRange.to + 'T23:59:59');
-      if (error) throw error;
-      return data;
+      const allOrders: any[] = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, amount, order_status, delivery_location, inside_delivery_status')
+          .eq('is_deleted', false)
+          .eq('sales_person_id', employee!.user_id!)
+          .gte('order_date', `${reportDateRange.from}T00:00:00`)
+          .lte('order_date', `${reportDateRange.to}T23:59:59`)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allOrders.push(...data);
+          hasMore = data.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allOrders;
     },
     enabled: !!employee?.user_id,
   });
 
-  // Compute report stats
+  // Compute report stats (matching Staff Leaderboard logic)
   const reportStats = useMemo(() => {
     const att = reportAttendance || [];
     const present = att.filter(r => r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late').length;
@@ -219,6 +251,7 @@ export default function HRMEmployeeDetail() {
     const absent = att.filter(r => r.status === 'Absent').length;
     const leave = att.filter(r => r.status === 'Leave').length;
     const totalLateMinutes = att.reduce((sum, r) => sum + ((r as any).late_minutes || 0), 0);
+    const workingDays = att.filter(r => !['Saturday', 'Holiday'].includes(r.status)).length;
     const totalDays = att.length;
 
     const tasks = reportTasks || [];
@@ -235,24 +268,63 @@ export default function HRMEmployeeDetail() {
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
 
-    const leads = reportLeads || [];
-    const totalLeads = leads.length;
-    const confirmedLeads = leads.filter(l => l.status === 'CONFIRMED' || l.order_id).length;
-    const conversionRate = totalLeads > 0 ? ((confirmedLeads / totalLeads) * 100).toFixed(1) : '0';
+    // Leaderboard-matching sales logic
+    const transfers = reportLeadTransfers || [];
+    const totalLeads = transfers.length;
 
     const orders = reportOrders || [];
-    const totalSales = orders
-      .filter(o => o.order_status && !['CANCELLED', 'RETURNED'].includes(o.order_status))
-      .reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrdersCount = orders.filter(o => o.order_status && !['CANCELLED', 'RETURNED'].includes(o.order_status)).length;
+    let confirmedOrders = 0;
+    let vdNotDeliver = 0;
+    let totalSales = 0;
+    let totalOrdersCount = 0;
+
+    orders.forEach(order => {
+      totalOrdersCount++;
+      if (['DELIVERED', 'DISPATCHED', 'CONFIRMED'].includes(order.order_status)) {
+        confirmedOrders++;
+        totalSales += order.amount || 0;
+        const isValley = order.delivery_location === 'INSIDE_VALLEY';
+        const isNotDelivered = order.inside_delivery_status !== 'DELIVERED';
+        if (isValley && isNotDelivered) {
+          vdNotDeliver++;
+        }
+      }
+    });
+
+    const effectiveOrders = confirmedOrders - vdNotDeliver;
+    const conversionRate = totalLeads > 0 ? ((effectiveOrders / totalLeads) * 100) : 0;
+
+    // ---- SCORING OUT OF 100 ----
+    // Attendance: 30 points max
+    const attendanceRate = workingDays > 0 ? (present / workingDays) : 0;
+    const latenessPenalty = Math.min(late * 1, 10); // -1 per late day, max -10
+    const attendanceScore = Math.max(0, Math.round(attendanceRate * 30) - latenessPenalty);
+
+    // Sales: 40 points max
+    const conversionScore = Math.min(40, Math.round(conversionRate * 0.8)); // 50% conv = 40 pts
+
+    // Tasks: 30 points max
+    const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
+    const taskOnTimeRate = completedTasks > 0 ? (onTimeTasks / completedTasks) : 0;
+    const taskScore = Math.round(taskCompletionRate * 15 + taskOnTimeRate * 15);
+
+    const totalScore = Math.min(100, attendanceScore + conversionScore + taskScore);
+
+    // Promotion suggestion
+    let promotionSuggestion: 'Good' | 'Medium' | 'Bad';
+    if (totalScore >= 75) promotionSuggestion = 'Good';
+    else if (totalScore >= 50) promotionSuggestion = 'Medium';
+    else promotionSuggestion = 'Bad';
 
     return {
-      totalDays, present, late, absent, leave, totalLateMinutes,
+      totalDays, workingDays, present, late, absent, leave, totalLateMinutes,
       totalTasks, completedTasks, onTimeTasks, overdueTasks,
-      totalLeads, confirmedLeads, conversionRate,
+      totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders,
+      conversionRate: conversionRate.toFixed(1),
       totalSales, totalOrdersCount,
+      attendanceScore, conversionScore, taskScore, totalScore, promotionSuggestion,
     };
-  }, [reportAttendance, reportTasks, reportLeads, reportOrders]);
+  }, [reportAttendance, reportTasks, reportLeadTransfers, reportOrders]);
 
   // Export PDF
   const handleExportReport = () => {
