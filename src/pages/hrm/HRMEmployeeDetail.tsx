@@ -629,36 +629,40 @@ export default function HRMEmployeeDetail() {
     const remarks: string[] = [];
 
     // Attendance remarks
-    if (reportStats.attendanceRating === 'Excellent') {
-      remarks.push('• Attendance: Excellent presence record with no late arrivals. Keep it up!');
+    if (reportStats.attendanceRating === 'No Rating') {
+      remarks.push('- Attendance: No attendance data available for this period. Rating excluded from overall score.');
+    } else if (reportStats.attendanceRating === 'Excellent') {
+      remarks.push('- Attendance: Excellent presence record with no late arrivals. Keep it up!');
     } else if (reportStats.attendanceRating === 'Good' && reportStats.totalLateMinutes > 0) {
-      remarks.push(`• Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
+      remarks.push(`- Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
     } else if (reportStats.attendanceRating === 'Low') {
-      remarks.push(`• Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
+      remarks.push(`- Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
     }
 
     // Sales remarks
     if (reportStats.salesRating === 'No Rating') {
-      remarks.push('• Sales: No sales data available for this period. Rating excluded from overall score.');
+      remarks.push('- Sales: No sales data available for this period. Rating excluded from overall score.');
     } else if (reportStats.salesRating === 'Excellent') {
-      remarks.push(`• Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
+      remarks.push(`- Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
     } else if (reportStats.salesRating === 'Good') {
-      remarks.push(`• Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
+      remarks.push(`- Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
     } else if (reportStats.salesRating === 'Medium') {
-      remarks.push(`• Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
+      remarks.push(`- Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
     } else {
-      remarks.push(`• Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
+      remarks.push(`- Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
     }
 
     // Task remarks
-    if (reportStats.taskRating === 'Excellent') {
-      remarks.push('• Tasks: All tasks completed on time. Excellent task management.');
+    if (reportStats.taskRating === 'No Rating') {
+      remarks.push('- Tasks: No task data available for this period. Rating excluded from overall score.');
+    } else if (reportStats.taskRating === 'Excellent') {
+      remarks.push('- Tasks: All tasks completed on time. Excellent task management.');
     } else if (reportStats.taskRating === 'Good') {
-      remarks.push(`• Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
+      remarks.push(`- Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
     } else if (reportStats.taskRating === 'Medium') {
-      remarks.push(`• Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
+      remarks.push(`- Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
     } else {
-      remarks.push(`• Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
+      remarks.push(`- Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
     }
 
     // Promotion remark
