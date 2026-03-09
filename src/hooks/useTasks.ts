@@ -170,7 +170,7 @@ export function useTasks(filters?: TaskFilters) {
 
       return tasksWithIssues as Task[];
     },
-    enabled: !!storeId,
+    enabled: filterByStore ? !!storeId : true,
   });
 }
 
