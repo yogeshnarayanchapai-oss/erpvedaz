@@ -506,6 +506,7 @@ export default function AccountsManagement() {
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -526,6 +527,16 @@ export default function AccountsManagement() {
                             {asset.is_cleared ? 'Cleared' : 'Pending'}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openAssignDialog(asset)}
+                            title="Assign to Employee"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -535,6 +546,76 @@ export default function AccountsManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Assign Asset Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Asset to Employee</DialogTitle>
+          </DialogHeader>
+          {assigningAsset && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-md bg-muted">
+                <p className="font-medium">{assigningAsset.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  NPR {assigningAsset.amount.toLocaleString()} • {format(new Date(assigningAsset.date), 'dd MMM yyyy')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Employee *</Label>
+                <Select value={assignEmployeeId} onValueChange={setAssignEmployeeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp: any) => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Condition</Label>
+                <Select value={assignCondition} onValueChange={setAssignCondition}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Good">Good</SelectItem>
+                    <SelectItem value="Fair">Fair</SelectItem>
+                    <SelectItem value="Used">Used</SelectItem>
+                    <SelectItem value="New">New</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                  placeholder="Optional notes..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={handleAssignAsset}
+                  disabled={!assignEmployeeId || assignAssetMutation.isPending || createAssetMutation.isPending}
+                >
+                  {assignAssetMutation.isPending ? 'Assigning...' : 'Assign'}
+                </Button>
+                <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
