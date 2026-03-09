@@ -318,8 +318,19 @@ export function useCheckIn() {
 
           await supabase.from('notifications').insert(notifications);
 
-          // Send email notification to admin team
-          if (storeId) {
+          // Send email notification to admin team (only if email notifications enabled)
+          const emailEnabled = (() => {
+            try {
+              const stored = localStorage.getItem(`notification_preferences_${result.actor_id}`);
+              if (stored) {
+                const prefs = JSON.parse(stored);
+                return prefs.emailEnabled === true;
+              }
+            } catch {}
+            return false; // Default: off
+          })();
+
+          if (emailEnabled && storeId) {
             const adminEmails = await getAdminTeamEmails(storeId);
             if (adminEmails.length > 0) {
               await sendHRMEmail({
