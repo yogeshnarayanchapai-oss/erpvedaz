@@ -158,6 +158,21 @@ export default function HRMEmployeeDetail() {
     enabled: !!id,
   });
 
+  // ---- Company Info for PDF header ----
+  const { data: companyInfo } = useQuery({
+    queryKey: ['company-info-for-report', employee?.store_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_info')
+        .select('company_name, address, phone, email, logo_url, registration_no')
+        .eq('store_id', employee!.store_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee?.store_id,
+  });
+
   // ---- REPORT DATA: attendance for report month ----
   const { data: reportAttendance } = useAttendanceRecords(id, {
     from: reportDateRange.from,
