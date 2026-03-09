@@ -840,6 +840,123 @@ export default function HRMEmployeeDetail() {
       y += lines.length * 4;
     });
 
+
+    // ---- 3-MONTH TREND SECTION ----
+    if (y + 80 > pageHeight - 30) {
+      doc.addPage();
+      y = 20;
+    }
+
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('3-Month Performance Trend', margin.left, y);
+    y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
+      head: [['Month', 'Attendance', 'Sales', 'Tasks', 'Overall', 'Score']],
+      body: trendStats.map(m => [
+        m.label,
+        m.attendanceRating,
+        m.salesRating,
+        m.taskRating,
+        m.overallRating,
+        m.maxScore > 0 ? `${m.totalScore}/${m.maxScore} (${m.pct}%)` : 'N/A',
+      ]),
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index >= 1 && data.column.index <= 4) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      margin,
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+
+    // Mini bar chart
+    const chartX = margin.left + 10;
+    const chartW = pageWidth - margin.left * 2 - 20;
+    const chartH = 28;
+    const barGroupW = chartW / 3;
+    const maxBarH = chartH - 8;
+
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin.left, y, pageWidth - margin.left * 2, chartH + 10, 2, 2, 'F');
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Score %', margin.left + 2, y + 5);
+
+    const barColors: Record<string, [number, number, number]> = {
+      'Excellent': [22, 163, 74],
+      'Good': [37, 99, 235],
+      'Medium': [234, 179, 8],
+      'Low': [220, 38, 38],
+      'No Rating': [203, 213, 225],
+    };
+
+    trendStats.forEach((m, i) => {
+      const cx = chartX + i * barGroupW + barGroupW / 2;
+      const barW = 18;
+      const barH = m.maxScore > 0 ? (m.pct / 100) * maxBarH : 2;
+      const barY = y + chartH - barH + 2;
+
+      const color = barColors[m.overallRating] || [148, 163, 184];
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.roundedRect(cx - barW / 2, barY, barW, barH, 1, 1, 'F');
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(`${m.pct}%`, cx, barY - 2, { align: 'center' });
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(m.label, cx, y + chartH + 7, { align: 'center' });
+    });
+
+    y += chartH + 12;
+
+    // Trend remark
+    const ratingOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'Good': 3, 'Excellent': 4, 'No Rating': 0 };
+    const ratedTrend = trendStats.filter(m => m.overallRating !== 'No Rating');
+    let trendRemark = '';
+    if (ratedTrend.length >= 2) {
+      const vals = ratedTrend.map(m => ratingOrder[m.overallRating] || 0);
+      const first = vals[0]; const last = vals[vals.length - 1];
+      const allSame = vals.every(v => v === first);
+      const allHigh = ratedTrend.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
+      const allLow = ratedTrend.every(m => m.overallRating === 'Low');
+      if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
+      else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
+      else if (allSame) trendRemark = `Consistently ${ratedTrend[0].overallRating} — Stable performance.`;
+      else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
+      else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
+      else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
+    } else if (ratedTrend.length === 1) {
+      trendRemark = 'Insufficient trend data (only 1 month with ratings).';
+    } else {
+      trendRemark = 'No rating data available for trend analysis.';
+    }
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Trend Observation: ', margin.left, y);
+    const trendLabelW = doc.getTextWidth('Trend Observation: ');
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    const trendLines = doc.splitTextToSize(trendRemark, pageWidth - margin.left * 2 - trendLabelW - 4);
+    doc.text(trendLines, margin.left + trendLabelW, y);
+    y += trendLines.length * 5;
+
     y += 20;
     // Signature lines
     doc.setDrawColor(203, 213, 225);
