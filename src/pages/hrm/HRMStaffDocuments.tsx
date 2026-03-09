@@ -70,6 +70,7 @@ export default function HRMStaffDocuments() {
   
   const verifyMutation = useVerifyDocument();
   const deleteMutation = useDeleteDocument();
+  const { data: myAssets = [], isLoading: loadingMyAssets } = useMyAssets();
   
   // Get existing doc by type for my documents
   const getMyDocByType = (type: string): EmployeeDocument | undefined => {
