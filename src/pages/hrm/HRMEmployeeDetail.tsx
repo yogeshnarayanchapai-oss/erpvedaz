@@ -315,14 +315,14 @@ export default function HRMEmployeeDetail() {
     if (workingDays === 0 || (present === 0 && late === 0 && absent === 0)) {
       attendanceRating = 'No Rating';
     } else if (attendanceRate >= 95) {
-      attendanceRating = totalLateMinutes > 0 ? 'Good' : 'Excellent';
+      attendanceRating = 'Excellent';
     } else if (attendanceRate >= 90) {
       attendanceRating = 'Good';
     } else {
       attendanceRating = 'Low';
     }
 
-    // Sales: if 0% conversion (no leads at all), mark as No Rating
+    // Sales: Below 40% → Low, 40-50% → Medium, 50-60% → Good, 60%+ → Excellent
     const hasSalesData = totalLeads > 0 && conversionRate > 0;
     let salesRating: 'Excellent' | 'Good' | 'Medium' | 'Low' | 'No Rating';
     if (!hasSalesData) {
@@ -337,24 +337,23 @@ export default function HRMEmployeeDetail() {
       salesRating = 'Low';
     }
 
+    // Tasks: 20%+ Due → Low, Up to 10% Due → Medium, 0% Due → Excellent
     const duePercent = totalTasks > 0 ? ((overdueTasks / totalTasks) * 100) : 0;
-    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low' | 'No Rating';
+    let taskRating: 'Excellent' | 'Medium' | 'Low' | 'No Rating';
     if (totalTasks === 0) {
       taskRating = 'No Rating';
     } else if (overdueTasks === 0) {
       taskRating = 'Excellent';
     } else if (duePercent <= 10) {
-      taskRating = 'Good';
-    } else if (duePercent <= 20) {
       taskRating = 'Medium';
     } else {
       taskRating = 'Low';
     }
 
-    // Score: only count rated categories
-    const attScore = attendanceRating === 'No Rating' ? 0 : attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
-    const salesScore = salesRating === 'No Rating' ? 0 : salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 32 : salesRating === 'Medium' ? 24 : 12;
-    const tskScore = taskRating === 'No Rating' ? 0 : taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
+    // Score: Attendance (max 30), Sales (max 40), Tasks (max 30)
+    const attScore = attendanceRating === 'No Rating' ? 0 : attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 20 : 10;
+    const salesScore = salesRating === 'No Rating' ? 0 : salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 30 : salesRating === 'Medium' ? 20 : 10;
+    const tskScore = taskRating === 'No Rating' ? 0 : taskRating === 'Excellent' ? 30 : taskRating === 'Medium' ? 20 : 10;
     const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
     const totalScore = attScore + salesScore + tskScore;
 
