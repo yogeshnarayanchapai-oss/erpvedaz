@@ -294,35 +294,50 @@ export default function HRMEmployeeDetail() {
     const effectiveOrders = confirmedOrders - vdNotDeliver;
     const conversionRate = totalLeads > 0 ? ((effectiveOrders / totalLeads) * 100) : 0;
 
-    // ---- SCORING OUT OF 100 ----
-    // Attendance: 30 points max
-    const attendanceRate = workingDays > 0 ? (present / workingDays) : 0;
-    const latenessPenalty = Math.min(late * 1, 10); // -1 per late day, max -10
-    const attendanceScore = Math.max(0, Math.round(attendanceRate * 30) - latenessPenalty);
+    // ---- CATEGORY RATINGS ----
+    const attendanceRate = workingDays > 0 ? ((present / workingDays) * 100) : 0;
+    let attendanceRating: 'Excellent' | 'Good' | 'Low';
+    if (attendanceRate >= 95) attendanceRating = 'Excellent';
+    else if (attendanceRate >= 90) attendanceRating = 'Good';
+    else attendanceRating = 'Low';
 
-    // Sales: 40 points max
-    const conversionScore = Math.min(40, Math.round(conversionRate * 0.8)); // 50% conv = 40 pts
+    let salesRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
+    if (conversionRate >= 60) salesRating = 'Excellent';
+    else if (conversionRate >= 50) salesRating = 'Good';
+    else if (conversionRate >= 40) salesRating = 'Medium';
+    else salesRating = 'Low';
 
-    // Tasks: 30 points max
-    const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
-    const taskOnTimeRate = completedTasks > 0 ? (onTimeTasks / completedTasks) : 0;
-    const taskScore = Math.round(taskCompletionRate * 15 + taskOnTimeRate * 15);
+    const duePercent = totalTasks > 0 ? ((overdueTasks / totalTasks) * 100) : 0;
+    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
+    if (overdueTasks === 0 && totalTasks > 0) taskRating = 'Excellent';
+    else if (duePercent <= 10) taskRating = 'Good';
+    else if (duePercent <= 20) taskRating = 'Medium';
+    else taskRating = 'Low';
 
-    const totalScore = Math.min(100, attendanceScore + conversionScore + taskScore);
+    // Score: Attendance 30, Sales 40, Tasks 30
+    const attScore = attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
+    const salesScore = salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 32 : salesRating === 'Medium' ? 24 : 12;
+    const tskScore = taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
+    const totalScore = attScore + salesScore + tskScore;
 
-    // Promotion suggestion
-    let promotionSuggestion: 'Good' | 'Medium' | 'Bad';
-    if (totalScore >= 75) promotionSuggestion = 'Good';
-    else if (totalScore >= 50) promotionSuggestion = 'Medium';
-    else promotionSuggestion = 'Bad';
+    // Promotion: only Excellent/Good ratings suggest promotion
+    const goodCount = [attendanceRating, salesRating, taskRating].filter(r => r === 'Excellent' || r === 'Good').length;
+    const hasLow = [attendanceRating, salesRating, taskRating].includes('Low');
+    let promotionSuggestion: string;
+    if (goodCount === 3) promotionSuggestion = 'Highly Recommended';
+    else if (goodCount >= 2 && !hasLow) promotionSuggestion = 'Recommended';
+    else promotionSuggestion = 'Not Recommended';
 
     return {
       totalDays, workingDays, present, late, absent, leave, totalLateMinutes,
-      totalTasks, completedTasks, onTimeTasks, overdueTasks,
+      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders,
       conversionRate: conversionRate.toFixed(1),
       totalSales, totalOrdersCount,
-      attendanceScore, conversionScore, taskScore, totalScore, promotionSuggestion,
+      attendanceRate: attendanceRate.toFixed(1),
+      attendanceRating, salesRating, taskRating,
+      attendanceScore: attScore, conversionScore: salesScore, taskScore: tskScore,
+      totalScore, promotionSuggestion,
     };
   }, [reportAttendance, reportTasks, reportLeadTransfers, reportOrders]);
 
