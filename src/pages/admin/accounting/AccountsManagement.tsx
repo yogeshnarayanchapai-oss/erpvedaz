@@ -550,7 +550,7 @@ export default function AccountsManagement() {
                       <TableHead>Account</TableHead>
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead className="text-right">Assigned To</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
