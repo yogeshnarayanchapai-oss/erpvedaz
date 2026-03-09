@@ -506,7 +506,7 @@ export default function HRMEmployeeDetail() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Attendance Summary', 14, y);
+    doc.text('Attendance Summary', margin.left, y);
     y += 3;
 
     const lateHours = Math.floor(reportStats.totalLateMinutes / 60);
@@ -534,7 +534,7 @@ export default function HRMEmployeeDetail() {
           data.cell.styles.fontStyle = 'bold';
         }
       },
-      margin: { left: 14, right: 14 },
+      margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
@@ -542,7 +542,7 @@ export default function HRMEmployeeDetail() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Sales Performance', 14, y);
+    doc.text('Sales Performance', margin.left, y);
     y += 3;
 
     autoTable(doc, {
@@ -566,7 +566,7 @@ export default function HRMEmployeeDetail() {
           data.cell.styles.fontStyle = 'bold';
         }
       },
-      margin: { left: 14, right: 14 },
+      margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
@@ -574,7 +574,7 @@ export default function HRMEmployeeDetail() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Task Summary', 14, y);
+    doc.text('Task Summary', margin.left, y);
     y += 3;
 
     autoTable(doc, {
@@ -597,79 +597,83 @@ export default function HRMEmployeeDetail() {
           data.cell.styles.fontStyle = 'bold';
         }
       },
-      margin: { left: 14, right: 14 },
+      margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
-
-    // ---- TASK DETAILS ----
-    if (reportTasks && reportTasks.length > 0) {
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 41, 59);
-      doc.text('Task Details', 14, y);
-      y += 3;
-
-      autoTable(doc, {
-        startY: y,
-        theme: 'grid',
-        headStyles: { ...lightHead, fontSize: 8 },
-        styles: { ...lightBody, fontSize: 8 },
-        head: [['#', 'Title', 'Due Date', 'Status', 'Completed']],
-        body: reportTasks.map((t, i) => [
-          i + 1,
-          t.title.substring(0, 45),
-          format(new Date(t.due_date), 'MMM dd, yyyy'),
-          t.status || 'PENDING',
-          t.completed_date ? format(new Date(t.completed_date), 'MMM dd') : '-',
-        ]),
-        columnStyles: { 1: { cellWidth: 55 } },
-        margin: { left: 14, right: 14 },
-      });
-      y = (doc as any).lastAutoTable.finalY + sectionGap;
-    }
 
     // ---- REMARKS / NOTES SECTION ----
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Remarks & Observations', 14, y);
-    y += 4;
+    doc.text('Remarks & Observations', margin.left, y);
+    y += 5;
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(71, 85, 105);
 
     const remarks: string[] = [];
-    if (reportStats.promotionSuggestion === 'Highly Recommended') {
-      remarks.push('• Outstanding performance across all areas. Strongly recommended for promotion or incentive.');
-    } else if (reportStats.promotionSuggestion === 'Recommended') {
-      remarks.push('• Good overall performance. Recommended for promotion consideration.');
-    } else {
-      remarks.push('• Performance needs improvement in one or more areas before promotion consideration.');
+
+    // Attendance remarks
+    if (reportStats.attendanceRating === 'Excellent') {
+      remarks.push('• Attendance: Excellent presence record with no late arrivals. Keep it up!');
+    } else if (reportStats.attendanceRating === 'Good' && reportStats.totalLateMinutes > 0) {
+      remarks.push(`• Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
+    } else if (reportStats.attendanceRating === 'Low') {
+      remarks.push(`• Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
     }
 
-    if (reportStats.attendanceRating === 'Low') remarks.push('• Attendance is below acceptable level. Counseling recommended.');
-    if (reportStats.salesRating === 'Low') remarks.push('• Sales conversion rate is low. Additional training may help.');
-    if (reportStats.taskRating === 'Low') remarks.push('• Task completion rate needs significant improvement.');
-    if (reportStats.late > 3) remarks.push(`• Employee was late ${reportStats.late} times this month.`);
-    if (reportStats.attendanceRating === 'Excellent' && reportStats.salesRating === 'Excellent') {
-      remarks.push('• Exceptional commitment to both attendance and sales targets.');
+    // Sales remarks
+    if (reportStats.salesRating === 'No Rating') {
+      remarks.push('• Sales: No sales data available for this period. Rating excluded from overall score.');
+    } else if (reportStats.salesRating === 'Excellent') {
+      remarks.push(`• Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
+    } else if (reportStats.salesRating === 'Good') {
+      remarks.push(`• Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
+    } else if (reportStats.salesRating === 'Medium') {
+      remarks.push(`• Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
+    } else {
+      remarks.push(`• Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
+    }
+
+    // Task remarks
+    if (reportStats.taskRating === 'Excellent') {
+      remarks.push('• Tasks: All tasks completed on time. Excellent task management.');
+    } else if (reportStats.taskRating === 'Good') {
+      remarks.push(`• Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
+    } else if (reportStats.taskRating === 'Medium') {
+      remarks.push(`• Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
+    } else {
+      remarks.push(`• Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
+    }
+
+    // Promotion remark
+    if (reportStats.promotionSuggestion === 'Highly Recommended') {
+      remarks.push('');
+      remarks.push('★ PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
+    } else if (reportStats.promotionSuggestion === 'Recommended') {
+      remarks.push('');
+      remarks.push('★ PROMOTION: Recommended for promotion consideration based on strong performance.');
+    } else {
+      remarks.push('');
+      remarks.push('★ PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
     }
 
     remarks.forEach(r => {
-      doc.text(r, 16, y);
+      if (r === '') { y += 2; return; }
+      doc.text(r, margin.left + 2, y, { maxWidth: pageWidth - margin.left - margin.right - 4 });
       y += 4;
     });
 
-    y += 3;
+    y += 5;
     // Signature lines
     doc.setDrawColor(203, 213, 225);
-    doc.line(14, y + 8, 70, y + 8);
-    doc.line(pageWidth - 70, y + 8, pageWidth - 14, y + 8);
+    doc.line(margin.left, y + 8, 74, y + 8);
+    doc.line(pageWidth - 74, y + 8, pageWidth - margin.left, y + 8);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('Employee Signature', 14, y + 12);
-    doc.text('Manager Signature', pageWidth - 70, y + 12);
+    doc.text('Employee Signature', margin.left, y + 12);
+    doc.text('Manager Signature', pageWidth - 74, y + 12);
 
     // Footer
     doc.setFontSize(7);
