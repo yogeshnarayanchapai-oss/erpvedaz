@@ -1,6 +1,6 @@
 import { LogIn, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTodayAttendance, useCheckIn, useCheckOut } from '@/hooks/useAttendance';
+import { useTodayAttendance, useCheckIn, useCheckOut, useIsActiveEmployee } from '@/hooks/useAttendance';
 
 export function AttendanceButton() {
   const { data: todayRecord, isLoading } = useTodayAttendance();
