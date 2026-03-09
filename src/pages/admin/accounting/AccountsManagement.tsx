@@ -516,7 +516,13 @@ export default function AccountsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {assets.map((asset) => (
+                    {assets
+                      .filter(a => {
+                        if (!assetSearch.trim()) return true;
+                        const q = assetSearch.toLowerCase();
+                        return (a.description?.toLowerCase().includes(q)) || (a.reference_no?.toLowerCase().includes(q));
+                      })
+                      .map((asset) => (
                       <TableRow key={asset.id}>
                         <TableCell>{format(new Date(asset.date), 'dd MMM yyyy')}</TableCell>
                         <TableCell className="font-medium">{asset.description}</TableCell>
