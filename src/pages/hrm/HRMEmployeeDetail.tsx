@@ -659,10 +659,12 @@ export default function HRMEmployeeDetail() {
       remarks.push('★ PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
     }
 
+    const maxTextWidth = pageWidth - margin.left - margin.right - 4;
     remarks.forEach(r => {
       if (r === '') { y += 2; return; }
-      doc.text(r, margin.left + 2, y, { maxWidth: pageWidth - margin.left - margin.right - 4 });
-      y += 4;
+      const lines = doc.splitTextToSize(r, maxTextWidth);
+      doc.text(lines, margin.left + 2, y);
+      y += lines.length * 4;
     });
 
     y += 5;
