@@ -456,6 +456,10 @@ export default function AdminDashboard() {
             <h1 className="text-xl md:text-2xl font-bold">Sales Dashboard</h1>
             <p className="text-xs md:text-sm text-muted-foreground">Sales performance and analytics</p>
           </div>
+          <Button variant="outline" size="sm" onClick={exportSalesReport} disabled={exportingReport}>
+            <Download className="w-4 h-4 mr-1" />
+            {exportingReport ? 'Generating...' : 'Sales Report'}
+          </Button>
         </div>
         <DashboardDateFilter value={dateRange} onChange={setDateRange} />
       </div>
