@@ -91,6 +91,20 @@ export default function HRMEmployeeDetail() {
     };
   }, [reportMonth, reportYear]);
 
+  // 3-month trend: [2 months ago, 1 month ago, selected month]
+  const trendMonthRanges = useMemo(() => {
+    return [2, 1, 0].map(offset => {
+      const d = subMonths(new Date(reportYear, reportMonth), offset);
+      const from = startOfMonth(d);
+      const to = endOfMonth(d);
+      return {
+        from: format(from, 'yyyy-MM-dd'),
+        to: format(to, 'yyyy-MM-dd'),
+        label: format(from, 'MMM yyyy'),
+      };
+    });
+  }, [reportMonth, reportYear]);
+
   // Date mode for BS/AD filter logic
   const { dateMode } = useDateMode();
 
