@@ -29,6 +29,11 @@ export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningAsset, setAssigningAsset] = useState<AccountingAsset | null>(null);
+  const [assignEmployeeId, setAssignEmployeeId] = useState('');
+  const [assignCondition, setAssignCondition] = useState('Good');
+  const [assignNotes, setAssignNotes] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as 'cash' | 'bank' | 'wallet' | 'other',
@@ -38,6 +43,7 @@ export default function AccountsManagement() {
     is_active: true,
   });
 
+  const storeId = useCurrentStoreId();
   const { data: accounts = [], isLoading } = useAccounts();
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
@@ -50,6 +56,21 @@ export default function AccountsManagement() {
   // Assets data
   const { data: assets = [], isLoading: assetsLoading } = useAccountingAssets();
   const { data: totalAssetValue = 0 } = useAccountingAssetTotal();
+  const createAssetMutation = useCreateAsset();
+  const assignAssetMutation = useAssignAsset();
+
+  // Employees for assign dialog
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees-for-assign', storeId],
+    queryFn: async () => {
+      let query = supabase.from('employees').select('id, full_name').eq('status', 'Active').order('full_name');
+      if (storeId) query = query.eq('store_id', storeId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+  });
 
   const displayedAccounts = hideZeroBalance
     ? accounts.filter(a => (a.current_balance ?? 0) !== 0)
