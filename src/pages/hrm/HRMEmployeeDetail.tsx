@@ -480,20 +480,22 @@ export default function HRMEmployeeDetail() {
     };
 
     const promoColor: [number, number, number] = reportStats.promotionSuggestion === 'Highly Recommended'
-      ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : [220, 38, 38];
+      ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : reportStats.promotionSuggestion === 'Insufficient Data' ? [148, 163, 184] : [220, 38, 38];
 
+    const attLabel = reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)';
     const salesLabel = reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)';
+    const taskLabel = reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)';
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { ...lightHead },
       styles: { ...lightBody },
-      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore})`, 'Promotion Suggestion']],
+      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore || 'N/A'})`, 'Promotion Suggestion']],
       body: [
-        ['Attendance (30)', reportStats.attendanceRating, `${reportStats.attendanceScore}/30`, '', ''],
+        [attLabel, reportStats.attendanceRating, reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`, '', ''],
         [salesLabel, reportStats.salesRating, reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`, '', ''],
-        ['Tasks (30)', reportStats.taskRating, `${reportStats.taskScore}/30`, '', ''],
+        [taskLabel, reportStats.taskRating, reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`, '', ''],
       ],
       didParseCell: (data: any) => {
         if (data.section === 'body' && data.column.index === 1) {
