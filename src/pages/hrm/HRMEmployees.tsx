@@ -315,6 +315,7 @@ export default function HRMEmployees() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
