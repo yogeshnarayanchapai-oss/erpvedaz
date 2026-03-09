@@ -91,6 +91,20 @@ export default function HRMEmployeeDetail() {
     };
   }, [reportMonth, reportYear]);
 
+  // 3-month trend: [2 months ago, 1 month ago, selected month]
+  const trendMonthRanges = useMemo(() => {
+    return [2, 1, 0].map(offset => {
+      const d = subMonths(new Date(reportYear, reportMonth), offset);
+      const from = startOfMonth(d);
+      const to = endOfMonth(d);
+      return {
+        from: format(from, 'yyyy-MM-dd'),
+        to: format(to, 'yyyy-MM-dd'),
+        label: format(from, 'MMM yyyy'),
+      };
+    });
+  }, [reportMonth, reportYear]);
+
   // Date mode for BS/AD filter logic
   const { dateMode } = useDateMode();
 
@@ -257,6 +271,147 @@ export default function HRMEmployeeDetail() {
     },
     enabled: !!employee?.user_id,
   });
+
+  // ---- TREND DATA: fetch attendance, tasks, leads, orders for prev 2 months ----
+  const { data: trendAttendance0 } = useAttendanceRecords(id, { from: trendMonthRanges[0].from, to: trendMonthRanges[0].to });
+  const { data: trendAttendance1 } = useAttendanceRecords(id, { from: trendMonthRanges[1].from, to: trendMonthRanges[1].to });
+
+  const { data: trendTasks0 } = useQuery({
+    queryKey: ['trend-tasks-0', employee?.user_id, trendMonthRanges[0].from, trendMonthRanges[0].to],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tasks').select('*')
+        .eq('assigned_to_user_id', employee!.user_id!)
+        .gte('due_date', trendMonthRanges[0].from).lte('due_date', trendMonthRanges[0].to);
+      if (error) throw error; return data;
+    }, enabled: !!employee?.user_id,
+  });
+  const { data: trendTasks1 } = useQuery({
+    queryKey: ['trend-tasks-1', employee?.user_id, trendMonthRanges[1].from, trendMonthRanges[1].to],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tasks').select('*')
+        .eq('assigned_to_user_id', employee!.user_id!)
+        .gte('due_date', trendMonthRanges[1].from).lte('due_date', trendMonthRanges[1].to);
+      if (error) throw error; return data;
+    }, enabled: !!employee?.user_id,
+  });
+
+  const fetchTrendTransfers = async (fromDate: string, toDate: string) => {
+    const allT: any[] = []; let page = 0; let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase.from('lead_transfers')
+        .select('id, lead_id, to_user_id, transferred_at')
+        .eq('to_user_id', employee!.user_id!)
+        .gte('transferred_at', `${fromDate}T00:00:00+05:45`)
+        .lte('transferred_at', `${toDate}T23:59:59+05:45`)
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      if (error) throw error;
+      if (data?.length) { allT.push(...data); hasMore = data.length === 1000; page++; } else hasMore = false;
+    }
+    return allT;
+  };
+  const fetchTrendOrders = async (fromDate: string, toDate: string) => {
+    const allO: any[] = []; let page = 0; let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase.from('orders')
+        .select('id, amount, order_status, delivery_location, inside_delivery_status')
+        .eq('is_deleted', false).eq('sales_person_id', employee!.user_id!)
+        .gte('order_date', `${fromDate}T00:00:00`).lte('order_date', `${toDate}T23:59:59`)
+        .range(page * 1000, (page + 1) * 1000 - 1);
+      if (error) throw error;
+      if (data?.length) { allO.push(...data); hasMore = data.length === 1000; page++; } else hasMore = false;
+    }
+    return allO;
+  };
+
+  const { data: trendTransfers0 } = useQuery({
+    queryKey: ['trend-transfers-0', employee?.user_id, trendMonthRanges[0].from],
+    queryFn: () => fetchTrendTransfers(trendMonthRanges[0].from, trendMonthRanges[0].to),
+    enabled: !!employee?.user_id,
+  });
+  const { data: trendTransfers1 } = useQuery({
+    queryKey: ['trend-transfers-1', employee?.user_id, trendMonthRanges[1].from],
+    queryFn: () => fetchTrendTransfers(trendMonthRanges[1].from, trendMonthRanges[1].to),
+    enabled: !!employee?.user_id,
+  });
+  const { data: trendOrders0 } = useQuery({
+    queryKey: ['trend-orders-0', employee?.user_id, trendMonthRanges[0].from],
+    queryFn: () => fetchTrendOrders(trendMonthRanges[0].from, trendMonthRanges[0].to),
+    enabled: !!employee?.user_id,
+  });
+  const { data: trendOrders1 } = useQuery({
+    queryKey: ['trend-orders-1', employee?.user_id, trendMonthRanges[1].from],
+    queryFn: () => fetchTrendOrders(trendMonthRanges[1].from, trendMonthRanges[1].to),
+    enabled: !!employee?.user_id,
+  });
+
+  // Helper: compute ratings from raw data
+  const computeMonthRatings = (att: any[], tasks: any[], transfers: any[], orders: any[]) => {
+    const present = att.filter(r => r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late').length;
+    const workingDays = att.filter(r => !['Saturday', 'Holiday'].includes(r.status)).length;
+    const attendanceRate = workingDays > 0 ? ((present / workingDays) * 100) : 0;
+    let attendanceRating: string;
+    if (workingDays === 0) attendanceRating = 'No Rating';
+    else if (attendanceRate >= 95) attendanceRating = 'Excellent';
+    else if (attendanceRate >= 90) attendanceRating = 'Good';
+    else attendanceRating = 'Low';
+
+    const totalLeads = transfers.length;
+    let confirmedOrders = 0; let vdNotDeliver = 0;
+    orders.forEach(o => {
+      if (['DELIVERED', 'DISPATCHED', 'CONFIRMED'].includes(o.order_status)) {
+        confirmedOrders++;
+        if (o.delivery_location === 'INSIDE_VALLEY' && o.inside_delivery_status !== 'DELIVERED') vdNotDeliver++;
+      }
+    });
+    const effectiveOrders = confirmedOrders - vdNotDeliver;
+    const conversionRate = totalLeads > 0 ? ((effectiveOrders / totalLeads) * 100) : 0;
+    const hasSalesData = totalLeads > 0 && conversionRate > 0;
+    let salesRating: string;
+    if (!hasSalesData) salesRating = 'No Rating';
+    else if (conversionRate >= 60) salesRating = 'Excellent';
+    else if (conversionRate >= 50) salesRating = 'Good';
+    else if (conversionRate >= 40) salesRating = 'Medium';
+    else salesRating = 'Low';
+
+    const totalTasks = tasks.length;
+    const overdueTasks = tasks.filter(t => {
+      if (t.status === 'COMPLETED' && t.completed_date) return new Date(t.completed_date) > new Date(t.due_date);
+      return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
+    }).length;
+    let taskRating: string;
+    if (totalTasks === 0) taskRating = 'No Rating';
+    else if (overdueTasks === 0) taskRating = 'Excellent';
+    else if ((overdueTasks / totalTasks) * 100 <= 10) taskRating = 'Medium';
+    else taskRating = 'Low';
+
+    // Overall
+    const attScore = attendanceRating === 'No Rating' ? 0 : attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 20 : 10;
+    const sScore = salesRating === 'No Rating' ? 0 : salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 30 : salesRating === 'Medium' ? 20 : 10;
+    const tScore = taskRating === 'No Rating' ? 0 : taskRating === 'Excellent' ? 30 : taskRating === 'Medium' ? 20 : 10;
+    const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
+    const totalScore = attScore + sScore + tScore;
+    const pct = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    let overallRating: string;
+    if (maxScore === 0) overallRating = 'No Rating';
+    else if (pct >= 85) overallRating = 'Excellent';
+    else if (pct >= 65) overallRating = 'Good';
+    else if (pct >= 45) overallRating = 'Medium';
+    else overallRating = 'Low';
+
+    return { attendanceRating, salesRating, taskRating, overallRating, totalScore, maxScore, pct };
+  };
+
+  // Compute 3-month trend stats
+  const trendStats = useMemo(() => {
+    const m0 = computeMonthRatings(trendAttendance0 || [], trendTasks0 || [], trendTransfers0 || [], trendOrders0 || []);
+    const m1 = computeMonthRatings(trendAttendance1 || [], trendTasks1 || [], trendTransfers1 || [], trendOrders1 || []);
+    const m2 = computeMonthRatings(reportAttendance || [], reportTasks || [], reportLeadTransfers || [], reportOrders || []);
+    return [
+      { label: trendMonthRanges[0].label, ...m0 },
+      { label: trendMonthRanges[1].label, ...m1 },
+      { label: trendMonthRanges[2].label, ...m2 },
+    ];
+  }, [trendAttendance0, trendAttendance1, reportAttendance, trendTasks0, trendTasks1, reportTasks, trendTransfers0, trendTransfers1, reportLeadTransfers, trendOrders0, trendOrders1, reportOrders, trendMonthRanges]);
 
   // Compute report stats (matching Staff Leaderboard logic)
   const reportStats = useMemo(() => {
@@ -684,6 +839,123 @@ export default function HRMEmployeeDetail() {
       doc.text(lines, margin.left + 2, y);
       y += lines.length * 4;
     });
+
+
+    // ---- 3-MONTH TREND SECTION ----
+    if (y + 80 > pageHeight - 30) {
+      doc.addPage();
+      y = 20;
+    }
+
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('3-Month Performance Trend', margin.left, y);
+    y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
+      head: [['Month', 'Attendance', 'Sales', 'Tasks', 'Overall', 'Score']],
+      body: trendStats.map(m => [
+        m.label,
+        m.attendanceRating,
+        m.salesRating,
+        m.taskRating,
+        m.overallRating,
+        m.maxScore > 0 ? `${m.totalScore}/${m.maxScore} (${m.pct}%)` : 'N/A',
+      ]),
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index >= 1 && data.column.index <= 4) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      margin,
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+
+    // Mini bar chart
+    const chartX = margin.left + 10;
+    const chartW = pageWidth - margin.left * 2 - 20;
+    const chartH = 28;
+    const barGroupW = chartW / 3;
+    const maxBarH = chartH - 8;
+
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin.left, y, pageWidth - margin.left * 2, chartH + 10, 2, 2, 'F');
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Score %', margin.left + 2, y + 5);
+
+    const barColors: Record<string, [number, number, number]> = {
+      'Excellent': [22, 163, 74],
+      'Good': [37, 99, 235],
+      'Medium': [234, 179, 8],
+      'Low': [220, 38, 38],
+      'No Rating': [203, 213, 225],
+    };
+
+    trendStats.forEach((m, i) => {
+      const cx = chartX + i * barGroupW + barGroupW / 2;
+      const barW = 18;
+      const barH = m.maxScore > 0 ? (m.pct / 100) * maxBarH : 2;
+      const barY = y + chartH - barH + 2;
+
+      const color = barColors[m.overallRating] || [148, 163, 184];
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.roundedRect(cx - barW / 2, barY, barW, barH, 1, 1, 'F');
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(`${m.pct}%`, cx, barY - 2, { align: 'center' });
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(m.label, cx, y + chartH + 7, { align: 'center' });
+    });
+
+    y += chartH + 12;
+
+    // Trend remark
+    const ratingOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'Good': 3, 'Excellent': 4, 'No Rating': 0 };
+    const ratedTrend = trendStats.filter(m => m.overallRating !== 'No Rating');
+    let trendRemark = '';
+    if (ratedTrend.length >= 2) {
+      const vals = ratedTrend.map(m => ratingOrder[m.overallRating] || 0);
+      const first = vals[0]; const last = vals[vals.length - 1];
+      const allSame = vals.every(v => v === first);
+      const allHigh = ratedTrend.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
+      const allLow = ratedTrend.every(m => m.overallRating === 'Low');
+      if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
+      else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
+      else if (allSame) trendRemark = `Consistently ${ratedTrend[0].overallRating} — Stable performance.`;
+      else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
+      else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
+      else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
+    } else if (ratedTrend.length === 1) {
+      trendRemark = 'Insufficient trend data (only 1 month with ratings).';
+    } else {
+      trendRemark = 'No rating data available for trend analysis.';
+    }
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Trend Observation: ', margin.left, y);
+    const trendLabelW = doc.getTextWidth('Trend Observation: ');
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    const trendLines = doc.splitTextToSize(trendRemark, pageWidth - margin.left * 2 - trendLabelW - 4);
+    doc.text(trendLines, margin.left + trendLabelW, y);
+    y += trendLines.length * 5;
 
     y += 20;
     // Signature lines
