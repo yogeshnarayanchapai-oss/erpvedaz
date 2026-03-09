@@ -662,16 +662,19 @@ export default function HRMEmployeeDetail() {
     // Promotion remark
     if (reportStats.promotionSuggestion === 'Highly Recommended') {
       remarks.push('');
-      remarks.push('★ PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
+      remarks.push('PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
     } else if (reportStats.promotionSuggestion === 'Recommended') {
       remarks.push('');
-      remarks.push('★ PROMOTION: Recommended for promotion consideration based on strong performance.');
+      remarks.push('PROMOTION: Recommended for promotion consideration based on strong performance.');
+    } else if (reportStats.promotionSuggestion === 'Insufficient Data') {
+      remarks.push('');
+      remarks.push('PROMOTION: Insufficient data to evaluate. More activity data needed.');
     } else {
       remarks.push('');
-      remarks.push('★ PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
+      remarks.push('PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
     }
 
-    const maxTextWidth = pageWidth - margin.left - margin.right - 4;
+    const maxTextWidth = pageWidth - (margin.left * 2) - 4;
     remarks.forEach(r => {
       if (r === '') { y += 2; return; }
       const lines = doc.splitTextToSize(r, maxTextWidth);
