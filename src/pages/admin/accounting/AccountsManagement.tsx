@@ -60,6 +60,44 @@ export default function AccountsManagement() {
   const createAssetMutation = useCreateAsset();
   const assignAssetMutation = useAssignAsset();
 
+  // Fetch asset assignments with employee names linked to accounting assets
+  const { data: assetAssignmentMap = {} } = useQuery({
+    queryKey: ['accounting-asset-assignments', storeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('asset_assignments')
+        .select('*, assets!inner(asset_code), employees!inner(full_name)')
+        .is('returned_on', null)
+        .order('assigned_on', { ascending: false });
+
+      if (storeId) query = query.eq('store_id', storeId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Build map: transaction_id -> { employee_name, assignment_id, asset_id }
+      const map: Record<string, { employee_name: string; assignment_id: string; asset_id: string }> = {};
+      (data || []).forEach((a: any) => {
+        const code = a.assets?.asset_code;
+        if (code && code.startsWith('ACC-')) {
+          const txIdPrefix = code.replace('ACC-', '').toLowerCase();
+          map[txIdPrefix] = {
+            employee_name: a.employees?.full_name || 'Unknown',
+            assignment_id: a.id,
+            asset_id: a.asset_id,
+          };
+        }
+      });
+      return map;
+    },
+    enabled: !!storeId,
+  });
+
+  const getAssignmentForAsset = (assetId: string) => {
+    const prefix = assetId.substring(0, 6).toLowerCase();
+    return assetAssignmentMap[prefix] || null;
+  };
+
   // Employees for assign dialog
   const { data: employees = [] } = useQuery({
     queryKey: ['employees-for-assign', storeId],
