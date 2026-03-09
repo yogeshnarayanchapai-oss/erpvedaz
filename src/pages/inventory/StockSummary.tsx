@@ -350,18 +350,14 @@ export default function StockSummary() {
                   doc.text(`Warehouse: ${warehouseName}`, 14, 27);
 
                   const head = activeTab === 'all'
-                    ? [['Product', 'Warehouse', 'In', 'Out', 'Current', 'Value', 'Reorder Lvl']]
-                    : [['Product', 'In', 'Out', 'Current', 'Value', 'Reorder Lvl']];
+                    ? [['Product', 'Warehouse', 'Current Stock']]
+                    : [['Product', 'Current Stock']];
 
                   const body = inStockItems.map(item => {
                     const row = [
                       item.product_name,
                       ...(activeTab === 'all' ? [item.warehouse_name] : []),
-                      item.total_in.toString(),
-                      item.total_out.toString(),
                       item.current_stock.toString(),
-                      `Rs ${item.stock_value.toLocaleString()}`,
-                      item.reorder_level.toString(),
                     ];
                     return row;
                   });
