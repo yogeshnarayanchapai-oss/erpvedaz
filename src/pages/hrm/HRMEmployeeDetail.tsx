@@ -688,7 +688,7 @@ export default function HRMEmployeeDetail() {
       y += lines.length * 4;
     });
 
-    y += 5;
+    y += 20;
     // Signature lines
     doc.setDrawColor(203, 213, 225);
     doc.line(margin.left, y + 8, 74, y + 8);
