@@ -158,6 +158,21 @@ export default function HRMEmployeeDetail() {
     enabled: !!id,
   });
 
+  // ---- Company Info for PDF header ----
+  const { data: companyInfo } = useQuery({
+    queryKey: ['company-info-for-report', employee?.store_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_info')
+        .select('company_name, address, phone, email, logo_url, registration_no')
+        .eq('store_id', employee!.store_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee?.store_id,
+  });
+
   // ---- REPORT DATA: attendance for report month ----
   const { data: reportAttendance } = useAttendanceRecords(id, {
     from: reportDateRange.from,
@@ -294,35 +309,50 @@ export default function HRMEmployeeDetail() {
     const effectiveOrders = confirmedOrders - vdNotDeliver;
     const conversionRate = totalLeads > 0 ? ((effectiveOrders / totalLeads) * 100) : 0;
 
-    // ---- SCORING OUT OF 100 ----
-    // Attendance: 30 points max
-    const attendanceRate = workingDays > 0 ? (present / workingDays) : 0;
-    const latenessPenalty = Math.min(late * 1, 10); // -1 per late day, max -10
-    const attendanceScore = Math.max(0, Math.round(attendanceRate * 30) - latenessPenalty);
+    // ---- CATEGORY RATINGS ----
+    const attendanceRate = workingDays > 0 ? ((present / workingDays) * 100) : 0;
+    let attendanceRating: 'Excellent' | 'Good' | 'Low';
+    if (attendanceRate >= 95) attendanceRating = 'Excellent';
+    else if (attendanceRate >= 90) attendanceRating = 'Good';
+    else attendanceRating = 'Low';
 
-    // Sales: 40 points max
-    const conversionScore = Math.min(40, Math.round(conversionRate * 0.8)); // 50% conv = 40 pts
+    let salesRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
+    if (conversionRate >= 60) salesRating = 'Excellent';
+    else if (conversionRate >= 50) salesRating = 'Good';
+    else if (conversionRate >= 40) salesRating = 'Medium';
+    else salesRating = 'Low';
 
-    // Tasks: 30 points max
-    const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
-    const taskOnTimeRate = completedTasks > 0 ? (onTimeTasks / completedTasks) : 0;
-    const taskScore = Math.round(taskCompletionRate * 15 + taskOnTimeRate * 15);
+    const duePercent = totalTasks > 0 ? ((overdueTasks / totalTasks) * 100) : 0;
+    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
+    if (overdueTasks === 0 && totalTasks > 0) taskRating = 'Excellent';
+    else if (duePercent <= 10) taskRating = 'Good';
+    else if (duePercent <= 20) taskRating = 'Medium';
+    else taskRating = 'Low';
 
-    const totalScore = Math.min(100, attendanceScore + conversionScore + taskScore);
+    // Score: Attendance 30, Sales 40, Tasks 30
+    const attScore = attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
+    const salesScore = salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 32 : salesRating === 'Medium' ? 24 : 12;
+    const tskScore = taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
+    const totalScore = attScore + salesScore + tskScore;
 
-    // Promotion suggestion
-    let promotionSuggestion: 'Good' | 'Medium' | 'Bad';
-    if (totalScore >= 75) promotionSuggestion = 'Good';
-    else if (totalScore >= 50) promotionSuggestion = 'Medium';
-    else promotionSuggestion = 'Bad';
+    // Promotion: only Excellent/Good ratings suggest promotion
+    const goodCount = [attendanceRating, salesRating, taskRating].filter(r => r === 'Excellent' || r === 'Good').length;
+    const hasLow = [attendanceRating, salesRating, taskRating].includes('Low');
+    let promotionSuggestion: string;
+    if (goodCount === 3) promotionSuggestion = 'Highly Recommended';
+    else if (goodCount >= 2 && !hasLow) promotionSuggestion = 'Recommended';
+    else promotionSuggestion = 'Not Recommended';
 
     return {
       totalDays, workingDays, present, late, absent, leave, totalLateMinutes,
-      totalTasks, completedTasks, onTimeTasks, overdueTasks,
+      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders,
       conversionRate: conversionRate.toFixed(1),
       totalSales, totalOrdersCount,
-      attendanceScore, conversionScore, taskScore, totalScore, promotionSuggestion,
+      attendanceRate: attendanceRate.toFixed(1),
+      attendanceRating, salesRating, taskRating,
+      attendanceScore: attScore, conversionScore: salesScore, taskScore: tskScore,
+      totalScore, promotionSuggestion,
     };
   }, [reportAttendance, reportTasks, reportLeadTransfers, reportOrders]);
 
@@ -332,29 +362,65 @@ export default function HRMEmployeeDetail() {
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 15;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let y = 12;
 
-    // Title
+    // ---- COMPANY HEADER ----
+    const compName = companyInfo?.company_name || 'Company';
+    const compAddr = companyInfo?.address || '';
+    const compPhone = companyInfo?.phone || '';
+    const compEmail = companyInfo?.email || '';
+    const compReg = companyInfo?.registration_no || '';
+
+    doc.setFillColor(245, 247, 250);
+    doc.rect(0, 0, pageWidth, 32, 'F');
+
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Employee Monthly Report', pageWidth / 2, y, { align: 'center' });
-    y += 8;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
+    doc.setTextColor(30, 41, 59);
+    doc.text(compName, pageWidth / 2, y + 4, { align: 'center' });
     y += 10;
 
-    // Staff Info - Only Name and Position
-    doc.setFontSize(12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    const headerParts = [compAddr, compPhone, compEmail, compReg ? `Reg: ${compReg}` : ''].filter(Boolean);
+    doc.text(headerParts.join('  |  '), pageWidth / 2, y, { align: 'center' });
+    y += 5;
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, y + 2, pageWidth - 14, y + 2);
+    y += 8;
+
+    // Report Title
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Employee Monthly Performance Report', pageWidth / 2, y, { align: 'center' });
+    y += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    // Light theme styles
+    const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 9 };
+    const lightBody = { fontSize: 9, textColor: [51, 65, 85] as [number, number, number] };
+    const sectionGap = 7;
+
+    // ---- STAFF INFO ----
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
     doc.text('Staff Information', 14, y);
-    y += 2;
+    y += 3;
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
       body: [
         ['Name', employee.full_name, 'Position', employee.position || 'N/A'],
       ],
@@ -366,51 +432,69 @@ export default function HRMEmployeeDetail() {
       },
       margin: { left: 14, right: 14 },
     });
+    y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Overall Score & Promotion Suggestion
-    doc.setFontSize(12);
+    // ---- OVERALL SCORE ----
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
     doc.text('Overall Performance Score', 14, y);
-    y += 2;
+    y += 3;
 
-    const suggestionColor: [number, number, number] = 
-      reportStats.promotionSuggestion === 'Good' ? [34, 197, 94] : 
-      reportStats.promotionSuggestion === 'Medium' ? [249, 115, 22] : [239, 68, 68];
+    const getRatingColor = (r: string): [number, number, number] => {
+      if (r === 'Excellent') return [22, 163, 74];
+      if (r === 'Good') return [37, 99, 235];
+      if (r === 'Medium') return [234, 179, 8];
+      return [220, 38, 38];
+    };
+
+    const promoColor: [number, number, number] = reportStats.promotionSuggestion === 'Highly Recommended'
+      ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : [220, 38, 38];
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [30, 64, 175] },
-      head: [['Attendance (30)', 'Sales (40)', 'Tasks (30)', 'Total Score (/100)', 'Promotion']],
-      body: [[
-        `${reportStats.attendanceScore}/30`,
-        `${reportStats.conversionScore}/40`,
-        `${reportStats.taskScore}/30`,
-        `${reportStats.totalScore}/100`,
-        reportStats.promotionSuggestion,
-      ]],
-      bodyStyles: { fontSize: 11 },
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
+      head: [['Category', 'Rating', 'Score', 'Total (/100)', 'Promotion Suggestion']],
+      body: [
+        ['Attendance (30)', reportStats.attendanceRating, `${reportStats.attendanceScore}/30`, '', ''],
+        ['Sales (40)', reportStats.salesRating, `${reportStats.conversionScore}/40`, '', ''],
+        ['Tasks (30)', reportStats.taskRating, `${reportStats.taskScore}/30`, '', ''],
+      ],
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 4) {
-          data.cell.styles.textColor = suggestionColor;
+        if (data.section === 'body' && data.column.index === 1) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
           data.cell.styles.fontStyle = 'bold';
         }
-        if (data.section === 'body' && data.column.index === 3) {
+        // Total score on first row col 3
+        if (data.section === 'body' && data.row.index === 0 && data.column.index === 3) {
+          data.cell.text = [`${reportStats.totalScore}/100`];
           data.cell.styles.fontStyle = 'bold';
+        }
+        // Promotion on first row col 4
+        if (data.section === 'body' && data.row.index === 0 && data.column.index === 4) {
+          data.cell.text = [reportStats.promotionSuggestion];
+          data.cell.styles.textColor = promoColor;
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      didDrawCell: (data: any) => {
+        // Merge visual for total/promotion columns
+        if (data.section === 'body' && data.row.index === 0 && (data.column.index === 3 || data.column.index === 4)) {
+          // Already handled above
         }
       },
       margin: { left: 14, right: 14 },
     });
+    y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Attendance Section
-    doc.setFontSize(12);
+    // ---- ATTENDANCE ----
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
     doc.text('Attendance Summary', 14, y);
-    y += 2;
+    y += 3;
 
     const lateHours = Math.floor(reportStats.totalLateMinutes / 60);
     const lateMins = reportStats.totalLateMinutes % 60;
@@ -418,33 +502,42 @@ export default function HRMEmployeeDetail() {
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] },
-      head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Total Late']],
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
+      head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Attendance %', 'Total Late', 'Rating']],
       body: [[
         reportStats.workingDays,
         reportStats.present,
         reportStats.late,
         reportStats.absent,
         reportStats.leave,
+        `${reportStats.attendanceRate}%`,
         `${lateHours}h ${lateMins}m`,
+        reportStats.attendanceRating,
       ]],
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 7) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
       margin: { left: 14, right: 14 },
     });
+    y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Sales Section (matching Staff Leaderboard)
-    doc.setFontSize(12);
+    // ---- SALES ----
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Sales Performance (Leaderboard)', 14, y);
-    y += 2;
+    doc.setTextColor(30, 41, 59);
+    doc.text('Sales Performance', 14, y);
+    y += 3;
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [168, 85, 247], fontSize: 8 },
-      styles: { fontSize: 8 },
-      head: [['Total Leads', 'Confirmed', 'VD Not Deliver', 'Effective', 'Conv. Rate', 'Total Sales (Rs.)']],
+      headStyles: { ...lightHead, fontSize: 8 },
+      styles: { ...lightBody, fontSize: 8 },
+      head: [['Total Leads', 'Confirmed', 'VD Not Deliver', 'Effective', 'Conv. Rate', 'Total Sales (Rs.)', 'Rating']],
       body: [[
         reportStats.totalLeads,
         reportStats.confirmedOrders,
@@ -452,64 +545,124 @@ export default function HRMEmployeeDetail() {
         reportStats.effectiveOrders,
         `${reportStats.conversionRate}%`,
         `Rs. ${reportStats.totalSales.toLocaleString()}`,
+        reportStats.salesRating,
       ]],
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 6) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
       margin: { left: 14, right: 14 },
     });
+    y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Tasks Section
-    doc.setFontSize(12);
+    // ---- TASKS ----
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
     doc.text('Task Summary', 14, y);
-    y += 2;
+    y += 3;
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [249, 115, 22] },
-      head: [['Total Tasks', 'Completed', 'On Time', 'Overdue/Late']],
+      headStyles: { ...lightHead },
+      styles: { ...lightBody },
+      head: [['Total Tasks', 'Completed', 'On Time', 'Overdue', 'Due %', 'Rating']],
       body: [[
         reportStats.totalTasks,
         reportStats.completedTasks,
         reportStats.onTimeTasks,
         reportStats.overdueTasks,
+        `${reportStats.duePercent.toFixed(1)}%`,
+        reportStats.taskRating,
       ]],
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 5) {
+          data.cell.styles.textColor = getRatingColor(data.cell.raw);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
       margin: { left: 14, right: 14 },
     });
+    y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    y = (doc as any).lastAutoTable.finalY + 8;
-
-    // Task details if any
+    // ---- TASK DETAILS ----
     if (reportTasks && reportTasks.length > 0) {
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 41, 59);
       doc.text('Task Details', 14, y);
-      y += 2;
+      y += 3;
 
       autoTable(doc, {
         startY: y,
-        theme: 'striped',
-        headStyles: { fillColor: [100, 116, 139] },
-        head: [['Title', 'Due Date', 'Status', 'Completed']],
-        body: reportTasks.map(t => [
-          t.title.substring(0, 40),
+        theme: 'grid',
+        headStyles: { ...lightHead, fontSize: 8 },
+        styles: { ...lightBody, fontSize: 8 },
+        head: [['#', 'Title', 'Due Date', 'Status', 'Completed']],
+        body: reportTasks.map((t, i) => [
+          i + 1,
+          t.title.substring(0, 45),
           format(new Date(t.due_date), 'MMM dd, yyyy'),
           t.status || 'PENDING',
           t.completed_date ? format(new Date(t.completed_date), 'MMM dd') : '-',
         ]),
-        columnStyles: {
-          0: { cellWidth: 60 },
-        },
+        columnStyles: { 1: { cellWidth: 55 } },
         margin: { left: 14, right: 14 },
       });
+      y = (doc as any).lastAutoTable.finalY + sectionGap;
     }
 
-    // Footer
-    const pageHeight = doc.internal.pageSize.getHeight();
+    // ---- REMARKS / NOTES SECTION ----
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Remarks & Observations', 14, y);
+    y += 4;
+
     doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+
+    const remarks: string[] = [];
+    if (reportStats.promotionSuggestion === 'Highly Recommended') {
+      remarks.push('• Outstanding performance across all areas. Strongly recommended for promotion or incentive.');
+    } else if (reportStats.promotionSuggestion === 'Recommended') {
+      remarks.push('• Good overall performance. Recommended for promotion consideration.');
+    } else {
+      remarks.push('• Performance needs improvement in one or more areas before promotion consideration.');
+    }
+
+    if (reportStats.attendanceRating === 'Low') remarks.push('• Attendance is below acceptable level. Counseling recommended.');
+    if (reportStats.salesRating === 'Low') remarks.push('• Sales conversion rate is low. Additional training may help.');
+    if (reportStats.taskRating === 'Low') remarks.push('• Task completion rate needs significant improvement.');
+    if (reportStats.late > 3) remarks.push(`• Employee was late ${reportStats.late} times this month.`);
+    if (reportStats.attendanceRating === 'Excellent' && reportStats.salesRating === 'Excellent') {
+      remarks.push('• Exceptional commitment to both attendance and sales targets.');
+    }
+
+    remarks.forEach(r => {
+      doc.text(r, 16, y);
+      y += 4;
+    });
+
+    y += 3;
+    // Signature lines
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, y + 8, 70, y + 8);
+    doc.line(pageWidth - 70, y + 8, pageWidth - 14, y + 8);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Employee Signature', 14, y + 12);
+    doc.text('Manager Signature', pageWidth - 70, y + 12);
+
+    // Footer
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'italic');
-    doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')} | ${compName}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
 
     doc.save(`${employee.full_name.replace(/\s+/g, '_')}_Report_${reportDateRange.label.replace(/\s+/g, '_')}.pdf`);
   };
