@@ -33,6 +33,7 @@ export default function AccountsManagement() {
   const [assigningAsset, setAssigningAsset] = useState<AccountingAsset | null>(null);
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [assignCondition, setAssignCondition] = useState('Good');
+  const [assetSearch, setAssetSearch] = useState('');
   const [assignNotes, setAssignNotes] = useState('');
   const [formData, setFormData] = useState({
     name: '',
