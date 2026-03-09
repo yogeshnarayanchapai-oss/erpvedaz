@@ -311,9 +311,10 @@ export default function HRMEmployeeDetail() {
 
     // ---- CATEGORY RATINGS ----
     const attendanceRate = workingDays > 0 ? ((present / workingDays) * 100) : 0;
-    let attendanceRating: 'Excellent' | 'Good' | 'Low';
-    if (attendanceRate >= 95) {
-      // If excellent attendance but has late hours, downgrade to Good
+    let attendanceRating: 'Excellent' | 'Good' | 'Low' | 'No Rating';
+    if (workingDays === 0 || (present === 0 && late === 0 && absent === 0)) {
+      attendanceRating = 'No Rating';
+    } else if (attendanceRate >= 95) {
       attendanceRating = totalLateMinutes > 0 ? 'Good' : 'Excellent';
     } else if (attendanceRate >= 90) {
       attendanceRating = 'Good';
@@ -337,26 +338,37 @@ export default function HRMEmployeeDetail() {
     }
 
     const duePercent = totalTasks > 0 ? ((overdueTasks / totalTasks) * 100) : 0;
-    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
-    if (overdueTasks === 0 && totalTasks > 0) taskRating = 'Excellent';
-    else if (duePercent <= 10) taskRating = 'Good';
-    else if (duePercent <= 20) taskRating = 'Medium';
-    else taskRating = 'Low';
+    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low' | 'No Rating';
+    if (totalTasks === 0) {
+      taskRating = 'No Rating';
+    } else if (overdueTasks === 0) {
+      taskRating = 'Excellent';
+    } else if (duePercent <= 10) {
+      taskRating = 'Good';
+    } else if (duePercent <= 20) {
+      taskRating = 'Medium';
+    } else {
+      taskRating = 'Low';
+    }
 
-    // Score: Attendance 30, Sales 40 (excluded if No Rating), Tasks 30
-    const attScore = attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
+    // Score: only count rated categories
+    const attScore = attendanceRating === 'No Rating' ? 0 : attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
     const salesScore = salesRating === 'No Rating' ? 0 : salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 32 : salesRating === 'Medium' ? 24 : 12;
-    const tskScore = taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
-    // If sales has no rating, score out of 60 instead of 100
-    const maxScore = salesRating === 'No Rating' ? 60 : 100;
+    const tskScore = taskRating === 'No Rating' ? 0 : taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
+    const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
     const totalScore = attScore + salesScore + tskScore;
 
-    // Promotion: only Excellent/Good ratings suggest promotion (exclude No Rating from penalty)
-    const ratedCategories = [attendanceRating, taskRating, ...(salesRating !== 'No Rating' ? [salesRating] : [])] as string[];
+    // Promotion: only Excellent/Good ratings suggest promotion (exclude No Rating)
+    const ratedCategories = [
+      ...(attendanceRating !== 'No Rating' ? [attendanceRating] : []),
+      ...(salesRating !== 'No Rating' ? [salesRating] : []),
+      ...(taskRating !== 'No Rating' ? [taskRating] : []),
+    ] as string[];
     const goodCount = ratedCategories.filter(r => r === 'Excellent' || r === 'Good').length;
     const hasLow = ratedCategories.includes('Low');
     let promotionSuggestion: string;
-    if (goodCount === ratedCategories.length && ratedCategories.length >= 2) promotionSuggestion = 'Highly Recommended';
+    if (ratedCategories.length === 0) promotionSuggestion = 'Insufficient Data';
+    else if (goodCount === ratedCategories.length) promotionSuggestion = 'Highly Recommended';
     else if (goodCount >= 2 && !hasLow) promotionSuggestion = 'Recommended';
     else promotionSuggestion = 'Not Recommended';
 
