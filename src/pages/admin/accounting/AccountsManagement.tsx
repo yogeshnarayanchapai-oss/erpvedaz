@@ -228,13 +228,31 @@ export default function AccountsManagement() {
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
-                All Accounts ({accounts.length})
+                All Accounts ({displayedAccounts.length})
                 <span className="ml-4 text-sm font-normal text-muted-foreground">
-                  Total Balance: {formatNPR(accounts.reduce((sum, acc) => sum + (acc.current_balance ?? 0), 0))}
+                  Total Balance: {formatNPR(displayedAccounts.reduce((sum, acc) => sum + (acc.current_balance ?? 0), 0))}
                 </span>
               </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant={hideZeroBalance ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setHideZeroBalance(!hideZeroBalance)}
+                >
+                  <EyeOff className="h-4 w-4 mr-1" />
+                  {hideZeroBalance ? 'Showing Non-Zero' : 'Hide 0 Balance'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPDF}
+                >
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Export PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
