@@ -21,11 +21,12 @@ import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function AccountsManagement() {
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
@@ -59,6 +60,44 @@ export default function AccountsManagement() {
   const { data: totalAssetValue = 0 } = useAccountingAssetTotal();
   const createAssetMutation = useCreateAsset();
   const assignAssetMutation = useAssignAsset();
+
+  // Fetch asset assignments with employee names linked to accounting assets
+  const { data: assetAssignmentMap = {} } = useQuery({
+    queryKey: ['accounting-asset-assignments', storeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('asset_assignments')
+        .select('*, assets!inner(asset_code), employees!inner(full_name)')
+        .is('returned_on', null)
+        .order('assigned_on', { ascending: false });
+
+      if (storeId) query = query.eq('store_id', storeId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Build map: transaction_id -> { employee_name, assignment_id, asset_id }
+      const map: Record<string, { employee_name: string; assignment_id: string; asset_id: string }> = {};
+      (data || []).forEach((a: any) => {
+        const code = a.assets?.asset_code;
+        if (code && code.startsWith('ACC-')) {
+          const txIdPrefix = code.replace('ACC-', '').toLowerCase();
+          map[txIdPrefix] = {
+            employee_name: a.employees?.full_name || 'Unknown',
+            assignment_id: a.id,
+            asset_id: a.asset_id,
+          };
+        }
+      });
+      return map;
+    },
+    enabled: !!storeId,
+  });
+
+  const getAssignmentForAsset = (assetId: string) => {
+    const prefix = assetId.substring(0, 6).toLowerCase();
+    return assetAssignmentMap[prefix] || null;
+  };
 
   // Employees for assign dialog
   const { data: employees = [] } = useQuery({
@@ -133,6 +172,7 @@ export default function AccountsManagement() {
         notes: assignNotes || null,
       });
 
+      queryClient.invalidateQueries({ queryKey: ['accounting-asset-assignments'] });
       setAssignDialogOpen(false);
     } catch (error: any) {
       // errors handled by mutation hooks
@@ -512,7 +552,7 @@ export default function AccountsManagement() {
                       <TableHead>Account</TableHead>
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead className="text-right">Assigned To</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -535,14 +575,30 @@ export default function AccountsManagement() {
                           NPR {asset.amount.toLocaleString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openAssignDialog(asset)}
-                            title="Assign to Employee"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
+                          {(() => {
+                            const assignment = getAssignmentForAsset(asset.id);
+                            if (assignment) {
+                              return (
+                                <span
+                                  className="cursor-pointer px-2 py-1 rounded bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/80 transition-colors"
+                                  onDoubleClick={() => openAssignDialog(asset)}
+                                  title="Double-click to reassign"
+                                >
+                                  {assignment.employee_name}
+                                </span>
+                              );
+                            }
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openAssignDialog(asset)}
+                                title="Assign to Employee"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            );
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
