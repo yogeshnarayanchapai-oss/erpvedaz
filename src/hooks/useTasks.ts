@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useModuleStoreFilter } from '@/hooks/useModuleStoreSettings';
 import { toast } from 'sonner';
 
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -112,10 +113,10 @@ interface TaskFilters {
 }
 
 export function useTasks(filters?: TaskFilters) {
-  const storeId = useCurrentStoreId();
+  const { storeId, filterByStore } = useModuleStoreFilter('task_management');
 
   return useQuery({
-    queryKey: ['tasks', storeId, filters],
+    queryKey: ['tasks', storeId, filterByStore, filters],
     queryFn: async () => {
       let query = supabase
         .from('tasks')
@@ -126,7 +127,7 @@ export function useTasks(filters?: TaskFilters) {
         `)
         .order('created_at', { ascending: false });
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 
@@ -169,7 +170,7 @@ export function useTasks(filters?: TaskFilters) {
 
       return tasksWithIssues as Task[];
     },
-    enabled: !!storeId,
+    enabled: filterByStore ? !!storeId : true,
   });
 }
 
@@ -202,14 +203,14 @@ export function useMyTasks(dateFrom?: string, dateTo?: string) {
 }
 
 export function useTaskStats(dateFrom?: string, dateTo?: string) {
-  const storeId = useCurrentStoreId();
+  const { storeId, filterByStore } = useModuleStoreFilter('task_management');
 
   return useQuery({
-    queryKey: ['task-stats', storeId, dateFrom, dateTo],
+    queryKey: ['task-stats', storeId, filterByStore, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase.from('tasks').select('id, status, due_date, completed_date');
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 
