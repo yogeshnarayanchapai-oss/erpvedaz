@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Users, Pencil, Trash2, Search, Link2, ExternalLink, Eye, MoreHorizontal } from 'lucide-react';
+import { BulkPerformanceReportButton } from '@/components/hrm/BulkPerformanceReportButton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
