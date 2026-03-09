@@ -2,14 +2,15 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { ArrowLeft, User, Calendar, FileText, Building2, Phone, Mail, Briefcase, DollarSign, CreditCard, Wallet, CheckCircle, XCircle, Clock, Shield, Package } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, subMonths, differenceInDays } from 'date-fns';
+import { ArrowLeft, User, Calendar, FileText, Building2, Phone, Mail, Briefcase, DollarSign, CreditCard, Wallet, CheckCircle, XCircle, Clock, Shield, Package, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
 import { useLeaveRequests, useDepartments, usePayrollRecords } from '@/hooks/useHRM';
 import { EmployeeDocumentsTab } from '@/components/hrm/EmployeeDocumentsTab';
@@ -19,6 +20,8 @@ import { EmployeeLeaveQuotaCard } from '@/components/hrm/EmployeeLeaveQuotaCard'
 import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSMonthRange, getPreviousBSMonthRange } from '@/lib/nepaliDate';
 import { FormattedDate } from '@/components/FormattedDate';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface EmployeeDetail {
   id: string;
@@ -37,6 +40,7 @@ interface EmployeeDetail {
   designation: string | null;
   shift: string | null;
   created_at: string;
+  store_id?: string | null;
   guardian_name?: string | null;
   guardian_relation?: string | null;
   guardian_phone?: string | null;
@@ -50,18 +54,48 @@ interface EmployeeDetail {
   profiles?: { name: string; email: string } | null;
 }
 
+// Generate month/year options
+function getMonthYearOptions() {
+  const options: { label: string; month: number; year: number }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 24; i++) {
+    const d = subMonths(now, i);
+    options.push({
+      label: format(d, 'MMMM yyyy'),
+      month: d.getMonth(),
+      year: d.getFullYear(),
+    });
+  }
+  return options;
+}
+
 export default function HRMEmployeeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [attendanceFilter, setAttendanceFilter] = useState<'this_month' | 'last_month'>('this_month');
   
+  // Report month/year filter (default: current month)
+  const now = new Date();
+  const [reportMonth, setReportMonth] = useState(now.getMonth());
+  const [reportYear, setReportYear] = useState(now.getFullYear());
+  const monthYearOptions = useMemo(() => getMonthYearOptions(), []);
+
+  const reportDateRange = useMemo(() => {
+    const from = startOfMonth(new Date(reportYear, reportMonth));
+    const to = endOfMonth(new Date(reportYear, reportMonth));
+    return {
+      from: format(from, 'yyyy-MM-dd'),
+      to: format(to, 'yyyy-MM-dd'),
+      label: format(from, 'MMMM yyyy'),
+    };
+  }, [reportMonth, reportYear]);
+
   // Date mode for BS/AD filter logic
   const { dateMode } = useDateMode();
 
   // Calculate date range for attendance filter based on date mode
   const attendanceDateRange = useMemo(() => {
-    // If BS mode, use BS month boundaries
     if (dateMode === 'BS') {
       const bsRange = attendanceFilter === 'this_month' 
         ? getCurrentBSMonthRange() 
@@ -71,7 +105,6 @@ export default function HRMEmployeeDetail() {
         to: format(bsRange.end, 'yyyy-MM-dd')
       };
     }
-    // AD mode - use standard AD months
     const today = new Date();
     if (attendanceFilter === 'this_month') {
       return {
@@ -124,6 +157,255 @@ export default function HRMEmployeeDetail() {
     },
     enabled: !!id,
   });
+
+  // ---- REPORT DATA: attendance for report month ----
+  const { data: reportAttendance } = useAttendanceRecords(id, {
+    from: reportDateRange.from,
+    to: reportDateRange.to,
+  });
+
+  // ---- REPORT DATA: tasks for report month ----
+  const { data: reportTasks } = useQuery({
+    queryKey: ['employee-report-tasks', employee?.user_id, reportDateRange.from, reportDateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('assigned_to_user_id', employee!.user_id!)
+        .gte('due_date', reportDateRange.from)
+        .lte('due_date', reportDateRange.to);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee?.user_id,
+  });
+
+  // ---- REPORT DATA: leads/orders for report month (sales & conversion) ----
+  const { data: reportLeads } = useQuery({
+    queryKey: ['employee-report-leads', employee?.user_id, reportDateRange.from, reportDateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, status, order_id')
+        .eq('assigned_to_user_id', employee!.user_id!)
+        .gte('date', reportDateRange.from)
+        .lte('date', reportDateRange.to);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee?.user_id,
+  });
+
+  const { data: reportOrders } = useQuery({
+    queryKey: ['employee-report-orders', employee?.user_id, reportDateRange.from, reportDateRange.to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, amount, order_status')
+        .eq('created_by_staff_id', employee!.user_id!)
+        .gte('order_date', reportDateRange.from + 'T00:00:00')
+        .lte('order_date', reportDateRange.to + 'T23:59:59');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee?.user_id,
+  });
+
+  // Compute report stats
+  const reportStats = useMemo(() => {
+    const att = reportAttendance || [];
+    const present = att.filter(r => r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late').length;
+    const late = att.filter(r => r.status === 'Late').length;
+    const absent = att.filter(r => r.status === 'Absent').length;
+    const leave = att.filter(r => r.status === 'Leave').length;
+    const totalLateMinutes = att.reduce((sum, r) => sum + ((r as any).late_minutes || 0), 0);
+    const totalDays = att.length;
+
+    const tasks = reportTasks || [];
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
+    const onTimeTasks = tasks.filter(t => {
+      if (t.status !== 'COMPLETED' || !t.completed_date) return false;
+      return new Date(t.completed_date) <= new Date(t.due_date);
+    }).length;
+    const overdueTasks = tasks.filter(t => {
+      if (t.status === 'COMPLETED' && t.completed_date) {
+        return new Date(t.completed_date) > new Date(t.due_date);
+      }
+      return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
+    }).length;
+
+    const leads = reportLeads || [];
+    const totalLeads = leads.length;
+    const confirmedLeads = leads.filter(l => l.status === 'CONFIRMED' || l.order_id).length;
+    const conversionRate = totalLeads > 0 ? ((confirmedLeads / totalLeads) * 100).toFixed(1) : '0';
+
+    const orders = reportOrders || [];
+    const totalSales = orders
+      .filter(o => o.order_status && !['CANCELLED', 'RETURNED'].includes(o.order_status))
+      .reduce((sum, o) => sum + (o.amount || 0), 0);
+    const totalOrdersCount = orders.filter(o => o.order_status && !['CANCELLED', 'RETURNED'].includes(o.order_status)).length;
+
+    return {
+      totalDays, present, late, absent, leave, totalLateMinutes,
+      totalTasks, completedTasks, onTimeTasks, overdueTasks,
+      totalLeads, confirmedLeads, conversionRate,
+      totalSales, totalOrdersCount,
+    };
+  }, [reportAttendance, reportTasks, reportLeads, reportOrders]);
+
+  // Export PDF
+  const handleExportReport = () => {
+    if (!employee) return;
+
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Employee Monthly Report', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    // Employee Info
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Staff Information', 14, y);
+    y += 2;
+
+    const deptName = employee.departments?.name || 'N/A';
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] },
+      body: [
+        ['Name', employee.full_name, 'Position', employee.position || 'N/A'],
+        ['Department', deptName, 'Status', employee.status],
+        ['Phone', employee.phone || 'N/A', 'Email', employee.email || 'N/A'],
+      ],
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 30 },
+        1: { cellWidth: 55 },
+        2: { fontStyle: 'bold', cellWidth: 30 },
+        3: { cellWidth: 55 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // Attendance Section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Attendance Summary', 14, y);
+    y += 2;
+
+    const lateHours = Math.floor(reportStats.totalLateMinutes / 60);
+    const lateMins = reportStats.totalLateMinutes % 60;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [34, 197, 94] },
+      head: [['Total Days', 'Present', 'Late', 'Absent', 'Leave', 'Total Late']],
+      body: [[
+        reportStats.totalDays,
+        reportStats.present,
+        reportStats.late,
+        reportStats.absent,
+        reportStats.leave,
+        `${lateHours}h ${lateMins}m`,
+      ]],
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // Sales Section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sales Performance', 14, y);
+    y += 2;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [168, 85, 247] },
+      head: [['Total Leads', 'Confirmed', 'Conversion Rate', 'Total Orders', 'Total Sales (Rs.)']],
+      body: [[
+        reportStats.totalLeads,
+        reportStats.confirmedLeads,
+        `${reportStats.conversionRate}%`,
+        reportStats.totalOrdersCount,
+        `Rs. ${reportStats.totalSales.toLocaleString()}`,
+      ]],
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // Tasks Section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Task Summary', 14, y);
+    y += 2;
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [249, 115, 22] },
+      head: [['Total Tasks', 'Completed', 'On Time', 'Overdue/Late']],
+      body: [[
+        reportStats.totalTasks,
+        reportStats.completedTasks,
+        reportStats.onTimeTasks,
+        reportStats.overdueTasks,
+      ]],
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+
+    // Task details if any
+    if (reportTasks && reportTasks.length > 0) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Task Details', 14, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y,
+        theme: 'striped',
+        headStyles: { fillColor: [100, 116, 139] },
+        head: [['Title', 'Due Date', 'Status', 'Completed']],
+        body: reportTasks.map(t => [
+          t.title.substring(0, 40),
+          format(new Date(t.due_date), 'MMM dd, yyyy'),
+          t.status || 'PENDING',
+          t.completed_date ? format(new Date(t.completed_date), 'MMM dd') : '-',
+        ]),
+        columnStyles: {
+          0: { cellWidth: 60 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    doc.save(`${employee.full_name.replace(/\s+/g, '_')}_Report_${reportDateRange.label.replace(/\s+/g, '_')}.pdf`);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -191,8 +473,6 @@ export default function HRMEmployeeDetail() {
     departments?.find(d => d.id === employee.department_id)?.name || 
     'Not assigned';
 
-  // Calculate attendance stats - use actual status from DB
-  // "Late" employees are also counted as "Present" (they attended office, just late)
   const attendanceStats = {
     present: attendanceRecords?.filter(r => r.status === 'Present' || r.status === 'Work From Home' || r.status === 'Late').length || 0,
     late: attendanceRecords?.filter(r => r.status === 'Late').length || 0,
@@ -202,18 +482,49 @@ export default function HRMEmployeeDetail() {
     totalLateMinutes: attendanceRecords?.reduce((sum, r) => sum + ((r as any).late_minutes || 0), 0) || 0,
   };
 
+  const selectedMonthYearKey = `${reportMonth}-${reportYear}`;
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => navigate('/hrm/employees')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{employee.full_name}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold">{employee.full_name}</h1>
+            <Badge className={getStatusColor(employee.status)}>{employee.status}</Badge>
+          </div>
           <p className="text-muted-foreground">{employee.position || 'No position'}</p>
         </div>
-        <Badge className={getStatusColor(employee.status)}>{employee.status}</Badge>
+
+        {/* Report Month Filter + Export */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select
+            value={selectedMonthYearKey}
+            onValueChange={(val) => {
+              const [m, y] = val.split('-').map(Number);
+              setReportMonth(m);
+              setReportYear(y);
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthYearOptions.map((opt) => (
+                <SelectItem key={`${opt.month}-${opt.year}`} value={`${opt.month}-${opt.year}`}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={handleExportReport}>
+            <Download className="h-4 w-4 mr-1" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
       {/* Attendance Summary Stats */}
