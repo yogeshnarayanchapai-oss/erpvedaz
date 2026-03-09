@@ -21,7 +21,7 @@ import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 
