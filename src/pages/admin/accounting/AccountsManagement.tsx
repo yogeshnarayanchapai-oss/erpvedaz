@@ -33,6 +33,7 @@ export default function AccountsManagement() {
   const [assigningAsset, setAssigningAsset] = useState<AccountingAsset | null>(null);
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [assignCondition, setAssignCondition] = useState('Good');
+  const [assetSearch, setAssetSearch] = useState('');
   const [assignNotes, setAssignNotes] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -481,8 +482,14 @@ export default function AccountsManagement() {
 
           {/* Assets Table */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Asset Transactions</CardTitle>
+              <Input
+                placeholder="Search by description or reference..."
+                value={assetSearch}
+                onChange={(e) => setAssetSearch(e.target.value)}
+                className="max-w-xs"
+              />
             </CardHeader>
             <CardContent>
               {assetsLoading ? (
@@ -509,7 +516,13 @@ export default function AccountsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {assets.map((asset) => (
+                    {assets
+                      .filter(a => {
+                        if (!assetSearch.trim()) return true;
+                        const q = assetSearch.toLowerCase();
+                        return (a.description?.toLowerCase().includes(q)) || (a.reference_no?.toLowerCase().includes(q));
+                      })
+                      .map((asset) => (
                       <TableRow key={asset.id}>
                         <TableCell>{format(new Date(asset.date), 'dd MMM yyyy')}</TableCell>
                         <TableCell className="font-medium">{asset.description}</TableCell>
