@@ -138,6 +138,7 @@ export default function AccountsManagement() {
     }
   };
 
+  const openDialog = (account?: Account) => {
     if (account) {
       setEditingAccount(account);
       setFormData({
