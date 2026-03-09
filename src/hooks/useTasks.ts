@@ -113,10 +113,10 @@ interface TaskFilters {
 }
 
 export function useTasks(filters?: TaskFilters) {
-  const storeId = useCurrentStoreId();
+  const { storeId, filterByStore } = useModuleStoreFilter('task_management');
 
   return useQuery({
-    queryKey: ['tasks', storeId, filters],
+    queryKey: ['tasks', storeId, filterByStore, filters],
     queryFn: async () => {
       let query = supabase
         .from('tasks')
@@ -127,7 +127,7 @@ export function useTasks(filters?: TaskFilters) {
         `)
         .order('created_at', { ascending: false });
 
-      if (storeId) {
+      if (filterByStore && storeId) {
         query = query.eq('store_id', storeId);
       }
 
