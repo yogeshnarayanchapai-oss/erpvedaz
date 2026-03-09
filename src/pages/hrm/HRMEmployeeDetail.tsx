@@ -442,8 +442,9 @@ export default function HRMEmployeeDetail() {
     autoTable(doc, {
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [168, 85, 247] },
-      head: [['Total Leads', 'Confirmed Orders', 'VD Not Deliver', 'Effective Orders', 'Conv. Rate', 'Total Sales (Rs.)']],
+      headStyles: { fillColor: [168, 85, 247], fontSize: 8 },
+      styles: { fontSize: 8 },
+      head: [['Total Leads', 'Confirmed', 'VD Not Deliver', 'Effective', 'Conv. Rate', 'Total Sales (Rs.)']],
       body: [[
         reportStats.totalLeads,
         reportStats.confirmedOrders,
