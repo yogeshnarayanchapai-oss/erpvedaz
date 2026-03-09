@@ -656,8 +656,6 @@ export default function HRMEmployeeDetail() {
       remarks.push('- Tasks: No task data available for this period. Rating excluded from overall score.');
     } else if (reportStats.taskRating === 'Excellent') {
       remarks.push('- Tasks: All tasks completed on time. Excellent task management.');
-    } else if (reportStats.taskRating === 'Good') {
-      remarks.push(`- Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
     } else if (reportStats.taskRating === 'Medium') {
       remarks.push(`- Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
     } else {
