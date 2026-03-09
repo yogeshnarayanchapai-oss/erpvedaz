@@ -345,13 +345,11 @@ export default function HRMEmployeeDetail() {
     doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
     y += 10;
 
-    // Employee Info
+    // Staff Info - Only Name and Position
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('Staff Information', 14, y);
     y += 2;
-
-    const deptName = employee.departments?.name || 'N/A';
 
     autoTable(doc, {
       startY: y,
@@ -359,8 +357,6 @@ export default function HRMEmployeeDetail() {
       headStyles: { fillColor: [59, 130, 246] },
       body: [
         ['Name', employee.full_name, 'Position', employee.position || 'N/A'],
-        ['Department', deptName, 'Status', employee.status],
-        ['Phone', employee.phone || 'N/A', 'Email', employee.email || 'N/A'],
       ],
       columnStyles: {
         0: { fontStyle: 'bold', cellWidth: 30 },
@@ -371,7 +367,44 @@ export default function HRMEmployeeDetail() {
       margin: { left: 14, right: 14 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 8;
+
+    // Overall Score & Promotion Suggestion
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Overall Performance Score', 14, y);
+    y += 2;
+
+    const suggestionColor: [number, number, number] = 
+      reportStats.promotionSuggestion === 'Good' ? [34, 197, 94] : 
+      reportStats.promotionSuggestion === 'Medium' ? [249, 115, 22] : [239, 68, 68];
+
+    autoTable(doc, {
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 64, 175] },
+      head: [['Attendance (30)', 'Sales (40)', 'Tasks (30)', 'Total Score (/100)', 'Promotion']],
+      body: [[
+        `${reportStats.attendanceScore}/30`,
+        `${reportStats.conversionScore}/40`,
+        `${reportStats.taskScore}/30`,
+        `${reportStats.totalScore}/100`,
+        reportStats.promotionSuggestion,
+      ]],
+      bodyStyles: { fontSize: 11 },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 4) {
+          data.cell.styles.textColor = suggestionColor;
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if (data.section === 'body' && data.column.index === 3) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 8;
 
     // Attendance Section
     doc.setFontSize(12);
@@ -386,9 +419,9 @@ export default function HRMEmployeeDetail() {
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [34, 197, 94] },
-      head: [['Total Days', 'Present', 'Late', 'Absent', 'Leave', 'Total Late']],
+      head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Total Late']],
       body: [[
-        reportStats.totalDays,
+        reportStats.workingDays,
         reportStats.present,
         reportStats.late,
         reportStats.absent,
@@ -398,30 +431,31 @@ export default function HRMEmployeeDetail() {
       margin: { left: 14, right: 14 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 8;
 
-    // Sales Section
+    // Sales Section (matching Staff Leaderboard)
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('Sales Performance', 14, y);
+    doc.text('Sales Performance (Leaderboard)', 14, y);
     y += 2;
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [168, 85, 247] },
-      head: [['Total Leads', 'Confirmed', 'Conversion Rate', 'Total Orders', 'Total Sales (Rs.)']],
+      head: [['Total Leads', 'Confirmed Orders', 'VD Not Deliver', 'Effective Orders', 'Conv. Rate', 'Total Sales (Rs.)']],
       body: [[
         reportStats.totalLeads,
-        reportStats.confirmedLeads,
+        reportStats.confirmedOrders,
+        reportStats.vdNotDeliver,
+        reportStats.effectiveOrders,
         `${reportStats.conversionRate}%`,
-        reportStats.totalOrdersCount,
         `Rs. ${reportStats.totalSales.toLocaleString()}`,
       ]],
       margin: { left: 14, right: 14 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 8;
 
     // Tasks Section
     doc.setFontSize(12);
@@ -443,7 +477,7 @@ export default function HRMEmployeeDetail() {
       margin: { left: 14, right: 14 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 8;
 
     // Task details if any
     if (reportTasks && reportTasks.length > 0) {
