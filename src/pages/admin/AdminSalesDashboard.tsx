@@ -190,6 +190,214 @@ export default function AdminDashboard() {
     XLSX.writeFile(wb, `PL_Report_${selectedYear}.xlsx`);
   };
 
+  // Export Sales Report PDF
+  const exportSalesReport = () => {
+    setExportingReport(true);
+    try {
+      const doc = new jsPDF();
+      const periodLabel = getPeriodLabel();
+      const pageWidth = doc.internal.pageSize.width;
+
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sales Performance Report', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text(`Period: ${periodLabel}`, 14, 27);
+      doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy, HH:mm')}`, 14, 32);
+      doc.setTextColor(0);
+
+      // ── Lead & Order Summary ──
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Lead & Order Summary', 14, 42);
+
+      const confirmRate = stats.total > 0 ? ((orders.confirmed / stats.total) * 100).toFixed(1) : '0';
+      const returnRate = orders.total > 0 ? ((orders.returned / orders.total) * 100).toFixed(1) : '0';
+
+      autoTable(doc, {
+        startY: 46,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Leads', String(stats.total)],
+          ['Confirmed Orders', String(orders.confirmed)],
+          ['Confirmation Rate', `${confirmRate}%`],
+          ['Total Orders', String(orders.total)],
+          ['Dispatched', String(orders.dispatched)],
+          ['Delivered', String(orders.delivered)],
+          ['Returned', String(orders.returned)],
+          ['Return Rate', `${returnRate}%`],
+          ['Cancelled', String(orders.cancelled)],
+          ['Redirect', String(orders.redirect)],
+        ],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 60 },
+        },
+        didParseCell: (data: any) => {
+          // Bold highlight for Total Orders row
+          if (data.section === 'body' && (data.row.index === 3)) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [235, 245, 255];
+          }
+        },
+      });
+
+      // ── Sales by Location ──
+      let y = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sales Summary (VD / OVD)', 14, y);
+
+      const totalSales = salesByRange?.total || 0;
+      const vdSales = salesByRange?.insideValley || 0;
+      const ovdSales = salesByRange?.outsideValley || 0;
+
+      autoTable(doc, {
+        startY: y + 4,
+        head: [['Location', 'Sales (NPR)']],
+        body: [
+          ['Inside Valley (VD)', `Rs ${vdSales.toLocaleString()}`],
+          ['Outside Valley (OVD)', `Rs ${ovdSales.toLocaleString()}`],
+          ['TOTAL SALES', `Rs ${totalSales.toLocaleString()}`],
+        ],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+        didParseCell: (data: any) => {
+          // Bold highlight Total Sales row
+          if (data.section === 'body' && data.row.index === 2) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fontSize = 11;
+            data.cell.styles.fillColor = [235, 245, 255];
+          }
+        },
+      });
+
+      // ── Product Target Progress ──
+      y = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Product Target Progress', 14, y);
+
+      const targetRows = productRevenueTargets.map((p: any) => {
+        const progress = p.target > 0 ? ((p.actual / p.target) * 100).toFixed(0) : '-';
+        const met = p.target > 0 && p.actual >= p.target;
+        return [
+          p.name,
+          `Rs ${(p.target || 0).toLocaleString()}`,
+          `Rs ${(p.actual || 0).toLocaleString()}`,
+          `${progress}%`,
+          met ? '✅ YES' : '❌ NO',
+        ];
+      });
+
+      if (targetRows.length > 0) {
+        autoTable(doc, {
+          startY: y + 4,
+          head: [['Product', 'Target (NPR)', 'Actual (NPR)', 'Progress', 'Target Met?']],
+          body: targetRows,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] },
+          columnStyles: {
+            4: { fontStyle: 'bold' },
+          },
+          didParseCell: (data: any) => {
+            if (data.section === 'body' && data.column.index === 4) {
+              const val = data.cell.raw as string;
+              if (val.includes('YES')) {
+                data.cell.styles.textColor = [22, 163, 74];
+              } else {
+                data.cell.styles.textColor = [220, 38, 38];
+              }
+            }
+          },
+        });
+      }
+
+      // ── Product Daybook (Ref Profit) ──
+      const activeProducts = sortedProductDaybook.filter(item => item.sales > 0);
+      if (activeProducts.length > 0) {
+        y = (doc as any).lastAutoTable?.finalY + 10 || y + 10;
+        
+        // Check if we need a new page
+        if (y > 240) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Product Daybook & Profit', 14, y);
+
+        const daybookRows = activeProducts.map(item => [
+          item.name,
+          String(item.sales),
+          String(item.ovdOrders || 0),
+          String(item.vdOrders || 0),
+          `Rs ${(item.revenue || 0).toLocaleString()}`,
+          `Rs ${item.pl.toLocaleString()}`,
+        ]);
+
+        const totalRevenue = activeProducts.reduce((s, i) => s + (i.revenue || 0), 0);
+        const totalPL = activeProducts.reduce((s, i) => s + i.pl, 0);
+
+        daybookRows.push([
+          'TOTAL',
+          String(activeProducts.reduce((s, i) => s + i.sales, 0)),
+          String(activeProducts.reduce((s, i) => s + (i.ovdOrders || 0), 0)),
+          String(activeProducts.reduce((s, i) => s + (i.vdOrders || 0), 0)),
+          `Rs ${totalRevenue.toLocaleString()}`,
+          `Rs ${totalPL.toLocaleString()}`,
+        ]);
+
+        autoTable(doc, {
+          startY: y + 4,
+          head: [['Product', 'Orders', 'OVD', 'VD', 'Revenue', 'P/L']],
+          body: daybookRows,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] },
+          didParseCell: (data: any) => {
+            // Bold total row
+            if (data.section === 'body' && data.row.index === daybookRows.length - 1) {
+              data.cell.styles.fontStyle = 'bold';
+              data.cell.styles.fillColor = [235, 245, 255];
+            }
+            // Color P/L column
+            if (data.section === 'body' && data.column.index === 5) {
+              const raw = String(data.cell.raw).replace(/[^0-9-]/g, '');
+              if (parseInt(raw) < 0) {
+                data.cell.styles.textColor = [220, 38, 38];
+              } else {
+                data.cell.styles.textColor = [22, 163, 74];
+              }
+            }
+          },
+        });
+      }
+
+      // ── Footer ──
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+          `Generated by Vakari Vision | Page ${i} of ${pageCount}`,
+          14,
+          doc.internal.pageSize.height - 10
+        );
+      }
+
+      doc.save(`Sales_Report_${format(dateRange.from, 'yyyy-MM-dd')}_to_${format(dateRange.to, 'yyyy-MM-dd')}.pdf`);
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
   // Generate period label for display
   const getPeriodLabel = () => {
     const fromStr = format(dateRange.from, 'MMM d');
