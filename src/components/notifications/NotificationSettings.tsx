@@ -117,15 +117,15 @@ export function NotificationSettings() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-              <Mail className="h-5 w-5 text-muted-foreground" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Mail className="h-5 w-5 text-primary" />
             </div>
             <div className="space-y-0.5">
-              <Label htmlFor="email-toggle" className="text-sm font-medium text-muted-foreground">
+              <Label htmlFor="email-toggle" className="text-sm font-medium">
                 Email Notifications
               </Label>
               <p className="text-xs text-muted-foreground">
-                Coming soon - Get email alerts for lead assignments
+                Send email alerts for attendance check-in/check-out
               </p>
             </div>
           </div>
@@ -133,7 +133,6 @@ export function NotificationSettings() {
             id="email-toggle"
             checked={preferences.emailEnabled}
             onCheckedChange={toggleEmail}
-            disabled
           />
         </div>
       </CardContent>
