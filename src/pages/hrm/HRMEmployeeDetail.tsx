@@ -369,7 +369,7 @@ export default function HRMEmployeeDetail() {
       attendanceRate: attendanceRate.toFixed(1),
       attendanceRating, salesRating, taskRating,
       attendanceScore: attScore, conversionScore: salesScore, taskScore: tskScore,
-      totalScore, promotionSuggestion,
+      totalScore, maxScore, promotionSuggestion,
     };
   }, [reportAttendance, reportTasks, reportLeadTransfers, reportOrders]);
 
