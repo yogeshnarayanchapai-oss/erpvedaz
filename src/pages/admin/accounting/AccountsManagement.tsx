@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [hideZeroBalance, setHideZeroBalance] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as 'cash' | 'bank' | 'wallet' | 'other',
