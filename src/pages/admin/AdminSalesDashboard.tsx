@@ -51,6 +51,7 @@ export default function AdminDashboard() {
   });
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [exportingReport, setExportingReport] = useState(false);
 
   // Format dates for queries - use Nepal-aware date formatting
   const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
