@@ -5,7 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Boxes, DollarSign, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Pencil, Check, X, Bell } from 'lucide-react';
+import { Package, Boxes, DollarSign, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Pencil, Check, X, Bell, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useInventorySummaryByWarehouse, WarehouseStockSummary } from '@/hooks/useInventorySummaryByWarehouse';
 import { useActiveWarehouses } from '@/hooks/useWarehouses';
 import { useHighAlertData } from '@/hooks/useHighAlertData';
@@ -325,10 +327,60 @@ export default function StockSummary() {
 
           {/* Inventory - Mobile card view, Desktop table */}
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
+            <CardHeader className="pb-2 md:pb-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm md:text-base">
                 Inventory {activeTab !== 'all' && `- ${warehouses?.find((w) => w.id === activeTab)?.name}`}
               </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const inStockItems = filteredItems.filter(i => i.current_stock > 0);
+                  if (!inStockItems.length) {
+                    toast({ title: 'No items with stock > 0 to export', variant: 'destructive' });
+                    return;
+                  }
+                  const doc = new jsPDF();
+                  doc.setFontSize(14);
+                  doc.text('Inventory Report', 14, 15);
+                  doc.setFontSize(9);
+                  doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 22);
+                  const warehouseName = activeTab === 'all' ? 'All Warehouses' : warehouses?.find(w => w.id === activeTab)?.name || '';
+                  doc.text(`Warehouse: ${warehouseName}`, 14, 27);
+
+                  const head = activeTab === 'all'
+                    ? [['Product', 'Warehouse', 'In', 'Out', 'Current', 'Value', 'Reorder Lvl']]
+                    : [['Product', 'In', 'Out', 'Current', 'Value', 'Reorder Lvl']];
+
+                  const body = inStockItems.map(item => {
+                    const row = [
+                      item.product_name,
+                      ...(activeTab === 'all' ? [item.warehouse_name] : []),
+                      item.total_in.toString(),
+                      item.total_out.toString(),
+                      item.current_stock.toString(),
+                      `Rs ${item.stock_value.toLocaleString()}`,
+                      item.reorder_level.toString(),
+                    ];
+                    return row;
+                  });
+
+                  autoTable(doc, {
+                    head,
+                    body,
+                    startY: 32,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [41, 128, 185] },
+                  });
+
+                  doc.save(`inventory-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+                  toast({ title: 'PDF exported successfully' });
+                }}
+              >
+                <FileDown className="h-4 w-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </Button>
             </CardHeader>
             <CardContent className="p-0 sm:p-6 sm:pt-0">
               {isLoading ? (
