@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { FileDown, EyeOff } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -20,6 +23,7 @@ import { format } from 'date-fns';
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [hideZeroBalance, setHideZeroBalance] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as 'cash' | 'bank' | 'wallet' | 'other',
@@ -41,6 +45,34 @@ export default function AccountsManagement() {
   // Assets data
   const { data: assets = [], isLoading: assetsLoading } = useAccountingAssets();
   const { data: totalAssetValue = 0 } = useAccountingAssetTotal();
+
+  const displayedAccounts = hideZeroBalance
+    ? accounts.filter(a => (a.current_balance ?? 0) !== 0)
+    : accounts;
+
+  const handleExportPDF = () => {
+    const positiveAccounts = accounts.filter(a => (a.current_balance ?? 0) > 0);
+    if (positiveAccounts.length === 0) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Accounts Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy')}`, 14, 22);
+    autoTable(doc, {
+      startY: 28,
+      head: [['Account Name', 'Type', 'Account Number', 'Opening Balance', 'Current Balance', 'Status']],
+      body: positiveAccounts.map(a => [
+        a.name + (a.is_default ? ' (Default)' : ''),
+        a.type,
+        a.account_number || '-',
+        `NPR ${(a.opening_balance ?? 0).toLocaleString()}`,
+        `NPR ${(a.current_balance ?? 0).toLocaleString()}`,
+        a.is_active ? 'Active' : 'Inactive',
+      ]),
+      foot: [['', '', '', 'Total:', `NPR ${positiveAccounts.reduce((s, a) => s + (a.current_balance ?? 0), 0).toLocaleString()}`, '']],
+    });
+    doc.save('accounts-report.pdf');
+  };
 
   const openDialog = (account?: Account) => {
     if (account) {
@@ -224,13 +256,31 @@ export default function AccountsManagement() {
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
-                All Accounts ({accounts.length})
+                All Accounts ({displayedAccounts.length})
                 <span className="ml-4 text-sm font-normal text-muted-foreground">
-                  Total Balance: {formatNPR(accounts.reduce((sum, acc) => sum + (acc.current_balance ?? 0), 0))}
+                  Total Balance: {formatNPR(displayedAccounts.reduce((sum, acc) => sum + (acc.current_balance ?? 0), 0))}
                 </span>
               </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant={hideZeroBalance ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setHideZeroBalance(!hideZeroBalance)}
+                >
+                  <EyeOff className="h-4 w-4 mr-1" />
+                  {hideZeroBalance ? 'Showing Non-Zero' : 'Hide 0 Balance'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPDF}
+                >
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Export PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -251,14 +301,14 @@ export default function AccountsManagement() {
                       <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
                     </TableRow>
                   )}
-                  {!isLoading && accounts.length === 0 && (
+                  {!isLoading && displayedAccounts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No accounts yet. Create one to get started.
                       </TableCell>
                     </TableRow>
                   )}
-                  {accounts.map((account) => (
+                  {displayedAccounts.map((account) => (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">
                         {account.name}
