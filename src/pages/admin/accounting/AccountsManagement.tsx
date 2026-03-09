@@ -505,7 +505,6 @@ export default function AccountsManagement() {
                       <TableHead>Account</TableHead>
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
