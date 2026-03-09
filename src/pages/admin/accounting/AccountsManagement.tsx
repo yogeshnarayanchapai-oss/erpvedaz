@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function AccountsManagement() {
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
