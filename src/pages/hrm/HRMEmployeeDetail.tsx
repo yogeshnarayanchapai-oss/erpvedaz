@@ -546,7 +546,7 @@ export default function HRMEmployeeDetail() {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    let y = 12;
+    let y = 10;
 
     // ---- COMPANY HEADER ----
     const compName = companyInfo?.company_name || 'Company';
@@ -556,74 +556,42 @@ export default function HRMEmployeeDetail() {
     const compReg = companyInfo?.registration_no || '';
 
     doc.setFillColor(245, 247, 250);
-    doc.rect(0, 0, pageWidth, 32, 'F');
+    doc.rect(0, 0, pageWidth, 26, 'F');
 
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text(compName, pageWidth / 2, y + 4, { align: 'center' });
-    y += 10;
+    doc.text(compName, pageWidth / 2, y + 3, { align: 'center' });
+    y += 8;
 
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     const headerParts = [compAddr, compPhone, compEmail, compReg ? `Reg: ${compReg}` : ''].filter(Boolean);
     doc.text(headerParts.join('  |  '), pageWidth / 2, y, { align: 'center' });
-    y += 5;
+    y += 4;
 
     doc.setDrawColor(203, 213, 225);
-    doc.line(14, y + 2, pageWidth - 14, y + 2);
-    y += 8;
+    doc.line(14, y + 1, pageWidth - 14, y + 1);
+    y += 5;
 
-    // Report Title
-    doc.setFontSize(13);
+    // Report Title + Period in one line
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Employee Monthly Performance Report', pageWidth / 2, y, { align: 'center' });
-    y += 6;
-    doc.setFontSize(9);
+    y += 5;
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
-    y += 8;
+    y += 5;
 
-    // Light theme styles
-    const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 9 };
-    const lightBody = { fontSize: 9, textColor: [51, 65, 85] as [number, number, number] };
-    const sectionGap = 8;
-    const margin = { left: 18, right: 18 };
-
-    // ---- STAFF INFO ----
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text('Staff Information', margin.left, y);
-    y += 3;
-
-    autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead },
-      styles: { ...lightBody },
-      body: [
-        ['Name', employee.full_name, 'Position', employee.position || 'N/A'],
-      ],
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 30 },
-        1: { cellWidth: 55 },
-        2: { fontStyle: 'bold', cellWidth: 30 },
-        3: { cellWidth: 55 },
-      },
-      margin,
-    });
-    y = (doc as any).lastAutoTable.finalY + sectionGap;
-
-    // ---- OVERALL SCORE ----
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text('Overall Performance Score', margin.left, y);
-    y += 3;
+    // Compact styles
+    const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 7.5, cellPadding: 1.5 };
+    const lightBody = { fontSize: 7.5, textColor: [51, 65, 85] as [number, number, number], cellPadding: 1.5 };
+    const sectionGap = 4;
+    const margin = { left: 14, right: 14 };
 
     const getRatingColor = (r: string): [number, number, number] => {
       if (r === 'Excellent') return [22, 163, 74];
@@ -633,23 +601,48 @@ export default function HRMEmployeeDetail() {
       return [220, 38, 38];
     };
 
+    // ---- STAFF INFO (inline) ----
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Staff: ${employee.full_name}`, margin.left, y);
+    doc.text(`Position: ${employee.position || 'N/A'}`, pageWidth / 2, y);
+    y += sectionGap + 1;
+
+    // ---- OVERALL SCORE ----
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Overall Performance Score', margin.left, y);
+    y += 2;
+
     const promoColor: [number, number, number] = reportStats.promotionSuggestion === 'Highly Recommended'
       ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : reportStats.promotionSuggestion === 'Insufficient Data' ? [148, 163, 184] : [220, 38, 38];
-
-    const attLabel = reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)';
-    const salesLabel = reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)';
-    const taskLabel = reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)';
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { ...lightHead },
       styles: { ...lightBody },
-      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore || 'N/A'})`, 'Promotion Suggestion']],
+      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore || 'N/A'})`, 'Promotion']],
       body: [
-        [attLabel, reportStats.attendanceRating, reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`, '', ''],
-        [salesLabel, reportStats.salesRating, reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`, '', ''],
-        [taskLabel, reportStats.taskRating, reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`, '', ''],
+        [
+          reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)',
+          reportStats.attendanceRating,
+          reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`,
+          '', '',
+        ],
+        [
+          reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)',
+          reportStats.salesRating,
+          reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`,
+          '', '',
+        ],
+        [
+          reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)',
+          reportStats.taskRating,
+          reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`,
+          '', '',
+        ],
       ],
       didParseCell: (data: any) => {
         if (data.section === 'body' && data.column.index === 1) {
@@ -670,259 +663,201 @@ export default function HRMEmployeeDetail() {
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- ATTENDANCE ----
-    doc.setFontSize(11);
+    // ---- ATTENDANCE (compact) ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Attendance Summary', margin.left, y);
-    y += 3;
+    y += 2;
 
     const lateHours = Math.floor(reportStats.totalLateMinutes / 60);
     const lateMins = reportStats.totalLateMinutes % 60;
 
     autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead },
-      styles: { ...lightBody },
-      head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Attendance %', 'Total Late', 'Rating']],
-      body: [[
-        reportStats.workingDays,
-        reportStats.present,
-        reportStats.late,
-        reportStats.absent,
-        reportStats.leave,
-        `${reportStats.attendanceRate}%`,
-        `${lateHours}h ${lateMins}m`,
-        reportStats.attendanceRating,
-      ]],
+      startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
+      head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Att %', 'Total Late', 'Rating']],
+      body: [[reportStats.workingDays, reportStats.present, reportStats.late, reportStats.absent, reportStats.leave, `${reportStats.attendanceRate}%`, `${lateHours}h ${lateMins}m`, reportStats.attendanceRating]],
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 7) {
-          data.cell.styles.textColor = getRatingColor(data.cell.raw);
-          data.cell.styles.fontStyle = 'bold';
-        }
+        if (data.section === 'body' && data.column.index === 7) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
       },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- SALES ----
-    doc.setFontSize(11);
+    // ---- SALES (compact) ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Sales Performance', margin.left, y);
-    y += 3;
+    y += 2;
 
     autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead, fontSize: 8 },
-      styles: { ...lightBody, fontSize: 8 },
-      head: [['Total Leads', 'Confirmed', 'VD Not Deliver', 'Effective', 'Conv. Rate', 'Total Sales (Rs.)', 'Rating']],
-      body: [[
-        reportStats.totalLeads,
-        reportStats.confirmedOrders,
-        reportStats.vdNotDeliver,
-        reportStats.effectiveOrders,
-        `${reportStats.conversionRate}%`,
-        `Rs. ${reportStats.totalSales.toLocaleString()}`,
-        reportStats.salesRating,
-      ]],
+      startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
+      head: [['Total Leads', 'Confirmed', 'VD Not Dlvr', 'Effective', 'Conv %', 'Sales (Rs.)', 'Rating']],
+      body: [[reportStats.totalLeads, reportStats.confirmedOrders, reportStats.vdNotDeliver, reportStats.effectiveOrders, `${reportStats.conversionRate}%`, `Rs.${reportStats.totalSales.toLocaleString()}`, reportStats.salesRating]],
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 6) {
-          data.cell.styles.textColor = getRatingColor(data.cell.raw);
-          data.cell.styles.fontStyle = 'bold';
-        }
+        if (data.section === 'body' && data.column.index === 6) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
       },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- TASKS ----
-    doc.setFontSize(11);
+    // ---- TASKS (compact) ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Task Summary', margin.left, y);
-    y += 3;
+    y += 2;
 
     autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead },
-      styles: { ...lightBody },
+      startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
       head: [['Total Tasks', 'Completed', 'On Time', 'Overdue', 'Due %', 'Rating']],
-      body: [[
-        reportStats.totalTasks,
-        reportStats.completedTasks,
-        reportStats.onTimeTasks,
-        reportStats.overdueTasks,
-        `${reportStats.duePercent.toFixed(1)}%`,
-        reportStats.taskRating,
-      ]],
+      body: [[reportStats.totalTasks, reportStats.completedTasks, reportStats.onTimeTasks, reportStats.overdueTasks, `${reportStats.duePercent.toFixed(1)}%`, reportStats.taskRating]],
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 5) {
-          data.cell.styles.textColor = getRatingColor(data.cell.raw);
-          data.cell.styles.fontStyle = 'bold';
-        }
+        if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
       },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- REMARKS / NOTES SECTION ----
-    doc.setFontSize(10);
+    // ---- REMARKS (compact) ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Remarks & Observations', margin.left, y);
-    y += 5;
+    y += 3;
 
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
 
     const remarks: string[] = [];
+    if (reportStats.attendanceRating === 'No Rating') remarks.push('- Attendance: No data. Excluded from score.');
+    else if (reportStats.attendanceRating === 'Excellent') remarks.push('- Attendance: Excellent presence. Keep it up!');
+    else if (reportStats.attendanceRating === 'Good') remarks.push(`- Attendance: Good (${reportStats.attendanceRate}%), ${lateHours}h ${lateMins}m late. Reduce for Excellent.`);
+    else remarks.push(`- Attendance: Low (${reportStats.attendanceRate}%). Counseling recommended.`);
 
-    // Attendance remarks
-    if (reportStats.attendanceRating === 'No Rating') {
-      remarks.push('- Attendance: No attendance data available for this period. Rating excluded from overall score.');
-    } else if (reportStats.attendanceRating === 'Excellent') {
-      remarks.push('- Attendance: Excellent presence record with no late arrivals. Keep it up!');
-    } else if (reportStats.attendanceRating === 'Good' && reportStats.totalLateMinutes > 0) {
-      remarks.push(`- Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
-    } else if (reportStats.attendanceRating === 'Low') {
-      remarks.push(`- Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
-    }
+    if (reportStats.salesRating === 'No Rating') remarks.push('- Sales: No data. Excluded from score.');
+    else if (reportStats.salesRating === 'Excellent') remarks.push(`- Sales: Outstanding ${reportStats.conversionRate}% conversion.`);
+    else if (reportStats.salesRating === 'Good') remarks.push(`- Sales: Good ${reportStats.conversionRate}%. Push to 60%+.`);
+    else if (reportStats.salesRating === 'Medium') remarks.push(`- Sales: Average ${reportStats.conversionRate}%. Needs improvement.`);
+    else remarks.push(`- Sales: Low ${reportStats.conversionRate}%. Coaching required.`);
 
-    // Sales remarks
-    if (reportStats.salesRating === 'No Rating') {
-      remarks.push('- Sales: No sales data available for this period. Rating excluded from overall score.');
-    } else if (reportStats.salesRating === 'Excellent') {
-      remarks.push(`- Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
-    } else if (reportStats.salesRating === 'Good') {
-      remarks.push(`- Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
-    } else if (reportStats.salesRating === 'Medium') {
-      remarks.push(`- Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
-    } else {
-      remarks.push(`- Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
-    }
+    if (reportStats.taskRating === 'No Rating') remarks.push('- Tasks: No data. Excluded from score.');
+    else if (reportStats.taskRating === 'Excellent') remarks.push('- Tasks: All on time. Excellent management.');
+    else if (reportStats.taskRating === 'Medium') remarks.push(`- Tasks: ${reportStats.duePercent.toFixed(0)}% overdue. Improve time mgmt.`);
+    else remarks.push(`- Tasks: ${reportStats.overdueTasks}/${reportStats.totalTasks} overdue. Major improvement needed.`);
 
-    // Task remarks
-    if (reportStats.taskRating === 'No Rating') {
-      remarks.push('- Tasks: No task data available for this period. Rating excluded from overall score.');
-    } else if (reportStats.taskRating === 'Excellent') {
-      remarks.push('- Tasks: All tasks completed on time. Excellent task management.');
-    } else if (reportStats.taskRating === 'Medium') {
-      remarks.push(`- Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
-    } else {
-      remarks.push(`- Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
-    }
-
-    // Promotion remark
-    if (reportStats.promotionSuggestion === 'Highly Recommended') {
-      remarks.push('');
-      remarks.push('PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
-    } else if (reportStats.promotionSuggestion === 'Recommended') {
-      remarks.push('');
-      remarks.push('PROMOTION: Recommended for promotion consideration based on strong performance.');
-    } else if (reportStats.promotionSuggestion === 'Insufficient Data') {
-      remarks.push('');
-      remarks.push('PROMOTION: Insufficient data to evaluate. More activity data needed.');
-    } else {
-      remarks.push('');
-      remarks.push('PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
-    }
+    remarks.push('');
+    if (reportStats.promotionSuggestion === 'Highly Recommended') remarks.push('PROMOTION: Highly recommended based on outstanding performance.');
+    else if (reportStats.promotionSuggestion === 'Recommended') remarks.push('PROMOTION: Recommended for consideration.');
+    else if (reportStats.promotionSuggestion === 'Insufficient Data') remarks.push('PROMOTION: Insufficient data to evaluate.');
+    else remarks.push('PROMOTION: Not recommended. Improvement needed.');
 
     const maxTextWidth = pageWidth - (margin.left * 2) - 4;
     remarks.forEach(r => {
-      if (r === '') { y += 2; return; }
+      if (r === '') { y += 1; return; }
       const lines = doc.splitTextToSize(r, maxTextWidth);
       doc.text(lines, margin.left + 2, y);
-      y += lines.length * 4;
+      y += lines.length * 3;
     });
 
+    y += 3;
 
-    // ---- 3-MONTH TREND SECTION ----
-    if (y + 80 > pageHeight - 30) {
-      doc.addPage();
-      y = 20;
-    }
-
-    y += 8;
-    doc.setFontSize(11);
+    // ---- 3-MONTH TREND (single-row table + line chart) ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('3-Month Performance Trend', margin.left, y);
-    y += 3;
+    y += 2;
 
+    // Single-row table: months as columns
     autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead },
-      styles: { ...lightBody },
-      head: [['Month', 'Attendance', 'Sales', 'Tasks', 'Overall', 'Score']],
-      body: trendStats.map(m => [
-        m.label,
-        m.attendanceRating,
-        m.salesRating,
-        m.taskRating,
-        m.overallRating,
-        m.maxScore > 0 ? `${m.totalScore}/${m.maxScore} (${m.pct}%)` : 'N/A',
-      ]),
+      startY: y, theme: 'grid',
+      headStyles: { ...lightHead, halign: 'center' as const },
+      styles: { ...lightBody, halign: 'center' as const },
+      head: [['', trendStats[0].label, trendStats[1].label, trendStats[2].label]],
+      body: [
+        ['Overall', trendStats[0].overallRating, trendStats[1].overallRating, trendStats[2].overallRating],
+        ['Score %', `${trendStats[0].pct}%`, `${trendStats[1].pct}%`, `${trendStats[2].pct}%`],
+      ],
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index >= 1 && data.column.index <= 4) {
+        if (data.section === 'body' && data.row.index === 0 && data.column.index >= 1) {
           data.cell.styles.textColor = getRatingColor(data.cell.raw);
           data.cell.styles.fontStyle = 'bold';
         }
       },
       margin,
     });
-    y = (doc as any).lastAutoTable.finalY + 6;
+    y = (doc as any).lastAutoTable.finalY + 4;
 
-    // Mini bar chart
-    const chartX = margin.left + 10;
-    const chartW = pageWidth - margin.left * 2 - 20;
-    const chartH = 28;
-    const barGroupW = chartW / 3;
-    const maxBarH = chartH - 8;
+    // Line chart
+    const chartMarginL = margin.left + 8;
+    const chartMarginR = pageWidth - margin.left - 8;
+    const chartW = chartMarginR - chartMarginL;
+    const chartH = 22;
+    const chartTop = y + 2;
+    const chartBottom = chartTop + chartH;
 
+    // Background
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin.left, y, pageWidth - margin.left * 2, chartH + 10, 2, 2, 'F');
+    doc.roundedRect(margin.left, y, pageWidth - margin.left * 2, chartH + 12, 2, 2, 'F');
 
-    doc.setFontSize(7);
+    // Grid lines
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    for (let g = 0; g <= 4; g++) {
+      const gy = chartTop + (chartH * g / 4);
+      doc.line(chartMarginL, gy, chartMarginR, gy);
+    }
+
+    // Y-axis labels
+    doc.setFontSize(5.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text('Score %', margin.left + 2, y + 5);
-
-    const barColors: Record<string, [number, number, number]> = {
-      'Excellent': [22, 163, 74],
-      'Good': [37, 99, 235],
-      'Medium': [234, 179, 8],
-      'Low': [220, 38, 38],
-      'No Rating': [203, 213, 225],
-    };
-
-    trendStats.forEach((m, i) => {
-      const cx = chartX + i * barGroupW + barGroupW / 2;
-      const barW = 18;
-      const barH = m.maxScore > 0 ? (m.pct / 100) * maxBarH : 2;
-      const barY = y + chartH - barH + 2;
-
-      const color = barColors[m.overallRating] || [148, 163, 184];
-      doc.setFillColor(color[0], color[1], color[2]);
-      doc.roundedRect(cx - barW / 2, barY, barW, barH, 1, 1, 'F');
-
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(color[0], color[1], color[2]);
-      doc.text(`${m.pct}%`, cx, barY - 2, { align: 'center' });
-
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      doc.text(m.label, cx, y + chartH + 7, { align: 'center' });
+    doc.setTextColor(148, 163, 184);
+    ['100%', '75%', '50%', '25%', '0%'].forEach((label, i) => {
+      doc.text(label, chartMarginL - 2, chartTop + (chartH * i / 4) + 1.5, { align: 'right' });
     });
 
-    y += chartH + 12;
+    // Plot points and lines
+    const points = trendStats.map((m, i) => {
+      const x = chartMarginL + (i * chartW / 2);
+      const yPos = chartBottom - (m.pct / 100) * chartH;
+      return { x, y: yPos, pct: m.pct, rating: m.overallRating, label: m.label };
+    });
+
+    // Draw connecting lines
+    doc.setLineWidth(0.8);
+    for (let i = 0; i < points.length - 1; i++) {
+      const color = getRatingColor(points[i + 1].rating);
+      doc.setDrawColor(color[0], color[1], color[2]);
+      doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+    }
+
+    // Draw dots and labels
+    points.forEach(p => {
+      const color = getRatingColor(p.rating);
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.circle(p.x, p.y, 1.5, 'F');
+      // White inner dot
+      doc.setFillColor(255, 255, 255);
+      doc.circle(p.x, p.y, 0.7, 'F');
+
+      // Score label above dot
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(`${p.pct}%`, p.x, p.y - 3, { align: 'center' });
+
+      // Month label below chart
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(p.label, p.x, chartBottom + 5, { align: 'center' });
+    });
+
+    y = chartBottom + 9;
 
     // Trend remark
     const ratingOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'Good': 3, 'Excellent': 4, 'No Rating': 0 };
@@ -946,32 +881,30 @@ export default function HRMEmployeeDetail() {
       trendRemark = 'No rating data available for trend analysis.';
     }
 
-    doc.setFontSize(9);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text('Trend Observation: ', margin.left, y);
-    const trendLabelW = doc.getTextWidth('Trend Observation: ');
+    doc.text('Trend: ', margin.left, y);
+    const trendLabelW = doc.getTextWidth('Trend: ');
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
-    const trendLines = doc.splitTextToSize(trendRemark, pageWidth - margin.left * 2 - trendLabelW - 4);
-    doc.text(trendLines, margin.left + trendLabelW, y);
-    y += trendLines.length * 5;
+    doc.text(trendRemark, margin.left + trendLabelW, y);
 
-    y += 20;
+    y += 12;
     // Signature lines
     doc.setDrawColor(203, 213, 225);
     doc.line(margin.left, y + 8, 74, y + 8);
     doc.line(pageWidth - 74, y + 8, pageWidth - margin.left, y + 8);
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
     doc.text('Employee Signature', margin.left, y + 12);
     doc.text('Manager Signature', pageWidth - 74, y + 12);
 
     // Footer
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(148, 163, 184);
-    doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')} | ${compName}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+    doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')} | ${compName}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
 
     doc.save(`${employee.full_name.replace(/\s+/g, '_')}_Report_${reportDateRange.label.replace(/\s+/g, '_')}.pdf`);
   };
