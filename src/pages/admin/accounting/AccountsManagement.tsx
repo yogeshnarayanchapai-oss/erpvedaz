@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDown, EyeOff } from 'lucide-react';
+import { FileDown, EyeOff, UserPlus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,17 +13,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, useRecalculateAccountBalance, Account } from '@/hooks/useAccounts';
-import { useAccountingAssets, useAccountingAssetTotal } from '@/hooks/useAccountingAssets';
+import { useAccountingAssets, useAccountingAssetTotal, AccountingAsset } from '@/hooks/useAccountingAssets';
+import { useCreateAsset, useAssignAsset } from '@/hooks/useAssets';
 import { Plus, Pencil, Trash2, RefreshCw, Wallet, Package, TrendingUp } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningAsset, setAssigningAsset] = useState<AccountingAsset | null>(null);
+  const [assignEmployeeId, setAssignEmployeeId] = useState('');
+  const [assignCondition, setAssignCondition] = useState('Good');
+  const [assignNotes, setAssignNotes] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as 'cash' | 'bank' | 'wallet' | 'other',
@@ -33,6 +43,7 @@ export default function AccountsManagement() {
     is_active: true,
   });
 
+  const storeId = useCurrentStoreId();
   const { data: accounts = [], isLoading } = useAccounts();
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
@@ -45,6 +56,21 @@ export default function AccountsManagement() {
   // Assets data
   const { data: assets = [], isLoading: assetsLoading } = useAccountingAssets();
   const { data: totalAssetValue = 0 } = useAccountingAssetTotal();
+  const createAssetMutation = useCreateAsset();
+  const assignAssetMutation = useAssignAsset();
+
+  // Employees for assign dialog
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees-for-assign', storeId],
+    queryFn: async () => {
+      let query = supabase.from('employees').select('id, full_name').eq('status', 'Active').order('full_name');
+      if (storeId) query = query.eq('store_id', storeId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+  });
 
   const displayedAccounts = hideZeroBalance
     ? accounts.filter(a => (a.current_balance ?? 0) !== 0)
@@ -72,6 +98,44 @@ export default function AccountsManagement() {
       foot: [['', '', '', 'Total:', `NPR ${positiveAccounts.reduce((s, a) => s + (a.current_balance ?? 0), 0).toLocaleString()}`, '']],
     });
     doc.save('accounts-report.pdf');
+  };
+
+  const openAssignDialog = (asset: AccountingAsset) => {
+    setAssigningAsset(asset);
+    setAssignEmployeeId('');
+    setAssignCondition('Good');
+    setAssignNotes('');
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssignAsset = async () => {
+    if (!assigningAsset || !assignEmployeeId) return;
+    try {
+      // Create asset in assets table first
+      const assetCode = `ACC-${assigningAsset.id.substring(0, 6).toUpperCase()}`;
+      const result = await createAssetMutation.mutateAsync({
+        asset_code: assetCode,
+        name: assigningAsset.description,
+        category: assigningAsset.category_name || 'General',
+        description: `From accounting: ${assigningAsset.description}`,
+        purchase_date: assigningAsset.date,
+        purchase_cost: assigningAsset.amount,
+        status: 'Assigned',
+      });
+
+      // Create assignment
+      await assignAssetMutation.mutateAsync({
+        asset_id: (result as any).id,
+        employee_id: assignEmployeeId,
+        assigned_on: new Date().toISOString().split('T')[0],
+        condition_on_assign: assignCondition,
+        notes: assignNotes || null,
+      });
+
+      setAssignDialogOpen(false);
+    } catch (error: any) {
+      // errors handled by mutation hooks
+    }
   };
 
   const openDialog = (account?: Account) => {
@@ -442,6 +506,7 @@ export default function AccountsManagement() {
                       <TableHead>Reference</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -462,6 +527,16 @@ export default function AccountsManagement() {
                             {asset.is_cleared ? 'Cleared' : 'Pending'}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openAssignDialog(asset)}
+                            title="Assign to Employee"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -471,6 +546,76 @@ export default function AccountsManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Assign Asset Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Asset to Employee</DialogTitle>
+          </DialogHeader>
+          {assigningAsset && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-md bg-muted">
+                <p className="font-medium">{assigningAsset.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  NPR {assigningAsset.amount.toLocaleString()} • {format(new Date(assigningAsset.date), 'dd MMM yyyy')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Employee *</Label>
+                <Select value={assignEmployeeId} onValueChange={setAssignEmployeeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp: any) => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Condition</Label>
+                <Select value={assignCondition} onValueChange={setAssignCondition}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Good">Good</SelectItem>
+                    <SelectItem value="Fair">Fair</SelectItem>
+                    <SelectItem value="Used">Used</SelectItem>
+                    <SelectItem value="New">New</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                  placeholder="Optional notes..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={handleAssignAsset}
+                  disabled={!assignEmployeeId || assignAssetMutation.isPending || createAssetMutation.isPending}
+                >
+                  {assignAssetMutation.isPending ? 'Assigning...' : 'Assign'}
+                </Button>
+                <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
