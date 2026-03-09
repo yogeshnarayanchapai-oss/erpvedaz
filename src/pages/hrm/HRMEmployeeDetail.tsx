@@ -590,7 +590,7 @@ export default function HRMEmployeeDetail() {
     // Styles
     const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 8.5, cellPadding: 2 };
     const lightBody = { fontSize: 8.5, textColor: [51, 65, 85] as [number, number, number], cellPadding: 2 };
-    const sectionGap = 4;
+    const sectionGap = 7;
     const margin = { left: 14, right: 14 };
 
     const getRatingColor = (r: string): [number, number, number] => {
