@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal, CreditCard } from 'lucide-react';
+import { FileText, Filter, Eye, CheckCircle, XCircle, Trash2, Loader2, User, MoreHorizontal, CreditCard, Package } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
