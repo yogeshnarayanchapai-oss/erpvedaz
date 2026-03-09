@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDown, EyeOff } from 'lucide-react';
+import { FileDown, EyeOff, UserPlus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,12 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAccounts, useCreateAccount, useUpdateAccount, useDeleteAccount, useRecalculateAccountBalance, Account } from '@/hooks/useAccounts';
-import { useAccountingAssets, useAccountingAssetTotal } from '@/hooks/useAccountingAssets';
+import { useAccountingAssets, useAccountingAssetTotal, AccountingAsset } from '@/hooks/useAccountingAssets';
+import { useCreateAsset, useAssignAsset } from '@/hooks/useAssets';
 import { Plus, Pencil, Trash2, RefreshCw, Wallet, Package, TrendingUp } from 'lucide-react';
 import { formatNPR } from '@/lib/currency';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AccountsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
