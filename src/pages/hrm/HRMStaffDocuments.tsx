@@ -148,6 +148,10 @@ export default function HRMStaffDocuments() {
             <CreditCard className="h-4 w-4" />
             My Bank
           </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-2">
+            <Package className="h-4 w-4" />
+            My Assets
+          </TabsTrigger>
         </TabsList>
 
         {/* My Documents Tab */}
