@@ -172,6 +172,7 @@ export default function AccountsManagement() {
         notes: assignNotes || null,
       });
 
+      queryClient.invalidateQueries({ queryKey: ['accounting-asset-assignments'] });
       setAssignDialogOpen(false);
     } catch (error: any) {
       // errors handled by mutation hooks
