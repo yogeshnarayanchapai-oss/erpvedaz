@@ -419,6 +419,65 @@ export default function HRMStaffDocuments() {
         <TabsContent value="bank" className="space-y-6">
           <MyBankAccountsCard />
         </TabsContent>
+
+        {/* My Assets Tab */}
+        <TabsContent value="assets" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                My Assigned Assets
+              </CardTitle>
+              <CardDescription>
+                Assets currently assigned to you
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingMyAssets ? (
+                <Skeleton className="h-48" />
+              ) : myAssets.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Assets Assigned</h3>
+                  <p className="text-muted-foreground">You don't have any assets assigned to you yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Asset Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Assigned On</TableHead>
+                      <TableHead>Condition</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {myAssets.map((assignment: any) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell className="font-mono text-sm">{assignment.assets?.asset_code || '-'}</TableCell>
+                        <TableCell className="font-medium">{assignment.assets?.name || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{assignment.assets?.category || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>{assignment.assigned_on ? format(new Date(assignment.assigned_on), 'dd MMM yyyy') : '-'}</TableCell>
+                        <TableCell>{assignment.condition_on_assign || '-'}</TableCell>
+                        <TableCell>
+                          {assignment.returned_on ? (
+                            <Badge variant="secondary">Returned</Badge>
+                          ) : (
+                            <Badge className="bg-primary/10 text-primary border-primary/20">Active</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Delete Confirmation Dialog */}
