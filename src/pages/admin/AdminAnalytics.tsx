@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+import { useState, useMemo, useCallback } from 'react';
+import { format, startOfDay, endOfDay, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,8 +11,12 @@ import {
 } from 'recharts';
 import {
   TrendingUp, DollarSign, ShoppingCart, Package, Users, Percent,
-  Target, MapPin, Award, TrendingDown, Clock, AlertCircle
+  Target, MapPin, Award, TrendingDown, Clock, AlertCircle, FileDown
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
 import { TodayQuickStats } from '@/components/dashboard/TodayQuickStats';
 import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard';
 import { useProducts } from '@/hooks/useProducts';
