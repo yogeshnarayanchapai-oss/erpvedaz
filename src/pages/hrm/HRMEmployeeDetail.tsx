@@ -805,16 +805,16 @@ export default function HRMEmployeeDetail() {
       y += lines.length * 3.5;
     });
 
-    y += 4;
+    y += 1;
 
-    // ---- SIGNATURE (less gap) ----
+    // ---- SIGNATURE ----
     doc.setDrawColor(203, 213, 225);
-    doc.line(margin.left, y + 4, 74, y + 4);
-    doc.line(pageWidth - 74, y + 4, pageWidth - margin.left, y + 4);
+    doc.line(margin.left, y + 2, 74, y + 2);
+    doc.line(pageWidth - 74, y + 2, pageWidth - margin.left, y + 2);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('Employee Signature', margin.left, y + 8);
-    doc.text('Manager Signature', pageWidth - 74, y + 8);
+    doc.text('Employee Signature', margin.left, y + 6);
+    doc.text('Manager Signature', pageWidth - 74, y + 6);
 
     // Footer
     doc.setFontSize(6.5);
