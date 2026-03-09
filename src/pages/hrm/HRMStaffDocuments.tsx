@@ -302,27 +302,31 @@ export default function HRMStaffDocuments() {
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setVerifyDoc(doc);
-                              setVerifyStatus('VERIFIED');
-                            }}
-                            className="text-green-600"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Verify
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setVerifyDoc(doc);
-                              setVerifyStatus('REJECTED');
-                            }}
-                            className="text-red-600"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Reject
-                          </DropdownMenuItem>
+                          {doc.status === 'PENDING' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setVerifyDoc(doc);
+                                  setVerifyStatus('VERIFIED');
+                                }}
+                                className="text-green-600"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Verify
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setVerifyDoc(doc);
+                                  setVerifyStatus('REJECTED');
+                                }}
+                                className="text-red-600"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Reject
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => setDeleteDoc(doc)}
