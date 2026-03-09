@@ -1,15 +1,21 @@
 import { LogIn, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTodayAttendance, useCheckIn, useCheckOut } from '@/hooks/useAttendance';
+import { useTodayAttendance, useCheckIn, useCheckOut, useIsActiveEmployee } from '@/hooks/useAttendance';
 
 export function AttendanceButton() {
   const { data: todayRecord, isLoading } = useTodayAttendance();
+  const { data: isActiveEmployee, isLoading: isCheckingActive } = useIsActiveEmployee();
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
 
   const isCheckedIn = !!todayRecord?.check_in_time;
   const isCheckedOut = !!todayRecord?.check_out_time;
   const isPending = checkIn.isPending || checkOut.isPending;
+
+  // Don't show button for inactive employees
+  if (!isCheckingActive && !isActiveEmployee) {
+    return null;
+  }
 
   const handleClick = () => {
     if (isCheckedOut) return; // Already checked out for today

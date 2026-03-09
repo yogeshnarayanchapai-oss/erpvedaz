@@ -53,6 +53,25 @@ export function useAttendanceRecords(employeeId?: string, dateRange?: { from: st
   });
 }
 
+export function useIsActiveEmployee() {
+  return useQuery({
+    queryKey: ['is-active-employee'],
+    queryFn: async () => {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) return false;
+
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'Active')
+        .maybeSingle();
+
+      return !!employee;
+    },
+  });
+}
+
 export function useMyAttendance() {
   return useQuery({
     queryKey: ['my-attendance'],
