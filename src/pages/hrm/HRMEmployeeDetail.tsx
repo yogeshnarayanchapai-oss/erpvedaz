@@ -311,9 +311,10 @@ export default function HRMEmployeeDetail() {
 
     // ---- CATEGORY RATINGS ----
     const attendanceRate = workingDays > 0 ? ((present / workingDays) * 100) : 0;
-    let attendanceRating: 'Excellent' | 'Good' | 'Low';
-    if (attendanceRate >= 95) {
-      // If excellent attendance but has late hours, downgrade to Good
+    let attendanceRating: 'Excellent' | 'Good' | 'Low' | 'No Rating';
+    if (workingDays === 0 || (present === 0 && late === 0 && absent === 0)) {
+      attendanceRating = 'No Rating';
+    } else if (attendanceRate >= 95) {
       attendanceRating = totalLateMinutes > 0 ? 'Good' : 'Excellent';
     } else if (attendanceRate >= 90) {
       attendanceRating = 'Good';
@@ -337,26 +338,37 @@ export default function HRMEmployeeDetail() {
     }
 
     const duePercent = totalTasks > 0 ? ((overdueTasks / totalTasks) * 100) : 0;
-    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low';
-    if (overdueTasks === 0 && totalTasks > 0) taskRating = 'Excellent';
-    else if (duePercent <= 10) taskRating = 'Good';
-    else if (duePercent <= 20) taskRating = 'Medium';
-    else taskRating = 'Low';
+    let taskRating: 'Excellent' | 'Good' | 'Medium' | 'Low' | 'No Rating';
+    if (totalTasks === 0) {
+      taskRating = 'No Rating';
+    } else if (overdueTasks === 0) {
+      taskRating = 'Excellent';
+    } else if (duePercent <= 10) {
+      taskRating = 'Good';
+    } else if (duePercent <= 20) {
+      taskRating = 'Medium';
+    } else {
+      taskRating = 'Low';
+    }
 
-    // Score: Attendance 30, Sales 40 (excluded if No Rating), Tasks 30
-    const attScore = attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
+    // Score: only count rated categories
+    const attScore = attendanceRating === 'No Rating' ? 0 : attendanceRating === 'Excellent' ? 30 : attendanceRating === 'Good' ? 24 : 15;
     const salesScore = salesRating === 'No Rating' ? 0 : salesRating === 'Excellent' ? 40 : salesRating === 'Good' ? 32 : salesRating === 'Medium' ? 24 : 12;
-    const tskScore = taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
-    // If sales has no rating, score out of 60 instead of 100
-    const maxScore = salesRating === 'No Rating' ? 60 : 100;
+    const tskScore = taskRating === 'No Rating' ? 0 : taskRating === 'Excellent' ? 30 : taskRating === 'Good' ? 24 : taskRating === 'Medium' ? 18 : 10;
+    const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
     const totalScore = attScore + salesScore + tskScore;
 
-    // Promotion: only Excellent/Good ratings suggest promotion (exclude No Rating from penalty)
-    const ratedCategories = [attendanceRating, taskRating, ...(salesRating !== 'No Rating' ? [salesRating] : [])] as string[];
+    // Promotion: only Excellent/Good ratings suggest promotion (exclude No Rating)
+    const ratedCategories = [
+      ...(attendanceRating !== 'No Rating' ? [attendanceRating] : []),
+      ...(salesRating !== 'No Rating' ? [salesRating] : []),
+      ...(taskRating !== 'No Rating' ? [taskRating] : []),
+    ] as string[];
     const goodCount = ratedCategories.filter(r => r === 'Excellent' || r === 'Good').length;
     const hasLow = ratedCategories.includes('Low');
     let promotionSuggestion: string;
-    if (goodCount === ratedCategories.length && ratedCategories.length >= 2) promotionSuggestion = 'Highly Recommended';
+    if (ratedCategories.length === 0) promotionSuggestion = 'Insufficient Data';
+    else if (goodCount === ratedCategories.length) promotionSuggestion = 'Highly Recommended';
     else if (goodCount >= 2 && !hasLow) promotionSuggestion = 'Recommended';
     else promotionSuggestion = 'Not Recommended';
 
@@ -468,20 +480,22 @@ export default function HRMEmployeeDetail() {
     };
 
     const promoColor: [number, number, number] = reportStats.promotionSuggestion === 'Highly Recommended'
-      ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : [220, 38, 38];
+      ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : reportStats.promotionSuggestion === 'Insufficient Data' ? [148, 163, 184] : [220, 38, 38];
 
+    const attLabel = reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)';
     const salesLabel = reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)';
+    const taskLabel = reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)';
 
     autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { ...lightHead },
       styles: { ...lightBody },
-      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore})`, 'Promotion Suggestion']],
+      head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore || 'N/A'})`, 'Promotion Suggestion']],
       body: [
-        ['Attendance (30)', reportStats.attendanceRating, `${reportStats.attendanceScore}/30`, '', ''],
+        [attLabel, reportStats.attendanceRating, reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`, '', ''],
         [salesLabel, reportStats.salesRating, reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`, '', ''],
-        ['Tasks (30)', reportStats.taskRating, `${reportStats.taskScore}/30`, '', ''],
+        [taskLabel, reportStats.taskRating, reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`, '', ''],
       ],
       didParseCell: (data: any) => {
         if (data.section === 'body' && data.column.index === 1) {
@@ -615,51 +629,58 @@ export default function HRMEmployeeDetail() {
     const remarks: string[] = [];
 
     // Attendance remarks
-    if (reportStats.attendanceRating === 'Excellent') {
-      remarks.push('• Attendance: Excellent presence record with no late arrivals. Keep it up!');
+    if (reportStats.attendanceRating === 'No Rating') {
+      remarks.push('- Attendance: No attendance data available for this period. Rating excluded from overall score.');
+    } else if (reportStats.attendanceRating === 'Excellent') {
+      remarks.push('- Attendance: Excellent presence record with no late arrivals. Keep it up!');
     } else if (reportStats.attendanceRating === 'Good' && reportStats.totalLateMinutes > 0) {
-      remarks.push(`• Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
+      remarks.push(`- Attendance: Good presence (${reportStats.attendanceRate}%) but has ${lateHours}h ${lateMins}m total late time. Reducing lateness can improve rating to Excellent.`);
     } else if (reportStats.attendanceRating === 'Low') {
-      remarks.push(`• Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
+      remarks.push(`- Attendance: Below acceptable level (${reportStats.attendanceRate}%). Regular attendance counseling is recommended.`);
     }
 
     // Sales remarks
     if (reportStats.salesRating === 'No Rating') {
-      remarks.push('• Sales: No sales data available for this period. Rating excluded from overall score.');
+      remarks.push('- Sales: No sales data available for this period. Rating excluded from overall score.');
     } else if (reportStats.salesRating === 'Excellent') {
-      remarks.push(`• Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
+      remarks.push(`- Sales: Outstanding conversion rate of ${reportStats.conversionRate}%. Top performer in sales.`);
     } else if (reportStats.salesRating === 'Good') {
-      remarks.push(`• Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
+      remarks.push(`- Sales: Good conversion rate (${reportStats.conversionRate}%). Push towards 60%+ for Excellent rating.`);
     } else if (reportStats.salesRating === 'Medium') {
-      remarks.push(`• Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
+      remarks.push(`- Sales: Average conversion (${reportStats.conversionRate}%). Needs improvement through additional training.`);
     } else {
-      remarks.push(`• Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
+      remarks.push(`- Sales: Low conversion rate (${reportStats.conversionRate}%). Immediate attention and coaching required.`);
     }
 
     // Task remarks
-    if (reportStats.taskRating === 'Excellent') {
-      remarks.push('• Tasks: All tasks completed on time. Excellent task management.');
+    if (reportStats.taskRating === 'No Rating') {
+      remarks.push('- Tasks: No task data available for this period. Rating excluded from overall score.');
+    } else if (reportStats.taskRating === 'Excellent') {
+      remarks.push('- Tasks: All tasks completed on time. Excellent task management.');
     } else if (reportStats.taskRating === 'Good') {
-      remarks.push(`• Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
+      remarks.push(`- Tasks: Good completion with minor delays (${reportStats.duePercent.toFixed(0)}% overdue). Nearly perfect.`);
     } else if (reportStats.taskRating === 'Medium') {
-      remarks.push(`• Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
+      remarks.push(`- Tasks: ${reportStats.duePercent.toFixed(0)}% tasks overdue. Better time management needed.`);
     } else {
-      remarks.push(`• Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
+      remarks.push(`- Tasks: ${reportStats.overdueTasks} of ${reportStats.totalTasks} tasks overdue. Significant improvement required.`);
     }
 
     // Promotion remark
     if (reportStats.promotionSuggestion === 'Highly Recommended') {
       remarks.push('');
-      remarks.push('★ PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
+      remarks.push('PROMOTION: Highly recommended for promotion or incentive based on outstanding performance across all rated areas.');
     } else if (reportStats.promotionSuggestion === 'Recommended') {
       remarks.push('');
-      remarks.push('★ PROMOTION: Recommended for promotion consideration based on strong performance.');
+      remarks.push('PROMOTION: Recommended for promotion consideration based on strong performance.');
+    } else if (reportStats.promotionSuggestion === 'Insufficient Data') {
+      remarks.push('');
+      remarks.push('PROMOTION: Insufficient data to evaluate. More activity data needed.');
     } else {
       remarks.push('');
-      remarks.push('★ PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
+      remarks.push('PROMOTION: Not recommended at this time. Improvement needed in highlighted areas before consideration.');
     }
 
-    const maxTextWidth = pageWidth - margin.left - margin.right - 4;
+    const maxTextWidth = pageWidth - (margin.left * 2) - 4;
     remarks.forEach(r => {
       if (r === '') { y += 2; return; }
       const lines = doc.splitTextToSize(r, maxTextWidth);
