@@ -266,11 +266,11 @@ export default function AccountsManagement() {
               <div className="flex gap-2">
                 <Button
                   variant={hideZeroBalance ? 'default' : 'outline'}
-                  size="sm"
+                  size="icon"
                   onClick={() => setHideZeroBalance(!hideZeroBalance)}
+                  title={hideZeroBalance ? 'Show all accounts' : 'Hide 0 balance'}
                 >
-                  <EyeOff className="h-4 w-4 mr-1" />
-                  {hideZeroBalance ? 'Showing Non-Zero' : 'Hide 0 Balance'}
+                  <EyeOff className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
