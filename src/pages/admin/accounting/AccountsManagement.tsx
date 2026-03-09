@@ -521,11 +521,6 @@ export default function AccountsManagement() {
                         <TableCell className="text-right font-semibold text-emerald-600">
                           NPR {asset.amount.toLocaleString()}
                         </TableCell>
-                        <TableCell>
-                          <Badge variant={asset.is_cleared ? 'default' : 'secondary'}>
-                            {asset.is_cleared ? 'Cleared' : 'Pending'}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
