@@ -10,6 +10,7 @@ const MODULE_INFO: Record<string, { label: string; description: string }> = {
   accounting: { label: 'Accounting', description: 'Transactions, parties, accounts — store-wise isolation' },
   marketing: { label: 'Marketing', description: 'Campaigns, ads, influencers — store-wise isolation' },
   hrm: { label: 'HRM', description: 'Employees, attendance, leaves — store-wise isolation' },
+  task_management: { label: 'Task Management', description: 'Tasks, assignments, performance — store-wise isolation' },
 };
 
 export default function ModuleStoreToggle() {
