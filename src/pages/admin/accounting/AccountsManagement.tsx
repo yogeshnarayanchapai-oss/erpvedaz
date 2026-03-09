@@ -100,7 +100,44 @@ export default function AccountsManagement() {
     doc.save('accounts-report.pdf');
   };
 
-  const openDialog = (account?: Account) => {
+  const openAssignDialog = (asset: AccountingAsset) => {
+    setAssigningAsset(asset);
+    setAssignEmployeeId('');
+    setAssignCondition('Good');
+    setAssignNotes('');
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssignAsset = async () => {
+    if (!assigningAsset || !assignEmployeeId) return;
+    try {
+      // Create asset in assets table first
+      const assetCode = `ACC-${assigningAsset.id.substring(0, 6).toUpperCase()}`;
+      const result = await createAssetMutation.mutateAsync({
+        asset_code: assetCode,
+        name: assigningAsset.description,
+        category: assigningAsset.category_name || 'General',
+        description: `From accounting: ${assigningAsset.description}`,
+        purchase_date: assigningAsset.date,
+        purchase_cost: assigningAsset.amount,
+        status: 'Assigned',
+      });
+
+      // Create assignment
+      await assignAssetMutation.mutateAsync({
+        asset_id: (result as any).id,
+        employee_id: assignEmployeeId,
+        assigned_on: new Date().toISOString().split('T')[0],
+        condition_on_assign: assignCondition,
+        notes: assignNotes || null,
+      });
+
+      setAssignDialogOpen(false);
+    } catch (error: any) {
+      // errors handled by mutation hooks
+    }
+  };
+
     if (account) {
       setEditingAccount(account);
       setFormData({
