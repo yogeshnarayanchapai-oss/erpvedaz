@@ -301,14 +301,14 @@ export default function AccountsManagement() {
                       <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
                     </TableRow>
                   )}
-                  {!isLoading && accounts.length === 0 && (
+                  {!isLoading && displayedAccounts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No accounts yet. Create one to get started.
                       </TableCell>
                     </TableRow>
                   )}
-                  {accounts.map((account) => (
+                  {displayedAccounts.map((account) => (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">
                         {account.name}
