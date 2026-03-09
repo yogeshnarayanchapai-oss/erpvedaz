@@ -195,10 +195,12 @@ export default function HRMEmployees() {
           <h1 className="text-xl md:text-2xl font-bold">Employees</h1>
           <p className="text-sm text-muted-foreground">Manage employee records</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-2" />Add Employee</Button>
-          </DialogTrigger>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <BulkPerformanceReportButton />
+          <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="flex-1 sm:flex-none"><Plus className="w-4 h-4 mr-2" />Add Employee</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader><DialogTitle>{editing ? 'Edit Employee' : 'Add Employee'}</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
