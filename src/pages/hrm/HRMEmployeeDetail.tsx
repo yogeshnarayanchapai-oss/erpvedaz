@@ -556,40 +556,40 @@ export default function HRMEmployeeDetail() {
     const compReg = companyInfo?.registration_no || '';
 
     doc.setFillColor(245, 247, 250);
-    doc.rect(0, 0, pageWidth, 26, 'F');
+    doc.rect(0, 0, pageWidth, 28, 'F');
 
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text(compName, pageWidth / 2, y + 3, { align: 'center' });
-    y += 8;
+    doc.text(compName, pageWidth / 2, y + 4, { align: 'center' });
+    y += 9;
 
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     const headerParts = [compAddr, compPhone, compEmail, compReg ? `Reg: ${compReg}` : ''].filter(Boolean);
     doc.text(headerParts.join('  |  '), pageWidth / 2, y, { align: 'center' });
-    y += 4;
+    y += 5;
 
     doc.setDrawColor(203, 213, 225);
     doc.line(14, y + 1, pageWidth - 14, y + 1);
-    y += 5;
+    y += 6;
 
-    // Report Title + Period in one line
-    doc.setFontSize(11);
+    // Report Title + Period
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Employee Monthly Performance Report', pageWidth / 2, y, { align: 'center' });
     y += 5;
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     doc.text(`Report Period: ${reportDateRange.label}`, pageWidth / 2, y, { align: 'center' });
-    y += 5;
+    y += 6;
 
-    // Compact styles
-    const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 7.5, cellPadding: 1.5 };
-    const lightBody = { fontSize: 7.5, textColor: [51, 65, 85] as [number, number, number], cellPadding: 1.5 };
+    // Styles
+    const lightHead = { fillColor: [241, 245, 249] as [number, number, number], textColor: [30, 41, 59] as [number, number, number], fontStyle: 'bold' as const, fontSize: 8.5, cellPadding: 2 };
+    const lightBody = { fontSize: 8.5, textColor: [51, 65, 85] as [number, number, number], cellPadding: 2 };
     const sectionGap = 4;
     const margin = { left: 14, right: 14 };
 
@@ -601,16 +601,16 @@ export default function HRMEmployeeDetail() {
       return [220, 38, 38];
     };
 
-    // ---- STAFF INFO (inline) ----
-    doc.setFontSize(8);
+    // ---- STAFF INFO ----
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text(`Staff: ${employee.full_name}`, margin.left, y);
     doc.text(`Position: ${employee.position || 'N/A'}`, pageWidth / 2, y);
-    y += sectionGap + 1;
+    y += sectionGap + 2;
 
     // ---- OVERALL SCORE ----
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Overall Performance Score', margin.left, y);
     y += 2;
@@ -619,52 +619,24 @@ export default function HRMEmployeeDetail() {
       ? [22, 163, 74] : reportStats.promotionSuggestion === 'Recommended' ? [37, 99, 235] : reportStats.promotionSuggestion === 'Insufficient Data' ? [148, 163, 184] : [220, 38, 38];
 
     autoTable(doc, {
-      startY: y,
-      theme: 'grid',
-      headStyles: { ...lightHead },
-      styles: { ...lightBody },
+      startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
       head: [['Category', 'Rating', 'Score', `Total (/${reportStats.maxScore || 'N/A'})`, 'Promotion']],
       body: [
-        [
-          reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)',
-          reportStats.attendanceRating,
-          reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`,
-          '', '',
-        ],
-        [
-          reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)',
-          reportStats.salesRating,
-          reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`,
-          '', '',
-        ],
-        [
-          reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)',
-          reportStats.taskRating,
-          reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`,
-          '', '',
-        ],
+        [reportStats.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)', reportStats.attendanceRating, reportStats.attendanceRating === 'No Rating' ? '-' : `${reportStats.attendanceScore}/30`, '', ''],
+        [reportStats.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)', reportStats.salesRating, reportStats.salesRating === 'No Rating' ? '-' : `${reportStats.conversionScore}/40`, '', ''],
+        [reportStats.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)', reportStats.taskRating, reportStats.taskRating === 'No Rating' ? '-' : `${reportStats.taskScore}/30`, '', ''],
       ],
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 1) {
-          data.cell.styles.textColor = getRatingColor(data.cell.raw);
-          data.cell.styles.fontStyle = 'bold';
-        }
-        if (data.section === 'body' && data.row.index === 0 && data.column.index === 3) {
-          data.cell.text = [`${reportStats.totalScore}/${reportStats.maxScore}`];
-          data.cell.styles.fontStyle = 'bold';
-        }
-        if (data.section === 'body' && data.row.index === 0 && data.column.index === 4) {
-          data.cell.text = [reportStats.promotionSuggestion];
-          data.cell.styles.textColor = promoColor;
-          data.cell.styles.fontStyle = 'bold';
-        }
+        if (data.section === 'body' && data.column.index === 1) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
+        if (data.section === 'body' && data.row.index === 0 && data.column.index === 3) { data.cell.text = [`${reportStats.totalScore}/${reportStats.maxScore}`]; data.cell.styles.fontStyle = 'bold'; }
+        if (data.section === 'body' && data.row.index === 0 && data.column.index === 4) { data.cell.text = [reportStats.promotionSuggestion]; data.cell.styles.textColor = promoColor; data.cell.styles.fontStyle = 'bold'; }
       },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- ATTENDANCE (compact) ----
-    doc.setFontSize(9);
+    // ---- ATTENDANCE ----
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Attendance Summary', margin.left, y);
@@ -677,15 +649,13 @@ export default function HRMEmployeeDetail() {
       startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
       head: [['Working Days', 'Present', 'Late', 'Absent', 'Leave', 'Att %', 'Total Late', 'Rating']],
       body: [[reportStats.workingDays, reportStats.present, reportStats.late, reportStats.absent, reportStats.leave, `${reportStats.attendanceRate}%`, `${lateHours}h ${lateMins}m`, reportStats.attendanceRating]],
-      didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 7) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
-      },
+      didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 7) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- SALES (compact) ----
-    doc.setFontSize(9);
+    // ---- SALES ----
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Sales Performance', margin.left, y);
@@ -695,15 +665,13 @@ export default function HRMEmployeeDetail() {
       startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
       head: [['Total Leads', 'Confirmed', 'VD Not Dlvr', 'Effective', 'Conv %', 'Sales (Rs.)', 'Rating']],
       body: [[reportStats.totalLeads, reportStats.confirmedOrders, reportStats.vdNotDeliver, reportStats.effectiveOrders, `${reportStats.conversionRate}%`, `Rs.${reportStats.totalSales.toLocaleString()}`, reportStats.salesRating]],
-      didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 6) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
-      },
+      didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 6) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- TASKS (compact) ----
-    doc.setFontSize(9);
+    // ---- TASKS ----
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Task Summary', margin.left, y);
@@ -713,21 +681,96 @@ export default function HRMEmployeeDetail() {
       startY: y, theme: 'grid', headStyles: { ...lightHead }, styles: { ...lightBody },
       head: [['Total Tasks', 'Completed', 'On Time', 'Overdue', 'Due %', 'Rating']],
       body: [[reportStats.totalTasks, reportStats.completedTasks, reportStats.onTimeTasks, reportStats.overdueTasks, `${reportStats.duePercent.toFixed(1)}%`, reportStats.taskRating]],
-      didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
-      },
+      didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = getRatingColor(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
       margin,
     });
     y = (doc as any).lastAutoTable.finalY + sectionGap;
 
-    // ---- REMARKS (compact) ----
-    doc.setFontSize(9);
+    // ---- 3-MONTH PERFORMANCE TREND (after Task Summary, before Remarks) ----
+    // Trend remark calculation
+    const ratingOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'Good': 3, 'Excellent': 4, 'No Rating': 0 };
+    const ratedTrend = trendStats.filter(m => m.overallRating !== 'No Rating');
+    let trendRemark = '';
+    if (ratedTrend.length >= 2) {
+      const vals = ratedTrend.map(m => ratingOrder[m.overallRating] || 0);
+      const first = vals[0]; const last = vals[vals.length - 1];
+      const allSame = vals.every(v => v === first);
+      const allHigh = ratedTrend.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
+      const allLow = ratedTrend.every(m => m.overallRating === 'Low');
+      if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
+      else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
+      else if (allSame) trendRemark = `Consistently ${ratedTrend[0].overallRating} — Stable performance.`;
+      else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
+      else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
+      else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
+    } else if (ratedTrend.length === 1) {
+      trendRemark = 'Insufficient trend data (only 1 month with ratings).';
+    } else {
+      trendRemark = 'No rating data available for trend analysis.';
+    }
+
+    // Get short trend word for table
+    let trendWord = '—';
+    if (ratedTrend.length >= 2) {
+      const vals = ratedTrend.map(m => ratingOrder[m.overallRating] || 0);
+      const first = vals[0]; const last = vals[vals.length - 1];
+      if (last > first) trendWord = '↑ Up';
+      else if (last < first) trendWord = '↓ Down';
+      else trendWord = '→ Stable';
+    }
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('3-Month Performance Trend', margin.left, y);
+    y += 2;
+
+    // Compact table matching photo: header = months + Trend, score row = Rating(pct%)
+    autoTable(doc, {
+      startY: y, theme: 'grid',
+      headStyles: { ...lightHead, halign: 'center' as const, fontSize: 9 },
+      styles: { ...lightBody, halign: 'center' as const, fontSize: 9 },
+      head: [['', trendStats[0].label, trendStats[1].label, trendStats[2].label, 'Trend']],
+      body: [
+        ['Score', `${trendStats[0].overallRating}(${trendStats[0].pct}%)`, `${trendStats[1].overallRating}(${trendStats[1].pct}%)`, `${trendStats[2].overallRating}(${trendStats[2].pct}%)`, trendWord],
+      ],
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 4: { cellWidth: 24 } },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index >= 1 && data.column.index <= 3) {
+          const rating = trendStats[data.column.index - 1].overallRating;
+          data.cell.styles.textColor = getRatingColor(rating);
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if (data.section === 'body' && data.column.index === 4) {
+          if (trendWord.includes('Up')) data.cell.styles.textColor = [22, 163, 74] as [number, number, number];
+          else if (trendWord.includes('Down')) data.cell.styles.textColor = [220, 38, 38] as [number, number, number];
+          else data.cell.styles.textColor = [37, 99, 235] as [number, number, number];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      margin,
+    });
+    y = (doc as any).lastAutoTable.finalY + 2;
+
+    // Trend observation line
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Trend — ', margin.left, y);
+    const trendLabelW = doc.getTextWidth('Trend — ');
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(trendRemark, margin.left + trendLabelW, y);
+    y += sectionGap + 2;
+
+    // ---- REMARKS & OBSERVATIONS ----
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
     doc.text('Remarks & Observations', margin.left, y);
-    y += 3;
+    y += 4;
 
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
 
@@ -759,149 +802,22 @@ export default function HRMEmployeeDetail() {
       if (r === '') { y += 1; return; }
       const lines = doc.splitTextToSize(r, maxTextWidth);
       doc.text(lines, margin.left + 2, y);
-      y += lines.length * 3;
+      y += lines.length * 3.5;
     });
 
-    y += 3;
+    y += 4;
 
-    // ---- 3-MONTH TREND (single-row table + line chart) ----
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text('3-Month Performance Trend', margin.left, y);
-    y += 2;
-
-    // Single-row table: months as columns
-    autoTable(doc, {
-      startY: y, theme: 'grid',
-      headStyles: { ...lightHead, halign: 'center' as const },
-      styles: { ...lightBody, halign: 'center' as const },
-      head: [['', trendStats[0].label, trendStats[1].label, trendStats[2].label]],
-      body: [
-        ['Overall', trendStats[0].overallRating, trendStats[1].overallRating, trendStats[2].overallRating],
-        ['Score %', `${trendStats[0].pct}%`, `${trendStats[1].pct}%`, `${trendStats[2].pct}%`],
-      ],
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
-      didParseCell: (data: any) => {
-        if (data.section === 'body' && data.row.index === 0 && data.column.index >= 1) {
-          data.cell.styles.textColor = getRatingColor(data.cell.raw);
-          data.cell.styles.fontStyle = 'bold';
-        }
-      },
-      margin,
-    });
-    y = (doc as any).lastAutoTable.finalY + 4;
-
-    // Line chart
-    const chartMarginL = margin.left + 8;
-    const chartMarginR = pageWidth - margin.left - 8;
-    const chartW = chartMarginR - chartMarginL;
-    const chartH = 22;
-    const chartTop = y + 2;
-    const chartBottom = chartTop + chartH;
-
-    // Background
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin.left, y, pageWidth - margin.left * 2, chartH + 12, 2, 2, 'F');
-
-    // Grid lines
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.2);
-    for (let g = 0; g <= 4; g++) {
-      const gy = chartTop + (chartH * g / 4);
-      doc.line(chartMarginL, gy, chartMarginR, gy);
-    }
-
-    // Y-axis labels
-    doc.setFontSize(5.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    ['100%', '75%', '50%', '25%', '0%'].forEach((label, i) => {
-      doc.text(label, chartMarginL - 2, chartTop + (chartH * i / 4) + 1.5, { align: 'right' });
-    });
-
-    // Plot points and lines
-    const points = trendStats.map((m, i) => {
-      const x = chartMarginL + (i * chartW / 2);
-      const yPos = chartBottom - (m.pct / 100) * chartH;
-      return { x, y: yPos, pct: m.pct, rating: m.overallRating, label: m.label };
-    });
-
-    // Draw connecting lines
-    doc.setLineWidth(0.8);
-    for (let i = 0; i < points.length - 1; i++) {
-      const color = getRatingColor(points[i + 1].rating);
-      doc.setDrawColor(color[0], color[1], color[2]);
-      doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
-    }
-
-    // Draw dots and labels
-    points.forEach(p => {
-      const color = getRatingColor(p.rating);
-      doc.setFillColor(color[0], color[1], color[2]);
-      doc.circle(p.x, p.y, 1.5, 'F');
-      // White inner dot
-      doc.setFillColor(255, 255, 255);
-      doc.circle(p.x, p.y, 0.7, 'F');
-
-      // Score label above dot
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(color[0], color[1], color[2]);
-      doc.text(`${p.pct}%`, p.x, p.y - 3, { align: 'center' });
-
-      // Month label below chart
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      doc.text(p.label, p.x, chartBottom + 5, { align: 'center' });
-    });
-
-    y = chartBottom + 9;
-
-    // Trend remark
-    const ratingOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'Good': 3, 'Excellent': 4, 'No Rating': 0 };
-    const ratedTrend = trendStats.filter(m => m.overallRating !== 'No Rating');
-    let trendRemark = '';
-    if (ratedTrend.length >= 2) {
-      const vals = ratedTrend.map(m => ratingOrder[m.overallRating] || 0);
-      const first = vals[0]; const last = vals[vals.length - 1];
-      const allSame = vals.every(v => v === first);
-      const allHigh = ratedTrend.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
-      const allLow = ratedTrend.every(m => m.overallRating === 'Low');
-      if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
-      else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
-      else if (allSame) trendRemark = `Consistently ${ratedTrend[0].overallRating} — Stable performance.`;
-      else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
-      else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
-      else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
-    } else if (ratedTrend.length === 1) {
-      trendRemark = 'Insufficient trend data (only 1 month with ratings).';
-    } else {
-      trendRemark = 'No rating data available for trend analysis.';
-    }
-
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text('Trend: ', margin.left, y);
-    const trendLabelW = doc.getTextWidth('Trend: ');
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text(trendRemark, margin.left + trendLabelW, y);
-
-    y += 12;
-    // Signature lines
+    // ---- SIGNATURE (less gap) ----
     doc.setDrawColor(203, 213, 225);
-    doc.line(margin.left, y + 8, 74, y + 8);
-    doc.line(pageWidth - 74, y + 8, pageWidth - margin.left, y + 8);
-    doc.setFontSize(7);
+    doc.line(margin.left, y + 4, 74, y + 4);
+    doc.line(pageWidth - 74, y + 4, pageWidth - margin.left, y + 4);
+    doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text('Employee Signature', margin.left, y + 12);
-    doc.text('Manager Signature', pageWidth - 74, y + 12);
+    doc.text('Employee Signature', margin.left, y + 8);
+    doc.text('Manager Signature', pageWidth - 74, y + 8);
 
     // Footer
-    doc.setFontSize(6);
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(148, 163, 184);
     doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy hh:mm a')} | ${compName}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
