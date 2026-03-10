@@ -388,10 +388,10 @@ export default function LogisticsPortalOrders() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search client, phone, branch..."
+                  placeholder="Search client, phone, #ref ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-[200px]"
+                  className="pl-9 w-[220px]"
                 />
               </div>
               <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
