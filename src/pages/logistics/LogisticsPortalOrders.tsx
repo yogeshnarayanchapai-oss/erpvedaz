@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
-import { useLogisticsPortalOrders } from '@/hooks/useLogisticsPortalOrders';
+import { useAllLogisticsOrders } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
@@ -65,38 +65,57 @@ export default function LogisticsPortalOrders() {
   // Today's date in Nepal timezone (YYYY-MM-DD)
   const todayNepal = getNepalDateString();
 
-  // Fetch orders based on active tab
-  const todayFilters = {
-    dateFrom: todayNepal,
-    dateTo: todayNepal,
-  };
-  
-  const allFilters = {
-    dateFrom: format(allOrdersDateRange.from, 'yyyy-MM-dd'),
-    dateTo: format(allOrdersDateRange.to, 'yyyy-MM-dd'),
-  };
+  // Single cached fetch for ALL orders
+  const { data: allCachedOrders = [], isLoading, isFetching, forceRefresh } = useAllLogisticsOrders();
 
-  const { data: todayOrders = [], isLoading: loadingToday, isFetching: fetchingToday } = useLogisticsPortalOrders(todayFilters);
-  const { data: allOrders = [], isLoading: loadingAll, isFetching: fetchingAll } = useLogisticsPortalOrders(allFilters);
-  
-  // Global search for reference ID (searches all orders regardless of date)
-  const globalSearchFilters = {
-    dateFrom: '2020-01-01',
-    dateTo: format(new Date(), 'yyyy-MM-dd'),
-  };
-  const { data: globalOrders = [] } = useLogisticsPortalOrders(globalSearchFilters);
+  // Derive today's orders and date-filtered orders from the single cache
+  const todayOrders = useMemo(() => 
+    allCachedOrders.filter(o => {
+      if (!o.order_date) return false;
+      const orderDate = o.order_date.substring(0, 10); // YYYY-MM-DD
+      return orderDate === todayNepal;
+    }),
+    [allCachedOrders, todayNepal]
+  );
 
-  const orders = activeTab === 'new' ? todayOrders : allOrders;
-  const isLoading = activeTab === 'new' ? loadingToday : loadingAll;
-  const isFetching = activeTab === 'new' ? fetchingToday : fetchingAll;
+  const allOrdersFiltered = useMemo(() => {
+    const from = format(allOrdersDateRange.from, 'yyyy-MM-dd');
+    const to = format(allOrdersDateRange.to, 'yyyy-MM-dd');
+    return allCachedOrders.filter(o => {
+      if (!o.order_date) return false;
+      const orderDate = o.order_date.substring(0, 10);
+      return orderDate >= from && orderDate <= to;
+    });
+  }, [allCachedOrders, allOrdersDateRange]);
+
+  const orders = activeTab === 'new' ? todayOrders : allOrdersFiltered;
 
   // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
-    // If reference ID search is active, search globally
-    if (search && isReferenceIdSearch(search)) {
-      let result = globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+    // If search is active, search across ALL cached orders (bypass date filter)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const isRefSearch = isReferenceIdSearch(search);
+      
+      let result = allCachedOrders.filter(o => {
+        if (isRefSearch) {
+          return matchesReferenceId((o.leads as any)?.reference_id, search);
+        }
+        return (
+          (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
+          (o.leads as any)?.contact_number?.includes(search) ||
+          (o.leads as any)?.reference_id?.includes(search.replace('#', '')) ||
+          o.destination_branch?.toLowerCase().includes(searchLower)
+        );
+      });
       if (staffFilter !== 'all') {
         result = result.filter(o => o.called_by_user_id === staffFilter);
+      }
+      if (deliveryFilter !== 'all') {
+        result = result.filter(o => o.delivery_location === deliveryFilter);
+      }
+      if (statusFilter !== 'all') {
+        result = result.filter(o => o.order_status === statusFilter);
       }
       return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
@@ -120,18 +139,10 @@ export default function LogisticsPortalOrders() {
     if (staffFilter !== 'all') {
       filtered = filtered.filter(o => o.called_by_user_id === staffFilter);
     }
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(o => 
-        (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
-        (o.leads as any)?.contact_number?.includes(search) ||
-        o.destination_branch?.toLowerCase().includes(searchLower)
-      );
-    }
     
     // Sort by newest first
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
+  }, [orders, allCachedOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
 
   // Stats (only used on dashboard)
   const stats = useMemo(() => {
