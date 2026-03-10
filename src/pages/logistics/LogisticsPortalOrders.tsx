@@ -441,7 +441,6 @@ export default function LogisticsPortalOrders() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="table-header">Date & Time</TableHead>
                   <TableHead className="table-header">Client</TableHead>
                   <TableHead className="table-header">Contact</TableHead>
                   <TableHead className="table-header">Products</TableHead>
