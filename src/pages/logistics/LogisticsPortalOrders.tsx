@@ -65,30 +65,30 @@ export default function LogisticsPortalOrders() {
   // Today's date in Nepal timezone (YYYY-MM-DD)
   const todayNepal = getNepalDateString();
 
-  // Fetch orders based on active tab
-  const todayFilters = {
-    dateFrom: todayNepal,
-    dateTo: todayNepal,
-  };
-  
-  const allFilters = {
-    dateFrom: format(allOrdersDateRange.from, 'yyyy-MM-dd'),
-    dateTo: format(allOrdersDateRange.to, 'yyyy-MM-dd'),
-  };
+  // Single cached fetch for ALL orders
+  const { data: allCachedOrders = [], isLoading, isFetching, forceRefresh } = useAllLogisticsOrders();
 
-  const { data: todayOrders = [], isLoading: loadingToday, isFetching: fetchingToday } = useLogisticsPortalOrders(todayFilters);
-  const { data: allOrders = [], isLoading: loadingAll, isFetching: fetchingAll } = useLogisticsPortalOrders(allFilters);
-  
-  // Global search for reference ID (searches all orders regardless of date)
-  const globalSearchFilters = {
-    dateFrom: '2020-01-01',
-    dateTo: format(new Date(), 'yyyy-MM-dd'),
-  };
-  const { data: globalOrders = [] } = useLogisticsPortalOrders(globalSearchFilters);
+  // Derive today's orders and date-filtered orders from the single cache
+  const todayOrders = useMemo(() => 
+    allCachedOrders.filter(o => {
+      if (!o.order_date) return false;
+      const orderDate = o.order_date.substring(0, 10); // YYYY-MM-DD
+      return orderDate === todayNepal;
+    }),
+    [allCachedOrders, todayNepal]
+  );
 
-  const orders = activeTab === 'new' ? todayOrders : allOrders;
-  const isLoading = activeTab === 'new' ? loadingToday : loadingAll;
-  const isFetching = activeTab === 'new' ? fetchingToday : fetchingAll;
+  const allOrdersFiltered = useMemo(() => {
+    const from = format(allOrdersDateRange.from, 'yyyy-MM-dd');
+    const to = format(allOrdersDateRange.to, 'yyyy-MM-dd');
+    return allCachedOrders.filter(o => {
+      if (!o.order_date) return false;
+      const orderDate = o.order_date.substring(0, 10);
+      return orderDate >= from && orderDate <= to;
+    });
+  }, [allCachedOrders, allOrdersDateRange]);
+
+  const orders = activeTab === 'new' ? todayOrders : allOrdersFiltered;
 
   // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
