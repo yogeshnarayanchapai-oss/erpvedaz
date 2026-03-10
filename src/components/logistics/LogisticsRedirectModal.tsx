@@ -125,95 +125,85 @@ export function LogisticsRedirectModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 pt-4 pb-3 border-b border-border">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Package className="w-4 h-4" />
             Order Details
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Order Info */}
-          <div className="grid grid-cols-2 gap-3 p-4 bg-muted/50 rounded-lg">
+        <div className="px-5 py-3 space-y-3">
+          {/* Order Info - 3 columns compact */}
+          <div className="grid grid-cols-3 gap-x-4 gap-y-2 p-3 bg-muted/50 rounded-lg text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Order Date</p>
-              <p className="font-medium">{order.order_date ? format(new Date(order.order_date), 'dd MMM yyyy HH:mm') : '-'}</p>
+              <p className="text-[11px] text-muted-foreground">Date</p>
+              <p className="font-medium text-xs">{order.order_date ? format(new Date(order.order_date), 'dd MMM yyyy HH:mm') : '-'}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Status</p>
-              <Badge variant="outline" className="mt-1">
+              <p className="text-[11px] text-muted-foreground">Status</p>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 {order.order_status?.replace('_', ' ') || 'Unknown'}
               </Badge>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <User className="w-3 h-3" /> Client
-              </p>
-              <p className="font-medium">{clientName}</p>
+              <p className="text-[11px] text-muted-foreground">Amount</p>
+              <p className="font-semibold text-xs">Rs. {totalAmount.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Phone className="w-3 h-3" /> Contact
-              </p>
-              <p className="font-medium">{contactNumber}</p>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1"><User className="w-2.5 h-2.5" /> Client</p>
+              <p className="font-medium text-xs">{clientName}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Phone className="w-2.5 h-2.5" /> Contact</p>
+              <p className="font-medium text-xs">{contactNumber}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground">Delivery</p>
+              <p className="font-medium text-xs">{order.delivery_location?.replace('_', ' ') || '-'}</p>
             </div>
             <div className="col-span-2">
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> Address
-              </p>
-              <p className="font-medium">{address}</p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-xs text-muted-foreground">Products</p>
-              <p className="font-medium">{productDisplay}</p>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="w-2.5 h-2.5" /> Address</p>
+              <p className="font-medium text-xs truncate">{address}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Amount</p>
-              <p className="font-medium">Rs. {totalAmount.toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Delivery</p>
-              <p className="font-medium">{order.delivery_location?.replace('_', ' ') || '-'}</p>
+              <p className="text-[11px] text-muted-foreground">Products</p>
+              <p className="font-medium text-xs truncate">{productDisplay}</p>
             </div>
           </div>
 
-          {/* Existing Remark */}
+          {/* Existing Remark - inline */}
           {order.delivery_notes && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-700 font-medium">Existing Remark</p>
-              <p className="text-sm text-yellow-800 mt-1">{order.delivery_notes}</p>
+            <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+              <span className="text-yellow-700 font-medium">Remark: </span>
+              <span className="text-yellow-800">{order.delivery_notes}</span>
             </div>
           )}
 
-          <Separator />
-
-          {/* Redirect Form - 1 column layout */}
+          {/* Redirect Form - 2 columns */}
           {canRedirect && (
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm">Redirect Options</h4>
-              
-              <div className="space-y-4">
-                {/* Row 1: Branch + Delivery Type */}
-                <div className="grid grid-cols-1 gap-4">
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Redirect Options</h4>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="branch">Change Branch/Area</Label>
+                    <Label className="text-xs">Branch/Area</Label>
                     <BranchSelect
                       value=""
                       customValue={newBranch || undefined}
                       onChange={(branchId, branch, customName) => {
                         setNewBranch(branch?.branch_name || customName || '');
                       }}
-                      placeholder="Type or select branch..."
+                      placeholder="Type or select..."
                       allowCustom={true}
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="deliveryLocation">Change Delivery Type</Label>
+                    <Label className="text-xs">Delivery Type</Label>
                     <Select value={newDeliveryLocation} onValueChange={setNewDeliveryLocation}>
-                      <SelectTrigger id="deliveryLocation">
-                        <SelectValue placeholder="Select delivery type" />
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
@@ -221,14 +211,10 @@ export function LogisticsRedirectModal({
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                {/* Row 2: Courier + Remark */}
-                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <Label htmlFor="courier">Select Courier</Label>
+                    <Label className="text-xs">Courier</Label>
                     <Select value={newCourier} onValueChange={setNewCourier}>
-                      <SelectTrigger id="courier">
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Select courier" />
                       </SelectTrigger>
                       <SelectContent>
@@ -240,60 +226,62 @@ export function LogisticsRedirectModal({
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div>
-                    <Label htmlFor="remark">Remark <span className="text-destructive">*</span></Label>
+                    <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
                     <Textarea
-                      id="remark"
-                      placeholder="Add redirect reason/notes..."
+                      placeholder="Redirect reason..."
                       value={remark}
                       onChange={(e) => setRemark(e.target.value)}
-                      rows={3}
+                      rows={1}
+                      className="min-h-[36px] resize-none text-sm"
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
 
-        <DialogFooter className="flex flex-wrap gap-2 mt-4">
-          <Button variant="outline" onClick={onClose}>
+        {/* Footer - all buttons in one row */}
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-muted/30">
+          <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>
           {canMarkReturned && (
             <Button
               variant="outline"
+              size="sm"
               onClick={handleMarkReturned}
               disabled={markReturned.isPending}
               className="border-orange-300 text-orange-700 hover:bg-orange-50"
             >
-              <Undo2 className="w-4 h-4 mr-2" />
-              Return (RTO)
+              <Undo2 className="w-3.5 h-3.5 mr-1" />
+              RTO
             </Button>
           )}
           {canMarkDelivered && (
             <Button
-              variant="default"
+              size="sm"
               onClick={handleMarkDelivered}
               disabled={markDelivered.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Mark Delivered
+              <CheckCircle className="w-3.5 h-3.5 mr-1" />
+              Delivered
             </Button>
           )}
           {canRedirect && (
             <Button
               variant="destructive"
+              size="sm"
               onClick={handleRedirect}
               disabled={redirectOrder.isPending || !remark.trim()}
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Redirect
             </Button>
           )}
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
