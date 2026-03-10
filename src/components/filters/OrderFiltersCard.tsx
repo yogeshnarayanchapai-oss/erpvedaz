@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Calendar, MapPin, Filter, X } from 'lucide-react';
+import { ActiveStoreBadge } from '@/components/filters/ActiveStoreBadge';
 
 export type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 export type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
