@@ -478,9 +478,6 @@ export default function LogisticsPortalOrders() {
                   
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="text-muted-foreground whitespace-nowrap">
-                        {order.order_date ? format(new Date(order.order_date), 'dd MMM HH:mm') : '-'}
-                      </TableCell>
                       <TableCell className="font-medium">{clientName}</TableCell>
                       <TableCell>{contactNumber}</TableCell>
                       <TableCell className="max-w-[200px]">
