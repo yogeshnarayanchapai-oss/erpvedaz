@@ -92,11 +92,30 @@ export default function LogisticsPortalOrders() {
 
   // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
-    // If reference ID search is active, search globally
-    if (search && isReferenceIdSearch(search)) {
-      let result = globalOrders.filter(o => matchesReferenceId((o.leads as any)?.reference_id, search));
+    // If search is active, search across ALL cached orders (bypass date filter)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const isRefSearch = isReferenceIdSearch(search);
+      
+      let result = allCachedOrders.filter(o => {
+        if (isRefSearch) {
+          return matchesReferenceId((o.leads as any)?.reference_id, search);
+        }
+        return (
+          (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
+          (o.leads as any)?.contact_number?.includes(search) ||
+          (o.leads as any)?.reference_id?.includes(search.replace('#', '')) ||
+          o.destination_branch?.toLowerCase().includes(searchLower)
+        );
+      });
       if (staffFilter !== 'all') {
         result = result.filter(o => o.called_by_user_id === staffFilter);
+      }
+      if (deliveryFilter !== 'all') {
+        result = result.filter(o => o.delivery_location === deliveryFilter);
+      }
+      if (statusFilter !== 'all') {
+        result = result.filter(o => o.order_status === statusFilter);
       }
       return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
@@ -120,18 +139,10 @@ export default function LogisticsPortalOrders() {
     if (staffFilter !== 'all') {
       filtered = filtered.filter(o => o.called_by_user_id === staffFilter);
     }
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(o => 
-        (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
-        (o.leads as any)?.contact_number?.includes(search) ||
-        o.destination_branch?.toLowerCase().includes(searchLower)
-      );
-    }
     
     // Sort by newest first
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [orders, globalOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
+  }, [orders, allCachedOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
 
   // Stats (only used on dashboard)
   const stats = useMemo(() => {
