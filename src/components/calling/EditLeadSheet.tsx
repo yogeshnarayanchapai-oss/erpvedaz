@@ -59,14 +59,11 @@ export interface EditLeadFormData {
   amount: string;
   delivery_location: string;
   is_cod: boolean;
-  // Lead date field
   date: string;
-  // Follow-up fields
   followup_preset: string;
   followup_date: string;
   followup_time: string;
   followup_reason: string;
-  // Multi-product order items
   orderItems: OrderItemLine[];
 }
 
@@ -120,7 +117,6 @@ export function EditLeadSheet({
     }
   };
 
-  // Multi-product handlers
   const addProductLine = () => {
     const newItem: OrderItemLine = {
       id: crypto.randomUUID(),
@@ -186,162 +182,150 @@ export function EditLeadSheet({
 
   return (
     <Sheet open={!!lead} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+      <SheetContent className="sm:max-w-3xl overflow-hidden p-4">
+        <SheetHeader className="pb-2">
+          <SheetTitle className="flex items-center gap-2 text-base">
             Edit Lead - {lead.client_name}
             {isTransferredLead && (
-              <Badge variant="secondary" className="text-xs">
-                Transferred Lead
-              </Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">TRF</Badge>
             )}
             {isOverdue && (
-              <Badge variant="destructive" className="text-xs">
-                <AlertTriangle className="w-3 h-3 mr-1" />
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                <AlertTriangle className="w-3 h-3 mr-0.5" />
                 Overdue
               </Badge>
             )}
           </SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-4 mt-6">
-          {/* Info bar with phone and product */}
-          <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Phone:</span>
-              <button onClick={() => onCall(lead, lead.contact_number)} className="text-primary hover:underline">
+        <div className="space-y-3 mt-2">
+          {/* Info bar - compact single row */}
+          <div className="flex items-center gap-4 p-2 bg-muted/50 rounded-lg text-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground text-xs">Phone:</span>
+              <button onClick={() => onCall(lead, lead.contact_number)} className="text-primary hover:underline text-xs font-medium">
                 {lead.contact_number}
               </button>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Inquiry Product:</span>
-              <span>{lead.products?.name || '-'}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground text-xs">Product:</span>
+              <span className="text-xs">{lead.products?.name || '-'}</span>
             </div>
             {lead.next_followup_at && (
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Follow-up Scheduled:</span>
-                <span className={isOverdue ? 'text-destructive font-medium' : ''}>
-                  {format(new Date(lead.next_followup_at), 'dd MMM yyyy HH:mm')}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-xs">Follow-up:</span>
+                <span className={`text-xs ${isOverdue ? 'text-destructive font-medium' : ''}`}>
+                  {format(new Date(lead.next_followup_at), 'dd MMM HH:mm')}
                 </span>
               </div>
             )}
+            {/* Call & WhatsApp inline */}
+            <div className="flex gap-1 ml-auto">
+              <Button variant="outline" size="sm" onClick={() => onCall(lead, lead.contact_number)} className="h-7 px-2 text-xs">
+                <Phone className="w-3 h-3 mr-1" />
+                Call
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onWhatsApp(lead)} className="h-7 px-2 text-xs">
+                <MessageSquare className="w-3 h-3 mr-1" />
+                WA
+              </Button>
+            </div>
           </div>
           
-          {/* Customer Insight Card */}
+          {/* Customer Insight - compact */}
           <CustomerInsightCard 
             insight={customerInsight} 
             isLoading={insightLoading} 
             phone={lead.contact_number} 
           />
-          
-          {/* Call & WhatsApp buttons - full width */}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onCall(lead, lead.contact_number)} className="flex-1">
-              <Phone className="w-4 h-4 mr-2" />
-              Call
-            </Button>
-            <Button variant="outline" onClick={() => onWhatsApp(lead)} className="flex-1">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              WhatsApp
-            </Button>
-          </div>
 
-          {/* Two-column layout for desktop, single column for mobile */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Lead Date</Label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => onFormChange({ ...formData, date: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Order Status</Label>
-                <Select value={formData.status} onValueChange={(v) => onFormChange({ ...formData, status: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_STATUS_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Destination Branch</Label>
-                <BranchSelect
-                  value={formData.branch_id}
-                  customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
-                  onChange={(branchId, branch, customName) => {
-                    onFormChange({ 
-                      ...formData, 
-                      branch_id: branchId || '',
-                      destination_branch: branch?.branch_name || customName || ''
-                    });
-                  }}
-                  placeholder="Type or select branch..."
-                  showDetails={!!formData.branch_id}
-                  allowCustom={true}
-                />
-              </div>
+          {/* Main form - 4 columns */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Lead Date</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => onFormChange({ ...formData, date: e.target.value })}
+                className="h-8 text-xs"
+              />
             </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Full Address</Label>
-                <Textarea
-                  value={formData.full_address}
-                  onChange={(e) => onFormChange({ ...formData, full_address: e.target.value })}
-                  placeholder="Enter full address"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Alt Phone Number</Label>
-                <Input
-                  value={formData.alt_phone}
-                  onChange={(e) => onFormChange({ ...formData, alt_phone: e.target.value })}
-                  placeholder="Alternative phone"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Remark</Label>
-                <Textarea
-                  value={formData.remark}
-                  onChange={(e) => onFormChange({ ...formData, remark: e.target.value })}
-                  placeholder="Add notes..."
-                  rows={3}
-                />
-              </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Order Status</Label>
+              <Select value={formData.status} onValueChange={(v) => onFormChange({ ...formData, status: v })}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORDER_STATUS_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Alt Phone</Label>
+              <Input
+                value={formData.alt_phone}
+                onChange={(e) => onFormChange({ ...formData, alt_phone: e.target.value })}
+                placeholder="Alt phone"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Branch</Label>
+              <BranchSelect
+                value={formData.branch_id}
+                customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
+                onChange={(branchId, branch, customName) => {
+                  onFormChange({ 
+                    ...formData, 
+                    branch_id: branchId || '',
+                    destination_branch: branch?.branch_name || customName || ''
+                  });
+                }}
+                placeholder="Select branch..."
+                showDetails={false}
+                allowCustom={true}
+              />
             </div>
           </div>
 
-          {/* Follow-up Section - Show when status is FOLLOW_UP */}
+          {/* Address & Remark - 2 columns */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Full Address</Label>
+              <Input
+                value={formData.full_address}
+                onChange={(e) => onFormChange({ ...formData, full_address: e.target.value })}
+                placeholder="Enter full address"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Remark</Label>
+              <Input
+                value={formData.remark}
+                onChange={(e) => onFormChange({ ...formData, remark: e.target.value })}
+                placeholder="Add notes..."
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Follow-up Section - compact inline */}
           {formData.status === 'FOLLOW_UP' && (
-            <div className="border-t pt-4 space-y-4">
-              <h4 className="font-medium flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+            <div className="border-t pt-2 space-y-2">
+              <h4 className="font-medium text-xs flex items-center gap-1">
+                <Clock className="w-3 h-3" />
                 Schedule Follow-Up
               </h4>
-              
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Follow-up Time</Label>
-                  <Select 
-                    value={formData.followup_preset} 
-                    onValueChange={handleFollowupPresetChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select when to follow up" />
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">When</Label>
+                  <Select value={formData.followup_preset} onValueChange={handleFollowupPresetChange}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select time" />
                     </SelectTrigger>
                     <SelectContent>
                       {FOLLOWUP_PRESETS.map(opt => (
@@ -350,213 +334,152 @@ export function EditLeadSheet({
                     </SelectContent>
                   </Select>
                 </div>
-
-                {formData.followup_preset === 'custom' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Date</Label>
-                      <Input
-                        type="date"
-                        value={formData.followup_date}
-                        onChange={(e) => onFormChange({ ...formData, followup_date: e.target.value })}
-                        min={format(new Date(), 'yyyy-MM-dd')}
-                      />
+                {formData.followup_preset === 'custom' ? (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Date</Label>
+                      <Input type="date" value={formData.followup_date} onChange={(e) => onFormChange({ ...formData, followup_date: e.target.value })} min={format(new Date(), 'yyyy-MM-dd')} className="h-8 text-xs" />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Time</Label>
-                      <Input
-                        type="time"
-                        value={formData.followup_time}
-                        onChange={(e) => onFormChange({ ...formData, followup_time: e.target.value })}
-                      />
+                    <div className="space-y-1">
+                      <Label className="text-xs">Time</Label>
+                      <Input type="time" value={formData.followup_time} onChange={(e) => onFormChange({ ...formData, followup_time: e.target.value })} className="h-8 text-xs" />
                     </div>
+                  </>
+                ) : (
+                  <div className="col-span-2 flex items-end pb-1">
+                    {formData.followup_preset && (
+                      <p className="text-xs text-muted-foreground">→ {formData.followup_date} {formData.followup_time}</p>
+                    )}
                   </div>
                 )}
-
-                {(formData.followup_preset && formData.followup_preset !== 'custom') && (
-                  <p className="text-sm text-muted-foreground">
-                    Scheduled for: {formData.followup_date} at {formData.followup_time}
-                  </p>
-                )}
-
-                <div className="space-y-2">
-                  <Label>Follow-up Reason</Label>
-                  <Textarea
+                <div className="space-y-1">
+                  <Label className="text-xs">Reason</Label>
+                  <Input
                     value={formData.followup_reason}
                     onChange={(e) => onFormChange({ ...formData, followup_reason: e.target.value })}
-                    placeholder="Why does this lead need follow-up?"
-                    rows={2}
+                    placeholder="Follow-up reason"
+                    className="h-8 text-xs"
                   />
                 </div>
               </div>
+              {/* Follow-up History inline */}
+              {lead.status === 'FOLLOW_UP' && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground flex items-center gap-1">
+                    <History className="w-3 h-3" /> View History
+                  </summary>
+                  <div className="mt-1">
+                    <FollowupHistorySection leadId={lead.id} />
+                  </div>
+                </details>
+              )}
             </div>
           )}
 
-          {/* Confirmed Order Details - Show for all confirmed orders (new or existing) */}
+          {/* Confirmed Order Details - compact */}
           {formData.status === 'CONFIRMED' && (
-            <div className="border-t pt-4 space-y-4">
+            <div className="border-t pt-2 space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">
+                <h4 className="font-medium text-xs flex items-center gap-1">
                   {lead.order_id ? 'Edit Order Products' : 'Order Products'}
+                  {lead.order_id && (
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">
+                      <CheckCircle className="w-2.5 h-2.5 mr-0.5" />Existing
+                    </Badge>
+                  )}
                 </h4>
-                <Button type="button" variant="outline" size="sm" onClick={addProductLine}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Product
+                <Button type="button" variant="outline" size="sm" onClick={addProductLine} className="h-6 text-[10px] px-2">
+                  <Plus className="w-3 h-3 mr-0.5" /> Add
                 </Button>
               </div>
 
-              {lead.order_id && (
-                <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                  <CheckCircle className="w-3 h-3 inline mr-1" />
-                  Order exists - changes will update the existing order
-                </div>
-              )}
-
-              {/* Product Lines */}
-              <div className="space-y-3">
-                {/* Header */}
-                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
+              {/* Product Lines - compact */}
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-12 gap-1 text-[10px] font-medium text-muted-foreground">
                   <div className="col-span-4">Product</div>
                   <div className="col-span-2">Qty</div>
                   <div className="col-span-2">Price</div>
-                  <div className="col-span-2">Discount</div>
+                  <div className="col-span-2">Disc</div>
                   <div className="col-span-1">Total</div>
                   <div className="col-span-1"></div>
                 </div>
-
                 {(formData.orderItems || []).map((item) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div key={item.id} className="grid grid-cols-12 gap-1 items-center">
                     <div className="col-span-4">
-                      <SearchableProductSelect
-                        products={products}
-                        value={item.product_id}
-                        onSelect={(productId) => handleProductSelect(item.id, productId)}
-                        className="h-9 w-full"
-                      />
+                      <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="h-7 w-full text-xs" />
                     </div>
                     <div className="col-span-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })}
-                        className="h-9"
-                      />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} className="h-7 text-xs" />
                     </div>
                     <div className="col-span-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.unit_price}
-                        onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })}
-                        className="h-9"
-                      />
+                      <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" />
                     </div>
                     <div className="col-span-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.discount || 0}
-                        onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })}
-                        className="h-9"
-                        placeholder="0"
-                      />
+                      <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" placeholder="0" />
                     </div>
-                    <div className="col-span-1 text-sm font-medium">
-                      Rs. {getLineTotal(item).toLocaleString()}
-                    </div>
+                    <div className="col-span-1 text-[11px] font-medium">₹{getLineTotal(item).toLocaleString()}</div>
                     <div className="col-span-1">
                       {(formData.orderItems || []).length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeProductLine(item.id)}
-                          className="h-9 w-9 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removeProductLine(item.id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
                     </div>
                   </div>
                 ))}
-
-                {/* Grand Total */}
-                <div className="flex flex-col items-end pt-2 border-t gap-1">
-                  {totalDiscount > 0 && (
-                    <div className="text-right text-sm text-muted-foreground">
-                      Total Discount: <span className="text-destructive">-Rs. {totalDiscount.toLocaleString()}</span>
+                <div className="flex items-center justify-between pt-1 border-t">
+                  <div className="flex items-center gap-4">
+                    {/* Payment & Location inline */}
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1 cursor-pointer text-xs">
+                        <input type="radio" name="payment_type" checked={formData.is_cod === true} onChange={() => onFormChange({ ...formData, is_cod: true })} className="w-3 h-3" />
+                        COD
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer text-xs">
+                        <input type="radio" name="payment_type" checked={formData.is_cod === false} onChange={() => onFormChange({ ...formData, is_cod: false })} className="w-3 h-3" />
+                        Online
+                      </label>
                     </div>
-                  )}
+                    <Select value={formData.delivery_location} onValueChange={(v) => onFormChange({ ...formData, delivery_location: v })}>
+                      <SelectTrigger className="h-7 text-xs w-[140px]">
+                        <SelectValue placeholder="Location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DELIVERY_LOCATION_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="text-right">
-                    <span className="text-sm text-muted-foreground mr-4">Grand Total:</span>
-                    <span className="text-lg font-bold">Rs. {grandTotal.toLocaleString()}</span>
+                    {totalDiscount > 0 && <span className="text-[10px] text-destructive mr-2">-₹{totalDiscount.toLocaleString()}</span>}
+                    <span className="text-xs text-muted-foreground mr-1">Total:</span>
+                    <span className="text-sm font-bold">Rs. {grandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Payment Type</Label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="payment_type"
-                      checked={formData.is_cod === true}
-                      onChange={() => onFormChange({ ...formData, is_cod: true })}
-                      className="w-4 h-4 text-primary"
-                    />
-                    <span className="text-sm">Cash on Delivery (COD)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="payment_type"
-                      checked={formData.is_cod === false}
-                      onChange={() => onFormChange({ ...formData, is_cod: false })}
-                      className="w-4 h-4 text-primary"
-                    />
-                    <span className="text-sm">Online Payment</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Delivery Location</Label>
-                <Select 
-                  value={formData.delivery_location} 
-                  onValueChange={(v) => onFormChange({ ...formData, delivery_location: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELIVERY_LOCATION_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           )}
 
-          {/* Follow-up History Section */}
-          {lead.status === 'FOLLOW_UP' && (
-            <div className="border-t pt-4 space-y-3">
-              <h4 className="font-medium flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Follow-Up History
-              </h4>
-              <FollowupHistorySection leadId={lead.id} />
-            </div>
+          {/* Follow-up History (non-followup status) */}
+          {lead.status === 'FOLLOW_UP' && formData.status !== 'FOLLOW_UP' && (
+            <details className="text-xs border-t pt-2">
+              <summary className="cursor-pointer text-muted-foreground flex items-center gap-1">
+                <History className="w-3 h-3" /> Follow-Up History
+              </summary>
+              <div className="mt-1">
+                <FollowupHistorySection leadId={lead.id} />
+              </div>
+            </details>
           )}
 
-          <div className="flex gap-2 pt-4">
-            <Button onClick={onSave} className="flex-1" disabled={isSaving}>
-              <CheckCircle className="w-4 h-4 mr-2" />
+          {/* Action buttons - single row */}
+          <div className="flex gap-2 pt-2 border-t">
+            <Button onClick={onSave} className="flex-1 h-8 text-xs" disabled={isSaving}>
+              <CheckCircle className="w-3.5 h-3.5 mr-1" />
               Save Changes
             </Button>
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} className="h-8 text-xs">
               Cancel
             </Button>
           </div>

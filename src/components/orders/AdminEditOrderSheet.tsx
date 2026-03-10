@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Plus, Trash2, Save, Package } from 'lucide-react';
@@ -90,7 +89,6 @@ export function AdminEditOrderSheet({
     orderItems: [],
   });
 
-  // Initialize form when order changes
   useEffect(() => {
     if (order) {
       const orderItems = (order as any).order_items || [];
@@ -134,7 +132,6 @@ export function AdminEditOrderSheet({
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  // Multi-product handlers
   const addProductLine = () => {
     const newItem: OrderItemLine = {
       id: crypto.randomUUID(),
@@ -144,16 +141,12 @@ export function AdminEditOrderSheet({
       unit_price: 0,
       discount: 0,
     };
-    handleFormChange({
-      orderItems: [...formData.orderItems, newItem],
-    });
+    handleFormChange({ orderItems: [...formData.orderItems, newItem] });
   };
 
   const removeProductLine = (id: string) => {
     if (formData.orderItems.length <= 1) return;
-    handleFormChange({
-      orderItems: formData.orderItems.filter(item => item.id !== id),
-    });
+    handleFormChange({ orderItems: formData.orderItems.filter(item => item.id !== id) });
   };
 
   const updateProductLine = (id: string, updates: Partial<OrderItemLine>) => {
@@ -186,15 +179,10 @@ export function AdminEditOrderSheet({
 
   const handleSave = async () => {
     if (!order) return;
-    
-    // Validate at least one product with valid data
     const validItems = formData.orderItems.filter(item => 
       item.product_id && item.quantity > 0 && item.unit_price >= 0
     );
-    
-    if (validItems.length === 0) {
-      return;
-    }
+    if (validItems.length === 0) return;
 
     try {
       await updateOrder.mutateAsync({
@@ -221,7 +209,6 @@ export function AdminEditOrderSheet({
         })),
         grandTotal,
       });
-      
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -233,50 +220,33 @@ export function AdminEditOrderSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
+      <SheetContent className="sm:max-w-3xl overflow-hidden p-4">
+        <SheetHeader className="pb-2">
+          <SheetTitle className="flex items-center gap-2 text-base">
+            <Package className="w-4 h-4" />
             Edit Order
           </SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-4 mt-6">
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Customer Name</Label>
-              <Input
-                value={formData.client_name}
-                onChange={(e) => handleFormChange({ client_name: e.target.value })}
-                placeholder="Customer name"
-              />
+        <div className="space-y-3 mt-2">
+          {/* Row 1: Customer info - 4 columns */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Customer Name</Label>
+              <Input value={formData.client_name} onChange={(e) => handleFormChange({ client_name: e.target.value })} placeholder="Name" className="h-8 text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>Contact Number</Label>
-              <Input
-                value={formData.contact_number}
-                onChange={(e) => handleFormChange({ contact_number: e.target.value })}
-                placeholder="Phone number"
-              />
+            <div className="space-y-1">
+              <Label className="text-xs">Contact</Label>
+              <Input value={formData.contact_number} onChange={(e) => handleFormChange({ contact_number: e.target.value })} placeholder="Phone" className="h-8 text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>Alt Phone</Label>
-              <Input
-                value={formData.alt_phone}
-                onChange={(e) => handleFormChange({ alt_phone: e.target.value })}
-                placeholder="Alternative phone"
-              />
+            <div className="space-y-1">
+              <Label className="text-xs">Alt Phone</Label>
+              <Input value={formData.alt_phone} onChange={(e) => handleFormChange({ alt_phone: e.target.value })} placeholder="Alt phone" className="h-8 text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>Delivery Location</Label>
-              <Select 
-                value={formData.delivery_location} 
-                onValueChange={(v) => handleFormChange({ delivery_location: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select delivery type" />
-                </SelectTrigger>
+            <div className="space-y-1">
+              <Label className="text-xs">Delivery Location</Label>
+              <Select value={formData.delivery_location} onValueChange={(v) => handleFormChange({ delivery_location: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   {DELIVERY_LOCATION_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -286,52 +256,40 @@ export function AdminEditOrderSheet({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Full Address</Label>
-            <Textarea
-              value={formData.full_address}
-              onChange={(e) => handleFormChange({ full_address: e.target.value })}
-              placeholder="Full delivery address"
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Destination Branch</Label>
-            <BranchSelect
-              value={formData.branch_id}
-              customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
-              onChange={(branchId, branch, customName) => {
-                handleFormChange({ 
-                  branch_id: branchId || '',
-                  destination_branch: branch?.branch_name || customName || ''
-                });
-              }}
-              placeholder="Type or select branch..."
-              showDetails={!!formData.branch_id}
-              allowCustom={true}
-            />
-          </div>
-
-          {/* Status Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-            <div className="space-y-2">
-              <Label>Order Date</Label>
-              <Input
-                type="date"
-                value={formData.order_date}
-                onChange={(e) => handleFormChange({ order_date: e.target.value })}
+          {/* Row 2: Address & Branch - 2 columns */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Full Address</Label>
+              <Input value={formData.full_address} onChange={(e) => handleFormChange({ full_address: e.target.value })} placeholder="Full delivery address" className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Destination Branch</Label>
+              <BranchSelect
+                value={formData.branch_id}
+                customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
+                onChange={(branchId, branch, customName) => {
+                  handleFormChange({ 
+                    branch_id: branchId || '',
+                    destination_branch: branch?.branch_name || customName || ''
+                  });
+                }}
+                placeholder="Select branch..."
+                showDetails={false}
+                allowCustom={true}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Order Status</Label>
-              <Select 
-                value={formData.order_status} 
-                onValueChange={(v) => handleFormChange({ order_status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+          </div>
+
+          {/* Row 3: Status section - 5 columns */}
+          <div className="grid grid-cols-5 gap-3 border-t pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Order Date</Label>
+              <Input type="date" value={formData.order_date} onChange={(e) => handleFormChange({ order_date: e.target.value })} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Order Status</Label>
+              <Select value={formData.order_status} onValueChange={(v) => handleFormChange({ order_status: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ORDER_STATUS_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -339,15 +297,10 @@ export function AdminEditOrderSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Payment Status</Label>
-              <Select 
-                value={formData.payment_status} 
-                onValueChange={(v) => handleFormChange({ payment_status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+            <div className="space-y-1">
+              <Label className="text-xs">Payment</Label>
+              <Select value={formData.payment_status} onValueChange={(v) => handleFormChange({ payment_status: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAYMENT_STATUS_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -355,42 +308,27 @@ export function AdminEditOrderSheet({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Logistic Order ID</Label>
-              <Input
-                value={formData.logistic_order_id}
-                onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })}
-                placeholder="Enter logistic order ID..."
-              />
+            <div className="space-y-1">
+              <Label className="text-xs">Logistic ID</Label>
+              <Input value={formData.logistic_order_id} onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })} placeholder="Logistic ID" className="h-8 text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>Delivery Notes / Remark</Label>
-              <Textarea
-                value={formData.delivery_notes}
-                onChange={(e) => handleFormChange({ delivery_notes: e.target.value })}
-                placeholder="Add notes..."
-                rows={2}
-              />
+            <div className="space-y-1">
+              <Label className="text-xs">Remark</Label>
+              <Input value={formData.delivery_notes} onChange={(e) => handleFormChange({ delivery_notes: e.target.value })} placeholder="Notes..." className="h-8 text-xs" />
             </div>
           </div>
 
-          {/* Products Section */}
-          <div className="border-t pt-4 space-y-4">
+          {/* Products Section - compact */}
+          <div className="border-t pt-2 space-y-1.5">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">Order Products</h4>
-              <Button type="button" variant="outline" size="sm" onClick={addProductLine}>
-                <Plus className="w-4 h-4 mr-1" />
-                Add Product
+              <h4 className="font-medium text-xs">Order Products</h4>
+              <Button type="button" variant="outline" size="sm" onClick={addProductLine} className="h-6 text-[10px] px-2">
+                <Plus className="w-3 h-3 mr-0.5" /> Add
               </Button>
             </div>
 
-            {/* Product Lines */}
-            <div className="space-y-3">
-              {/* Header */}
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
+            <div className="space-y-1">
+              <div className="grid grid-cols-12 gap-1 text-[10px] font-medium text-muted-foreground">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-2">Qty</div>
                 <div className="col-span-2">Price</div>
@@ -400,78 +338,42 @@ export function AdminEditOrderSheet({
               </div>
 
               {formData.orderItems.map((item) => (
-                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                <div key={item.id} className="grid grid-cols-12 gap-1 items-center">
                   <div className="col-span-4">
-                    <SearchableProductSelect
-                      products={products}
-                      value={item.product_id}
-                      onSelect={(productId) => handleProductSelect(item.id, productId)}
-                      className="h-9 w-full"
-                    />
+                    <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="h-7 w-full text-xs" />
                   </div>
                   <div className="col-span-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })}
-                      className="h-9"
-                    />
+                    <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} className="h-7 text-xs" />
                   </div>
                   <div className="col-span-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={item.unit_price}
-                      onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })}
-                      className="h-9"
-                    />
+                    <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" />
                   </div>
                   <div className="col-span-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={item.discount || 0}
-                      onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })}
-                      className="h-9"
-                      placeholder="0"
-                    />
+                    <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" placeholder="0" />
                   </div>
-                  <div className="col-span-1 text-sm font-medium">
-                    Rs. {getLineTotal(item).toLocaleString()}
-                  </div>
+                  <div className="col-span-1 text-[11px] font-medium">₹{getLineTotal(item).toLocaleString()}</div>
                   <div className="col-span-1">
                     {formData.orderItems.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeProductLine(item.id)}
-                        className="h-9 w-9 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeProductLine(item.id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     )}
                   </div>
                 </div>
               ))}
 
-              {/* Grand Total */}
-              <div className="flex justify-between items-center pt-3 border-t font-semibold">
-                <span>Grand Total</span>
-                <span className="text-lg">Rs. {grandTotal.toLocaleString()}</span>
+              {/* Grand Total row */}
+              <div className="flex justify-end items-center pt-1.5 border-t">
+                <span className="text-xs text-muted-foreground mr-2">Grand Total:</span>
+                <span className="text-sm font-bold">Rs. {grandTotal.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* Save Button */}
-          <div className="flex justify-end pt-4 border-t">
-            <Button 
-              onClick={handleSave} 
-              disabled={updateOrder.isPending}
-              className="min-w-[120px]"
-            >
-              <Save className="w-4 h-4 mr-2" />
+          <div className="flex justify-end pt-2 border-t">
+            <Button onClick={handleSave} disabled={updateOrder.isPending} className="h-8 text-xs min-w-[120px]">
+              <Save className="w-3.5 h-3.5 mr-1" />
               {updateOrder.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
