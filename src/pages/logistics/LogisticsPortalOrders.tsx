@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
-import { useLogisticsPortalOrders } from '@/hooks/useLogisticsPortalOrders';
+import { useAllLogisticsOrders } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
