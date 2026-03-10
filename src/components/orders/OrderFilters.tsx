@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { ActiveStoreBadge } from '@/components/filters/ActiveStoreBadge';
 
 interface OrderFiltersProps {
   search: string;
@@ -24,6 +25,7 @@ export function OrderFilters({
 }: OrderFiltersProps) {
   return (
     <div className="flex flex-col md:flex-row gap-4 p-4 bg-card rounded-lg border">
+      <ActiveStoreBadge />
       <div className="flex-1 relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input

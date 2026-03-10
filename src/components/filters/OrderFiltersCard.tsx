@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Calendar, MapPin, Filter, X } from 'lucide-react';
+import { ActiveStoreBadge } from '@/components/filters/ActiveStoreBadge';
 
 export type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
 export type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
@@ -97,6 +98,7 @@ export function OrderFiltersCard({
     <Card>
       <CardContent className="pt-6">
         <div className="flex flex-wrap items-center gap-4">
+          <ActiveStoreBadge />
           {/* Search Input */}
           <div className="relative flex-1 min-w-[200px] max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
