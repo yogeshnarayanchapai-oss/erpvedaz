@@ -243,6 +243,8 @@ export function useLogisticsRedirectOrder() {
       }
     },
     onSuccess: () => {
+      clearLogisticsOrdersCache();
+      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -307,6 +309,8 @@ export function useLogisticsMarkDelivered() {
       }
     },
     onSuccess: () => {
+      clearLogisticsOrdersCache();
+      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -340,6 +344,8 @@ export function useLogisticsMarkReturned() {
       if (error) throw error;
     },
     onSuccess: () => {
+      clearLogisticsOrdersCache();
+      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
