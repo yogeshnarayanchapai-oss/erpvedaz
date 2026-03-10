@@ -492,8 +492,15 @@ export default function LogisticsPortalOrders() {
                       <TableCell>{order.destination_branch || '-'}</TableCell>
                       <TableCell>{staffName}</TableCell>
                       <TableCell>{getStatusBadge(order.order_status)}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">
-                        {order.delivery_notes || '-'}
+                      <TableCell className="max-w-[200px]">
+                        <div className="flex flex-col gap-1">
+                          {(order.leads as any)?.reference_id && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 w-fit text-xs font-mono">
+                              #{(order.leads as any).reference_id}
+                            </Badge>
+                          )}
+                          <span className="truncate text-sm">{order.delivery_notes || '-'}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
