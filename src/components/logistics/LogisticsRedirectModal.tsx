@@ -7,10 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BranchSelect } from '@/components/BranchSelect';
-import { useLogisticsRedirectOrder, useLogisticsMarkDelivered } from '@/hooks/useLogisticsPortalOrders';
+import { useLogisticsRedirectOrder, useLogisticsMarkDelivered, useLogisticsMarkReturned } from '@/hooks/useLogisticsPortalOrders';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { RotateCcw, CheckCircle, Package, MapPin, Phone, User } from 'lucide-react';
+import { RotateCcw, CheckCircle, Package, MapPin, Phone, User, Undo2 } from 'lucide-react';
 
 interface LogisticsRedirectModalProps {
   order: any;
@@ -37,6 +37,7 @@ export function LogisticsRedirectModal({
 }: LogisticsRedirectModalProps) {
   const redirectOrder = useLogisticsRedirectOrder();
   const markDelivered = useLogisticsMarkDelivered();
+  const markReturned = useLogisticsMarkReturned();
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
@@ -67,8 +68,9 @@ export function LogisticsRedirectModal({
   const contactNumber = (order.leads as any)?.contact_number || (order as any).customers?.phone_number || '-';
   const address = (order.leads as any)?.full_address || order.delivery_address || '-';
 
-  const canRedirect = !['DELIVERED', 'CANCELLED', 'REDIRECT', 'REDIRECTED'].includes(order.order_status || '');
-  const canMarkDelivered = !['DELIVERED', 'CANCELLED'].includes(order.order_status || '');
+  const canRedirect = !['DELIVERED', 'CANCELLED', 'REDIRECT', 'REDIRECTED', 'RETURNED'].includes(order.order_status || '');
+  const canMarkDelivered = !['DELIVERED', 'CANCELLED', 'RETURNED'].includes(order.order_status || '');
+  const canMarkReturned = !['CANCELLED', 'RETURNED'].includes(order.order_status || '');
 
   const handleRedirect = async () => {
     if (!remark.trim()) {
@@ -103,6 +105,21 @@ export function LogisticsRedirectModal({
       onClose();
     } catch (error) {
       toast.error('Failed to mark order as delivered');
+    }
+  };
+
+  const handleMarkReturned = async () => {
+    if (!confirm('Are you sure you want to mark this order as RETURNED (RTO)?')) return;
+    try {
+      await markReturned.mutateAsync({
+        orderId: order.id,
+        userId,
+        userName,
+      });
+      toast.success('Order marked as returned (RTO)');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to mark order as returned');
     }
   };
 
@@ -171,73 +188,90 @@ export function LogisticsRedirectModal({
 
           <Separator />
 
-          {/* Redirect Form */}
+          {/* Redirect Form - 1 column layout */}
           {canRedirect && (
             <div className="space-y-4">
               <h4 className="font-medium text-sm">Redirect Options</h4>
               
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="branch">Change Branch/Area</Label>
-                  <BranchSelect
-                    value=""
-                    customValue={newBranch || undefined}
-                    onChange={(branchId, branch, customName) => {
-                      setNewBranch(branch?.branch_name || customName || '');
-                    }}
-                    placeholder="Type or select branch..."
-                    allowCustom={true}
-                  />
+              <div className="space-y-4">
+                {/* Row 1: Branch + Delivery Type */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label htmlFor="branch">Change Branch/Area</Label>
+                    <BranchSelect
+                      value=""
+                      customValue={newBranch || undefined}
+                      onChange={(branchId, branch, customName) => {
+                        setNewBranch(branch?.branch_name || customName || '');
+                      }}
+                      placeholder="Type or select branch..."
+                      allowCustom={true}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deliveryLocation">Change Delivery Type</Label>
+                    <Select value={newDeliveryLocation} onValueChange={setNewDeliveryLocation}>
+                      <SelectTrigger id="deliveryLocation">
+                        <SelectValue placeholder="Select delivery type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
+                        <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="deliveryLocation">Change Delivery Type</Label>
-                  <Select value={newDeliveryLocation} onValueChange={setNewDeliveryLocation}>
-                    <SelectTrigger id="deliveryLocation">
-                      <SelectValue placeholder="Select delivery type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INSIDE_VALLEY">Inside Valley</SelectItem>
-                      <SelectItem value="OUTSIDE_VALLEY">Outside Valley</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Row 2: Courier + Remark */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label htmlFor="courier">Select Courier</Label>
+                    <Select value={newCourier} onValueChange={setNewCourier}>
+                      <SelectTrigger id="courier">
+                        <SelectValue placeholder="Select courier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COURIERS.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label htmlFor="courier">Select Courier</Label>
-                  <Select value={newCourier} onValueChange={setNewCourier}>
-                    <SelectTrigger id="courier">
-                      <SelectValue placeholder="Select courier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COURIERS.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="remark">Remark <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    id="remark"
-                    placeholder="Add redirect reason/notes..."
-                    value={remark}
-                    onChange={(e) => setRemark(e.target.value)}
-                    rows={3}
-                  />
+                  <div>
+                    <Label htmlFor="remark">Remark <span className="text-destructive">*</span></Label>
+                    <Textarea
+                      id="remark"
+                      placeholder="Add redirect reason/notes..."
+                      value={remark}
+                      onChange={(e) => setRemark(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex gap-2 mt-4">
+        <DialogFooter className="flex flex-wrap gap-2 mt-4">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
+          {canMarkReturned && (
+            <Button
+              variant="outline"
+              onClick={handleMarkReturned}
+              disabled={markReturned.isPending}
+              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+            >
+              <Undo2 className="w-4 h-4 mr-2" />
+              Return (RTO)
+            </Button>
+          )}
           {canMarkDelivered && (
             <Button
               variant="default"
@@ -256,7 +290,7 @@ export function LogisticsRedirectModal({
               disabled={redirectOrder.isPending || !remark.trim()}
             >
               <RotateCcw className="w-4 h-4 mr-2" />
-              Redirect Order
+              Redirect
             </Button>
           )}
         </DialogFooter>

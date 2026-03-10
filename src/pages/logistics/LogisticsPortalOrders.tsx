@@ -388,10 +388,10 @@ export default function LogisticsPortalOrders() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search client, phone, branch..."
+                  placeholder="Search client, phone, #ref ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-[200px]"
+                  className="pl-9 w-[220px]"
                 />
               </div>
               <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
@@ -441,7 +441,6 @@ export default function LogisticsPortalOrders() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="table-header">Date & Time</TableHead>
                   <TableHead className="table-header">Client</TableHead>
                   <TableHead className="table-header">Contact</TableHead>
                   <TableHead className="table-header">Products</TableHead>
@@ -479,9 +478,6 @@ export default function LogisticsPortalOrders() {
                   
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="text-muted-foreground whitespace-nowrap">
-                        {order.order_date ? format(new Date(order.order_date), 'dd MMM HH:mm') : '-'}
-                      </TableCell>
                       <TableCell className="font-medium">{clientName}</TableCell>
                       <TableCell>{contactNumber}</TableCell>
                       <TableCell className="max-w-[200px]">
@@ -492,8 +488,15 @@ export default function LogisticsPortalOrders() {
                       <TableCell>{order.destination_branch || '-'}</TableCell>
                       <TableCell>{staffName}</TableCell>
                       <TableCell>{getStatusBadge(order.order_status)}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">
-                        {order.delivery_notes || '-'}
+                      <TableCell className="max-w-[200px]">
+                        <div className="flex flex-col gap-1">
+                          {(order.leads as any)?.reference_id && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 w-fit text-xs font-mono">
+                              #{(order.leads as any).reference_id}
+                            </Badge>
+                          )}
+                          <span className="truncate text-sm">{order.delivery_notes || '-'}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -524,7 +527,7 @@ export default function LogisticsPortalOrders() {
                 })}
                 {filteredOrders.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No orders found'}
                     </TableCell>
                   </TableRow>

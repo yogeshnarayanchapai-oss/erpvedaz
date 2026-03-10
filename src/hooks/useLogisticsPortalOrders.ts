@@ -169,7 +169,6 @@ export function useLogisticsMarkDelivered() {
     }) => {
       const now = new Date().toISOString();
 
-      // Get order details for notification
       const { data: order } = await supabase
         .from('orders')
         .select(`
@@ -192,7 +191,6 @@ export function useLogisticsMarkDelivered() {
 
       if (error) throw error;
 
-      // Notify order owner
       if (order && order.sales_person_id && order.sales_person_id !== userId) {
         const { data: actorProfile } = await supabase
           .from('profiles')
@@ -214,6 +212,39 @@ export function useLogisticsMarkDelivered() {
           console.error('Failed to send notification:', notifyError);
         }
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+export function useLogisticsMarkReturned() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orderId,
+      userId,
+      userName,
+    }: {
+      orderId: string;
+      userId: string;
+      userName: string;
+    }) => {
+      const now = new Date().toISOString();
+      const returnNote = `Marked as RETURNED by ${userName} on ${new Date().toLocaleDateString()}`;
+
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          order_status: 'RETURNED',
+          delivery_notes: returnNote,
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
