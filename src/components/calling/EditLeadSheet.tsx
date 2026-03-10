@@ -182,7 +182,7 @@ export function EditLeadSheet({
 
   return (
     <Sheet open={!!lead} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-3xl overflow-hidden flex flex-col h-full">
+      <SheetContent className="sm:max-w-3xl overflow-y-auto flex flex-col h-full">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             Edit Lead – {lead.client_name}

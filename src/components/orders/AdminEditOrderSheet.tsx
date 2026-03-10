@@ -220,7 +220,7 @@ export function AdminEditOrderSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-3xl overflow-hidden flex flex-col h-full">
+      <SheetContent className="sm:max-w-3xl overflow-y-auto flex flex-col h-full">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
