@@ -220,33 +220,33 @@ export function AdminEditOrderSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-3xl overflow-hidden p-4">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="flex items-center gap-2 text-base">
-            <Package className="w-4 h-4" />
+      <SheetContent className="sm:max-w-3xl overflow-hidden flex flex-col h-full">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
             Edit Order
           </SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-3 mt-2">
+        <div className="flex-1 flex flex-col gap-5 mt-4">
           {/* Row 1: Customer info - 4 columns */}
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Customer Name</Label>
-              <Input value={formData.client_name} onChange={(e) => handleFormChange({ client_name: e.target.value })} placeholder="Name" className="h-8 text-xs" />
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label>Customer Name</Label>
+              <Input value={formData.client_name} onChange={(e) => handleFormChange({ client_name: e.target.value })} placeholder="Name" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Contact</Label>
-              <Input value={formData.contact_number} onChange={(e) => handleFormChange({ contact_number: e.target.value })} placeholder="Phone" className="h-8 text-xs" />
+            <div className="space-y-1.5">
+              <Label>Contact</Label>
+              <Input value={formData.contact_number} onChange={(e) => handleFormChange({ contact_number: e.target.value })} placeholder="Phone" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Alt Phone</Label>
-              <Input value={formData.alt_phone} onChange={(e) => handleFormChange({ alt_phone: e.target.value })} placeholder="Alt phone" className="h-8 text-xs" />
+            <div className="space-y-1.5">
+              <Label>Alt Phone</Label>
+              <Input value={formData.alt_phone} onChange={(e) => handleFormChange({ alt_phone: e.target.value })} placeholder="Alt phone" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Delivery Location</Label>
+            <div className="space-y-1.5">
+              <Label>Delivery Location</Label>
               <Select value={formData.delivery_location} onValueChange={(v) => handleFormChange({ delivery_location: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   {DELIVERY_LOCATION_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -257,13 +257,13 @@ export function AdminEditOrderSheet({
           </div>
 
           {/* Row 2: Address & Branch - 2 columns */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Full Address</Label>
-              <Input value={formData.full_address} onChange={(e) => handleFormChange({ full_address: e.target.value })} placeholder="Full delivery address" className="h-8 text-xs" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Full Address</Label>
+              <Input value={formData.full_address} onChange={(e) => handleFormChange({ full_address: e.target.value })} placeholder="Full delivery address" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Destination Branch</Label>
+            <div className="space-y-1.5">
+              <Label>Destination Branch</Label>
               <BranchSelect
                 value={formData.branch_id}
                 customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
@@ -281,15 +281,15 @@ export function AdminEditOrderSheet({
           </div>
 
           {/* Row 3: Status section - 5 columns */}
-          <div className="grid grid-cols-5 gap-3 border-t pt-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Order Date</Label>
-              <Input type="date" value={formData.order_date} onChange={(e) => handleFormChange({ order_date: e.target.value })} className="h-8 text-xs" />
+          <div className="grid grid-cols-5 gap-4 border-t pt-4">
+            <div className="space-y-1.5">
+              <Label>Order Date</Label>
+              <Input type="date" value={formData.order_date} onChange={(e) => handleFormChange({ order_date: e.target.value })} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Order Status</Label>
+            <div className="space-y-1.5">
+              <Label>Order Status</Label>
               <Select value={formData.order_status} onValueChange={(v) => handleFormChange({ order_status: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ORDER_STATUS_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -297,10 +297,10 @@ export function AdminEditOrderSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Payment</Label>
+            <div className="space-y-1.5">
+              <Label>Payment</Label>
               <Select value={formData.payment_status} onValueChange={(v) => handleFormChange({ payment_status: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAYMENT_STATUS_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -308,27 +308,27 @@ export function AdminEditOrderSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Logistic ID</Label>
-              <Input value={formData.logistic_order_id} onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })} placeholder="Logistic ID" className="h-8 text-xs" />
+            <div className="space-y-1.5">
+              <Label>Logistic ID</Label>
+              <Input value={formData.logistic_order_id} onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })} placeholder="Logistic ID" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Remark</Label>
-              <Input value={formData.delivery_notes} onChange={(e) => handleFormChange({ delivery_notes: e.target.value })} placeholder="Notes..." className="h-8 text-xs" />
+            <div className="space-y-1.5">
+              <Label>Remark</Label>
+              <Input value={formData.delivery_notes} onChange={(e) => handleFormChange({ delivery_notes: e.target.value })} placeholder="Notes..." />
             </div>
           </div>
 
-          {/* Products Section - compact */}
-          <div className="border-t pt-2 space-y-1.5">
+          {/* Products Section */}
+          <div className="border-t pt-4 space-y-3 flex-1 flex flex-col">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-xs">Order Products</h4>
-              <Button type="button" variant="outline" size="sm" onClick={addProductLine} className="h-6 text-[10px] px-2">
-                <Plus className="w-3 h-3 mr-0.5" /> Add
+              <h4 className="font-medium">Order Products</h4>
+              <Button type="button" variant="outline" size="sm" onClick={addProductLine}>
+                <Plus className="w-4 h-4 mr-1" /> Add
               </Button>
             </div>
 
-            <div className="space-y-1">
-              <div className="grid grid-cols-12 gap-1 text-[10px] font-medium text-muted-foreground">
+            <div className="space-y-2 flex-1">
+              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-2">Qty</div>
                 <div className="col-span-2">Price</div>
@@ -338,42 +338,42 @@ export function AdminEditOrderSheet({
               </div>
 
               {formData.orderItems.map((item) => (
-                <div key={item.id} className="grid grid-cols-12 gap-1 items-center">
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-4">
-                    <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="h-7 w-full text-xs" />
+                    <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="w-full" />
                   </div>
                   <div className="col-span-2">
-                    <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} className="h-7 text-xs" />
+                    <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} />
                   </div>
                   <div className="col-span-2">
-                    <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" />
+                    <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} />
                   </div>
                   <div className="col-span-2">
-                    <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" placeholder="0" />
+                    <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
                   </div>
-                  <div className="col-span-1 text-[11px] font-medium">₹{getLineTotal(item).toLocaleString()}</div>
+                  <div className="col-span-1 text-sm font-medium">₹{getLineTotal(item).toLocaleString()}</div>
                   <div className="col-span-1">
                     {formData.orderItems.length > 1 && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeProductLine(item.id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                        <Trash2 className="w-3 h-3" />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeProductLine(item.id)} className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
                 </div>
               ))}
 
-              {/* Grand Total row */}
-              <div className="flex justify-end items-center pt-1.5 border-t">
-                <span className="text-xs text-muted-foreground mr-2">Grand Total:</span>
-                <span className="text-sm font-bold">Rs. {grandTotal.toLocaleString()}</span>
+              {/* Grand Total */}
+              <div className="flex justify-end items-center pt-3 border-t">
+                <span className="text-sm text-muted-foreground mr-3">Grand Total:</span>
+                <span className="text-lg font-bold">Rs. {grandTotal.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end pt-2 border-t">
-            <Button onClick={handleSave} disabled={updateOrder.isPending} className="h-8 text-xs min-w-[120px]">
-              <Save className="w-3.5 h-3.5 mr-1" />
+          {/* Save Button - pushed to bottom */}
+          <div className="flex justify-end pt-4 border-t mt-auto">
+            <Button onClick={handleSave} disabled={updateOrder.isPending} className="min-w-[140px]">
+              <Save className="w-4 h-4 mr-2" />
               {updateOrder.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>

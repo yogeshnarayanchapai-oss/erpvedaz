@@ -182,57 +182,54 @@ export function EditLeadSheet({
 
   return (
     <Sheet open={!!lead} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-3xl overflow-hidden p-4">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="flex items-center gap-2 text-base">
-            Edit Lead - {lead.client_name}
+      <SheetContent className="sm:max-w-3xl overflow-hidden flex flex-col h-full">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            Edit Lead – {lead.client_name}
             {isTransferredLead && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">TRF</Badge>
+              <Badge variant="secondary" className="text-xs">TRF</Badge>
             )}
             {isOverdue && (
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                <AlertTriangle className="w-3 h-3 mr-0.5" />
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
                 Overdue
               </Badge>
             )}
           </SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-3 mt-2">
-          {/* Info bar - compact single row */}
-          <div className="flex items-center gap-4 p-2 bg-muted/50 rounded-lg text-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground text-xs">Phone:</span>
-              <button onClick={() => onCall(lead, lead.contact_number)} className="text-primary hover:underline text-xs font-medium">
+        <div className="flex-1 flex flex-col gap-5 mt-4">
+          {/* Info bar with phone, product, call/WA */}
+          <div className="flex items-center gap-6 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Phone:</span>
+              <button onClick={() => onCall(lead, lead.contact_number)} className="text-primary hover:underline text-sm font-medium">
                 {lead.contact_number}
               </button>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground text-xs">Product:</span>
-              <span className="text-xs">{lead.products?.name || '-'}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Product:</span>
+              <span className="text-sm">{lead.products?.name || '-'}</span>
             </div>
             {lead.next_followup_at && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground text-xs">Follow-up:</span>
-                <span className={`text-xs ${isOverdue ? 'text-destructive font-medium' : ''}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Follow-up:</span>
+                <span className={`text-sm ${isOverdue ? 'text-destructive font-medium' : ''}`}>
                   {format(new Date(lead.next_followup_at), 'dd MMM HH:mm')}
                 </span>
               </div>
             )}
-            {/* Call & WhatsApp inline */}
-            <div className="flex gap-1 ml-auto">
-              <Button variant="outline" size="sm" onClick={() => onCall(lead, lead.contact_number)} className="h-7 px-2 text-xs">
-                <Phone className="w-3 h-3 mr-1" />
-                Call
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" size="sm" onClick={() => onCall(lead, lead.contact_number)}>
+                <Phone className="w-4 h-4 mr-1" /> Call
               </Button>
-              <Button variant="outline" size="sm" onClick={() => onWhatsApp(lead)} className="h-7 px-2 text-xs">
-                <MessageSquare className="w-3 h-3 mr-1" />
-                WA
+              <Button variant="outline" size="sm" onClick={() => onWhatsApp(lead)}>
+                <MessageSquare className="w-4 h-4 mr-1" /> WA
               </Button>
             </div>
           </div>
           
-          {/* Customer Insight - compact */}
+          {/* Customer Insight */}
           <CustomerInsightCard 
             insight={customerInsight} 
             isLoading={insightLoading} 
@@ -240,22 +237,19 @@ export function EditLeadSheet({
           />
 
           {/* Main form - 4 columns */}
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Lead Date</Label>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label>Lead Date</Label>
               <Input
                 type="date"
                 value={formData.date}
                 onChange={(e) => onFormChange({ ...formData, date: e.target.value })}
-                className="h-8 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Order Status</Label>
+            <div className="space-y-1.5">
+              <Label>Order Status</Label>
               <Select value={formData.status} onValueChange={(v) => onFormChange({ ...formData, status: v })}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ORDER_STATUS_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -263,17 +257,16 @@ export function EditLeadSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Alt Phone</Label>
+            <div className="space-y-1.5">
+              <Label>Alt Phone</Label>
               <Input
                 value={formData.alt_phone}
                 onChange={(e) => onFormChange({ ...formData, alt_phone: e.target.value })}
                 placeholder="Alt phone"
-                className="h-8 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Branch</Label>
+            <div className="space-y-1.5">
+              <Label>Branch</Label>
               <BranchSelect
                 value={formData.branch_id}
                 customValue={!formData.branch_id && formData.destination_branch ? formData.destination_branch : undefined}
@@ -292,41 +285,37 @@ export function EditLeadSheet({
           </div>
 
           {/* Address & Remark - 2 columns */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Full Address</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Full Address</Label>
               <Input
                 value={formData.full_address}
                 onChange={(e) => onFormChange({ ...formData, full_address: e.target.value })}
                 placeholder="Enter full address"
-                className="h-8 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Remark</Label>
+            <div className="space-y-1.5">
+              <Label>Remark</Label>
               <Input
                 value={formData.remark}
                 onChange={(e) => onFormChange({ ...formData, remark: e.target.value })}
                 placeholder="Add notes..."
-                className="h-8 text-xs"
               />
             </div>
           </div>
 
-          {/* Follow-up Section - compact inline */}
+          {/* Follow-up Section */}
           {formData.status === 'FOLLOW_UP' && (
-            <div className="border-t pt-2 space-y-2">
-              <h4 className="font-medium text-xs flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+            <div className="border-t pt-4 space-y-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4" />
                 Schedule Follow-Up
               </h4>
-              <div className="grid grid-cols-4 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">When</Label>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label>When</Label>
                   <Select value={formData.followup_preset} onValueChange={handleFollowupPresetChange}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Select time" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
                     <SelectContent>
                       {FOLLOWUP_PRESETS.map(opt => (
                         <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -336,39 +325,37 @@ export function EditLeadSheet({
                 </div>
                 {formData.followup_preset === 'custom' ? (
                   <>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Date</Label>
-                      <Input type="date" value={formData.followup_date} onChange={(e) => onFormChange({ ...formData, followup_date: e.target.value })} min={format(new Date(), 'yyyy-MM-dd')} className="h-8 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label>Date</Label>
+                      <Input type="date" value={formData.followup_date} onChange={(e) => onFormChange({ ...formData, followup_date: e.target.value })} min={format(new Date(), 'yyyy-MM-dd')} />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Time</Label>
-                      <Input type="time" value={formData.followup_time} onChange={(e) => onFormChange({ ...formData, followup_time: e.target.value })} className="h-8 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label>Time</Label>
+                      <Input type="time" value={formData.followup_time} onChange={(e) => onFormChange({ ...formData, followup_time: e.target.value })} />
                     </div>
                   </>
                 ) : (
-                  <div className="col-span-2 flex items-end pb-1">
+                  <div className="col-span-2 flex items-end pb-2">
                     {formData.followup_preset && (
-                      <p className="text-xs text-muted-foreground">→ {formData.followup_date} {formData.followup_time}</p>
+                      <p className="text-sm text-muted-foreground">→ {formData.followup_date} at {formData.followup_time}</p>
                     )}
                   </div>
                 )}
-                <div className="space-y-1">
-                  <Label className="text-xs">Reason</Label>
+                <div className="space-y-1.5">
+                  <Label>Reason</Label>
                   <Input
                     value={formData.followup_reason}
                     onChange={(e) => onFormChange({ ...formData, followup_reason: e.target.value })}
                     placeholder="Follow-up reason"
-                    className="h-8 text-xs"
                   />
                 </div>
               </div>
-              {/* Follow-up History inline */}
               {lead.status === 'FOLLOW_UP' && (
-                <details className="text-xs">
+                <details className="text-sm">
                   <summary className="cursor-pointer text-muted-foreground flex items-center gap-1">
-                    <History className="w-3 h-3" /> View History
+                    <History className="w-4 h-4" /> View Follow-Up History
                   </summary>
-                  <div className="mt-1">
+                  <div className="mt-2">
                     <FollowupHistorySection leadId={lead.id} />
                   </div>
                 </details>
@@ -376,74 +363,70 @@ export function EditLeadSheet({
             </div>
           )}
 
-          {/* Confirmed Order Details - compact */}
+          {/* Confirmed Order Details */}
           {formData.status === 'CONFIRMED' && (
-            <div className="border-t pt-2 space-y-2">
+            <div className="border-t pt-4 space-y-3 flex-1 flex flex-col">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-xs flex items-center gap-1">
+                <h4 className="font-medium flex items-center gap-2">
                   {lead.order_id ? 'Edit Order Products' : 'Order Products'}
                   {lead.order_id && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">
-                      <CheckCircle className="w-2.5 h-2.5 mr-0.5" />Existing
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />Existing
                     </Badge>
                   )}
                 </h4>
-                <Button type="button" variant="outline" size="sm" onClick={addProductLine} className="h-6 text-[10px] px-2">
-                  <Plus className="w-3 h-3 mr-0.5" /> Add
+                <Button type="button" variant="outline" size="sm" onClick={addProductLine}>
+                  <Plus className="w-4 h-4 mr-1" /> Add
                 </Button>
               </div>
 
-              {/* Product Lines - compact */}
-              <div className="space-y-1.5">
-                <div className="grid grid-cols-12 gap-1 text-[10px] font-medium text-muted-foreground">
+              <div className="space-y-2 flex-1">
+                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
                   <div className="col-span-4">Product</div>
                   <div className="col-span-2">Qty</div>
                   <div className="col-span-2">Price</div>
-                  <div className="col-span-2">Disc</div>
+                  <div className="col-span-2">Discount</div>
                   <div className="col-span-1">Total</div>
                   <div className="col-span-1"></div>
                 </div>
                 {(formData.orderItems || []).map((item) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-1 items-center">
+                  <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-4">
-                      <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="h-7 w-full text-xs" />
+                      <SearchableProductSelect products={products} value={item.product_id} onSelect={(productId) => handleProductSelect(item.id, productId)} className="w-full" />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} className="h-7 text-xs" />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateProductLine(item.id, { quantity: parseInt(e.target.value) || 1 })} />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" />
+                      <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateProductLine(item.id, { unit_price: parseFloat(e.target.value) || 0 })} />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" placeholder="0" />
+                      <Input type="number" min="0" value={item.discount || 0} onChange={(e) => updateProductLine(item.id, { discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
                     </div>
-                    <div className="col-span-1 text-[11px] font-medium">₹{getLineTotal(item).toLocaleString()}</div>
+                    <div className="col-span-1 text-sm font-medium">₹{getLineTotal(item).toLocaleString()}</div>
                     <div className="col-span-1">
                       {(formData.orderItems || []).length > 1 && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeProductLine(item.id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="w-3 h-3" />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeProductLine(item.id)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-between pt-1 border-t">
+                <div className="flex items-center justify-between pt-3 border-t">
                   <div className="flex items-center gap-4">
-                    {/* Payment & Location inline */}
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-1 cursor-pointer text-xs">
-                        <input type="radio" name="payment_type" checked={formData.is_cod === true} onChange={() => onFormChange({ ...formData, is_cod: true })} className="w-3 h-3" />
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                        <input type="radio" name="payment_type" checked={formData.is_cod === true} onChange={() => onFormChange({ ...formData, is_cod: true })} className="w-4 h-4" />
                         COD
                       </label>
-                      <label className="flex items-center gap-1 cursor-pointer text-xs">
-                        <input type="radio" name="payment_type" checked={formData.is_cod === false} onChange={() => onFormChange({ ...formData, is_cod: false })} className="w-3 h-3" />
+                      <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                        <input type="radio" name="payment_type" checked={formData.is_cod === false} onChange={() => onFormChange({ ...formData, is_cod: false })} className="w-4 h-4" />
                         Online
                       </label>
                     </div>
                     <Select value={formData.delivery_location} onValueChange={(v) => onFormChange({ ...formData, delivery_location: v })}>
-                      <SelectTrigger className="h-7 text-xs w-[140px]">
-                        <SelectValue placeholder="Location" />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-[160px]"><SelectValue placeholder="Location" /></SelectTrigger>
                       <SelectContent>
                         {DELIVERY_LOCATION_OPTIONS.map(opt => (
                           <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -452,9 +435,9 @@ export function EditLeadSheet({
                     </Select>
                   </div>
                   <div className="text-right">
-                    {totalDiscount > 0 && <span className="text-[10px] text-destructive mr-2">-₹{totalDiscount.toLocaleString()}</span>}
-                    <span className="text-xs text-muted-foreground mr-1">Total:</span>
-                    <span className="text-sm font-bold">Rs. {grandTotal.toLocaleString()}</span>
+                    {totalDiscount > 0 && <span className="text-sm text-destructive mr-3">-Rs. {totalDiscount.toLocaleString()}</span>}
+                    <span className="text-sm text-muted-foreground mr-2">Grand Total:</span>
+                    <span className="text-lg font-bold">Rs. {grandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -463,23 +446,23 @@ export function EditLeadSheet({
 
           {/* Follow-up History (non-followup status) */}
           {lead.status === 'FOLLOW_UP' && formData.status !== 'FOLLOW_UP' && (
-            <details className="text-xs border-t pt-2">
+            <details className="text-sm border-t pt-3">
               <summary className="cursor-pointer text-muted-foreground flex items-center gap-1">
-                <History className="w-3 h-3" /> Follow-Up History
+                <History className="w-4 h-4" /> Follow-Up History
               </summary>
-              <div className="mt-1">
+              <div className="mt-2">
                 <FollowupHistorySection leadId={lead.id} />
               </div>
             </details>
           )}
 
-          {/* Action buttons - single row */}
-          <div className="flex gap-2 pt-2 border-t">
-            <Button onClick={onSave} className="flex-1 h-8 text-xs" disabled={isSaving}>
-              <CheckCircle className="w-3.5 h-3.5 mr-1" />
+          {/* Action buttons - pushed to bottom */}
+          <div className="flex gap-3 pt-4 border-t mt-auto">
+            <Button onClick={onSave} className="flex-1" disabled={isSaving}>
+              <CheckCircle className="w-4 h-4 mr-2" />
               Save Changes
             </Button>
-            <Button variant="outline" onClick={onClose} className="h-8 text-xs">
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
           </div>
