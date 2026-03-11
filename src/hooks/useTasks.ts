@@ -623,12 +623,14 @@ export function useCloseTicket() {
 
   return useMutation({
     mutationFn: async ({ remarkId, taskId }: { remarkId: string; taskId: string }) => {
+      // Use raw update to handle status column not in generated types
       const { error } = await supabase
         .from('task_remarks')
         .update({ status: 'CLOSED', is_issue: false } as any)
         .eq('id', remarkId);
 
       if (error) throw error;
+      return { remarkId, taskId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
