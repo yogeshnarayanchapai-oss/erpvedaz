@@ -6650,6 +6650,7 @@ export type Database = {
           is_issue: boolean | null
           parent_remark_id: string | null
           remark: string
+          status: string
           task_id: string
         }
         Insert: {
@@ -6659,6 +6660,7 @@ export type Database = {
           is_issue?: boolean | null
           parent_remark_id?: string | null
           remark: string
+          status?: string
           task_id: string
         }
         Update: {
@@ -6668,6 +6670,7 @@ export type Database = {
           is_issue?: boolean | null
           parent_remark_id?: string | null
           remark?: string
+          status?: string
           task_id?: string
         }
         Relationships: [
