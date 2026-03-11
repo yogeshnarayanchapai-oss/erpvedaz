@@ -565,7 +565,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                 <TableCell className="hidden md:table-cell">
                   <div className="relative inline-flex">
                     <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, false)}
-                      title={task.has_issues ? 'View remarks (has issues)' : 'Add remark'}
+                      title={task.has_issues ? 'View tickets (has issues)' : 'Open ticket'}
                       className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
                       <MessageSquare className="h-4 w-4" />
                     </Button>

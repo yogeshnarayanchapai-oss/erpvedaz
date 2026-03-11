@@ -359,11 +359,11 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
 
             <Separator />
 
-            {/* Remarks */}
+            {/* Remarks & Issues (all tickets including closed) */}
             <div>
               <h4 className="flex items-center gap-2 text-sm font-medium mb-3">
                 <MessageSquare className="h-4 w-4" />
-                Remarks & Issues
+                Tickets & Issues
               </h4>
               <div className="space-y-3">
                 {remarks?.length === 0 && (
