@@ -169,18 +169,21 @@ export function useTasks(filters?: TaskFilters) {
             .from('task_remarks')
             .select('*', { count: 'exact', head: true })
             .eq('task_id', task.id)
-            .eq('is_issue', true);
+            .eq('is_issue', true)
+            .is('parent_remark_id', null)
+            .eq('status', 'OPEN');
 
-          // Check for top-level remarks that have no replies
-          const { data: topRemarks } = await supabase
+          // Check for open tickets that have no replies (pending reply)
+          const { data: openTickets } = await supabase
             .from('task_remarks')
             .select('id')
             .eq('task_id', task.id)
-            .is('parent_remark_id', null);
+            .is('parent_remark_id', null)
+            .eq('status', 'OPEN');
 
           let hasUnreplied = false;
-          if (topRemarks && topRemarks.length > 0) {
-            for (const tr of topRemarks) {
+          if (openTickets && openTickets.length > 0) {
+            for (const tr of openTickets) {
               const { count: replyCount } = await supabase
                 .from('task_remarks')
                 .select('*', { count: 'exact', head: true })
@@ -262,7 +265,9 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
           .from('task_remarks')
           .select('task_id', { count: 'exact', head: true })
           .in('task_id', nonCompletedTaskIds)
-          .eq('is_issue', true);
+          .eq('is_issue', true)
+          .is('parent_remark_id', null)
+          .eq('status', 'OPEN');
         issueCount = count || 0;
       }
 
@@ -609,6 +614,29 @@ export function useAddTaskRemark() {
     },
     onError: (error) => {
       toast.error('Failed to add remark: ' + error.message);
+    },
+  });
+}
+
+export function useCloseTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ remarkId, taskId }: { remarkId: string; taskId: string }) => {
+      const { error } = await supabase
+        .from('task_remarks')
+        .update({ status: 'CLOSED', is_issue: false } as any)
+        .eq('id', remarkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-remarks'] });
+      toast.success('Ticket closed');
+    },
+    onError: (error) => {
+      toast.error('Failed to close ticket: ' + error.message);
     },
   });
 }
