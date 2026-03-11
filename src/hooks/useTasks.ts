@@ -156,20 +156,41 @@ export function useTasks(filters?: TaskFilters) {
 
       if (error) throw error;
 
-      // Check for issues in each task
-      const tasksWithIssues = await Promise.all(
+      // Check for issues and unreplied remarks in each task
+      const tasksWithMeta = await Promise.all(
         (data || []).map(async (task) => {
-          const { count } = await supabase
+          const { count: issueCount } = await supabase
             .from('task_remarks')
             .select('*', { count: 'exact', head: true })
             .eq('task_id', task.id)
             .eq('is_issue', true);
 
-          return { ...task, has_issues: (count || 0) > 0 };
+          // Check for top-level remarks that have no replies
+          const { data: topRemarks } = await supabase
+            .from('task_remarks')
+            .select('id')
+            .eq('task_id', task.id)
+            .is('parent_remark_id', null);
+
+          let hasUnreplied = false;
+          if (topRemarks && topRemarks.length > 0) {
+            for (const tr of topRemarks) {
+              const { count: replyCount } = await supabase
+                .from('task_remarks')
+                .select('*', { count: 'exact', head: true })
+                .eq('parent_remark_id', tr.id);
+              if ((replyCount || 0) === 0) {
+                hasUnreplied = true;
+                break;
+              }
+            }
+          }
+
+          return { ...task, has_issues: (issueCount || 0) > 0, has_unreplied_remarks: hasUnreplied };
         })
       );
 
-      return tasksWithIssues as Task[];
+      return tasksWithMeta as Task[];
     },
     enabled: filterByStore ? !!storeId : true,
   });
