@@ -279,7 +279,7 @@ export default function CallingLeads() {
 
   // Call timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (activeCall) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - activeCall.startTime.getTime()) / 1000);
