@@ -207,6 +207,11 @@ export default function HRMTasks() {
       .sort((a, b) => b.percentage - a.percentage);
   }, [allTasks]);
 
+  // Allow status change for tasks assigned to the user OR tasks they manage (admin/owner can change any)
+  const canChangeTaskStatus = (task: Task) => {
+    if (isAdminOrOwner) return task.status !== 'COMPLETED';
+    return task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
+  };
   const isMyPendingTask = (task: Task) => task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
 
   const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
