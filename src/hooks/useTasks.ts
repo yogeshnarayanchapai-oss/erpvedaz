@@ -524,6 +524,7 @@ export function useUpdateTaskStatus() {
       queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-stats'] });
       queryClient.invalidateQueries({ queryKey: ['my-task-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['task-remarks'] });
       toast.success('Task status updated');
     },
     onError: (error) => {
