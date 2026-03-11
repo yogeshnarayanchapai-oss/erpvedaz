@@ -27,6 +27,7 @@ export interface Task {
   assigned_to?: { id: string; name: string } | null;
   assigned_by?: { id: string; name: string } | null;
   has_issues?: boolean;
+  has_unreplied_remarks?: boolean;
 }
 
 export function getTaskPerformance(task: Task): { label: string; type: TaskPerformance; days?: number } {
