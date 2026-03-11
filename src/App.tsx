@@ -33,9 +33,23 @@ import AdminOrders from './pages/admin/AdminOrders';
 import OrderDetail from './pages/admin/OrderDetail';
 import AdminCustomers from './pages/admin/AdminCustomers';
 import CustomerDetail from './pages/admin/CustomerDetail';
+import ReportsHub from "./pages/admin/ReportsHub";
 import AdminReports from "./pages/admin/AdminReports";
 import DailyPerformance from "./pages/admin/reports/DailyPerformance";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import BusinessControlReport from "./pages/admin/reports/BusinessControlReport";
+import ProfitLossReport from "./pages/admin/reports/ProfitLossReport";
+import SalesReport from "./pages/admin/reports/SalesReport";
+import IncomeExpenseReport from "./pages/admin/reports/IncomeExpenseReport";
+import DayBookReport from "./pages/admin/reports/DayBookReport";
+import BankPartyReport from "./pages/admin/reports/BankPartyReport";
+import BusinessStatusReport from "./pages/admin/reports/BusinessStatusReport";
+import ProductReport from "./pages/admin/reports/ProductReport";
+import LeadsReportAdmin from "./pages/admin/reports/LeadsReport";
+import CallingReportAdmin from "./pages/admin/reports/CallingReport";
+import LogisticsReport from "./pages/admin/reports/LogisticsReport";
+import SourceAnalysisReport from "./pages/admin/reports/SourceAnalysisReport";
+import AiSummaryReport from "./pages/admin/reports/AiSummaryReport";
 import AdminStaffTargets from "./pages/admin/AdminStaffTargets";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import SalesActivityLog from "./pages/admin/SalesActivityLog";
@@ -242,8 +256,22 @@ const App = () => (
                 <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />
                 <Route path="/admin/customers/:customerId" element={<CustomerDetail />} />
-                <Route path="/admin/reports" element={<AdminReports />} />
+                <Route path="/admin/reports" element={<ReportsHub />} />
                 <Route path="/admin/reports/daily-performance" element={<DailyPerformance />} />
+                <Route path="/admin/reports/business-control" element={<BusinessControlReport />} />
+                <Route path="/admin/reports/profit-loss" element={<ProfitLossReport />} />
+                <Route path="/admin/reports/sales" element={<SalesReport />} />
+                <Route path="/admin/reports/income-expense" element={<IncomeExpenseReport />} />
+                <Route path="/admin/reports/daybook" element={<DayBookReport />} />
+                <Route path="/admin/reports/bank-party" element={<BankPartyReport />} />
+                <Route path="/admin/reports/business-status" element={<BusinessStatusReport />} />
+                <Route path="/admin/reports/products" element={<ProductReport />} />
+                <Route path="/admin/reports/leads" element={<LeadsReportAdmin />} />
+                <Route path="/admin/reports/calling" element={<CallingReportAdmin />} />
+                <Route path="/admin/reports/logistics" element={<LogisticsReport />} />
+                <Route path="/admin/reports/source-analysis" element={<SourceAnalysisReport />} />
+                <Route path="/admin/reports/ai-summary" element={<AiSummaryReport />} />
+                <Route path="/admin/reports/old" element={<AdminReports />} />
                 <Route path="/admin/analytics" element={<AdminAnalytics />} />
                 <Route path="/admin/sales/activity-log" element={<SalesActivityLog />} />
                 <Route path="/admin/accounting/dashboard" element={<AccountingDashboard />} />

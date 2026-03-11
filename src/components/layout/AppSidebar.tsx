@@ -218,17 +218,8 @@ const salesItems: MenuItem[] = [
   { title: 'AI Leads', url: '/admin/ai-leads', icon: Brain },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
   { title: 'Customers', url: '/admin/customers', icon: Users },
-  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Activity Log', url: '/admin/sales/activity-log', icon: History },
-  { 
-    title: 'Reports', 
-    url: '/admin/reports', 
-    icon: FileText,
-    children: [
-      { title: 'All Reports', url: '/admin/reports', icon: FileText },
-      { title: 'Daily Performance', url: '/admin/reports/daily-performance', icon: TrendingUp },
-    ]
-  },
+  { title: 'Reports', url: '/admin/reports', icon: FileText },
   { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
   {
     title: 'Courier Integration',
