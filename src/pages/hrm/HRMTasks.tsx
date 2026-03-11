@@ -53,6 +53,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   ClipboardList,
   Clock,
