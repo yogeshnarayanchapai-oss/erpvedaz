@@ -208,23 +208,26 @@ export default function AdminUnifiedDashboard() {
           .from('task_remarks')
           .select('task_id')
           .in('task_id', nonCompletedIds)
-          .eq('is_issue', true);
+          .eq('is_issue', true)
+          .is('parent_remark_id', null)
+          .eq('status', 'OPEN');
         issueCount = new Set((issueRemarks || []).map(r => r.task_id)).size;
       }
       
-      // Pending replies - count unique TASKS that have unreplied top-level remarks
+      // Pending replies - count unique TASKS that have open tickets with no replies
       let pendingRepliesCount = 0;
       if (nonCompletedIds.length > 0) {
-        const { data: topRemarks } = await supabase
+        const { data: openTickets } = await supabase
           .from('task_remarks')
           .select('id, task_id')
           .in('task_id', nonCompletedIds)
-          .is('parent_remark_id', null);
+          .is('parent_remark_id', null)
+          .eq('status', 'OPEN');
         
-        if (topRemarks && topRemarks.length > 0) {
+        if (openTickets && openTickets.length > 0) {
           const tasksWithUnreplied = new Set<string>();
-          for (const tr of topRemarks) {
-            if (tasksWithUnreplied.has(tr.task_id)) continue; // already counted
+          for (const tr of openTickets) {
+            if (tasksWithUnreplied.has(tr.task_id)) continue;
             const { count: replyCount } = await supabase
               .from('task_remarks')
               .select('*', { count: 'exact', head: true })
