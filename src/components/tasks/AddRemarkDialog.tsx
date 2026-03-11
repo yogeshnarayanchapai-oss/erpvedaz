@@ -219,20 +219,14 @@ export function AddRemarkDialog({
           <>
             <ScrollArea className="max-h-[50vh] pr-2">
               <div className="space-y-3">
-                {/* Open tickets first */}
+                {/* Only show open tickets in popup */}
                 {openTickets.map((ticket: any) => renderTicket(ticket, false))}
-                
-                {/* Closed tickets */}
-                {closedTickets.length > 0 && (
-                  <>
-                    {openTickets.length > 0 && closedTickets.length > 0 && (
-                      <div className="text-[10px] text-muted-foreground text-center py-1">— Closed Tickets —</div>
-                    )}
-                    {closedTickets.map((ticket: any) => renderTicket(ticket, true))}
-                  </>
+
+                {!hasOpenTickets && hasAnyTickets && (
+                  <p className="text-xs text-muted-foreground text-center py-4">All tickets are closed. You can create a new one below.</p>
                 )}
 
-                {!hasAnyTickets && !canCreateNewTicket && (
+                {!hasAnyTickets && (
                   <p className="text-xs text-muted-foreground text-center py-4">No tickets yet.</p>
                 )}
               </div>
