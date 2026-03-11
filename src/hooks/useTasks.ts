@@ -613,6 +613,29 @@ export function useAddTaskRemark() {
   });
 }
 
+export function useCloseTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ remarkId, taskId }: { remarkId: string; taskId: string }) => {
+      const { error } = await supabase
+        .from('task_remarks')
+        .update({ status: 'CLOSED', is_issue: false } as any)
+        .eq('id', remarkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-remarks'] });
+      toast.success('Ticket closed');
+    },
+    onError: (error) => {
+      toast.error('Failed to close ticket: ' + error.message);
+    },
+  });
+}
+
 export function useTaskRemarks(taskId: string) {
   return useQuery({
     queryKey: ['task-remarks', taskId],
