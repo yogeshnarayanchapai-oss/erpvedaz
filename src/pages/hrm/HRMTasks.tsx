@@ -563,14 +563,16 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                   <TaskPerformanceBadge type={perf.type} label={perf.label} />
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <div className="relative inline-flex">
+                  <div className="relative inline-flex items-center gap-1">
                     <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, false)}
                       title={task.has_issues ? 'View tickets (has issues)' : 'Open ticket'}
                       className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
                       <MessageSquare className="h-4 w-4" />
                     </Button>
                     {task.has_unreplied_remarks && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-amber-400 border-2 border-background" />
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-400 text-amber-600 bg-amber-50">
+                        Pending
+                      </Badge>
                     )}
                   </div>
                 </TableCell>
