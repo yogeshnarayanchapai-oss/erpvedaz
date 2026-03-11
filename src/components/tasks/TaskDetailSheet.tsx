@@ -368,21 +368,24 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               </h4>
               <div className="space-y-3">
                 {remarks?.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No remarks yet</p>
+                  <p className="text-sm text-muted-foreground">No tickets yet</p>
                 )}
-                {remarks?.map((remark) => (
-                  <div key={remark.id} className="space-y-2">
-                    {/* Parent Remark */}
+                {remarks?.map((remark: any) => {
+                  const isClosed = remark.status === 'CLOSED';
+                  return (
+                  <div key={remark.id} className={cn("space-y-2", isClosed && "opacity-60")}>
+                    {/* Parent Ticket */}
                     <div
-                      className={`text-sm rounded-lg p-3 ${
+                      className={cn(
+                        "text-sm rounded-lg p-3",
                         remark.is_issue
-                          ? 'bg-red-500/10 border border-red-500/20'
+                          ? 'bg-destructive/10 border border-destructive/20'
                           : 'bg-muted/50'
-                      }`}
+                      )}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         {remark.is_issue && (
-                          <AlertCircle className="h-3 w-3 text-red-500" />
+                          <AlertCircle className="h-3 w-3 text-destructive" />
                         )}
                         <span className="font-medium text-xs">
                           {remark.created_by?.name || 'Unknown'}
@@ -390,11 +393,14 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(remark.created_at), 'MMM dd, hh:mm a')}
                         </span>
+                        <Badge variant={isClosed ? "secondary" : "default"} className="text-[10px] h-4 ml-auto">
+                          {isClosed ? 'Closed' : 'Open'}
+                        </Badge>
                       </div>
                       <p className="text-sm">{remark.remark}</p>
 
-                      {/* Reply Button (for Admin/Manager/HR) */}
-                      {canReply && (
+                      {/* Reply Button - only for open tickets */}
+                      {canReply && !isClosed && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -443,7 +449,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                     {/* Replies */}
                     {remark.replies && remark.replies.length > 0 && (
                       <div className="ml-4 space-y-2 border-l-2 border-muted pl-3">
-                        {remark.replies.map((reply) => (
+                        {remark.replies.map((reply: any) => (
                           <div
                             key={reply.id}
                             className="text-sm rounded-lg p-2 bg-primary/5"
@@ -463,7 +469,8 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
