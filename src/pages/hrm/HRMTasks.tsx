@@ -223,7 +223,11 @@ export default function HRMTasks() {
   const openRemarkDialog = (taskId: string, defaultIsIssue = false) => {
     setRemarkDialogTaskId(taskId); setRemarkDialogDefaultIsIssue(defaultIsIssue); setRemarkDialogOpen(true);
   };
-  const isTaskAssignedToMe = (task: Task) => task.assigned_to?.id === user?.id;
+  const isTaskAssignedToMe = (task: Task) => {
+    const myId = user?.id;
+    if (!myId) return false;
+    return task.assigned_to_user_id === myId || task.assigned_to?.id === myId;
+  };
   const handleEditTask = (task: Task) => {
     if (isTaskAssignedToMe(task)) {
       toast.error("You can't edit a task assigned to you.");
