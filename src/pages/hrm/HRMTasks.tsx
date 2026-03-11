@@ -384,12 +384,12 @@ export default function HRMTasks() {
           </div>
 
           <TabsContent value="active" className="m-0">
-            <TaskTable tasks={activeTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+            <TaskTable tasks={activeTasks} isLoading={isLoading} user={user} canChangeTaskStatus={canChangeTaskStatus}
               isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
               openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
           </TabsContent>
           <TabsContent value="completed" className="m-0">
-            <TaskTable tasks={completedTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+            <TaskTable tasks={completedTasks} isLoading={isLoading} user={user} canChangeTaskStatus={canChangeTaskStatus}
               isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
               openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
           </TabsContent>
