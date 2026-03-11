@@ -490,8 +490,6 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
             <TableHead>Assigned To</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Due Date</TableHead>
-            <TableHead className="hidden lg:table-cell">Created</TableHead>
-            <TableHead className="hidden lg:table-cell">Completed</TableHead>
             <TableHead className="hidden sm:table-cell">Performance</TableHead>
             <TableHead className="hidden md:table-cell">Remark</TableHead>
             <TableHead className="text-right">Action</TableHead>
