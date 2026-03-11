@@ -504,7 +504,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                   {task.assigned_to?.name || 'N/A'}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
                     {canChangeTaskStatus(task) ? (
                       <Select value={task.status} onValueChange={(value) => handleStatusChange(task, value as TaskStatus)} disabled={updateTaskStatus.isPending}>
                         <SelectTrigger className="w-[130px] h-8">
@@ -519,7 +519,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                     ) : (
                       <TaskStatusBadge status={task.status} />
                     )}
-                    <TaskPriorityBadge priority={task.priority} className="w-fit text-[10px] px-1.5 py-0" />
+                    <TaskPriorityBadge priority={task.priority} className="text-[10px] px-1.5 py-0" />
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
@@ -535,11 +535,16 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                   <TaskPerformanceBadge type={perf.type} label={perf.label} />
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, false)}
-                    title={task.has_issues ? 'View remarks' : 'Add remark'}
-                    className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
+                  <div className="relative inline-flex">
+                    <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, false)}
+                      title={task.has_issues ? 'View remarks (has issues)' : 'Add remark'}
+                      className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                    {task.has_unreplied_remarks && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-amber-400 border-2 border-background" />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
