@@ -115,9 +115,10 @@ interface TaskFilters {
 
 export function useTasks(filters?: TaskFilters) {
   const { storeId, filterByStore } = useModuleStoreFilter('task_management');
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['tasks', storeId, filterByStore, filters],
+    queryKey: ['tasks', storeId, filterByStore, filters, user?.id],
     queryFn: async () => {
       let query = supabase
         .from('tasks')
