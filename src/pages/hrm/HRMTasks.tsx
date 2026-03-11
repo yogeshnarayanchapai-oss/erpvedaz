@@ -493,7 +493,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Due Date</TableHead>
             <TableHead className="hidden sm:table-cell">Performance</TableHead>
-            <TableHead className="hidden md:table-cell">Remark</TableHead>
+            <TableHead className="hidden md:table-cell">Ticket</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
