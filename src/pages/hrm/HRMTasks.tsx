@@ -104,7 +104,9 @@ export default function HRMTasks() {
   const { effectiveRole } = useEffectiveRole();
   const isManager = effectiveRole === 'MANAGER';
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
-  const canUpdateOwnTaskStatus = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
+  const canManageTasks = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
+  // Managers/admins can change status on tasks assigned TO them OR tasks they created
+  const canUpdateOwnTaskStatus = canManageTasks;
   
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [remarkDialogTaskId, setRemarkDialogTaskId] = useState<string>('');
