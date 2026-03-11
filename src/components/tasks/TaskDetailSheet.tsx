@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import {
   Sheet,
   SheetContent,
