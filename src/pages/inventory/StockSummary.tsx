@@ -100,7 +100,7 @@ export default function StockSummary() {
   }, []);
 
   // Handle long press for mobile
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   
   const handleTouchStart = useCallback(() => {
     const timer = setTimeout(() => {
