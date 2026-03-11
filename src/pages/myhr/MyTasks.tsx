@@ -226,7 +226,7 @@ export default function MyTasks() {
                           }} title="Add link">
                             <Link2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleAddRemark(task.id)} title="Add remark">
+                          <Button variant="ghost" size="sm" onClick={() => handleAddRemark(task.id)} title="Open ticket">
                             <MessageSquare className="h-4 w-4" />
                           </Button>
                         </div>
