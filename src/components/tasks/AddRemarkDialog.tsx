@@ -203,7 +203,7 @@ export function AddRemarkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -217,7 +217,7 @@ export function AddRemarkDialog({
           </div>
         ) : (
           <>
-            <ScrollArea className="max-h-[50vh] pr-2">
+            <ScrollArea className="flex-1 max-h-[55vh] pr-2">
               <div className="space-y-3">
                 {/* Only show open tickets in popup */}
                 {openTickets.map((ticket: any) => renderTicket(ticket, false))}
