@@ -173,29 +173,41 @@ export function useTasks(filters?: TaskFilters) {
             .is('parent_remark_id', null)
             .eq('status', 'OPEN');
 
-          // Check for open tickets that have no replies (pending reply)
+          // Check for open tickets where current user needs to reply
+          // Logic: pending if the last message in the ticket was NOT by the current user
           const { data: openTickets } = await supabase
             .from('task_remarks')
-            .select('id')
+            .select('id, created_by_user_id')
             .eq('task_id', task.id)
             .is('parent_remark_id', null)
             .eq('status', 'OPEN');
 
-          let hasUnreplied = false;
+          let hasPendingReply = false;
           if (openTickets && openTickets.length > 0) {
             for (const tr of openTickets) {
-              const { count: replyCount } = await supabase
+              // Get last message in this ticket thread (including the ticket itself)
+              const { data: lastReply } = await supabase
                 .from('task_remarks')
-                .select('*', { count: 'exact', head: true })
-                .eq('parent_remark_id', tr.id);
-              if ((replyCount || 0) === 0) {
-                hasUnreplied = true;
-                break;
+                .select('created_by_user_id')
+                .or(`id.eq.${tr.id},parent_remark_id.eq.${tr.id}`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+              // If last message is NOT by current user, it's pending for current user
+              // But only if current user is involved (assigned_to or assigned_by)
+              if (lastReply && lastReply.created_by_user_id !== user?.id) {
+                // Current user is either the task assignee or the task assigner
+                const isInvolved = task.assigned_to_user_id === user?.id || task.assigned_by_user_id === user?.id;
+                if (isInvolved) {
+                  hasPendingReply = true;
+                  break;
+                }
               }
             }
           }
 
-          return { ...task, has_issues: (issueCount || 0) > 0, has_unreplied_remarks: hasUnreplied };
+          return { ...task, has_issues: (issueCount || 0) > 0, has_unreplied_remarks: hasPendingReply };
         })
       );
 
