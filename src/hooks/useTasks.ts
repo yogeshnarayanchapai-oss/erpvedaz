@@ -265,7 +265,9 @@ export function useTaskStats(dateFrom?: string, dateTo?: string) {
           .from('task_remarks')
           .select('task_id', { count: 'exact', head: true })
           .in('task_id', nonCompletedTaskIds)
-          .eq('is_issue', true);
+          .eq('is_issue', true)
+          .is('parent_remark_id', null)
+          .eq('status', 'OPEN');
         issueCount = count || 0;
       }
 
