@@ -104,7 +104,9 @@ export default function HRMTasks() {
   const { effectiveRole } = useEffectiveRole();
   const isManager = effectiveRole === 'MANAGER';
   const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER';
-  const canUpdateOwnTaskStatus = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
+  const canManageTasks = ['ADMIN', 'MANAGER', 'OWNER'].includes(effectiveRole);
+  // Managers/admins can change status on tasks assigned TO them OR tasks they created
+  const canUpdateOwnTaskStatus = canManageTasks;
   
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [remarkDialogTaskId, setRemarkDialogTaskId] = useState<string>('');
@@ -205,6 +207,11 @@ export default function HRMTasks() {
       .sort((a, b) => b.percentage - a.percentage);
   }, [allTasks]);
 
+  // Allow status change for tasks assigned to the user OR tasks they manage (admin/owner can change any)
+  const canChangeTaskStatus = (task: Task) => {
+    if (isAdminOrOwner) return task.status !== 'COMPLETED';
+    return task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
+  };
   const isMyPendingTask = (task: Task) => task.assigned_to?.id === user?.id && task.status !== 'COMPLETED';
 
   const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
@@ -377,12 +384,12 @@ export default function HRMTasks() {
           </div>
 
           <TabsContent value="active" className="m-0">
-            <TaskTable tasks={activeTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+            <TaskTable tasks={activeTasks} isLoading={isLoading} user={user} canChangeTaskStatus={canChangeTaskStatus}
               isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
               openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
           </TabsContent>
           <TabsContent value="completed" className="m-0">
-            <TaskTable tasks={completedTasks} isLoading={isLoading} user={user} canUpdateOwnTaskStatus={canUpdateOwnTaskStatus}
+            <TaskTable tasks={completedTasks} isLoading={isLoading} user={user} canChangeTaskStatus={canChangeTaskStatus}
               isMyPendingTask={isMyPendingTask} handleStatusChange={handleStatusChange} updateTaskStatus={updateTaskStatus}
               openRemarkDialog={openRemarkDialog} handleViewTask={handleViewTask} handleEditTask={handleEditTask} handleDeleteTask={handleDeleteTask} />
           </TabsContent>
@@ -425,11 +432,11 @@ export default function HRMTasks() {
 }
 
 // Extracted table component to avoid duplication
-function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPendingTask, handleStatusChange, updateTaskStatus, openRemarkDialog, handleViewTask, handleEditTask, handleDeleteTask }: {
+function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTask, handleStatusChange, updateTaskStatus, openRemarkDialog, handleViewTask, handleEditTask, handleDeleteTask }: {
   tasks: Task[];
   isLoading: boolean;
   user: any;
-  canUpdateOwnTaskStatus: boolean;
+  canChangeTaskStatus: (task: Task) => boolean;
   isMyPendingTask: (task: Task) => boolean;
   handleStatusChange: (task: Task, newStatus: TaskStatus) => Promise<void>;
   updateTaskStatus: any;
@@ -462,13 +469,12 @@ function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPending
           <TableRow>
             <TableHead>Title</TableHead>
             <TableHead>Assigned To</TableHead>
-            <TableHead className="hidden sm:table-cell">Priority</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Due Date</TableHead>
             <TableHead className="hidden lg:table-cell">Created</TableHead>
             <TableHead className="hidden lg:table-cell">Completed</TableHead>
             <TableHead className="hidden sm:table-cell">Performance</TableHead>
-            <TableHead className="hidden md:table-cell">Issue</TableHead>
+            <TableHead className="hidden md:table-cell">Remark</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -497,24 +503,24 @@ function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPending
                 <TableCell className="max-w-[80px] sm:max-w-[120px] truncate">
                   {task.assigned_to?.name || 'N/A'}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <TaskPriorityBadge priority={task.priority} />
-                </TableCell>
                 <TableCell>
-                  {canUpdateOwnTaskStatus && isMyPendingTask(task) ? (
-                    <Select value={task.status} onValueChange={(value) => handleStatusChange(task, value as TaskStatus)} disabled={updateTaskStatus.isPending}>
-                      <SelectTrigger className="w-[130px] h-8">
-                        <TaskStatusBadge status={task.status} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PENDING"><TaskStatusBadge status="PENDING" /></SelectItem>
-                        <SelectItem value="IN_PROGRESS"><TaskStatusBadge status="IN_PROGRESS" /></SelectItem>
-                        <SelectItem value="COMPLETED"><TaskStatusBadge status="COMPLETED" /></SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <TaskStatusBadge status={task.status} />
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {canChangeTaskStatus(task) ? (
+                      <Select value={task.status} onValueChange={(value) => handleStatusChange(task, value as TaskStatus)} disabled={updateTaskStatus.isPending}>
+                        <SelectTrigger className="w-[130px] h-8">
+                          <TaskStatusBadge status={task.status} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PENDING"><TaskStatusBadge status="PENDING" /></SelectItem>
+                          <SelectItem value="IN_PROGRESS"><TaskStatusBadge status="IN_PROGRESS" /></SelectItem>
+                          <SelectItem value="COMPLETED"><TaskStatusBadge status="COMPLETED" /></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <TaskStatusBadge status={task.status} />
+                    )}
+                    <TaskPriorityBadge priority={task.priority} className="w-fit text-[10px] px-1.5 py-0" />
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <FormattedDate date={task.due_date} />
@@ -529,10 +535,10 @@ function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPending
                   <TaskPerformanceBadge type={perf.type} label={perf.label} />
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, true)}
-                    title={task.has_issues ? 'View / add issue' : 'Report issue'}
+                  <Button variant="ghost" size="sm" onClick={() => openRemarkDialog(task.id, false)}
+                    title={task.has_issues ? 'View remarks' : 'Add remark'}
                     className={cn('h-8 w-8 p-0', task.has_issues ? 'text-destructive' : 'text-muted-foreground')}>
-                    <AlertCircle className="h-4 w-4" />
+                    <MessageSquare className="h-4 w-4" />
                   </Button>
                 </TableCell>
                 <TableCell className="text-right">
@@ -541,12 +547,6 @@ function TaskTable({ tasks, isLoading, user, canUpdateOwnTaskStatus, isMyPending
                       <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openRemarkDialog(task.id, false)}>
-                        <MessageSquare className="h-4 w-4 mr-2" />Add remark
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openRemarkDialog(task.id, true)}>
-                        <AlertCircle className="h-4 w-4 mr-2" />Report issue
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleViewTask(task)}>
                         <Eye className="h-4 w-4 mr-2" />View
                       </DropdownMenuItem>
