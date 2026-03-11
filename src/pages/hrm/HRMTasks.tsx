@@ -53,6 +53,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   ClipboardList,
   Clock,
@@ -222,8 +223,21 @@ export default function HRMTasks() {
   const openRemarkDialog = (taskId: string, defaultIsIssue = false) => {
     setRemarkDialogTaskId(taskId); setRemarkDialogDefaultIsIssue(defaultIsIssue); setRemarkDialogOpen(true);
   };
-  const handleEditTask = (task: Task) => { setEditTask(task); setEditDialogOpen(true); };
-  const handleDeleteTask = (task: Task) => { setDeleteTask(task); setDeleteDialogOpen(true); };
+  const isTaskAssignedToMe = (task: Task) => task.assigned_to?.id === user?.id;
+  const handleEditTask = (task: Task) => {
+    if (isTaskAssignedToMe(task)) {
+      toast.error("You can't edit a task assigned to you.");
+      return;
+    }
+    setEditTask(task); setEditDialogOpen(true);
+  };
+  const handleDeleteTask = (task: Task) => {
+    if (isTaskAssignedToMe(task)) {
+      toast.error("You can't delete a task assigned to you.");
+      return;
+    }
+    setDeleteTask(task); setDeleteDialogOpen(true);
+  };
   const confirmDelete = async () => {
     if (deleteTask) { await deleteTaskMutation.mutateAsync(deleteTask.id); setDeleteDialogOpen(false); setDeleteTask(null); }
   };
