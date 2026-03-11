@@ -560,13 +560,21 @@ export function useAddTaskRemark() {
         }
       }
 
-      // If reply, notify the original remark author
+      // If reply, auto-clear issue on parent remark & notify author
       if (parentRemarkId) {
         const { data: parentRemark } = await supabase
           .from('task_remarks')
-          .select('created_by_user_id')
+          .select('created_by_user_id, is_issue')
           .eq('id', parentRemarkId)
           .single();
+
+        // Auto-resolve: clear is_issue when someone replies to an issue
+        if (parentRemark?.is_issue) {
+          await supabase
+            .from('task_remarks')
+            .update({ is_issue: false })
+            .eq('id', parentRemarkId);
+        }
 
         const { data: task } = await supabase
           .from('tasks')
