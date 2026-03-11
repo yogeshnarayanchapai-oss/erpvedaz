@@ -504,7 +504,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                   {task.assigned_to?.name || 'N/A'}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
                     {canChangeTaskStatus(task) ? (
                       <Select value={task.status} onValueChange={(value) => handleStatusChange(task, value as TaskStatus)} disabled={updateTaskStatus.isPending}>
                         <SelectTrigger className="w-[130px] h-8">
@@ -519,7 +519,7 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                     ) : (
                       <TaskStatusBadge status={task.status} />
                     )}
-                    <TaskPriorityBadge priority={task.priority} className="w-fit text-[10px] px-1.5 py-0" />
+                    <TaskPriorityBadge priority={task.priority} className="text-[10px] px-1.5 py-0" />
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
