@@ -422,6 +422,8 @@ export default function HRMTasks() {
         open={remarkDialogOpen}
         onOpenChange={(open) => { setRemarkDialogOpen(open); if (!open) setRemarkDialogTaskId(''); }}
         defaultIsIssue={remarkDialogDefaultIsIssue}
+        taskAssignedTo={tasksRaw?.find(t => t.id === remarkDialogTaskId)?.assigned_to_user_id}
+        taskAssignedBy={tasksRaw?.find(t => t.id === remarkDialogTaskId)?.assigned_by_user_id}
       />
 
       <CreateTaskDialog
