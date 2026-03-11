@@ -467,6 +467,16 @@ export function useUpdateTaskStatus() {
 
       if (updateError) throw updateError;
 
+      // Auto-close all open tickets when task is completed
+      if (newStatus === 'COMPLETED') {
+        await supabase
+          .from('task_remarks')
+          .update({ status: 'CLOSED', is_issue: false })
+          .eq('task_id', taskId)
+          .is('parent_remark_id', null)
+          .eq('status', 'OPEN');
+      }
+
       // Insert status history
       await supabase.from('task_status_history').insert({
         task_id: taskId,
