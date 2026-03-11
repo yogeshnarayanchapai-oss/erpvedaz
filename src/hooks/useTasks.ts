@@ -157,8 +157,14 @@ export function useTasks(filters?: TaskFilters) {
       if (error) throw error;
 
       // Check for issues and unreplied remarks in each task
+      // Completed tasks auto-resolve: no issues/unreplied flags
       const tasksWithMeta = await Promise.all(
         (data || []).map(async (task) => {
+          // If task is completed, auto-resolve issues and remarks
+          if (task.status === 'COMPLETED') {
+            return { ...task, has_issues: false, has_unreplied_remarks: false };
+          }
+
           const { count: issueCount } = await supabase
             .from('task_remarks')
             .select('*', { count: 'exact', head: true })

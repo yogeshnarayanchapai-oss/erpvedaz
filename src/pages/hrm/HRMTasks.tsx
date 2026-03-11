@@ -54,6 +54,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   ClipboardList,
   Clock,
@@ -489,8 +490,6 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
             <TableHead>Assigned To</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Due Date</TableHead>
-            <TableHead className="hidden lg:table-cell">Created</TableHead>
-            <TableHead className="hidden lg:table-cell">Completed</TableHead>
             <TableHead className="hidden sm:table-cell">Performance</TableHead>
             <TableHead className="hidden md:table-cell">Remark</TableHead>
             <TableHead className="text-right">Action</TableHead>
@@ -541,13 +540,22 @@ function TaskTable({ tasks, isLoading, user, canChangeTaskStatus, isMyPendingTas
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <FormattedDate date={task.due_date} />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <FormattedDate date={task.created_at} />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {task.completed_date ? <FormattedDate date={task.completed_date} /> : '-'}
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-default underline decoration-dotted underline-offset-2">
+                          <FormattedDate date={task.due_date} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs space-y-1 p-2">
+                        <div className="flex justify-between gap-4"><span className="text-muted-foreground">Created:</span><span className="font-medium"><FormattedDate date={task.created_at} /></span></div>
+                        <div className="flex justify-between gap-4"><span className="text-muted-foreground">Due:</span><span className="font-medium"><FormattedDate date={task.due_date} /></span></div>
+                        {task.completed_date && (
+                          <div className="flex justify-between gap-4"><span className="text-muted-foreground">Completed:</span><span className="font-medium"><FormattedDate date={task.completed_date} /></span></div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <TaskPerformanceBadge type={perf.type} label={perf.label} />

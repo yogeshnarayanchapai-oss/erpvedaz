@@ -193,13 +193,12 @@ export default function AdminUnifiedDashboard() {
         .eq('store_id', storeId)
         .in('status', ['PENDING', 'IN_PROGRESS']);
       
-      // Tasks with issues - count tasks that have at least one remark with is_issue=true
+      // Tasks with issues - only count non-completed tasks
       const { data: issueRemarks } = await supabase
         .from('task_remarks')
         .select('task_id')
         .eq('is_issue', true);
       const uniqueIssueTasks = new Set((issueRemarks || []).map(r => r.task_id));
-      // Filter to only non-completed tasks in this store
       let issueCount = 0;
       if (uniqueIssueTasks.size > 0) {
         const { count } = await supabase
@@ -211,11 +210,23 @@ export default function AdminUnifiedDashboard() {
         issueCount = count || 0;
       }
       
-      // Pending replies - count task_remarks that haven't been replied to (top-level remarks)
-      const { count: pendingRepliesCount } = await supabase
-        .from('task_remarks')
-        .select('*', { count: 'exact', head: true })
-        .is('parent_remark_id', null);
+      // Pending replies - only count remarks on non-completed tasks
+      // First get non-completed task IDs
+      const { data: nonCompletedTasks } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('store_id', storeId)
+        .neq('status', 'COMPLETED');
+      const nonCompletedIds = (nonCompletedTasks || []).map(t => t.id);
+      let pendingRepliesCount = 0;
+      if (nonCompletedIds.length > 0) {
+        const { count } = await supabase
+          .from('task_remarks')
+          .select('*', { count: 'exact', head: true })
+          .in('task_id', nonCompletedIds)
+          .is('parent_remark_id', null);
+        pendingRepliesCount = count || 0;
+      }
       
       // Total tasks
       const { count: totalCount } = await supabase
