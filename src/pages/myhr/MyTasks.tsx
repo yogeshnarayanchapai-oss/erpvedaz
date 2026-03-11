@@ -323,7 +323,13 @@ export default function MyTasks() {
         </Tabs>
       </Card>
 
-      <AddRemarkDialog taskId={selectedTaskId} open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen} />
+      <AddRemarkDialog
+        taskId={selectedTaskId}
+        open={remarkDialogOpen}
+        onOpenChange={setRemarkDialogOpen}
+        taskAssignedTo={tasks?.find(t => t.id === selectedTaskId)?.assigned_to_user_id}
+        taskAssignedBy={tasks?.find(t => t.id === selectedTaskId)?.assigned_by_user_id}
+      />
       <TaskDetailSheet task={selectedTask} open={detailSheetOpen} onOpenChange={setDetailSheetOpen} />
     </div>
   );
