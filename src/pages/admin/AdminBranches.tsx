@@ -170,6 +170,71 @@ export default function AdminBranches() {
     }
   };
 
+  const parseGBLFormat = (rows: any[]): any[] => {
+    const branchesToInsert: any[] = [];
+    
+    for (const row of rows) {
+      const keys = Object.keys(row);
+      
+      // Try to find columns by partial match
+      const findCol = (patterns: string[]) => {
+        for (const p of patterns) {
+          const key = keys.find(k => k.toLowerCase().replace(/[^a-z]/g, '').includes(p.toLowerCase().replace(/[^a-z]/g, '')));
+          if (key && row[key] != null) return String(row[key]).trim();
+        }
+        return '';
+      };
+
+      const branchArrival = findCol(['Branch Name', 'branchname', 'branch_name']);
+      const contacts = findCol(['Contacts', 'contact']);
+      const district = findCol(['District']);
+      const province = findCol(['Province']);
+      const charge = findCol(['Delivery Charge', 'base_charge', 'charge']);
+      const area = findCol(['Area Covered', 'area_covered', 'area']);
+      
+      if (!branchArrival) continue;
+
+      // Parse branch name and arrival time from combined field
+      let branchName = branchArrival;
+      let arrivalTime = '';
+      const arrivalMatch = branchArrival.match(/(\d+-?\d*\s*DAYS?|\d+\s*DAY)/i);
+      if (arrivalMatch) {
+        arrivalTime = arrivalMatch[0].toUpperCase();
+        branchName = branchArrival.replace(arrivalMatch[0], '').trim();
+      }
+
+      // Parse contact name and phone from combined field
+      let contactName = '';
+      let contactPhone = '';
+      if (contacts) {
+        const phoneMatch = contacts.match(/(\d{10})/);
+        if (phoneMatch) {
+          contactPhone = phoneMatch[1];
+          // Get name before the first phone number
+          const namepart = contacts.substring(0, contacts.indexOf(phoneMatch[1])).trim();
+          contactName = namepart.replace(/[,\s]+$/, '');
+        } else {
+          contactName = contacts;
+        }
+      }
+
+      if (!branchName) continue;
+
+      branchesToInsert.push({
+        branch_name: branchName.toUpperCase(),
+        arrival_time: arrivalTime || null,
+        contact_name: contactName || null,
+        contact_phone: contactPhone || null,
+        district: district ? district.toUpperCase() : null,
+        province: province || null,
+        base_charge: charge ? parseFloat(charge) || null : null,
+        area_covered: area || null,
+        is_active: true,
+      });
+    }
+    return branchesToInsert;
+  };
+
   const handleImport = async () => {
     if (!importFile) {
       toast.error('Please select a file');
@@ -178,71 +243,67 @@ export default function AdminBranches() {
 
     setImporting(true);
     try {
-      const text = await importFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/ /g, '_'));
+      const isXlsx = importFile.name.endsWith('.xlsx') || importFile.name.endsWith('.xls');
+      let branchesToInsert: any[] = [];
       
-      const branchesToInsert = [];
-      const errors: string[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        // Handle CSV with quoted fields containing commas
-        const values: string[] = [];
-        let current = '';
-        let inQuotes = false;
+      if (isXlsx) {
+        const buffer = await importFile.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
         
-        for (const char of lines[i]) {
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            values.push(current.trim().replace(/^"|"$/g, ''));
-            current = '';
-          } else {
-            current += char;
+        // Find header row (look for row containing "Branch Name" or "District")
+        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+        let headerRow = 0;
+        for (let r = range.s.r; r <= Math.min(range.e.r, 5); r++) {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+            if (cell && String(cell.v || '').toLowerCase().includes('branch name')) {
+              headerRow = r;
+              break;
+            }
           }
         }
-        values.push(current.trim().replace(/^"|"$/g, ''));
-
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => {
-          row[h] = values[idx] || '';
-        });
-
-        // Map common column name variations
-        const branchName = row.branch_name || row.branchname || row.name || row.branch || '';
         
-        if (!branchName) {
-          errors.push(`Row ${i + 1}: Missing branch name`);
-          continue;
+        const rows = XLSX.utils.sheet_to_json(sheet, { range: headerRow, defval: '' });
+        branchesToInsert = parseGBLFormat(rows);
+      } else {
+        // CSV parsing (existing logic)
+        const text = await importFile.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/ /g, '_'));
+        
+        const rows: Record<string, string>[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (const char of lines[i]) {
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { values.push(current.trim().replace(/^"|"$/g, '')); current = ''; }
+            else current += char;
+          }
+          values.push(current.trim().replace(/^"|"$/g, ''));
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+          rows.push(row);
         }
-
-        branchesToInsert.push({
-          branch_name: branchName,
-          code: row.code || null,
-          arrival_time: row.arrival_time || row.arrivaltime || row.arrival || null,
-          contact_name: row.contact_name || row.contactname || row.contact || null,
-          contact_phone: row.contact_phone || row.contactphone || row.phone || null,
-          district: row.district || null,
-          province: row.province || null,
-          base_charge: row.base_charge || row.basecharge || row.charge ? parseFloat(row.base_charge || row.basecharge || row.charge) : null,
-          area_covered: row.area_covered || row.areacovered || row.areas || row.area || null,
-          is_active: true,
-        });
+        branchesToInsert = parseGBLFormat(rows);
       }
 
       if (branchesToInsert.length > 0) {
-        const { error } = await supabase.from('branches').insert(branchesToInsert);
-        if (error) throw error;
+        // Insert in batches of 100
+        for (let i = 0; i < branchesToInsert.length; i += 100) {
+          const batch = branchesToInsert.slice(i, i + 100);
+          const { error } = await supabase.from('branches').insert(batch);
+          if (error) throw error;
+        }
         
         toast.success(`${branchesToInsert.length} branches imported successfully`);
-        if (errors.length > 0) {
-          toast.warning(`${errors.length} rows skipped due to errors`);
-        }
         queryClient.invalidateQueries({ queryKey: ['branches'] });
         setIsImportOpen(false);
         setImportFile(null);
       } else {
-        toast.error('No valid branches found in CSV');
+        toast.error('No valid branches found in file');
       }
     } catch (error: any) {
       toast.error(`Import failed: ${error.message}`);
