@@ -371,7 +371,7 @@ export default function AdminBranches() {
           )}
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+            Import
           </Button>
           <Button variant="outline" onClick={exportToCSV}>
             <Download className="w-4 h-4 mr-2" />
