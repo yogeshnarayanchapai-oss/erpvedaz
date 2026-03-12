@@ -493,25 +493,25 @@ export default function AdminBranches() {
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import Branches from CSV</DialogTitle>
+            <DialogTitle>Import Branches</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              <p className="mb-2">CSV should have columns:</p>
+              <p className="mb-2">Excel/CSV should have these columns:</p>
               <code className="text-xs bg-muted px-2 py-1 rounded block">
-                branch_name, code, arrival_time, contact_name, contact_phone, district, province, base_charge, area_covered
+                Branch Name/Arrival time, Contacts, District, Province, Delivery Charge, Area Covered
               </code>
-              <p className="mt-2 text-xs">Only <strong>branch_name</strong> is required. Other fields are optional.</p>
+              <p className="mt-2 text-xs">Branch Name is required. Arrival time can be combined with branch name (e.g., "ATTARIYA1-2 DAYS").</p>
             </div>
             <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
               <Download className="w-4 h-4 mr-2" />
-              Download Template CSV
+              Download Template
             </Button>
             <div className="space-y-2">
-              <Label>Select CSV File</Label>
+              <Label>Select File (.xlsx, .xls, .csv)</Label>
               <Input
                 type="file"
-                accept=".csv"
+                accept=".xlsx,.xls,.csv"
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
