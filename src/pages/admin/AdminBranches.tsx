@@ -339,17 +339,16 @@ export default function AdminBranches() {
   };
 
   const downloadTemplate = () => {
-    const headers = ['branch_name', 'code', 'arrival_time', 'contact_name', 'contact_phone', 'district', 'province', 'base_charge', 'area_covered'];
-    const exampleRow = ['4 NO JEETPUR', 'JTP', '1-2 DAYS', 'GBL STAFF', '9802266733', 'KAPILBASTU', 'Lumbini Province', '225', 'JEETPUR, BAIRAYA, PIPARA'];
-    
-    const csvContent = [headers, exampleRow].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'branches_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const wb = XLSX.utils.book_new();
+    const headers = ['Branch Name/Arrival time', 'Contacts', 'District', 'Province', 'Delivery Charge', 'Area Covered'];
+    const exampleData = [
+      ['ATTARIYA1-2 DAYS', 'Gyanendra Rawal 9802266863', 'KAILALI', 'Sudurpaschim Province', 220, 'GETA, ATTARIYA CHOWK, LALPUR'],
+      ['TANDI1-2 DAYS', 'Kanchan Poudel 9802266728', 'CHITWAN', 'Bagmati Province', 200, 'TIKAULI, GANESH CHOWK'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);
+    ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 22 }, { wch: 15 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Branches');
+    XLSX.writeFile(wb, 'branches_import_template.xlsx');
     toast.success('Template downloaded');
   };
 
