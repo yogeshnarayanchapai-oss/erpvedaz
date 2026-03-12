@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { useBranches, useCreateBranch, useUpdateBranch, useDeleteBranch, Branch } from '@/hooks/useBranches';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -169,6 +170,71 @@ export default function AdminBranches() {
     }
   };
 
+  const parseGBLFormat = (rows: any[]): any[] => {
+    const branchesToInsert: any[] = [];
+    
+    for (const row of rows) {
+      const keys = Object.keys(row);
+      
+      // Try to find columns by partial match
+      const findCol = (patterns: string[]) => {
+        for (const p of patterns) {
+          const key = keys.find(k => k.toLowerCase().replace(/[^a-z]/g, '').includes(p.toLowerCase().replace(/[^a-z]/g, '')));
+          if (key && row[key] != null) return String(row[key]).trim();
+        }
+        return '';
+      };
+
+      const branchArrival = findCol(['Branch Name', 'branchname', 'branch_name']);
+      const contacts = findCol(['Contacts', 'contact']);
+      const district = findCol(['District']);
+      const province = findCol(['Province']);
+      const charge = findCol(['Delivery Charge', 'base_charge', 'charge']);
+      const area = findCol(['Area Covered', 'area_covered', 'area']);
+      
+      if (!branchArrival) continue;
+
+      // Parse branch name and arrival time from combined field
+      let branchName = branchArrival;
+      let arrivalTime = '';
+      const arrivalMatch = branchArrival.match(/(\d+-?\d*\s*DAYS?|\d+\s*DAY)/i);
+      if (arrivalMatch) {
+        arrivalTime = arrivalMatch[0].toUpperCase();
+        branchName = branchArrival.replace(arrivalMatch[0], '').trim();
+      }
+
+      // Parse contact name and phone from combined field
+      let contactName = '';
+      let contactPhone = '';
+      if (contacts) {
+        const phoneMatch = contacts.match(/(\d{10})/);
+        if (phoneMatch) {
+          contactPhone = phoneMatch[1];
+          // Get name before the first phone number
+          const namepart = contacts.substring(0, contacts.indexOf(phoneMatch[1])).trim();
+          contactName = namepart.replace(/[,\s]+$/, '');
+        } else {
+          contactName = contacts;
+        }
+      }
+
+      if (!branchName) continue;
+
+      branchesToInsert.push({
+        branch_name: branchName.toUpperCase(),
+        arrival_time: arrivalTime || null,
+        contact_name: contactName || null,
+        contact_phone: contactPhone || null,
+        district: district ? district.toUpperCase() : null,
+        province: province || null,
+        base_charge: charge ? parseFloat(charge) || null : null,
+        area_covered: area || null,
+        is_active: true,
+      });
+    }
+    return branchesToInsert;
+  };
+
   const handleImport = async () => {
     if (!importFile) {
       toast.error('Please select a file');
@@ -177,71 +243,67 @@ export default function AdminBranches() {
 
     setImporting(true);
     try {
-      const text = await importFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/ /g, '_'));
+      const isXlsx = importFile.name.endsWith('.xlsx') || importFile.name.endsWith('.xls');
+      let branchesToInsert: any[] = [];
       
-      const branchesToInsert = [];
-      const errors: string[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        // Handle CSV with quoted fields containing commas
-        const values: string[] = [];
-        let current = '';
-        let inQuotes = false;
+      if (isXlsx) {
+        const buffer = await importFile.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
         
-        for (const char of lines[i]) {
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            values.push(current.trim().replace(/^"|"$/g, ''));
-            current = '';
-          } else {
-            current += char;
+        // Find header row (look for row containing "Branch Name" or "District")
+        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+        let headerRow = 0;
+        for (let r = range.s.r; r <= Math.min(range.e.r, 5); r++) {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+            if (cell && String(cell.v || '').toLowerCase().includes('branch name')) {
+              headerRow = r;
+              break;
+            }
           }
         }
-        values.push(current.trim().replace(/^"|"$/g, ''));
-
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => {
-          row[h] = values[idx] || '';
-        });
-
-        // Map common column name variations
-        const branchName = row.branch_name || row.branchname || row.name || row.branch || '';
         
-        if (!branchName) {
-          errors.push(`Row ${i + 1}: Missing branch name`);
-          continue;
+        const rows = XLSX.utils.sheet_to_json(sheet, { range: headerRow, defval: '' });
+        branchesToInsert = parseGBLFormat(rows);
+      } else {
+        // CSV parsing (existing logic)
+        const text = await importFile.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/ /g, '_'));
+        
+        const rows: Record<string, string>[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (const char of lines[i]) {
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { values.push(current.trim().replace(/^"|"$/g, '')); current = ''; }
+            else current += char;
+          }
+          values.push(current.trim().replace(/^"|"$/g, ''));
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+          rows.push(row);
         }
-
-        branchesToInsert.push({
-          branch_name: branchName,
-          code: row.code || null,
-          arrival_time: row.arrival_time || row.arrivaltime || row.arrival || null,
-          contact_name: row.contact_name || row.contactname || row.contact || null,
-          contact_phone: row.contact_phone || row.contactphone || row.phone || null,
-          district: row.district || null,
-          province: row.province || null,
-          base_charge: row.base_charge || row.basecharge || row.charge ? parseFloat(row.base_charge || row.basecharge || row.charge) : null,
-          area_covered: row.area_covered || row.areacovered || row.areas || row.area || null,
-          is_active: true,
-        });
+        branchesToInsert = parseGBLFormat(rows);
       }
 
       if (branchesToInsert.length > 0) {
-        const { error } = await supabase.from('branches').insert(branchesToInsert);
-        if (error) throw error;
+        // Insert in batches of 100
+        for (let i = 0; i < branchesToInsert.length; i += 100) {
+          const batch = branchesToInsert.slice(i, i + 100);
+          const { error } = await supabase.from('branches').insert(batch);
+          if (error) throw error;
+        }
         
         toast.success(`${branchesToInsert.length} branches imported successfully`);
-        if (errors.length > 0) {
-          toast.warning(`${errors.length} rows skipped due to errors`);
-        }
         queryClient.invalidateQueries({ queryKey: ['branches'] });
         setIsImportOpen(false);
         setImportFile(null);
       } else {
-        toast.error('No valid branches found in CSV');
+        toast.error('No valid branches found in file');
       }
     } catch (error: any) {
       toast.error(`Import failed: ${error.message}`);
@@ -277,17 +339,16 @@ export default function AdminBranches() {
   };
 
   const downloadTemplate = () => {
-    const headers = ['branch_name', 'code', 'arrival_time', 'contact_name', 'contact_phone', 'district', 'province', 'base_charge', 'area_covered'];
-    const exampleRow = ['4 NO JEETPUR', 'JTP', '1-2 DAYS', 'GBL STAFF', '9802266733', 'KAPILBASTU', 'Lumbini Province', '225', 'JEETPUR, BAIRAYA, PIPARA'];
-    
-    const csvContent = [headers, exampleRow].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'branches_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const wb = XLSX.utils.book_new();
+    const headers = ['Branch Name/Arrival time', 'Contacts', 'District', 'Province', 'Delivery Charge', 'Area Covered'];
+    const exampleData = [
+      ['ATTARIYA1-2 DAYS', 'Gyanendra Rawal 9802266863', 'KAILALI', 'Sudurpaschim Province', 220, 'GETA, ATTARIYA CHOWK, LALPUR'],
+      ['TANDI1-2 DAYS', 'Kanchan Poudel 9802266728', 'CHITWAN', 'Bagmati Province', 200, 'TIKAULI, GANESH CHOWK'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);
+    ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 22 }, { wch: 15 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Branches');
+    XLSX.writeFile(wb, 'branches_import_template.xlsx');
     toast.success('Template downloaded');
   };
 
@@ -310,7 +371,7 @@ export default function AdminBranches() {
           )}
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+            Import
           </Button>
           <Button variant="outline" onClick={exportToCSV}>
             <Download className="w-4 h-4 mr-2" />
@@ -432,25 +493,25 @@ export default function AdminBranches() {
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import Branches from CSV</DialogTitle>
+            <DialogTitle>Import Branches</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              <p className="mb-2">CSV should have columns:</p>
+              <p className="mb-2">Excel/CSV should have these columns:</p>
               <code className="text-xs bg-muted px-2 py-1 rounded block">
-                branch_name, code, arrival_time, contact_name, contact_phone, district, province, base_charge, area_covered
+                Branch Name/Arrival time, Contacts, District, Province, Delivery Charge, Area Covered
               </code>
-              <p className="mt-2 text-xs">Only <strong>branch_name</strong> is required. Other fields are optional.</p>
+              <p className="mt-2 text-xs">Branch Name is required. Arrival time can be combined with branch name (e.g., "ATTARIYA1-2 DAYS").</p>
             </div>
             <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full">
               <Download className="w-4 h-4 mr-2" />
-              Download Template CSV
+              Download Template
             </Button>
             <div className="space-y-2">
-              <Label>Select CSV File</Label>
+              <Label>Select File (.xlsx, .xls, .csv)</Label>
               <Input
                 type="file"
-                accept=".csv"
+                accept=".xlsx,.xls,.csv"
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
