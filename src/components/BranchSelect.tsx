@@ -32,6 +32,9 @@ export function BranchSelect({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const { effectiveRole } = useEffectiveRole();
+  
+  const canAddCustomBranch = allowCustom && ['OWNER', 'ADMIN', 'MANAGER'].includes(effectiveRole);
   
   const { data: branches = [], isLoading } = useBranches();
 
