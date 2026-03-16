@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 
 import { Check, ChevronsUpDown, MapPin, Clock, Phone, DollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface BranchSelectProps {
   value?: string;
@@ -31,6 +32,9 @@ export function BranchSelect({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const { effectiveRole } = useEffectiveRole();
+  
+  const canAddCustomBranch = allowCustom && ['OWNER', 'ADMIN', 'MANAGER'].includes(effectiveRole);
   
   const { data: branches = [], isLoading } = useBranches();
 
@@ -134,7 +138,7 @@ export function BranchSelect({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && allowCustom && search.trim() && !hasExactMatch) {
+                if (e.key === 'Enter' && canAddCustomBranch && search.trim() && !hasExactMatch) {
                   e.preventDefault();
                   handleCustomSelect();
                 }
@@ -144,7 +148,7 @@ export function BranchSelect({
           </div>
           <div className="h-[250px] overflow-y-auto overscroll-contain p-1">
               {/* Custom entry option */}
-              {allowCustom && search.trim() && !hasExactMatch && (
+              {canAddCustomBranch && search.trim() && !hasExactMatch && (
                 <button
                   onClick={handleCustomSelect}
                   className="flex items-center gap-2 w-full rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer border-b border-border mb-1"
@@ -158,7 +162,7 @@ export function BranchSelect({
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   {isLoading ? 'Loading...' : 'No branches found'}
                 </div>
-              ) : filteredBranches.length === 0 && search.trim() && !allowCustom ? (
+              ) : filteredBranches.length === 0 && search.trim() && !canAddCustomBranch ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   No matching branches
                 </div>
