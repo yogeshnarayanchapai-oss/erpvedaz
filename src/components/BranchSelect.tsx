@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 
 import { Check, ChevronsUpDown, MapPin, Clock, Phone, DollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface BranchSelectProps {
   value?: string;
