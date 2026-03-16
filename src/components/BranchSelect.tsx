@@ -162,7 +162,7 @@ export function BranchSelect({
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   {isLoading ? 'Loading...' : 'No branches found'}
                 </div>
-              ) : filteredBranches.length === 0 && search.trim() && !allowCustom ? (
+              ) : filteredBranches.length === 0 && search.trim() && !canAddCustomBranch ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   No matching branches
                 </div>
