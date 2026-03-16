@@ -138,7 +138,7 @@ export function BranchSelect({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && allowCustom && search.trim() && !hasExactMatch) {
+                if (e.key === 'Enter' && canAddCustomBranch && search.trim() && !hasExactMatch) {
                   e.preventDefault();
                   handleCustomSelect();
                 }
