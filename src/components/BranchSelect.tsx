@@ -148,7 +148,7 @@ export function BranchSelect({
           </div>
           <div className="h-[250px] overflow-y-auto overscroll-contain p-1">
               {/* Custom entry option */}
-              {allowCustom && search.trim() && !hasExactMatch && (
+              {canAddCustomBranch && search.trim() && !hasExactMatch && (
                 <button
                   onClick={handleCustomSelect}
                   className="flex items-center gap-2 w-full rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer border-b border-border mb-1"
