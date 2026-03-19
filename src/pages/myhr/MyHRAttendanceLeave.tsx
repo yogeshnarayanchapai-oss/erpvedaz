@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, LogIn, LogOut, Calendar, CalendarDays, List, Plus, CheckCircle, XCircle, Info, Timer } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { differenceInDays, differenceInMinutes, format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
