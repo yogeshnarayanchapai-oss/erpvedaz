@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -29,14 +30,15 @@ export default function HRMLeave() {
     from_date: '',
     to_date: '',
     reason: '',
+    work_assigned_to: '',
   });
 
-  const resetForm = () => setForm({ employee_id: '', leave_type_id: '', from_date: '', to_date: '', reason: '' });
+  const resetForm = () => setForm({ employee_id: '', leave_type_id: '', from_date: '', to_date: '', reason: '', work_assigned_to: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const totalDays = differenceInDays(new Date(form.to_date), new Date(form.from_date)) + 1;
-    await createRequest.mutateAsync({ ...form, total_days: totalDays, reason: form.reason || undefined });
+    await createRequest.mutateAsync({ ...form, total_days: totalDays, reason: form.reason || undefined, work_assigned_to: form.work_assigned_to || undefined });
     setIsOpen(false);
     resetForm();
   };
@@ -102,8 +104,12 @@ export default function HRMLeave() {
                     <NepaliDatePicker value={form.to_date} onChange={(v) => setForm({ ...form, to_date: v })} placeholder="Select end date" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Work Assigned To *</Label>
+                  <Input value={form.work_assigned_to} onChange={(e) => setForm({ ...form, work_assigned_to: e.target.value })} placeholder="Enter name of staff handling this work" required />
+                </div>
                 <div className="space-y-2"><Label>Reason</Label><Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} /></div>
-                <Button type="submit" className="w-full" disabled={createRequest.isPending}>Submit Request</Button>
+                <Button type="submit" className="w-full" disabled={createRequest.isPending || !form.work_assigned_to}>Submit Request</Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -190,6 +196,10 @@ export default function HRMLeave() {
                   <Label className="text-muted-foreground text-xs">Status</Label>
                   <Badge variant="outline" className={statusColors[viewRequest.status]}>{viewRequest.status}</Badge>
                 </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Work Assigned To</Label>
+                <p className="font-medium">{(viewRequest as any).work_assigned_to || 'Not specified'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground text-xs">Reason</Label>

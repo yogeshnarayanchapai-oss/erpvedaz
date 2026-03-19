@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, LogIn, LogOut, Calendar, CalendarDays, List, Plus, CheckCircle, XCircle, Info, Timer } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { differenceInDays, differenceInMinutes, format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { FormattedDate } from '@/components/FormattedDate';
 import { NepaliDatePicker } from '@/components/NepaliDatePicker';
@@ -50,6 +51,7 @@ export default function MyHRAttendanceLeave() {
     from_date: '',
     to_date: '',
     reason: '',
+    work_assigned_to: '',
   });
 
   const calculateHours = (checkInTime: string | null, checkOutTime: string | null) => {
@@ -152,7 +154,7 @@ export default function MyHRAttendanceLeave() {
     .reduce((sum, r) => sum + r.total_days, 0);
   const remainingQuota = (leaveQuota?.max_days || 0) - approvedDays;
 
-  const resetLeaveForm = () => setLeaveForm({ leave_type_id: '', from_date: '', to_date: '', reason: '' });
+  const resetLeaveForm = () => setLeaveForm({ leave_type_id: '', from_date: '', to_date: '', reason: '', work_assigned_to: '' });
 
   const handleLeaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +165,8 @@ export default function MyHRAttendanceLeave() {
       employee_id: employee.id,
       ...leaveForm,
       total_days: totalDays,
-      reason: leaveForm.reason || undefined
+      reason: leaveForm.reason || undefined,
+      work_assigned_to: leaveForm.work_assigned_to || undefined,
     });
     setIsLeaveDialogOpen(false);
     resetLeaveForm();
@@ -412,10 +415,14 @@ export default function MyHRAttendanceLeave() {
                         </p>
                       )}
                       <div className="space-y-2">
+                        <Label>Work Assigned To *</Label>
+                        <Input value={leaveForm.work_assigned_to} onChange={(e) => setLeaveForm({ ...leaveForm, work_assigned_to: e.target.value })} placeholder="Enter name of staff handling your work" required />
+                      </div>
+                      <div className="space-y-2">
                         <Label>Reason</Label>
                         <Textarea value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} rows={2} placeholder="Optional: Describe reason for leave" />
                       </div>
-                      <Button type="submit" className="w-full" disabled={createRequest.isPending || !leaveForm.leave_type_id || !leaveForm.from_date || !leaveForm.to_date}>
+                      <Button type="submit" className="w-full" disabled={createRequest.isPending || !leaveForm.leave_type_id || !leaveForm.from_date || !leaveForm.to_date || !leaveForm.work_assigned_to}>
                         Submit Request
                       </Button>
                     </form>

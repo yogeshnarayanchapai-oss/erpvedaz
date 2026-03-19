@@ -3496,6 +3496,7 @@ export type Database = {
           store_id: string | null
           to_date: string
           total_days: number
+          work_assigned_to: string | null
         }
         Insert: {
           approved_by?: string | null
@@ -3509,6 +3510,7 @@ export type Database = {
           store_id?: string | null
           to_date: string
           total_days: number
+          work_assigned_to?: string | null
         }
         Update: {
           approved_by?: string | null
@@ -3522,6 +3524,7 @@ export type Database = {
           store_id?: string | null
           to_date?: string
           total_days?: number
+          work_assigned_to?: string | null
         }
         Relationships: [
           {

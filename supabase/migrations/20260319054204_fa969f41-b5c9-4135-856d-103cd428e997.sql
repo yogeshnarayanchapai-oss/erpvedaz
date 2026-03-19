@@ -1,0 +1,1 @@
+ALTER TABLE public.leave_requests ADD COLUMN work_assigned_to TEXT;

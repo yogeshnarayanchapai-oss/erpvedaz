@@ -820,8 +820,8 @@ export function useCreateLeaveRequest() {
   const storeId = useCurrentStoreId();
 
   return useMutation({
-    mutationFn: async (input: { employee_id: string; leave_type_id: string; from_date: string; to_date: string; total_days: number; reason?: string }) => {
-      const { data, error } = await supabase.from('leave_requests').insert({ ...input, store_id: storeId }).select().single();
+    mutationFn: async (input: { employee_id: string; leave_type_id: string; from_date: string; to_date: string; total_days: number; reason?: string; work_assigned_to?: string }) => {
+      const { data, error } = await supabase.from('leave_requests').insert({ ...input, store_id: storeId } as any).select().single();
       if (error) throw error;
       return data;
     },
