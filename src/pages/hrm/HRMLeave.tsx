@@ -103,8 +103,12 @@ export default function HRMLeave() {
                     <NepaliDatePicker value={form.to_date} onChange={(v) => setForm({ ...form, to_date: v })} placeholder="Select end date" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Work Assigned To *</Label>
+                  <Input value={form.work_assigned_to} onChange={(e) => setForm({ ...form, work_assigned_to: e.target.value })} placeholder="Enter name of staff handling this work" required />
+                </div>
                 <div className="space-y-2"><Label>Reason</Label><Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} /></div>
-                <Button type="submit" className="w-full" disabled={createRequest.isPending}>Submit Request</Button>
+                <Button type="submit" className="w-full" disabled={createRequest.isPending || !form.work_assigned_to}>Submit Request</Button>
               </form>
             </DialogContent>
           </Dialog>
