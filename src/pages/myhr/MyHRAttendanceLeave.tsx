@@ -153,7 +153,7 @@ export default function MyHRAttendanceLeave() {
     .reduce((sum, r) => sum + r.total_days, 0);
   const remainingQuota = (leaveQuota?.max_days || 0) - approvedDays;
 
-  const resetLeaveForm = () => setLeaveForm({ leave_type_id: '', from_date: '', to_date: '', reason: '' });
+  const resetLeaveForm = () => setLeaveForm({ leave_type_id: '', from_date: '', to_date: '', reason: '', work_assigned_to: '' });
 
   const handleLeaveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
