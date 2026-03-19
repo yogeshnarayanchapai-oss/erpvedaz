@@ -197,6 +197,10 @@ export default function HRMLeave() {
                 </div>
               </div>
               <div>
+                <Label className="text-muted-foreground text-xs">Work Assigned To</Label>
+                <p className="font-medium">{(viewRequest as any).work_assigned_to || 'Not specified'}</p>
+              </div>
+              <div>
                 <Label className="text-muted-foreground text-xs">Reason</Label>
                 <div className="mt-1 p-3 rounded-lg bg-muted/50 min-h-[60px]">
                   <p className="text-sm whitespace-pre-wrap">{viewRequest.reason || 'No reason provided'}</p>
