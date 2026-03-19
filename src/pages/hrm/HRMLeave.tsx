@@ -29,9 +29,10 @@ export default function HRMLeave() {
     from_date: '',
     to_date: '',
     reason: '',
+    work_assigned_to: '',
   });
 
-  const resetForm = () => setForm({ employee_id: '', leave_type_id: '', from_date: '', to_date: '', reason: '' });
+  const resetForm = () => setForm({ employee_id: '', leave_type_id: '', from_date: '', to_date: '', reason: '', work_assigned_to: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
