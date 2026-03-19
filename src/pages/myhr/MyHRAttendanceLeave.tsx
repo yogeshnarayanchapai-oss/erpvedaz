@@ -414,10 +414,14 @@ export default function MyHRAttendanceLeave() {
                         </p>
                       )}
                       <div className="space-y-2">
+                        <Label>Work Assigned To *</Label>
+                        <Input value={leaveForm.work_assigned_to} onChange={(e) => setLeaveForm({ ...leaveForm, work_assigned_to: e.target.value })} placeholder="Enter name of staff handling your work" required />
+                      </div>
+                      <div className="space-y-2">
                         <Label>Reason</Label>
                         <Textarea value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} rows={2} placeholder="Optional: Describe reason for leave" />
                       </div>
-                      <Button type="submit" className="w-full" disabled={createRequest.isPending || !leaveForm.leave_type_id || !leaveForm.from_date || !leaveForm.to_date}>
+                      <Button type="submit" className="w-full" disabled={createRequest.isPending || !leaveForm.leave_type_id || !leaveForm.from_date || !leaveForm.to_date || !leaveForm.work_assigned_to}>
                         Submit Request
                       </Button>
                     </form>
