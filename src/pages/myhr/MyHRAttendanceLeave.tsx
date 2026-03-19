@@ -50,6 +50,7 @@ export default function MyHRAttendanceLeave() {
     from_date: '',
     to_date: '',
     reason: '',
+    work_assigned_to: '',
   });
 
   const calculateHours = (checkInTime: string | null, checkOutTime: string | null) => {
