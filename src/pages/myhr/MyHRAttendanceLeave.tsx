@@ -164,7 +164,8 @@ export default function MyHRAttendanceLeave() {
       employee_id: employee.id,
       ...leaveForm,
       total_days: totalDays,
-      reason: leaveForm.reason || undefined
+      reason: leaveForm.reason || undefined,
+      work_assigned_to: leaveForm.work_assigned_to || undefined,
     });
     setIsLeaveDialogOpen(false);
     resetLeaveForm();
