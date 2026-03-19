@@ -37,7 +37,7 @@ export default function HRMLeave() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const totalDays = differenceInDays(new Date(form.to_date), new Date(form.from_date)) + 1;
-    await createRequest.mutateAsync({ ...form, total_days: totalDays, reason: form.reason || undefined });
+    await createRequest.mutateAsync({ ...form, total_days: totalDays, reason: form.reason || undefined, work_assigned_to: form.work_assigned_to || undefined });
     setIsOpen(false);
     resetForm();
   };
