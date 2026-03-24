@@ -74,7 +74,8 @@ export default function HRMSalarySlip() {
 
   // Get Nepali month/year for PDF (always show Nepali for PDF as per requirement)
   const getNepaliMonthYear = (adDateStr: string) => {
-    const adDate = new Date(adDateStr);
+    const adDate = new Date(adDateStr + 'T00:00:00');
+    adDate.setDate(15);
     const bs = adToBS(adDate);
     return `${getBSMonthName(bs.month)} ${bs.year}`;
   };
