@@ -243,7 +243,11 @@ export default function HRMPayroll() {
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewRecord(r)}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          View
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(r)}>
                           <Pencil className="w-4 h-4 mr-2" />
                           Edit
