@@ -206,8 +206,10 @@ export default function HRMPayroll() {
             <TableBody>
               {sortedRecords.map((r) => {
                 // Derive BS month from the record's actual month (AD date)
-                const recordDate = new Date(r.month);
-                const recordBS = adToBS(recordDate.getFullYear(), recordDate.getMonth() + 1, 15);
+                const recordDate = new Date(r.month + 'T00:00:00');
+                // Use mid-month (15th) to avoid edge cases
+                recordDate.setDate(15);
+                const recordBS = adToBS(recordDate);
                 const recordMonthLabel = `${getBSMonthName(recordBS.month)} ${recordBS.year}`;
                 return (
                 <TableRow key={r.id}>
