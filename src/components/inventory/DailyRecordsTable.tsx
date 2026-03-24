@@ -115,7 +115,12 @@ export function DailyRecordsTable({ records }: Props) {
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="text-right">{record.sell}</TableCell>
+                <TableCell className="text-right">
+                  {record.sell}
+                  {record.total_orders > 0 && (
+                    <span className="text-xs text-muted-foreground ml-1">({record.total_orders})</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right text-blue-600">{formatCurrency(record.ads_spent_npr)}</TableCell>
                 <TableCell className="text-right text-green-600">{formatCurrency(record.actual_product_value)}</TableCell>
                 <TableCell className="text-right text-destructive">{formatCurrency(record.actual_product_cost)}</TableCell>
