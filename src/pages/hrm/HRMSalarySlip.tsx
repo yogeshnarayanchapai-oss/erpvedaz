@@ -421,6 +421,7 @@ export default function HRMSalarySlip() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Month</TableHead>
                 <TableHead className="text-right">Net Salary</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
