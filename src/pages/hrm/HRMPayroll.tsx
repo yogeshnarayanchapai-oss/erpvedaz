@@ -54,6 +54,7 @@ export default function HRMPayroll() {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
   const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
+  const [viewRecord, setViewRecord] = useState<any>(null);
   
   // Payment confirmation state
   const [paymentConfirmRecord, setPaymentConfirmRecord] = useState<any>(null);
