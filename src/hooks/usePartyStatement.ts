@@ -60,11 +60,11 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       if (stockRefIds.length > 0) {
         const { data: stockMovements } = await supabase
           .from('stock_movements')
-          .select('id, quantity')
+          .select('id, qty')
           .in('id', stockRefIds);
         if (stockMovements) {
           stockMovements.forEach(sm => {
-            stockQuantities[sm.id] = sm.quantity;
+            stockQuantities[sm.id] = sm.qty;
           });
         }
       }
