@@ -57,7 +57,7 @@ export default function HRMPayroll() {
     return sorted;
   }, [records, sortBy]);
 
-  const handleGenerate = () => generatePayroll.mutate(selectedMonth);
+  const handleGenerate = () => generatePayroll.mutate({ month: selectedMonth, bsYear, bsMonth });
 
   const openEdit = (record: any) => {
     setEditingRecord(record);
