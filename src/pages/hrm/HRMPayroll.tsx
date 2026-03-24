@@ -215,6 +215,7 @@ export default function HRMPayroll() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Month</TableHead>
                 <TableHead className="text-right">Basic</TableHead>
                 <TableHead className="text-right">Allowances</TableHead>
                 <TableHead className="text-right">Deductions</TableHead>
