@@ -16,35 +16,25 @@ import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
-  const { dateMode } = useDateMode();
   const currentBS = getCurrentBSDate();
   const bsYearOptions = getBSYearRange();
 
-  // For AD mode: store as YYYY-MM-01
-  // For BS mode: store BS year and month separately, convert to AD for query
-  const [adMonth, setAdMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
+  // Always use BS month for payroll
   const [bsYear, setBsYear] = useState(currentBS.year);
   const [bsMonth, setBsMonth] = useState(currentBS.month);
 
-  // Compute the AD date string for querying based on mode
+  // Convert BS year/month to AD date for database query
   const selectedMonth = useMemo(() => {
-    if (dateMode === 'BS') {
-      // Convert BS year/month to AD date (use day 1)
-      const adDate = bsToAd(bsYear, bsMonth, 1);
-      const year = adDate.getFullYear();
-      const month = String(adDate.getMonth() + 1).padStart(2, '0');
-      return `${year}-${month}-01`;
-    }
-    return adMonth;
-  }, [dateMode, adMonth, bsYear, bsMonth]);
+    const adDate = bsToAd(bsYear, bsMonth, 1);
+    const year = adDate.getFullYear();
+    const month = String(adDate.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
+  }, [bsYear, bsMonth]);
 
-  // Get display label for the selected month
+  // Display label always in BS
   const monthDisplayLabel = useMemo(() => {
-    if (dateMode === 'BS') {
-      return `${getBSMonthName(bsMonth)} ${bsYear}`;
-    }
-    return format(new Date(adMonth), 'MMMM yyyy');
-  }, [dateMode, adMonth, bsYear, bsMonth]);
+    return `${getBSMonthName(bsMonth)} ${bsYear}`;
+  }, [bsYear, bsMonth]);
 
   const { data: records = [], isLoading } = usePayrollRecords(selectedMonth);
   const generatePayroll = useGenerateMonthlyPayroll();
