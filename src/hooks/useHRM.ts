@@ -507,13 +507,29 @@ export function useGenerateMonthlyPayroll() {
 
   return useMutation({
     mutationFn: async (month: string) => {
+      // Check if current store is active before generating payroll
+      if (storeId) {
+        const { data: storeData } = await supabase
+          .from('stores')
+          .select('is_active')
+          .eq('id', storeId)
+          .single();
+        if (storeData && !storeData.is_active) {
+          toast.error('Cannot generate payroll for an inactive store');
+          return [];
+        }
+      }
+
       let empQuery = supabase
         .from('employees')
-        .select('id, base_salary')
+        .select('id, base_salary, store_id')
         .eq('status', 'Active');
       if (filterByStore && storeId) {
         empQuery = empQuery.eq('store_id', storeId);
       }
+
+      // Also filter out employees from inactive stores
+      empQuery = empQuery.eq('stores.is_active', true);
       const { data: employees, error: empError } = await empQuery;
       if (empError) throw empError;
 
