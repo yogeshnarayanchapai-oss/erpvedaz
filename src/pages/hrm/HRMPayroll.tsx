@@ -120,37 +120,26 @@ export default function HRMPayroll() {
           <p className="text-muted-foreground">Manage monthly payroll records</p>
         </div>
         <div className="flex gap-2 items-center">
-          {dateMode === 'BS' ? (
-            <>
-              <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                    <SelectItem key={m} value={m.toString()}>{getBSMonthName(m)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
-                <SelectTrigger className="w-24">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bsYearOptions.map((y) => (
-                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          ) : (
-            <Input 
-              type="month" 
-              value={adMonth.slice(0, 7)} 
-              onChange={(e) => setAdMonth(e.target.value + '-01')} 
-              className="w-40" 
-            />
-          )}
+          <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <SelectItem key={m} value={m.toString()}>{getBSMonthName(m)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+            <SelectTrigger className="w-24">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {bsYearOptions.map((y) => (
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={handleGenerate} disabled={generatePayroll.isPending}>
             <Play className="w-4 h-4 mr-2" />Generate
           </Button>
