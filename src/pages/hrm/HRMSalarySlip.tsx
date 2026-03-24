@@ -333,12 +333,9 @@ export default function HRMSalarySlip() {
     doc.save(fileName);
   };
 
-  // Get current display month for card title
+  // Get current display month for card title - always BS
   const getCurrentDisplayMonth = () => {
-    if (dateMode === 'BS') {
-      return `${getBSMonthName(bsMonth)} ${bsYear}`;
-    }
-    return format(new Date(selectedMonth), 'MMMM yyyy');
+    return `${getBSMonthName(bsMonth)} ${bsYear}`;
   };
 
   return (
