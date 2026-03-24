@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle, ArrowUpDown } from 'lucide-react';
+import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle, ArrowUpDown, FileText } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
