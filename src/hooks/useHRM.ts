@@ -506,7 +506,13 @@ export function useGenerateMonthlyPayroll() {
   const filterByStore = useIsModuleStoreWise('hrm');
 
   return useMutation({
-    mutationFn: async (month: string) => {
+    mutationFn: async ({ month, bsYear, bsMonth }: { month: string; bsYear: number; bsMonth: number }) => {
+      // Check if the BS month has completed
+      const currentBS = getCurrentBSDate();
+      if (bsYear > currentBS.year || (bsYear === currentBS.year && bsMonth >= currentBS.month)) {
+        throw new Error(`${getBSMonthName(bsMonth)} ${bsYear} अझै पूरा भएको छैन। महिना सकिएपछि मात्र payroll generate गर्न सकिन्छ।`);
+      }
+
       // Check if current store is active before generating payroll
       if (storeId) {
         const { data: storeData } = await supabase
@@ -515,8 +521,7 @@ export function useGenerateMonthlyPayroll() {
           .eq('id', storeId)
           .single();
         if (storeData && !storeData.is_active) {
-          toast.error('Cannot generate payroll for an inactive store');
-          return [];
+          throw new Error('Cannot generate payroll for an inactive store');
         }
       }
 
