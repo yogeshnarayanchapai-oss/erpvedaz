@@ -12,7 +12,7 @@ import { FileText, Download, Trash2, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
-import { useDateMode } from '@/contexts/DateModeContext';
+
 import { adToBS, getBSMonthName, bsToAd, getBSYears, getBSMonths, formatBSDate } from '@/lib/nepaliDate';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { isAdminOrManager } from '@/lib/roleUtils';
