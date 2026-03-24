@@ -19,22 +19,15 @@ import { isAdminOrManager } from '@/lib/roleUtils';
 import jsPDF from 'jspdf';
 
 export default function HRMSalarySlip() {
-  const { dateMode } = useDateMode();
-  const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
-  
-  // BS date state for Nepali calendar filter
+  // Always use BS month for salary slips
   const currentBS = adToBS(new Date());
   const [bsYear, setBsYear] = useState(currentBS.year);
   const [bsMonth, setBsMonth] = useState(currentBS.month);
   
-  // Compute the actual month to query based on mode
+  // Convert BS to AD for database query
   const getQueryMonth = () => {
-    if (dateMode === 'BS') {
-      // Convert BS selection to AD for database query
-      const adDate = bsToAd(bsYear, bsMonth, 1);
-      return format(adDate, 'yyyy-MM-01');
-    }
-    return selectedMonth;
+    const adDate = bsToAd(bsYear, bsMonth, 1);
+    return format(adDate, 'yyyy-MM-01');
   };
 
   const { data: records = [], isLoading } = usePayrollRecords(getQueryMonth());
