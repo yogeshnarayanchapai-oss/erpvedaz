@@ -421,6 +421,7 @@ export default function HRMSalarySlip() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Month</TableHead>
                 <TableHead className="text-right">Net Salary</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -430,6 +431,7 @@ export default function HRMSalarySlip() {
               {sortedRecords.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{getDisplayMonthYear(r.month)}</TableCell>
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge></TableCell>
                   <TableCell className="text-right">
@@ -454,7 +456,7 @@ export default function HRMSalarySlip() {
                   </TableCell>
                 </TableRow>
               ))}
-              {sortedRecords.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
+              {sortedRecords.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

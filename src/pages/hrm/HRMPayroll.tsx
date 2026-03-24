@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle, ArrowUpDown } from 'lucide-react';
+import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2, CreditCard, AlertCircle, ArrowUpDown, FileText } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
@@ -54,6 +54,7 @@ export default function HRMPayroll() {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
   const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
+  const [viewRecord, setViewRecord] = useState<any>(null);
   
   // Payment confirmation state
   const [paymentConfirmRecord, setPaymentConfirmRecord] = useState<any>(null);
@@ -215,6 +216,7 @@ export default function HRMPayroll() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Month</TableHead>
                 <TableHead className="text-right">Basic</TableHead>
                 <TableHead className="text-right">Allowances</TableHead>
                 <TableHead className="text-right">Deductions</TableHead>
@@ -227,6 +229,7 @@ export default function HRMPayroll() {
               {sortedRecords.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{monthDisplayLabel}</TableCell>
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
@@ -241,7 +244,11 @@ export default function HRMPayroll() {
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewRecord(r)}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          View
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(r)}>
                           <Pencil className="w-4 h-4 mr-2" />
                           Edit
@@ -266,7 +273,7 @@ export default function HRMPayroll() {
               ))}
               {records.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No records. Click Generate to create payroll.'}
                   </TableCell>
                 </TableRow>
@@ -286,6 +293,27 @@ export default function HRMPayroll() {
             <div className="space-y-2"><Label>Notes</Label><Input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} /></div>
             <Button type="submit" className="w-full" disabled={updatePayroll.isPending}>Update</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Payroll Detail Dialog */}
+      <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-primary" />Payroll Details</DialogTitle></DialogHeader>
+          {viewRecord && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Employee:</span><p className="font-medium">{viewRecord.employees?.full_name || '-'}</p></div>
+                <div><span className="text-muted-foreground">Month:</span><p className="font-medium">{monthDisplayLabel}</p></div>
+                <div><span className="text-muted-foreground">Basic Salary:</span><p className="font-medium">रू {viewRecord.basic_salary.toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Allowances:</span><p className="font-medium text-success">+रू {(viewRecord.allowances || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Deductions:</span><p className="font-medium text-destructive">-रू {(viewRecord.deductions || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Net Salary:</span><p className="font-bold text-lg">रू {viewRecord.net_salary.toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Status:</span><p><Badge variant={viewRecord.payment_status === 'Paid' ? 'default' : 'secondary'}>{viewRecord.payment_status}</Badge></p></div>
+                {viewRecord.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span><p className="font-medium">{viewRecord.notes}</p></div>}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
