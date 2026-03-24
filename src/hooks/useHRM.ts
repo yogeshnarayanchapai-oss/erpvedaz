@@ -522,14 +522,11 @@ export function useGenerateMonthlyPayroll() {
 
       let empQuery = supabase
         .from('employees')
-        .select('id, base_salary, store_id')
+        .select('id, base_salary')
         .eq('status', 'Active');
       if (filterByStore && storeId) {
         empQuery = empQuery.eq('store_id', storeId);
       }
-
-      // Also filter out employees from inactive stores
-      empQuery = empQuery.eq('stores.is_active', true);
       const { data: employees, error: empError } = await empQuery;
       if (empError) throw empError;
 
