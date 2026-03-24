@@ -21,8 +21,11 @@ import jsPDF from 'jspdf';
 export default function HRMSalarySlip() {
   // Always use BS month for salary slips
   const currentBS = adToBS(new Date());
-  const [bsYear, setBsYear] = useState(currentBS.year);
-  const [bsMonth, setBsMonth] = useState(currentBS.month);
+  // Default to previous BS month
+  const prevMonth = currentBS.month === 1 ? 12 : currentBS.month - 1;
+  const prevYear = currentBS.month === 1 ? currentBS.year - 1 : currentBS.year;
+  const [bsYear, setBsYear] = useState(prevYear);
+  const [bsMonth, setBsMonth] = useState(prevMonth);
   
   // Convert BS to AD for database query
   const getQueryMonth = () => {
