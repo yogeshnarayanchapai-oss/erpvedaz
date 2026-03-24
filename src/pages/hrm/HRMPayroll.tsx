@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePayrollRecords, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { useEmployeeBankAccounts } from '@/hooks/useEmployeeBankAccounts';
-import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSDate, getBSMonthName, getBSYearRange, bsToAd, adToBS } from '@/lib/nepaliDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
