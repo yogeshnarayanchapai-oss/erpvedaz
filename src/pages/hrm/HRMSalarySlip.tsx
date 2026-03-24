@@ -346,42 +346,33 @@ export default function HRMSalarySlip() {
           <p className="text-muted-foreground">Generate and view salary slips</p>
         </div>
         
-        {/* Date Filter - Show BS or AD based on dateMode */}
-        {dateMode === 'BS' ? (
-          <div className="flex gap-2">
-            <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
-              <SelectTrigger className="w-24">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {getBSYears().map((year) => (
-                  <SelectItem key={year.value} value={year.value.toString()}>
-                    {year.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                {getBSMonths().map((month) => (
-                  <SelectItem key={month.value} value={month.value.toString()}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <Input 
-            type="month" 
-            value={selectedMonth.slice(0, 7)} 
-            onChange={(e) => setSelectedMonth(e.target.value + '-01')} 
-            className="w-40" 
-          />
-        )}
+        {/* Date Filter - Always BS */}
+        <div className="flex gap-2">
+          <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+            <SelectTrigger className="w-24">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {getBSYears().map((year) => (
+                <SelectItem key={year.value} value={year.value.toString()}>
+                  {year.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {getBSMonths().map((month) => (
+                <SelectItem key={month.value} value={month.value.toString()}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card>
