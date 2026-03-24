@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePayrollRecords, useUpdatePayrollRecord, useGenerateMonthlyPayroll, useDeletePayrollRecord } from '@/hooks/useHRM';
 import { useEmployeeBankAccounts } from '@/hooks/useEmployeeBankAccounts';
-import { useDateMode } from '@/contexts/DateModeContext';
 import { getCurrentBSDate, getBSMonthName, getBSYearRange, bsToAd, adToBS } from '@/lib/nepaliDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,35 +15,25 @@ import { DollarSign, Download, Play, CheckCircle, Pencil, MoreHorizontal, Trash2
 import { format, startOfMonth } from 'date-fns';
 
 export default function HRMPayroll() {
-  const { dateMode } = useDateMode();
   const currentBS = getCurrentBSDate();
   const bsYearOptions = getBSYearRange();
 
-  // For AD mode: store as YYYY-MM-01
-  // For BS mode: store BS year and month separately, convert to AD for query
-  const [adMonth, setAdMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
+  // Always use BS month for payroll
   const [bsYear, setBsYear] = useState(currentBS.year);
   const [bsMonth, setBsMonth] = useState(currentBS.month);
 
-  // Compute the AD date string for querying based on mode
+  // Convert BS year/month to AD date for database query
   const selectedMonth = useMemo(() => {
-    if (dateMode === 'BS') {
-      // Convert BS year/month to AD date (use day 1)
-      const adDate = bsToAd(bsYear, bsMonth, 1);
-      const year = adDate.getFullYear();
-      const month = String(adDate.getMonth() + 1).padStart(2, '0');
-      return `${year}-${month}-01`;
-    }
-    return adMonth;
-  }, [dateMode, adMonth, bsYear, bsMonth]);
+    const adDate = bsToAd(bsYear, bsMonth, 1);
+    const year = adDate.getFullYear();
+    const month = String(adDate.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
+  }, [bsYear, bsMonth]);
 
-  // Get display label for the selected month
+  // Display label always in BS
   const monthDisplayLabel = useMemo(() => {
-    if (dateMode === 'BS') {
-      return `${getBSMonthName(bsMonth)} ${bsYear}`;
-    }
-    return format(new Date(adMonth), 'MMMM yyyy');
-  }, [dateMode, adMonth, bsYear, bsMonth]);
+    return `${getBSMonthName(bsMonth)} ${bsYear}`;
+  }, [bsYear, bsMonth]);
 
   const { data: records = [], isLoading } = usePayrollRecords(selectedMonth);
   const generatePayroll = useGenerateMonthlyPayroll();
@@ -131,37 +120,26 @@ export default function HRMPayroll() {
           <p className="text-muted-foreground">Manage monthly payroll records</p>
         </div>
         <div className="flex gap-2 items-center">
-          {dateMode === 'BS' ? (
-            <>
-              <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                    <SelectItem key={m} value={m.toString()}>{getBSMonthName(m)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
-                <SelectTrigger className="w-24">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bsYearOptions.map((y) => (
-                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          ) : (
-            <Input 
-              type="month" 
-              value={adMonth.slice(0, 7)} 
-              onChange={(e) => setAdMonth(e.target.value + '-01')} 
-              className="w-40" 
-            />
-          )}
+          <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <SelectItem key={m} value={m.toString()}>{getBSMonthName(m)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+            <SelectTrigger className="w-24">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {bsYearOptions.map((y) => (
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={handleGenerate} disabled={generatePayroll.isPending}>
             <Play className="w-4 h-4 mr-2" />Generate
           </Button>

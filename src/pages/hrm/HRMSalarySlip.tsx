@@ -3,7 +3,7 @@ import { usePayrollRecords, useCompanyInfo, useEmployees, useBankAccounts, useDe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -12,29 +12,22 @@ import { FileText, Download, Trash2, ArrowUpDown } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStoreBranding } from '@/hooks/useStoreBranding';
-import { useDateMode } from '@/contexts/DateModeContext';
+
 import { adToBS, getBSMonthName, bsToAd, getBSYears, getBSMonths, formatBSDate } from '@/lib/nepaliDate';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { isAdminOrManager } from '@/lib/roleUtils';
 import jsPDF from 'jspdf';
 
 export default function HRMSalarySlip() {
-  const { dateMode } = useDateMode();
-  const [selectedMonth, setSelectedMonth] = useState(format(startOfMonth(new Date()), 'yyyy-MM-01'));
-  
-  // BS date state for Nepali calendar filter
+  // Always use BS month for salary slips
   const currentBS = adToBS(new Date());
   const [bsYear, setBsYear] = useState(currentBS.year);
   const [bsMonth, setBsMonth] = useState(currentBS.month);
   
-  // Compute the actual month to query based on mode
+  // Convert BS to AD for database query
   const getQueryMonth = () => {
-    if (dateMode === 'BS') {
-      // Convert BS selection to AD for database query
-      const adDate = bsToAd(bsYear, bsMonth, 1);
-      return format(adDate, 'yyyy-MM-01');
-    }
-    return selectedMonth;
+    const adDate = bsToAd(bsYear, bsMonth, 1);
+    return format(adDate, 'yyyy-MM-01');
   };
 
   const { data: records = [], isLoading } = usePayrollRecords(getQueryMonth());
@@ -71,14 +64,11 @@ export default function HRMSalarySlip() {
     return bankAccounts.find((b) => b.id === bankAccountId) || null;
   };
 
-  // Get display month/year based on date mode
+  // Always display in BS format
   const getDisplayMonthYear = (adDateStr: string) => {
     const adDate = new Date(adDateStr);
-    if (dateMode === 'BS') {
-      const bs = adToBS(adDate);
-      return `${getBSMonthName(bs.month)} ${bs.year}`;
-    }
-    return format(adDate, 'MMMM yyyy');
+    const bs = adToBS(adDate);
+    return `${getBSMonthName(bs.month)} ${bs.year}`;
   };
 
   // Get Nepali month/year for PDF (always show Nepali for PDF as per requirement)
@@ -343,12 +333,9 @@ export default function HRMSalarySlip() {
     doc.save(fileName);
   };
 
-  // Get current display month for card title
+  // Get current display month for card title - always BS
   const getCurrentDisplayMonth = () => {
-    if (dateMode === 'BS') {
-      return `${getBSMonthName(bsMonth)} ${bsYear}`;
-    }
-    return format(new Date(selectedMonth), 'MMMM yyyy');
+    return `${getBSMonthName(bsMonth)} ${bsYear}`;
   };
 
   return (
@@ -359,42 +346,33 @@ export default function HRMSalarySlip() {
           <p className="text-muted-foreground">Generate and view salary slips</p>
         </div>
         
-        {/* Date Filter - Show BS or AD based on dateMode */}
-        {dateMode === 'BS' ? (
-          <div className="flex gap-2">
-            <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
-              <SelectTrigger className="w-24">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {getBSYears().map((year) => (
-                  <SelectItem key={year.value} value={year.value.toString()}>
-                    {year.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                {getBSMonths().map((month) => (
-                  <SelectItem key={month.value} value={month.value.toString()}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <Input 
-            type="month" 
-            value={selectedMonth.slice(0, 7)} 
-            onChange={(e) => setSelectedMonth(e.target.value + '-01')} 
-            className="w-40" 
-          />
-        )}
+        {/* Date Filter - Always BS */}
+        <div className="flex gap-2">
+          <Select value={bsYear.toString()} onValueChange={(v) => setBsYear(parseInt(v))}>
+            <SelectTrigger className="w-24">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {getBSYears().map((year) => (
+                <SelectItem key={year.value} value={year.value.toString()}>
+                  {year.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={bsMonth.toString()} onValueChange={(v) => setBsMonth(parseInt(v))}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {getBSMonths().map((month) => (
+                <SelectItem key={month.value} value={month.value.toString()}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card>
