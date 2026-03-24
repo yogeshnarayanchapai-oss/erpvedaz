@@ -343,7 +343,7 @@ export default function DailyPL() {
                 <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-sm md:text-lg font-bold">{U}</div>
+                <div className="text-sm md:text-lg font-bold">{U} <span className="text-xs font-normal text-muted-foreground">({stockMetrics?.referenceOrderCount ?? 0} orders)</span></div>
                 <p className="text-[10px] md:text-xs text-muted-foreground">
                   From stock movements
                 </p>
