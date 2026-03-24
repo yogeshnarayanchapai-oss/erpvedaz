@@ -5,6 +5,7 @@ import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { notifyAdminTeam, notifyStaff, getEmployeeDetails, getCurrentUserName } from '@/lib/hrmNotifications';
 import { sendHRMEmail, getAdminTeamEmails, getEmployeeEmail } from '@/lib/hrmEmailService';
+import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 
 // Types
 export interface Department {
