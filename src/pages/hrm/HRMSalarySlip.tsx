@@ -64,14 +64,11 @@ export default function HRMSalarySlip() {
     return bankAccounts.find((b) => b.id === bankAccountId) || null;
   };
 
-  // Get display month/year based on date mode
+  // Always display in BS format
   const getDisplayMonthYear = (adDateStr: string) => {
     const adDate = new Date(adDateStr);
-    if (dateMode === 'BS') {
-      const bs = adToBS(adDate);
-      return `${getBSMonthName(bs.month)} ${bs.year}`;
-    }
-    return format(adDate, 'MMMM yyyy');
+    const bs = adToBS(adDate);
+    return `${getBSMonthName(bs.month)} ${bs.year}`;
   };
 
   // Get Nepali month/year for PDF (always show Nepali for PDF as per requirement)
