@@ -290,7 +290,7 @@ export default function HRMPayroll() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground">Employee:</span><p className="font-medium">{viewRecord.employees?.full_name || '-'}</p></div>
-                <div><span className="text-muted-foreground">Month:</span><p className="font-medium">{monthDisplayLabel}</p></div>
+                <div><span className="text-muted-foreground">Month:</span><p className="font-medium">{(() => { const d = new Date(viewRecord.month + 'T00:00:00'); d.setDate(15); const bs = adToBS(d); return `${getBSMonthName(bs.month)} ${bs.year}`; })()}</p></div>
                 <div><span className="text-muted-foreground">Basic Salary:</span><p className="font-medium">रू {viewRecord.basic_salary.toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Allowances:</span><p className="font-medium text-success">+रू {(viewRecord.allowances || 0).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Deductions:</span><p className="font-medium text-destructive">-रू {(viewRecord.deductions || 0).toLocaleString()}</p></div>

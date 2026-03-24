@@ -64,16 +64,18 @@ export default function HRMSalarySlip() {
     return bankAccounts.find((b) => b.id === bankAccountId) || null;
   };
 
-  // Always display in BS format
+  // Always display in BS format - use mid-month to avoid timezone edge cases
   const getDisplayMonthYear = (adDateStr: string) => {
-    const adDate = new Date(adDateStr);
+    const adDate = new Date(adDateStr + 'T00:00:00');
+    adDate.setDate(15);
     const bs = adToBS(adDate);
     return `${getBSMonthName(bs.month)} ${bs.year}`;
   };
 
   // Get Nepali month/year for PDF (always show Nepali for PDF as per requirement)
   const getNepaliMonthYear = (adDateStr: string) => {
-    const adDate = new Date(adDateStr);
+    const adDate = new Date(adDateStr + 'T00:00:00');
+    adDate.setDate(15);
     const bs = adToBS(adDate);
     return `${getBSMonthName(bs.month)} ${bs.year}`;
   };
