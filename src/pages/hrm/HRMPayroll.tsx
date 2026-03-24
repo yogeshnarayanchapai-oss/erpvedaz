@@ -19,8 +19,11 @@ export default function HRMPayroll() {
   const bsYearOptions = getBSYearRange();
 
   // Always use BS month for payroll
-  const [bsYear, setBsYear] = useState(currentBS.year);
-  const [bsMonth, setBsMonth] = useState(currentBS.month);
+  // Default to previous BS month
+  const prevMonth = currentBS.month === 1 ? 12 : currentBS.month - 1;
+  const prevYear = currentBS.month === 1 ? currentBS.year - 1 : currentBS.year;
+  const [bsYear, setBsYear] = useState(prevYear);
+  const [bsMonth, setBsMonth] = useState(prevMonth);
 
   // Convert BS year/month to AD date for database query
   const selectedMonth = useMemo(() => {
