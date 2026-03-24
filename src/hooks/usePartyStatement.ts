@@ -14,6 +14,7 @@ export interface PartyStatementEntry {
   id: string;
   transaction_code?: string;
   transaction_type?: string;
+  stock_quantity?: number | null;
 }
 
 export function usePartyStatement(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
@@ -49,6 +50,25 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       const { data: transactions, error } = await query;
       if (error) throw error;
 
+      // Collect stock movement reference IDs
+      const stockRefIds = (transactions || [])
+        .filter(t => t.reference_type === 'stock_movement' && t.reference_id)
+        .map(t => t.reference_id as string);
+
+      // Fetch stock movement quantities
+      let stockQuantities: Record<string, number> = {};
+      if (stockRefIds.length > 0) {
+        const { data: stockMovements } = await supabase
+          .from('stock_movements')
+          .select('id, qty')
+          .in('id', stockRefIds);
+        if (stockMovements) {
+          stockMovements.forEach(sm => {
+            stockQuantities[sm.id] = sm.qty;
+          });
+        }
+      }
+
       const entries: PartyStatementEntry[] = [];
 
       // Add opening balance entry
@@ -77,9 +97,6 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         let credit = 0;
         let particulars = t.description || txType;
 
-        // DR/CR mapping:
-        // DR (we gave/spent) = EXPENSE, PAYMENT_OUT, SALES_OUT → Receivable
-        // CR (we received) = INCOME, PAYMENT_IN, SALES_IN → Payable
         switch (txType) {
           case 'EXPENSE':
             debit = t.amount;
@@ -104,10 +121,14 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
             credit = t.amount;
             break;
           default:
-            // Fallback for legacy data
             if (t.type === 'expense') debit = t.amount;
             else credit = t.amount;
         }
+
+        // Get stock quantity if from stock movement
+        const stockQty = t.reference_type === 'stock_movement' && t.reference_id
+          ? stockQuantities[t.reference_id] || null
+          : null;
 
         entries.push({
           date: t.date,
@@ -122,6 +143,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           id: t.id,
           transaction_code: t.transaction_code,
           transaction_type: txType,
+          stock_quantity: stockQty,
         });
       });
 

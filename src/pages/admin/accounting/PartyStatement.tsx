@@ -338,6 +338,9 @@ export default function PartyStatement() {
                     <TableCell className="font-mono text-xs">{entry.transaction_code || '-'}</TableCell>
                     <TableCell>
                       {entry.particulars}
+                      {entry.stock_quantity != null && (
+                        <span className="text-xs text-muted-foreground ml-1">({entry.stock_quantity} pcs)</span>
+                      )}
                       {entry.transaction_type && <Badge variant="outline" className="ml-2 text-xs">{entry.transaction_type.replace('_', ' ')}</Badge>}
                     </TableCell>
                     <TableCell className="text-right text-red-600">{entry.debit > 0 ? `₹${entry.debit.toLocaleString()}` : '-'}</TableCell>
