@@ -204,10 +204,17 @@ export default function HRMPayroll() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedRecords.map((r) => (
+              {sortedRecords.map((r) => {
+                // Derive BS month from the record's actual month (AD date)
+                const recordDate = new Date(r.month + 'T00:00:00');
+                // Use mid-month (15th) to avoid edge cases
+                recordDate.setDate(15);
+                const recordBS = adToBS(recordDate);
+                const recordMonthLabel = `${getBSMonthName(recordBS.month)} ${recordBS.year}`;
+                return (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employees?.full_name || '-'}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{monthDisplayLabel}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{recordMonthLabel}</TableCell>
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
@@ -248,7 +255,8 @@ export default function HRMPayroll() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {records.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
