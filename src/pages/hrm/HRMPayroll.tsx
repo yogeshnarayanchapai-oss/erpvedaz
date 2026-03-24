@@ -296,6 +296,27 @@ export default function HRMPayroll() {
         </DialogContent>
       </Dialog>
 
+      {/* View Payroll Detail Dialog */}
+      <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-primary" />Payroll Details</DialogTitle></DialogHeader>
+          {viewRecord && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Employee:</span><p className="font-medium">{viewRecord.employees?.full_name || '-'}</p></div>
+                <div><span className="text-muted-foreground">Month:</span><p className="font-medium">{monthDisplayLabel}</p></div>
+                <div><span className="text-muted-foreground">Basic Salary:</span><p className="font-medium">रू {viewRecord.basic_salary.toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Allowances:</span><p className="font-medium text-success">+रू {(viewRecord.allowances || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Deductions:</span><p className="font-medium text-destructive">-रू {(viewRecord.deductions || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Net Salary:</span><p className="font-bold text-lg">रू {viewRecord.net_salary.toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Status:</span><p><Badge variant={viewRecord.payment_status === 'Paid' ? 'default' : 'secondary'}>{viewRecord.payment_status}</Badge></p></div>
+                {viewRecord.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span><p className="font-medium">{viewRecord.notes}</p></div>}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Payment Confirmation Dialog */}
       <PaymentConfirmationDialog
         record={paymentConfirmRecord}

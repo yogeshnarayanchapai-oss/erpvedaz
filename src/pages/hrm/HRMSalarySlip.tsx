@@ -456,7 +456,7 @@ export default function HRMSalarySlip() {
                   </TableCell>
                 </TableRow>
               ))}
-              {sortedRecords.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
+              {sortedRecords.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{isLoading ? 'Loading...' : 'No payroll records'}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
