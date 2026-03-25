@@ -15,6 +15,7 @@ export interface PartyStatementEntry {
   transaction_code?: string;
   transaction_type?: string;
   stock_quantity?: number | null;
+  stock_rate?: number | null;
 }
 
 export function usePartyStatement(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
