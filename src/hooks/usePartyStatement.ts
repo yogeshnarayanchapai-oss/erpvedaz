@@ -15,6 +15,7 @@ export interface PartyStatementEntry {
   transaction_code?: string;
   transaction_type?: string;
   stock_quantity?: number | null;
+  stock_rate?: number | null;
 }
 
 export function usePartyStatement(partyId: string, filters?: { startDate?: string; endDate?: string; productId?: string }) {
@@ -57,14 +58,16 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
 
       // Fetch stock movement quantities
       let stockQuantities: Record<string, number> = {};
+      let stockRates: Record<string, number | null> = {};
       if (stockRefIds.length > 0) {
         const { data: stockMovements } = await supabase
           .from('stock_movements')
-          .select('id, qty')
+          .select('id, qty, unit_price')
           .in('id', stockRefIds);
         if (stockMovements) {
           stockMovements.forEach(sm => {
             stockQuantities[sm.id] = sm.qty;
+            stockRates[sm.id] = sm.unit_price;
           });
         }
       }
@@ -129,6 +132,9 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         const stockQty = t.reference_type === 'stock_movement' && t.reference_id
           ? stockQuantities[t.reference_id] || null
           : null;
+        const stockRate = t.reference_type === 'stock_movement' && t.reference_id
+          ? stockRates[t.reference_id] || null
+          : null;
 
         entries.push({
           date: t.date,
@@ -144,6 +150,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           transaction_code: t.transaction_code,
           transaction_type: txType,
           stock_quantity: stockQty,
+          stock_rate: stockRate,
         });
       });
 

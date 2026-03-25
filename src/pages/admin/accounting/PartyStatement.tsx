@@ -202,12 +202,18 @@ export default function PartyStatement() {
     doc.text(`Generated: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 28);
     doc.text(`Phone: ${selectedParty.phone || 'N/A'}  |  Type: ${selectedParty.party_type}`, 14, 34);
 
-    const tableData = dataToExport.map(e => [
-      e.date, e.transaction_code || '', e.particulars,
-      e.debit > 0 ? `Rs ${e.debit.toLocaleString()}` : '-',
-      e.credit > 0 ? `Rs ${e.credit.toLocaleString()}` : '-',
-      `Rs ${e.balance.toLocaleString()}`,
-    ]);
+    const tableData = dataToExport.map(e => {
+      let particularsText = e.particulars;
+      if (e.stock_quantity != null) {
+        particularsText += ` (${e.stock_quantity} pcs${e.stock_rate != null ? ` × Rs.${e.stock_rate.toLocaleString()}` : ''})`;
+      }
+      return [
+        e.date, e.transaction_code || '', particularsText,
+        e.debit > 0 ? `Rs ${e.debit.toLocaleString()}` : '-',
+        e.credit > 0 ? `Rs ${e.credit.toLocaleString()}` : '-',
+        `Rs ${e.balance.toLocaleString()}`,
+      ];
+    });
 
     autoTable(doc, {
       startY: 40,
@@ -339,7 +345,7 @@ export default function PartyStatement() {
                     <TableCell>
                       {entry.particulars}
                       {entry.stock_quantity != null && (
-                        <span className="text-xs text-muted-foreground ml-1">({entry.stock_quantity} pcs)</span>
+                        <span className="text-xs text-muted-foreground ml-1">({entry.stock_quantity} pcs{entry.stock_rate != null ? ` × Rs.${entry.stock_rate.toLocaleString()}` : ''})</span>
                       )}
                       {entry.transaction_type && <Badge variant="outline" className="ml-2 text-xs">{entry.transaction_type.replace('_', ' ')}</Badge>}
                     </TableCell>
