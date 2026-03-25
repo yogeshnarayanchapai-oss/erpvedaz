@@ -58,6 +58,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
 
       // Fetch stock movement quantities
       let stockQuantities: Record<string, number> = {};
+      let stockRates: Record<string, number | null> = {};
       if (stockRefIds.length > 0) {
         const { data: stockMovements } = await supabase
           .from('stock_movements')
