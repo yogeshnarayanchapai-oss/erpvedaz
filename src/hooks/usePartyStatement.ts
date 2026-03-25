@@ -132,6 +132,9 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
         const stockQty = t.reference_type === 'stock_movement' && t.reference_id
           ? stockQuantities[t.reference_id] || null
           : null;
+        const stockRate = t.reference_type === 'stock_movement' && t.reference_id
+          ? stockRates[t.reference_id] || null
+          : null;
 
         entries.push({
           date: t.date,
