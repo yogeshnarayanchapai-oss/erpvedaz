@@ -150,6 +150,7 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
           transaction_code: t.transaction_code,
           transaction_type: txType,
           stock_quantity: stockQty,
+          stock_rate: stockRate,
         });
       });
 
