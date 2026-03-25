@@ -345,7 +345,7 @@ export default function PartyStatement() {
                     <TableCell>
                       {entry.particulars}
                       {entry.stock_quantity != null && (
-                        <span className="text-xs text-muted-foreground ml-1">({entry.stock_quantity} pcs)</span>
+                        <span className="text-xs text-muted-foreground ml-1">({entry.stock_quantity} pcs{entry.stock_rate != null ? ` × Rs.${entry.stock_rate.toLocaleString()}` : ''})</span>
                       )}
                       {entry.transaction_type && <Badge variant="outline" className="ml-2 text-xs">{entry.transaction_type.replace('_', ' ')}</Badge>}
                     </TableCell>
