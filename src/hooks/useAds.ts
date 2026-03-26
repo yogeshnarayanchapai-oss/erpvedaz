@@ -28,14 +28,19 @@ interface UseAdsParams {
 const DEFAULT_USD_RATE = 133.5;
 
 export function useDefaultUsdRate() {
+  const storeId = useCurrentStoreId();
   return useQuery({
-    queryKey: ['default-usd-rate'],
+    queryKey: ['default-usd-rate', storeId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('company_info')
-        .select('other_details')
-        .limit(1)
-        .maybeSingle();
+        .select('other_details');
+      
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data } = await query.limit(1).maybeSingle();
       
       if (data?.other_details) {
         try {
