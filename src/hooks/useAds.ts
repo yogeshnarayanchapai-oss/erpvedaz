@@ -28,14 +28,19 @@ interface UseAdsParams {
 const DEFAULT_USD_RATE = 133.5;
 
 export function useDefaultUsdRate() {
+  const storeId = useCurrentStoreId();
   return useQuery({
-    queryKey: ['default-usd-rate'],
+    queryKey: ['default-usd-rate', storeId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('company_info')
-        .select('other_details')
-        .limit(1)
-        .maybeSingle();
+        .select('other_details');
+      
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data } = await query.limit(1).maybeSingle();
       
       if (data?.other_details) {
         try {
@@ -54,14 +59,19 @@ export function useDefaultUsdRate() {
 
 export function useUpdateDefaultUsdRate() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   return useMutation({
     mutationFn: async (rate: number) => {
-      const { data: existing } = await supabase
+      let query = supabase
         .from('company_info')
-        .select('id, other_details')
-        .limit(1)
-        .maybeSingle();
+        .select('id, other_details');
+      
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data: existing } = await query.limit(1).maybeSingle();
 
       let otherDetails: any = {};
       if (existing?.other_details) {
@@ -84,7 +94,8 @@ export function useUpdateDefaultUsdRate() {
           .from('company_info')
           .insert({ 
             company_name: 'Company',
-            other_details: JSON.stringify(otherDetails) 
+            other_details: JSON.stringify(otherDetails),
+            ...(storeId ? { store_id: storeId } : {})
           });
         if (error) throw error;
       }
