@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ArrowRight, RefreshCw, Brain, AlertCircle, Trash2 } from 'lucide-react';
 import { useFetchSocialBoxLeads, useSocialBoxConfig, useMarkLeadsTransferred, useDeleteSocialBoxLeads, useStoredSocialBoxLeads, type SocialBoxLead } from '@/hooks/useSocialBoxLeads';
 import { BulkAddLeadsForm } from '@/components/leads/BulkAddLeadsForm';
@@ -23,6 +25,8 @@ export default function AILeads() {
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [isDeletingDuplicates, setIsDeletingDuplicates] = useState(false);
 
   // Use stored leads directly - no local state copy needed
   const leads = storedLeads;
@@ -58,6 +62,41 @@ export default function AILeads() {
     return acc;
   }, {});
   const duplicateCount = Object.values(phoneCounts).filter(c => c > 1).reduce((sum, c) => sum + c, 0);
+
+  const duplicateGroups = useMemo(() => {
+    const groups: Record<string, SocialBoxLead[]> = {};
+    filteredLeads.forEach(l => {
+      const phone = (l.phone || '').replace(/\D/g, '');
+      if (phone.length >= 10) {
+        if (!groups[phone]) groups[phone] = [];
+        groups[phone].push(l);
+      }
+    });
+    return Object.entries(groups).filter(([, arr]) => arr.length > 1);
+  }, [filteredLeads]);
+
+  const totalDuplicatesToDelete = duplicateGroups.reduce((sum, [, arr]) => sum + (arr.length - 1), 0);
+
+  const handleDeleteAllDuplicates = async () => {
+    const idsToDelete: string[] = [];
+    duplicateGroups.forEach(([, arr]) => {
+      for (let i = 1; i < arr.length; i++) {
+        idsToDelete.push(arr[i].id);
+      }
+    });
+    if (idsToDelete.length === 0) return;
+    setIsDeletingDuplicates(true);
+    try {
+      await deleteLeads.mutateAsync(idsToDelete);
+      queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
+      toast.success(`${idsToDelete.length} duplicate lead(s) deleted`);
+      setShowDuplicateDialog(false);
+    } catch {
+      toast.error('Failed to delete duplicates');
+    } finally {
+      setIsDeletingDuplicates(false);
+    }
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -188,10 +227,13 @@ export default function AILeads() {
             {fetchLeads.isPending && <Loader2 className="h-3 w-3 ml-2 inline animate-spin" />}
           </p>
           {duplicateCount > 0 && (
-            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+            <button
+              onClick={() => setShowDuplicateDialog(true)}
+              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
+            >
               <AlertCircle className="h-3.5 w-3.5" />
               Double: {duplicateCount} leads
-            </div>
+            </button>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -314,6 +356,54 @@ export default function AILeads() {
         prefillData={prefillLeads}
         onSuccess={handleBulkCreateSuccess}
       />
+
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Duplicate Leads Cleanup</DialogTitle>
+            <DialogDescription>
+              {duplicateGroups.length} phone number(s) with duplicates found. 
+              Each group keeps 1 lead and removes {totalDuplicatesToDelete} extra(s).
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px] pr-2">
+            <div className="space-y-3">
+              {duplicateGroups.map(([phone, arr]) => (
+                <div key={phone} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">{phone}</span>
+                    <Badge variant="destructive" className="text-xs">
+                      {arr.length} entries → keep 1, delete {arr.length - 1}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {arr.map((lead, idx) => (
+                      <div key={lead.id} className={`text-xs flex items-center gap-2 ${idx === 0 ? 'text-green-600 font-medium' : 'text-muted-foreground line-through'}`}>
+                        <span>{idx === 0 ? '✓ Keep:' : '✕ Delete:'}</span>
+                        <span>{lead.full_name || 'No name'}</span>
+                        <span>·</span>
+                        <span>{lead.source || 'SocialBox'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicateDialog(false)} disabled={isDeletingDuplicates}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllDuplicates} disabled={isDeletingDuplicates || totalDuplicatesToDelete === 0}>
+              {isDeletingDuplicates ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting...</>
+              ) : (
+                <><Trash2 className="h-4 w-4 mr-1" /> Delete {totalDuplicatesToDelete} Duplicates</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
