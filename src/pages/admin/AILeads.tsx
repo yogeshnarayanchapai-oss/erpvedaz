@@ -63,7 +63,41 @@ export default function AILeads() {
   }, {});
   const duplicateCount = Object.values(phoneCounts).filter(c => c > 1).reduce((sum, c) => sum + c, 0);
 
-  const toggleSelect = (id: string) => {
+  const duplicateGroups = useMemo(() => {
+    const groups: Record<string, SocialBoxLead[]> = {};
+    filteredLeads.forEach(l => {
+      const phone = (l.phone || '').replace(/\D/g, '');
+      if (phone.length >= 10) {
+        if (!groups[phone]) groups[phone] = [];
+        groups[phone].push(l);
+      }
+    });
+    return Object.entries(groups).filter(([, arr]) => arr.length > 1);
+  }, [filteredLeads]);
+
+  const totalDuplicatesToDelete = duplicateGroups.reduce((sum, [, arr]) => sum + (arr.length - 1), 0);
+
+  const handleDeleteAllDuplicates = async () => {
+    const idsToDelete: string[] = [];
+    duplicateGroups.forEach(([, arr]) => {
+      for (let i = 1; i < arr.length; i++) {
+        idsToDelete.push(arr[i].id);
+      }
+    });
+    if (idsToDelete.length === 0) return;
+    setIsDeletingDuplicates(true);
+    try {
+      await deleteLeads.mutateAsync(idsToDelete);
+      queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
+      toast.success(`${idsToDelete.length} duplicate lead(s) deleted`);
+      setShowDuplicateDialog(false);
+    } catch {
+      toast.error('Failed to delete duplicates');
+    } finally {
+      setIsDeletingDuplicates(false);
+    }
+  };
+
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
