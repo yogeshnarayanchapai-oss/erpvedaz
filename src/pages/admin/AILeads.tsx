@@ -25,6 +25,8 @@ export default function AILeads() {
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [prefillLeads, setPrefillLeads] = useState<any[]>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [isDeletingDuplicates, setIsDeletingDuplicates] = useState(false);
 
   // Use stored leads directly - no local state copy needed
   const leads = storedLeads;
