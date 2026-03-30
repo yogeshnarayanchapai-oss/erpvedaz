@@ -226,10 +226,13 @@ export default function AILeads() {
             {fetchLeads.isPending && <Loader2 className="h-3 w-3 ml-2 inline animate-spin" />}
           </p>
           {duplicateCount > 0 && (
-            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+            <button
+              onClick={() => setShowDuplicateDialog(true)}
+              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
+            >
               <AlertCircle className="h-3.5 w-3.5" />
               Double: {duplicateCount} leads
-            </div>
+            </button>
           )}
         </div>
         <div className="flex items-center gap-2">
