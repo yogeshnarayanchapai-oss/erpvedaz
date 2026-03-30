@@ -355,6 +355,54 @@ export default function AILeads() {
         prefillData={prefillLeads}
         onSuccess={handleBulkCreateSuccess}
       />
+
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Duplicate Leads Cleanup</DialogTitle>
+            <DialogDescription>
+              {duplicateGroups.length} phone number(s) with duplicates found. 
+              Each group keeps 1 lead and removes {totalDuplicatesToDelete} extra(s).
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px] pr-2">
+            <div className="space-y-3">
+              {duplicateGroups.map(([phone, arr]) => (
+                <div key={phone} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">{phone}</span>
+                    <Badge variant="destructive" className="text-xs">
+                      {arr.length} entries → keep 1, delete {arr.length - 1}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {arr.map((lead, idx) => (
+                      <div key={lead.id} className={`text-xs flex items-center gap-2 ${idx === 0 ? 'text-green-600 font-medium' : 'text-muted-foreground line-through'}`}>
+                        <span>{idx === 0 ? '✓ Keep:' : '✕ Delete:'}</span>
+                        <span>{lead.full_name || 'No name'}</span>
+                        <span>·</span>
+                        <span>{lead.source || 'SocialBox'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicateDialog(false)} disabled={isDeletingDuplicates}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllDuplicates} disabled={isDeletingDuplicates || totalDuplicatesToDelete === 0}>
+              {isDeletingDuplicates ? (
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting...</>
+              ) : (
+                <><Trash2 className="h-4 w-4 mr-1" /> Delete {totalDuplicatesToDelete} Duplicates</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
