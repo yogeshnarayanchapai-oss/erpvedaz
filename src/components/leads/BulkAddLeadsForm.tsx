@@ -247,7 +247,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
   return (
     <>
       <Dialog open={open} onOpenChange={handleCloseAttempt}>
-        <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="w-[98vw] !max-w-[1800px] max-h-[92vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-lg font-semibold">Add New Leads (Bulk Entry)</DialogTitle>
@@ -272,7 +272,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
           
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {/* Table Header */}
-            <div className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <div className="grid grid-cols-[40px_130px_minmax(150px,2fr)_150px_130px_minmax(150px,2fr)_160px_minmax(120px,1.5fr)_40px] gap-3 mb-2 text-xs font-medium text-muted-foreground">
               <div></div>
               <div>Date *</div>
               <div>Customer Name *</div>
@@ -289,7 +289,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
               {rows.map((row, index) => (
                 <div 
                   key={row.id} 
-                  className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 items-center"
+                  className="grid grid-cols-[40px_130px_minmax(150px,2fr)_150px_130px_minmax(150px,2fr)_160px_minmax(120px,1.5fr)_40px] gap-3 items-center"
                 >
                   <div className="text-sm font-medium text-muted-foreground">#{index + 1}</div>
                   
