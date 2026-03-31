@@ -290,7 +290,7 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
               {rows.map((row, index) => (
                 <div 
                   key={row.id} 
-                  className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 items-center"
+                  className="grid grid-cols-[40px_130px_minmax(150px,2fr)_150px_130px_minmax(150px,2fr)_160px_minmax(120px,1.5fr)_40px] gap-3 items-center"
                 >
                   <div className="text-sm font-medium text-muted-foreground">#{index + 1}</div>
                   
