@@ -272,7 +272,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
           
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {/* Table Header */}
-            <div className="grid grid-cols-[40px_100px_1fr_120px_100px_1fr_140px_1fr_40px] gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <div className="grid grid-cols-[40px_130px_minmax(150px,2fr)_150px_130px_minmax(150px,2fr)_160px_minmax(120px,1.5fr)_40px] gap-3 mb-2 text-xs font-medium text-muted-foreground">
               <div></div>
               <div>Date *</div>
               <div>Customer Name *</div>
