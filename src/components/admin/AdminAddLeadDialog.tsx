@@ -248,7 +248,7 @@ export function AdminAddLeadDialog({ open, onOpenChange }: AdminAddLeadDialogPro
   return (
     <>
       <Dialog open={open} onOpenChange={handleCloseAttempt}>
-        <DialogContent className="w-[95vw] !max-w-7xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="w-[98vw] !max-w-[1800px] max-h-[92vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-lg font-semibold">Add New Leads (Bulk Entry)</DialogTitle>
