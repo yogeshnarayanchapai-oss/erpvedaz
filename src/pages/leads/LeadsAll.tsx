@@ -290,6 +290,15 @@ export default function LeadsAll() {
       return;
     }
 
+    // Check for same-day leads - they cannot be reassigned today
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const sameDayLeads = selectedLeadObjects.filter(l => l.date === today);
+    
+    if (sameDayLeads.length > 0) {
+      toast.error(`Cannot reassign ${sameDayLeads.length} lead(s) with today's date. Leads can only be reassigned the next day.`);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
