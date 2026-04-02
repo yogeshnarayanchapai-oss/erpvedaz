@@ -150,7 +150,7 @@ export function useLeads(filters?: {
         query = query.eq('lead_bucket', filters.leadBucket);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(0, 9999);
       if (error) throw error;
       return data as Lead[];
     },
