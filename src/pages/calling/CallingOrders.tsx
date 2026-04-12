@@ -189,7 +189,7 @@ export default function CallingOrders() {
   };
 
   const exportCSV = () => {
-    const headers = ['Order Date', 'Client', 'Contact', 'Product', 'Qty', 'Amount', 'Payment', 'Delivery Location', 'Branch', 'Address', 'Status', 'Delivery Update'];
+    const headers = ['Order Date', 'Client', 'Contact', 'Product', 'Qty', 'Amount', 'Payment', 'Delivery Location', 'Branch', 'Address', 'Status', 'Delivery Update', 'Remarks'];
     const rows = orders.map(o => [
       format(new Date(o.order_date), 'yyyy-MM-dd HH:mm'),
       o.leads?.client_name || '',
@@ -203,6 +203,7 @@ export default function CallingOrders() {
       o.full_address || '',
       o.order_status,
       o.inside_delivery_status || 'PENDING',
+      o.delivery_notes || '',
     ]);
 
     const csv = [headers, ...rows].map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -212,6 +213,39 @@ export default function CallingOrders() {
     a.href = url;
     a.download = `my-orders-${dateRange.from}-to-${dateRange.to}.csv`;
     a.click();
+  };
+
+  const exportPDF = () => {
+    import('jspdf').then(({ jsPDF }) => {
+      import('jspdf-autotable').then(() => {
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const headers = ['Date', 'Client', 'Contact', 'Product', 'Qty', 'Amount', 'Location', 'Branch', 'Status', 'Remarks'];
+        const rows = orders.map(o => [
+          format(new Date(o.order_date), 'yyyy-MM-dd'),
+          o.leads?.client_name || '',
+          o.leads?.contact_number || '',
+          o.products?.name || '',
+          o.quantity,
+          `NPR ${(o.amount || 0).toLocaleString()}`,
+          getDeliveryLocationLabel(o.delivery_location),
+          o.destination_branch || '',
+          o.order_status,
+          o.delivery_notes || '',
+        ]);
+        doc.setFontSize(14);
+        doc.text(`Orders Report (${dateRange.from} to ${dateRange.to})`, 14, 15);
+        doc.setFontSize(9);
+        doc.text(`Total: ${orders.length} orders | Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 22);
+        (doc as any).autoTable({
+          head: [headers], body: rows, startY: 27,
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: [41, 128, 185], fontSize: 7, fontStyle: 'bold' },
+          columnStyles: { 4: { cellWidth: 12, halign: 'center' }, 5: { cellWidth: 22, halign: 'right' }, 9: { cellWidth: 40 } },
+        });
+        doc.save(`my-orders-${dateRange.from}-to-${dateRange.to}.pdf`);
+        toast.success('PDF exported successfully');
+      });
+    });
   };
 
   // Copy order details using dynamic template from Data Tools

@@ -23,7 +23,7 @@ import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, InsideDeliveryStatusFilter } from '@/components/filters/OrderFiltersCard';
-import { ShoppingCart, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
+import { ShoppingCart, Download, FileSpreadsheet, FileText, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
@@ -378,6 +378,15 @@ export default function AdminOrders() {
     exportOrdersToCSV(filteredOrders, `orders_${dateFrom}_to_${dateTo}.csv`);
   };
 
+  const exportPDF = () => {
+    exportOrdersToPDF(filteredOrders, `orders_${dateFrom}_to_${dateTo}.pdf`);
+  };
+
+  const handleExportSelectedPDF = () => {
+    const selected = getSelectedOrders();
+    exportOrdersToPDF(selected, `selected_orders_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
   const exportSummaryCSV = () => {
     if (orderSummary.items.length === 0) {
       toast.error('No data to export');
@@ -403,13 +412,9 @@ export default function AdminOrders() {
     toast.success('Summary exported successfully');
   };
 
-  const exportOrdersToCSV = (orders: typeof filteredOrders, filename: string) => {
-    const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Delivery Location', 'Branch', 'Address', 'Order Status', 'Payment', 'Confirmed By'];
-    const rows = orders.map((order) => {
-      // Get staff name - prefer confirmed_by_profile, then created_by_staff, then sales_person
+  const getOrderExportRows = (orders: typeof filteredOrders) => {
+    return orders.map((order) => {
       const confirmedByName = (order as any).confirmed_by_profile?.name || (order as any).created_by_staff?.name || order.sales_person?.name || '-';
-      
-      // Handle multi-product orders
       const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
       const productDisplay = orderItemsList.length > 0 
         ? orderItemsList.map((item: any) => {
@@ -427,23 +432,31 @@ export default function AdminOrders() {
       const totalAmount = orderItemsList.length > 0
         ? orderItemsList.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0)
         : (order.amount || 0);
+      const remark = order.delivery_notes || (order.leads as any)?.remark || '';
       
-      return [
-        order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
-        order.leads?.client_name || '',
-        order.leads?.contact_number || '',
-        productDisplay,
-        totalQty,
-        totalAmount,
-        getDeliveryLocationLabel(order.delivery_location),
-        order.destination_branch || '',
-        order.full_address || '',
-        order.order_status || '',
-        order.payment_status || '',
-        confirmedByName,
-      ];
+      return {
+        date: order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : '',
+        client: order.leads?.client_name || '',
+        contact: order.leads?.contact_number || '',
+        products: productDisplay,
+        qty: totalQty,
+        amount: totalAmount,
+        location: getDeliveryLocationLabel(order.delivery_location),
+        branch: order.destination_branch || '',
+        address: order.full_address || '',
+        status: order.order_status || '',
+        payment: order.payment_status || '',
+        confirmedBy: confirmedByName,
+        remark: remark,
+      };
     });
+  };
 
+  const exportOrdersToCSV = (orders: typeof filteredOrders, filename: string) => {
+    const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Delivery Location', 'Branch', 'Address', 'Order Status', 'Payment', 'Confirmed By', 'Remarks'];
+    const rows = getOrderExportRows(orders).map(r => [
+      r.date, r.client, r.contact, r.products, r.qty, r.amount, r.location, r.branch, r.address, r.status, r.payment, r.confirmedBy, r.remark
+    ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -452,6 +465,44 @@ export default function AdminOrders() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportOrdersToPDF = (orders: typeof filteredOrders, filename: string) => {
+    import('jspdf').then(({ jsPDF }) => {
+      import('jspdf-autotable').then((autoTableModule) => {
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Location', 'Branch', 'Status', 'Remarks'];
+        const rows = getOrderExportRows(orders).map(r => [
+          r.date, r.client, r.contact, r.products, r.qty, `NPR ${Number(r.amount).toLocaleString()}`, r.location, r.branch, r.status, r.remark
+        ]);
+        
+        doc.setFontSize(14);
+        doc.text(`Orders Report (${dateFrom} to ${dateTo})`, 14, 15);
+        doc.setFontSize(9);
+        doc.text(`Total: ${orders.length} orders | Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 22);
+        
+        (doc as any).autoTable({
+          head: [headers],
+          body: rows,
+          startY: 27,
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: [41, 128, 185], fontSize: 7, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            4: { cellWidth: 12, halign: 'center' },
+            5: { cellWidth: 22, halign: 'right' },
+            9: { cellWidth: 40 },
+          },
+          didDrawPage: (data: any) => {
+            doc.setFontSize(7);
+            doc.text(`Page ${doc.getNumberOfPages()}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 8);
+          },
+        });
+        
+        doc.save(filename);
+        toast.success('PDF exported successfully');
+      });
+    });
   };
 
   return (
@@ -598,6 +649,10 @@ export default function AdminOrders() {
                     <DropdownMenuItem onClick={handleExportSelected}>
                       <Download className="w-4 h-4 mr-2" />
                       Export CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportSelectedPDF}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export PDF
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleExportCourierFormat}>
                       <FileSpreadsheet className="w-4 h-4 mr-2" />
