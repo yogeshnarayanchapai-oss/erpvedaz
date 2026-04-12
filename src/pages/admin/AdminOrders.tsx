@@ -23,7 +23,7 @@ import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
 import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, InsideDeliveryStatusFilter } from '@/components/filters/OrderFiltersCard';
-import { ShoppingCart, Download, FileSpreadsheet, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
+import { ShoppingCart, Download, FileSpreadsheet, FileText, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
