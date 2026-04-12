@@ -378,6 +378,15 @@ export default function AdminOrders() {
     exportOrdersToCSV(filteredOrders, `orders_${dateFrom}_to_${dateTo}.csv`);
   };
 
+  const exportPDF = () => {
+    exportOrdersToPDF(filteredOrders, `orders_${dateFrom}_to_${dateTo}.pdf`);
+  };
+
+  const handleExportSelectedPDF = () => {
+    const selected = getSelectedOrders();
+    exportOrdersToPDF(selected, `selected_orders_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
   const exportSummaryCSV = () => {
     if (orderSummary.items.length === 0) {
       toast.error('No data to export');
