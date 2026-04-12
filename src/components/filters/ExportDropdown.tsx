@@ -1,14 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Download, FileSpreadsheet, ChevronDown } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
 
 interface ExportDropdownProps {
   onExportCSV: () => void;
   onExportCourier?: () => void;
+  onExportPDF?: () => void;
   showCourierExport?: boolean;
 }
 
-export function ExportDropdown({ onExportCSV, onExportCourier, showCourierExport = true }: ExportDropdownProps) {
+export function ExportDropdown({ onExportCSV, onExportCourier, onExportPDF, showCourierExport = true }: ExportDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -23,6 +24,12 @@ export function ExportDropdown({ onExportCSV, onExportCourier, showCourierExport
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </DropdownMenuItem>
+        {onExportPDF && (
+          <DropdownMenuItem onClick={onExportPDF}>
+            <FileText className="w-4 h-4 mr-2" />
+            Export PDF
+          </DropdownMenuItem>
+        )}
         {showCourierExport && onExportCourier && (
           <DropdownMenuItem onClick={onExportCourier}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />
