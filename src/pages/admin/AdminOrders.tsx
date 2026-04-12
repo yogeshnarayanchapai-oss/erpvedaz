@@ -650,6 +650,10 @@ export default function AdminOrders() {
                       <Download className="w-4 h-4 mr-2" />
                       Export CSV
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportSelectedPDF}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export PDF
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleExportCourierFormat}>
                       <FileSpreadsheet className="w-4 h-4 mr-2" />
                       Courier Excel
