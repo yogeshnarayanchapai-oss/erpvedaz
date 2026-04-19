@@ -9,68 +9,54 @@ interface LogisticsOrdersFilters {
   dateTo?: string;
 }
 
-// Limit logistics fetch window for performance (logistics flow is short-lived)
-const FETCH_WINDOW_DAYS = 90;
+// Lightweight SELECT — only fields used by the table/modal. Avoids `*` and heavy joins.
+const LOGISTICS_SELECT = `
+  id, order_date, created_at, order_status, delivery_location, delivery_notes,
+  destination_branch, courier_provider, amount, quantity, store_id,
+  sales_person_id, called_by_user_id, redirected_by_user_id, confirmed_by_user_id,
+  is_deleted, lead_id, customer_id, product_id,
+  products:products!orders_product_id_fkey (id, name),
+  leads:leads!orders_lead_id_fkey (id, client_name, contact_number, remark, full_address, reference_id),
+  customers:customers!orders_customer_id_fkey (id, customer_name, phone_number),
+  profiles:profiles!orders_sales_person_id_fkey (id, name),
+  confirmed_by_profile:profiles!orders_confirmed_by_user_id_fkey (id, name),
+  redirected_by:profiles!orders_redirected_by_user_id_fkey (id, name),
+  order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
+`;
 
-function getCacheKeys(storeId: string | null) {
-  const suffix = storeId || 'global';
-  return {
-    data: `logistics_all_orders_cache_${suffix}`,
-    ts: `logistics_all_orders_ts_${suffix}`,
-  };
-}
-const CACHE_MAX_AGE = 10 * 60 * 1000; // 10 minutes
-
-function getSessionCache(storeId: string | null): any[] | null {
-  try {
-    const { data, ts } = getCacheKeys(storeId);
-    const tsVal = sessionStorage.getItem(ts);
-    if (!tsVal || Date.now() - parseInt(tsVal) > CACHE_MAX_AGE) return null;
-    const cached = sessionStorage.getItem(data);
-    return cached ? JSON.parse(cached) : null;
-  } catch { return null; }
-}
-
-function setSessionCache(storeId: string | null, data: any[]) {
-  try {
-    const keys = getCacheKeys(storeId);
-    sessionStorage.setItem(keys.data, JSON.stringify(data));
-    sessionStorage.setItem(keys.ts, String(Date.now()));
-  } catch { /* storage full - ignore */ }
+function dateOnlyIso(d: Date): string {
+  // YYYY-MM-DD in local time
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-export function clearLogisticsOrdersCache() {
-  // Clear all logistics cache entries (any store)
-  try {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const k = sessionStorage.key(i);
-      if (k && k.startsWith('logistics_all_orders_')) keysToRemove.push(k);
-    }
-    keysToRemove.forEach(k => sessionStorage.removeItem(k));
-  } catch { /* ignore */ }
-}
-
-// Single hook that fetches ALL orders once and caches in sessionStorage
-export function useAllLogisticsOrders() {
+/**
+ * Fetch logistics orders for a specific date range (server-side filtered).
+ * Default range: today only — extend via the dateRange argument for "All Orders" tab.
+ */
+export function useLogisticsOrdersInRange(dateRange?: { from: Date; to: Date }) {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
   const invalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Realtime subscription with debounced invalidation to avoid thrashing
+  const fromStr = dateRange ? dateOnlyIso(dateRange.from) : dateOnlyIso(new Date());
+  const toStr = dateRange ? dateOnlyIso(dateRange.to) : dateOnlyIso(new Date());
+
+  // Realtime subscription with debounced invalidation
   useEffect(() => {
     if (!storeId) return;
     const channel = supabase
-      .channel(`logistics-portal-orders-realtime-${storeId}`)
+      .channel(`logistics-orders-rt-${storeId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => {
           if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
           invalidateTimeoutRef.current = setTimeout(() => {
-            clearLogisticsOrdersCache();
-            queryClient.invalidateQueries({ queryKey: ['logistics-all-orders', storeId] });
-          }, 3000); // debounce 3s
+            queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeId] });
+          }, 5000); // 5s debounce
         }
       )
       .subscribe();
@@ -82,45 +68,30 @@ export function useAllLogisticsOrders() {
   }, [queryClient, storeId]);
 
   const query = useQuery({
-    queryKey: ['logistics-all-orders', storeId],
+    queryKey: ['logistics-orders-range', storeId, fromStr, toStr],
     enabled: !!storeId,
     queryFn: async () => {
-      // Check sessionStorage cache first
-      const cached = getSessionCache(storeId);
-      if (cached) return cached;
+      // Server-side bounded query. Use timestamptz boundaries with NPT offset.
+      const fromIso = `${fromStr}T00:00:00+05:45`;
+      const toIso = `${toStr}T23:59:59+05:45`;
 
-      // Compute date window (last N days)
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - FETCH_WINDOW_DAYS);
-      const fromIso = fromDate.toISOString();
-
-      // Paginate to get orders within the window (bypass 1000 row limit)
+      // Paginate to handle high-volume stores without hitting the 1000 default cap.
       const allOrders: any[] = [];
       const PAGE_SIZE = 1000;
+      const MAX_PAGES = 5; // hard cap = 5000 records to avoid UI freeze
       let page = 0;
       let hasMore = true;
 
-      while (hasMore) {
-        let q = supabase
+      while (hasMore && page < MAX_PAGES) {
+        const { data, error } = await supabase
           .from('orders')
-          .select(`
-            *,
-            products (id, name),
-            leads:leads!orders_lead_id_fkey (id, client_name, contact_number, remark, full_address, reference_id),
-            customers:customers!orders_customer_id_fkey (id, customer_name, phone_number),
-            profiles:profiles!orders_sales_person_id_fkey (id, name),
-            confirmed_by_profile:profiles!orders_confirmed_by_user_id_fkey (id, name),
-            redirected_by:profiles!orders_redirected_by_user_id_fkey (id, name),
-            order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
-          `)
+          .select(LOGISTICS_SELECT)
+          .eq('store_id', storeId!)
           .eq('is_deleted', false)
           .gte('order_date', fromIso)
+          .lte('order_date', toIso)
           .order('order_date', { ascending: false })
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-        if (storeId) q = q.eq('store_id', storeId);
-
-        const { data, error } = await q;
 
         if (error) throw error;
         if (data && data.length > 0) {
@@ -131,35 +102,43 @@ export function useAllLogisticsOrders() {
           hasMore = false;
         }
       }
-
-      // Cache in sessionStorage
-      setSessionCache(storeId, allOrders);
       return allOrders;
     },
-    staleTime: 5 * 60 * 1000, // 5 min
-    gcTime: 10 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     retry: 1,
     refetchOnWindowFocus: false,
   });
 
   const forceRefresh = useCallback(() => {
-    clearLogisticsOrdersCache();
-    queryClient.invalidateQueries({ queryKey: ['logistics-all-orders', storeId] });
+    queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeId] });
   }, [queryClient, storeId]);
 
   return { ...query, forceRefresh };
 }
 
-// Keep old hook for backward compat but it now just filters the cached data
+// Backward-compat shim: returns today's orders when called with no args.
+export function useAllLogisticsOrders() {
+  return useLogisticsOrdersInRange();
+}
+
+export function clearLogisticsOrdersCache() {
+  // No sessionStorage cache anymore — kept for API compatibility.
+  return;
+}
+
+// Legacy hook kept for backward compatibility with other callers.
 export function useLogisticsPortalOrders(filters: LogisticsOrdersFilters = {}) {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
 
   useEffect(() => {
+    if (!storeId) return;
     const channel = supabase
-      .channel('logistics-portal-orders-realtime-compat')
+      .channel(`logistics-portal-orders-compat-${storeId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
         }
@@ -167,37 +146,34 @@ export function useLogisticsPortalOrders(filters: LogisticsOrdersFilters = {}) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
+  }, [queryClient, storeId]);
 
   return useQuery({
-    queryKey: ['logistics-portal-orders', filters],
+    queryKey: ['logistics-portal-orders', storeId, filters],
+    enabled: !!storeId,
     queryFn: async () => {
       let query = supabase
         .from('orders')
-        .select(`
-          *,
-          products (id, name),
-          leads:leads!orders_lead_id_fkey (id, client_name, contact_number, remark, full_address, reference_id),
-          customers:customers!orders_customer_id_fkey (id, customer_name, phone_number),
-          profiles:profiles!orders_sales_person_id_fkey (id, name),
-          confirmed_by_profile:profiles!orders_confirmed_by_user_id_fkey (id, name),
-          redirected_by:profiles!orders_redirected_by_user_id_fkey (id, name),
-          order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
-        `)
+        .select(LOGISTICS_SELECT)
         .eq('is_deleted', false)
-        .order('order_date', { ascending: false });
+        .eq('store_id', storeId!)
+        .order('order_date', { ascending: false })
+        .limit(2000);
 
       if (filters.dateFrom) {
-        query = query.gte('order_date', `${filters.dateFrom}T00:00:00`);
+        query = query.gte('order_date', `${filters.dateFrom}T00:00:00+05:45`);
       }
       if (filters.dateTo) {
-        query = query.lte('order_date', `${filters.dateTo}T23:59:59`);
+        query = query.lte('order_date', `${filters.dateTo}T23:59:59+05:45`);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
+    staleTime: 2 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -222,7 +198,6 @@ export function useLogisticsRedirectOrder() {
       userId: string;
       userName: string;
     }) => {
-      // Get order details for notification before updating
       const { data: order } = await supabase
         .from('orders')
         .select(`
@@ -247,15 +222,9 @@ export function useLogisticsRedirectOrder() {
         redirected_at: now,
       };
 
-      if (branch) {
-        updateData.destination_branch = branch;
-      }
-      if (deliveryLocation) {
-        updateData.delivery_location = deliveryLocation;
-      }
-      if (courier) {
-        updateData.courier_provider = courier;
-      }
+      if (branch) updateData.destination_branch = branch;
+      if (deliveryLocation) updateData.delivery_location = deliveryLocation;
+      if (courier) updateData.courier_provider = courier;
 
       const { error } = await supabase
         .from('orders')
@@ -264,7 +233,6 @@ export function useLogisticsRedirectOrder() {
 
       if (error) throw error;
 
-      // Notify the calling staff who owns the order
       if (order && order.sales_person_id && order.sales_person_id !== userId) {
         try {
           await notifyOrderRedirected({
@@ -283,8 +251,7 @@ export function useLogisticsRedirectOrder() {
       }
     },
     onSuccess: () => {
-      clearLogisticsOrdersCache();
-      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['logistics-orders-range'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -349,8 +316,7 @@ export function useLogisticsMarkDelivered() {
       }
     },
     onSuccess: () => {
-      clearLogisticsOrdersCache();
-      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['logistics-orders-range'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -370,7 +336,6 @@ export function useLogisticsMarkReturned() {
       userId: string;
       userName: string;
     }) => {
-      const now = new Date().toISOString();
       const returnNote = `Marked as RETURNED by ${userName} on ${new Date().toLocaleDateString()}`;
 
       const { error } = await supabase
@@ -384,8 +349,7 @@ export function useLogisticsMarkReturned() {
       if (error) throw error;
     },
     onSuccess: () => {
-      clearLogisticsOrdersCache();
-      queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['logistics-orders-range'] });
       queryClient.invalidateQueries({ queryKey: ['logistics-portal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
