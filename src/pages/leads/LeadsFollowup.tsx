@@ -24,6 +24,9 @@ import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 type FollowupTab = 'ALL' | 'FOLLOW_UP' | 'CNR';
 
@@ -100,6 +103,9 @@ export default function LeadsFollowup() {
       return isInPool && inDateRange && matchesProduct && matchesSearch && matchesTab;
     });
   }, [allLeads, dateRange, productFilter, search, tabFilter]);
+
+  const { page: fpPage, setPage: setFpPage, pagedRows: pagedFollowup } =
+    useClientPagination(followupLeads, DEFAULT_PAGE_SIZE);
 
   // Count leads by type - only those in pool
   const leadCounts = useMemo(() => {
