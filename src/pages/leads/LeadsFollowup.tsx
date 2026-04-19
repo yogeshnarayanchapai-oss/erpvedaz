@@ -409,7 +409,7 @@ export default function LeadsFollowup() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {followupLeads.map((lead, index) => (
+                {pagedFollowup.map((lead, index) => (
                   <TableRow key={lead.id}>
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
                       {index + 1}
@@ -448,6 +448,14 @@ export default function LeadsFollowup() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={fpPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={followupLeads.length}
+            onPageChange={setFpPage}
+            isLoading={isLoading}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
