@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { DateRangeFilter, DateRange } from '@/components/ui/DateRangeFilter';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -24,9 +26,6 @@ import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
-import { useClientPagination } from '@/hooks/useClientPagination';
-import { DataPagination } from '@/components/ui/data-pagination';
-import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 type FollowupTab = 'ALL' | 'FOLLOW_UP' | 'CNR';
 
@@ -104,8 +103,17 @@ export default function LeadsFollowup() {
     });
   }, [allLeads, dateRange, productFilter, search, tabFilter]);
 
-  const { page: fpPage, setPage: setFpPage, pagedRows: pagedFollowup } =
-    useClientPagination(followupLeads, DEFAULT_PAGE_SIZE);
+  // Pagination - 100 per page
+  const followupPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${search}|${tabFilter}|${followupLeads.length}`;
+  const {
+    pagedRows: pagedFollowupLeads,
+    page: followupPage,
+    setPage: setFollowupPage,
+    totalPages: followupTotalPages,
+    total: followupTotal,
+    from: followupFrom,
+    to: followupTo,
+  } = useClientPagination(followupLeads, 100, followupPaginationKey);
 
   // Count leads by type - only those in pool
   const leadCounts = useMemo(() => {
@@ -409,7 +417,7 @@ export default function LeadsFollowup() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagedFollowup.map((lead, index) => (
+                {pagedFollowupLeads.map((lead, index) => (
                   <TableRow key={lead.id}>
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
                       {index + 1}
@@ -449,11 +457,12 @@ export default function LeadsFollowup() {
             </Table>
           </div>
           <DataPagination
-            page={fpPage}
-            pageSize={DEFAULT_PAGE_SIZE}
-            totalCount={followupLeads.length}
-            onPageChange={setFpPage}
-            isLoading={isLoading}
+            page={followupPage}
+            totalPages={followupTotalPages}
+            total={followupTotal}
+            from={followupFrom}
+            to={followupTo}
+            onPageChange={setFollowupPage}
             itemLabel="leads"
           />
         </CardContent>

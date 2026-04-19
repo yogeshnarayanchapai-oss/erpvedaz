@@ -23,14 +23,13 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { FormattedDate } from '@/components/FormattedDate';
 import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
-import { useClientPagination } from '@/hooks/useClientPagination';
-import { DataPagination } from '@/components/ui/data-pagination';
-import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
@@ -190,9 +189,17 @@ export default function LeadsAll() {
     return leads;
   }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
 
-  // Client-side pagination — slices filteredLeads into 100/page for rendering.
-  const { page: leadsPage, setPage: setLeadsPage, pagedRows: pagedLeads } =
-    useClientPagination(filteredLeads, DEFAULT_PAGE_SIZE);
+  // Pagination - 100 per page; resets when filters change
+  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${filteredLeads.length}`;
+  const {
+    pagedRows: pagedLeads,
+    page: leadsPage,
+    setPage: setLeadsPage,
+    totalPages: leadsTotalPages,
+    total: leadsTotal,
+    from: leadsFrom,
+    to: leadsTo,
+  } = useClientPagination(filteredLeads, 100, leadsPaginationKey);
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
   const bucketCounts = useMemo(() => {
@@ -698,7 +705,7 @@ export default function LeadsAll() {
                 {isLoading ? 'Loading...' : 'No leads found'}
               </div>
             ) : (
-              pagedLeads.map((lead, index) => (
+              filteredLeads.length === 0 ? null : pagedLeads.map((lead, index) => (
                 <div 
                   key={lead.id} 
                   className={cn(
@@ -821,10 +828,11 @@ export default function LeadsAll() {
           </div>
           <DataPagination
             page={leadsPage}
-            pageSize={DEFAULT_PAGE_SIZE}
-            totalCount={filteredLeads.length}
+            totalPages={leadsTotalPages}
+            total={leadsTotal}
+            from={leadsFrom}
+            to={leadsTo}
             onPageChange={setLeadsPage}
-            isLoading={isLoading}
             itemLabel="leads"
           />
         </CardContent>

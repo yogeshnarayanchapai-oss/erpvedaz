@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Eye, Edit, Copy, MapPin } from 'lucide-react';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays } from 'date-fns';
 
@@ -22,9 +24,6 @@ import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, Inside
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
-import { useClientPagination } from '@/hooks/useClientPagination';
-import { DataPagination } from '@/components/ui/data-pagination';
-import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 const INSIDE_DELIVERY_STATUS_OPTIONS: { value: InsideDeliveryStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pending' },
@@ -164,8 +163,17 @@ export default function CallingOrders() {
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, searchQuery]);
 
-  const { page: ordersPage, setPage: setOrdersPage, pagedRows: pagedOrders } =
-    useClientPagination(orders, DEFAULT_PAGE_SIZE);
+  // Pagination - 100 per page
+  const callingOrdersPaginationKey = `${statusFilter}|${productFilter}|${deliveryFilter}|${insideDeliveryStatusFilter}|${searchQuery}|${orders.length}`;
+  const {
+    pagedRows: pagedCallingOrders,
+    page: callingPage,
+    setPage: setCallingPage,
+    totalPages: callingTotalPages,
+    total: callingTotal,
+    from: callingFrom,
+    to: callingTo,
+  } = useClientPagination(orders, 100, callingOrdersPaginationKey);
   
   // Real-time subscription
   useEffect(() => {
@@ -382,7 +390,7 @@ export default function CallingOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagedOrders.map((order) => (
+                {pagedCallingOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-muted/50">
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       {format(new Date(order.order_date), 'dd MMM HH:mm')}
@@ -535,15 +543,16 @@ export default function CallingOrders() {
                 )}
               </TableBody>
             </Table>
-          </div>
           <DataPagination
-            page={ordersPage}
-            pageSize={DEFAULT_PAGE_SIZE}
-            totalCount={orders.length}
-            onPageChange={setOrdersPage}
-            isLoading={isLoading}
+            page={callingPage}
+            totalPages={callingTotalPages}
+            total={callingTotal}
+            from={callingFrom}
+            to={callingTo}
+            onPageChange={setCallingPage}
             itemLabel="orders"
           />
+          </div>
         </CardContent>
       </Card>
       {/* Edit Order Sheet */}

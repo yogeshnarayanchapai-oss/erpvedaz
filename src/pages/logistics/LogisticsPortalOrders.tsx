@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,14 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
-import { useLogisticsOrdersPaginated } from '@/hooks/useLogisticsPortalOrders';
+import { useLogisticsOrdersInRange } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { useStaff } from '@/hooks/useStaff';
+import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
-import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 // Nepal timezone helpers - returns date string in YYYY-MM-DD format for Nepal time
 function getNepalDateString(): string {
@@ -68,7 +68,7 @@ export default function LogisticsPortalOrders() {
   const todayNepal = getNepalDateString();
 
   // Active tab determines which date range to fetch from server.
-  // "New Orders" = today only. "All Orders" = user-selected range.
+  // "New Orders" = today only (small payload). "All Orders" = user-selected range.
   const activeRange = useMemo(() => {
     if (activeTab === 'new') {
       const today = new Date();
@@ -77,65 +77,93 @@ export default function LogisticsPortalOrders() {
     return allOrdersDateRange;
   }, [activeTab, allOrdersDateRange]);
 
-  // Pagination state
-  const [page, setPage] = useState(1);
+  const { data: rangeOrders = [], isLoading, isFetching, isError, forceRefresh } = useLogisticsOrdersInRange(activeRange);
 
-  // Reset to page 1 when filters/tab/date change
-  useEffect(() => {
-    setPage(1);
-  }, [activeTab, deliveryFilter, statusFilter, staffFilter, search, allOrdersDateRange]);
+  // For search, we use whatever is currently loaded (range-bound).
+  const allCachedOrders = rangeOrders;
 
-  const {
-    data: paged,
-    isLoading,
-    isFetching,
-    isError,
-    forceRefresh,
-  } = useLogisticsOrdersPaginated({
-    dateRange: activeRange,
-    page,
-    pageSize: DEFAULT_PAGE_SIZE,
-    statusFilter,
-    deliveryFilter,
-    staffFilter,
-    excludeDeliveredCancelled: activeTab === 'new' && statusFilter === 'all',
-  });
+  const todayOrders = useMemo(() => 
+    rangeOrders.filter(o => {
+      if (!o.order_date) return false;
+      return o.order_date.substring(0, 10) === todayNepal;
+    }),
+    [rangeOrders, todayNepal]
+  );
 
-  const rangeOrders = paged?.rows || [];
-  const totalCount = paged?.totalCount || 0;
+  const orders = activeTab === 'new' ? todayOrders : rangeOrders;
 
-  // Client-side search on the current page only (works for the visible 100 rows).
+  // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
-    let result = rangeOrders as any[];
+    // If search is active, search across ALL cached orders (bypass date filter)
     if (search) {
       const searchLower = search.toLowerCase();
       const isRefSearch = isReferenceIdSearch(search);
-      result = result.filter((o: any) => {
+      
+      let result = allCachedOrders.filter(o => {
         if (isRefSearch) {
-          return matchesReferenceId(o.leads?.reference_id, search);
+          return matchesReferenceId((o.leads as any)?.reference_id, search);
         }
         return (
-          o.leads?.client_name?.toLowerCase().includes(searchLower) ||
-          o.leads?.contact_number?.includes(search) ||
-          o.leads?.reference_id?.includes(search.replace('#', '')) ||
+          (o.leads as any)?.client_name?.toLowerCase().includes(searchLower) ||
+          (o.leads as any)?.contact_number?.includes(search) ||
+          (o.leads as any)?.reference_id?.includes(search.replace('#', '')) ||
           o.destination_branch?.toLowerCase().includes(searchLower)
         );
       });
+      if (staffFilter !== 'all') {
+        result = result.filter(o => o.called_by_user_id === staffFilter);
+      }
+      if (deliveryFilter !== 'all') {
+        result = result.filter(o => o.delivery_location === deliveryFilter);
+      }
+      if (statusFilter !== 'all') {
+        result = result.filter(o => o.order_status === statusFilter);
+      }
+      return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
-    return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [rangeOrders, search]);
 
-  // Stats (only used on dashboard) — show from current page only for performance.
+    let filtered = orders;
+    
+    // New Orders tab: exclude delivered/cancelled
+    if (activeTab === 'new') {
+      filtered = filtered.filter(o => 
+        !['DELIVERED', 'CANCELLED'].includes(o.order_status || '')
+      );
+    }
+    
+    // Apply filters
+    if (deliveryFilter !== 'all') {
+      filtered = filtered.filter(o => o.delivery_location === deliveryFilter);
+    }
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(o => o.order_status === statusFilter);
+    }
+    if (staffFilter !== 'all') {
+      filtered = filtered.filter(o => o.called_by_user_id === staffFilter);
+    }
+    
+    // Sort by newest first
+    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [orders, allCachedOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
+
+  // Pagination - 100 per page; resets when filters/tab change
+  const paginationKey = `${activeTab}|${deliveryFilter}|${statusFilter}|${staffFilter}|${search}|${filteredOrders.length}`;
+  const { pagedRows: pagedOrders, page, setPage, totalPages, total, from, to } =
+    useClientPagination(filteredOrders, 100, paginationKey);
+
+  // Stats (only used on dashboard)
   const stats = useMemo(() => {
-    const data = rangeOrders as any[];
+    const data = activeTab === 'new' 
+      ? orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.order_status || ''))
+      : orders;
     return {
-      total: totalCount,
-      inside: data.filter((o: any) => o.delivery_location === 'INSIDE_VALLEY').length,
-      outside: data.filter((o: any) => o.delivery_location === 'OUTSIDE_VALLEY').length,
-      redirected: data.filter((o: any) => o.order_status === 'REDIRECT').length,
-      delivered: data.filter((o: any) => o.order_status === 'DELIVERED').length,
+      total: data.length,
+      inside: data.filter(o => o.delivery_location === 'INSIDE_VALLEY').length,
+      outside: data.filter(o => o.delivery_location === 'OUTSIDE_VALLEY').length,
+      redirected: data.filter(o => o.order_status === 'REDIRECT').length,
+      delivered: data.filter(o => o.order_status === 'DELIVERED').length,
     };
-  }, [rangeOrders, totalCount]);
+  }, [orders, activeTab]);
 
   const getDeliveryBadge = (location: string | null) => {
     if (location === 'INSIDE_VALLEY') {
@@ -452,7 +480,7 @@ export default function LogisticsPortalOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
+                {pagedOrders.map((order) => {
                   const orderItems = (order as any).order_items || [];
                   const productDisplay = orderItems.length > 0 
                     ? orderItems.map((item: any) => `(${item.quantity || 1}) ${item.product_name}`).join(', ')
@@ -533,13 +561,13 @@ export default function LogisticsPortalOrders() {
               </TableBody>
             </Table>
           </div>
-          {/* Pagination */}
           <DataPagination
             page={page}
-            pageSize={DEFAULT_PAGE_SIZE}
-            totalCount={totalCount}
+            totalPages={totalPages}
+            total={total}
+            from={from}
+            to={to}
             onPageChange={setPage}
-            isLoading={isFetching}
             itemLabel="orders"
           />
         </CardContent>

@@ -28,6 +28,8 @@ import { useAvailableStock } from '@/hooks/useAvailableStock';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO_IN'] as const;
 
@@ -168,6 +170,18 @@ export default function StockMovements() {
   const createMovement = useCreateStockMovement();
   const deleteMovement = useDeleteStockMovement();
   const updateMovement = useUpdateStockMovement();
+
+  // Pagination - 100 per page
+  const movementsPaginationKey = `${dateRange.startDate}|${dateRange.endDate}|${filters.warehouseId}|${filters.productId}|${filters.movementType}|${filters.remarkSearch}|${(movements ?? []).length}`;
+  const {
+    pagedRows: pagedMovements,
+    page: movementsPage,
+    setPage: setMovementsPage,
+    totalPages: movementsTotalPages,
+    total: movementsTotal,
+    from: movementsFrom,
+    to: movementsTo,
+  } = useClientPagination(movements ?? [], 100, movementsPaginationKey);
 
   // Determine the warehouse ID to check stock for (source warehouse for transfers, regular warehouse for others)
   const stockCheckWarehouseId = form.movement_type === 'TRANSFER' ? form.from_warehouse_id : form.warehouse_id;
@@ -799,7 +813,7 @@ export default function StockMovements() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.map((m) => {
+                {pagedMovements.map((m) => {
                   // Display warehouse: For TRANSFER show "From → To", otherwise show warehouse name
                   const warehouseDisplay = m.movement_type === 'TRANSFER' && m.from_warehouse && m.to_warehouse
                     ? `${m.from_warehouse.name} → ${m.to_warehouse.name}`
@@ -896,6 +910,15 @@ export default function StockMovements() {
               </TableBody>
             </Table>
           )}
+          <DataPagination
+            page={movementsPage}
+            totalPages={movementsTotalPages}
+            total={movementsTotal}
+            from={movementsFrom}
+            to={movementsTo}
+            onPageChange={setMovementsPage}
+            itemLabel="movements"
+          />
         </CardContent>
       </Card>
 

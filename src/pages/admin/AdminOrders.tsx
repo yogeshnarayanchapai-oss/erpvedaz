@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -29,9 +31,6 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
-import { useClientPagination } from '@/hooks/useClientPagination';
-import { DataPagination } from '@/components/ui/data-pagination';
-import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 interface DateRange {
   from: Date;
@@ -229,8 +228,17 @@ export default function AdminOrders() {
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedOrderDate, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
 
-  const { page: aoPage, setPage: setAoPage, pagedRows: pagedFilteredOrders } =
-    useClientPagination(filteredOrders, DEFAULT_PAGE_SIZE);
+  // Pagination - 100 per page
+  const ordersPaginationKey = `${selectedStatus}|${selectedDelivery}|${selectedInsideDeliveryStatus}|${selectedOrderDate}|${selectedProduct}|${selectedSalesPerson}|${showDuplicatesOnly}|${search}|${filteredOrders.length}`;
+  const {
+    pagedRows: pagedOrders,
+    page: ordersPage,
+    setPage: setOrdersPage,
+    totalPages: ordersTotalPages,
+    total: ordersTotal,
+    from: ordersFrom,
+    to: ordersTo,
+  } = useClientPagination(filteredOrders, 100, ordersPaginationKey);
 
   // Count duplicates - check both order and linked lead is_duplicate
   const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
@@ -682,7 +690,7 @@ export default function AdminOrders() {
                 {isLoading ? 'Loading...' : 'No orders found'}
               </p>
             )}
-            {pagedFilteredOrders.map((order) => {
+            {pagedOrders.map((order) => {
               const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
               const productDisplay = orderItemsList.length > 0 
                 ? orderItemsList.map((item: any) => {
@@ -796,7 +804,7 @@ export default function AdminOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagedFilteredOrders.map((order) => {
+                {pagedOrders.map((order) => {
                   const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
                   const productDisplay = orderItemsList.length > 0 
                     ? orderItemsList.map((item: any) => {
@@ -959,11 +967,12 @@ export default function AdminOrders() {
             </Table>
           </div>
           <DataPagination
-            page={aoPage}
-            pageSize={DEFAULT_PAGE_SIZE}
-            totalCount={filteredOrders.length}
-            onPageChange={setAoPage}
-            isLoading={isLoading}
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            total={ordersTotal}
+            from={ordersFrom}
+            to={ordersTo}
+            onPageChange={setOrdersPage}
             itemLabel="orders"
           />
         </CardContent>

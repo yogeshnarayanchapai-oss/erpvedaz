@@ -32,6 +32,8 @@ import { LockFilledIcon, UnlockFilledIcon } from '@/components/icons/LockIcons';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 export default function ViewTransactions() {
   const queryClient = useQueryClient();
@@ -115,6 +117,18 @@ export default function ViewTransactions() {
       t.parties?.name.toLowerCase().includes(searchLower)
     );
   });
+
+  // Pagination - 100 per page
+  const txPaginationKey = `${filters.startDate}|${filters.endDate}|${filters.type}|${filters.accountId}|${filters.partyId}|${filters.categoryId}|${filters.search}|${filteredTransactions.length}`;
+  const {
+    pagedRows: pagedTransactions,
+    page: txPage,
+    setPage: setTxPage,
+    totalPages: txTotalPages,
+    total: txTotal,
+    from: txFrom,
+    to: txTo,
+  } = useClientPagination(filteredTransactions, 100, txPaginationKey);
 
   const handleTypeSelected = (type: TransactionType) => {
     switch (type) {
@@ -476,7 +490,7 @@ export default function ViewTransactions() {
                   </TableCell>
                 </TableRow>
               )}
-              {filteredTransactions.map((transaction) => (
+              {pagedTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   {canDelete && (
                     <TableCell>
@@ -562,6 +576,15 @@ export default function ViewTransactions() {
               ))}
             </TableBody>
           </Table>
+          <DataPagination
+            page={txPage}
+            totalPages={txTotalPages}
+            total={txTotal}
+            from={txFrom}
+            to={txTo}
+            onPageChange={setTxPage}
+            itemLabel="transactions"
+          />
         </CardContent>
       </Card>
 

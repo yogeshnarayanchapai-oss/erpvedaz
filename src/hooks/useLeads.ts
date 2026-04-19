@@ -163,67 +163,6 @@ export function useLeads(filters?: {
   });
 }
 
-/**
- * Server-side PAGINATED leads hook (100 per page).
- * Use this for large lists. Returns { rows, totalCount }.
- */
-export function useLeadsPaginated(opts: {
-  page: number;
-  pageSize: number;
-  status?: LeadStatus;
-  team?: TeamType;
-  assignedTo?: string;
-  productId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  leadBucket?: LeadBucket;
-  poolStatus?: PoolStatus;
-  isDuplicate?: boolean;
-  createdByUserId?: string | null;
-  storeId?: string;
-}) {
-  const currentStoreId = useCurrentStoreId();
-  const storeId = opts.storeId || currentStoreId;
-
-  return useQuery({
-    queryKey: ['leads-paginated', opts, storeId],
-    queryFn: async () => {
-      let query = supabase
-        .from('leads')
-        .select(`
-          *,
-          products:product_id(name),
-          assigned_to:profiles!leads_assigned_to_user_id_fkey(name),
-          created_by_staff:profiles!leads_created_by_staff_id_fkey(name),
-          branches:branch_id(branch_name, district, arrival_time, contact_phone, base_charge, area_covered)
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false });
-
-      if (storeId) query = query.eq('store_id', storeId);
-      if (opts.createdByUserId) query = query.eq('created_by_user_id', opts.createdByUserId);
-      if (opts.status) query = query.eq('status', opts.status);
-      if (opts.team) query = query.eq('current_team', opts.team);
-      if (opts.assignedTo) query = query.eq('assigned_to_user_id', opts.assignedTo);
-      if (opts.productId) query = query.eq('product_id', opts.productId);
-      if (opts.dateFrom) query = query.gte('date', opts.dateFrom);
-      if (opts.dateTo) query = query.lte('date', opts.dateTo);
-      if (opts.leadBucket) query = query.eq('lead_bucket', opts.leadBucket);
-      if (opts.poolStatus) query = query.eq('pool_status', opts.poolStatus);
-      if (opts.isDuplicate !== undefined) query = query.eq('is_duplicate', opts.isDuplicate);
-
-      const from = (opts.page - 1) * opts.pageSize;
-      const to = from + opts.pageSize - 1;
-      const { data, error, count } = await query.range(from, to);
-      if (error) throw error;
-      return { rows: (data || []) as Lead[], totalCount: count || 0 };
-    },
-    enabled: !!storeId && opts.createdByUserId !== null,
-    staleTime: 60 * 1000,
-    retry: 1,
-    refetchOnWindowFocus: false,
-  });
-}
-
 // Hook for Staff Transfer Summary - includes ALL leads (including confirmed ones)
 // This ensures "Today Transfer" count doesn't decrease when leads get confirmed
 export function useLeadsForTransferSummary() {
