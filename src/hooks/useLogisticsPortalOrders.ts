@@ -122,6 +122,96 @@ export function useAllLogisticsOrders() {
   return useLogisticsOrdersInRange();
 }
 
+/**
+ * Server-side PAGINATED version (100 per page).
+ * Use this for the Logistics Orders table — fetches only 100 records at a time.
+ */
+export function useLogisticsOrdersPaginated(opts: {
+  dateRange?: { from: Date; to: Date };
+  page: number;
+  pageSize: number;
+  statusFilter?: string;
+  deliveryFilter?: string;
+  staffFilter?: string;
+  excludeDeliveredCancelled?: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  const invalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { dateRange, page, pageSize, statusFilter, deliveryFilter, staffFilter, excludeDeliveredCancelled } = opts;
+  const fromStr = dateRange ? dateOnlyIso(dateRange.from) : dateOnlyIso(new Date());
+  const toStr = dateRange ? dateOnlyIso(dateRange.to) : dateOnlyIso(new Date());
+
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabase
+      .channel(`logistics-orders-paginated-${storeId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+        () => {
+          if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
+          invalidateTimeoutRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['logistics-orders-paginated', storeId] });
+          }, 5000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, storeId]);
+
+  const query = useQuery({
+    queryKey: ['logistics-orders-paginated', storeId, fromStr, toStr, page, pageSize, statusFilter, deliveryFilter, staffFilter, excludeDeliveredCancelled],
+    enabled: !!storeId,
+    queryFn: async () => {
+      const fromIso = `${fromStr}T00:00:00+05:45`;
+      const toIso = `${toStr}T23:59:59+05:45`;
+
+      let q = supabase
+        .from('orders')
+        .select(LOGISTICS_SELECT, { count: 'exact' })
+        .eq('store_id', storeId!)
+        .eq('is_deleted', false)
+        .gte('order_date', fromIso)
+        .lte('order_date', toIso)
+        .order('order_date', { ascending: false });
+
+      if (statusFilter && statusFilter !== 'all') {
+        q = q.eq('order_status', statusFilter);
+      } else if (excludeDeliveredCancelled) {
+        q = q.not('order_status', 'in', '("DELIVERED","CANCELLED")');
+      }
+      if (deliveryFilter && deliveryFilter !== 'all') {
+        q = q.eq('delivery_location', deliveryFilter);
+      }
+      if (staffFilter && staffFilter !== 'all') {
+        q = q.eq('called_by_user_id', staffFilter);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await q.range(from, to);
+      if (error) throw error;
+      return { rows: data || [], totalCount: count || 0 };
+    },
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const forceRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['logistics-orders-paginated', storeId] });
+  }, [queryClient, storeId]);
+
+  return { ...query, forceRefresh };
+}
+
 export function clearLogisticsOrdersCache() {
   // No sessionStorage cache anymore — kept for API compatibility.
   return;
