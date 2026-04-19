@@ -80,9 +80,10 @@ export default function LeadsDashboard() {
   }, [orders, allLeads, isAdminOrOwner, currentUserId]);
 
   useEffect(() => {
+    if (!currentStoreId) return;
     const channel = supabase
-      .channel('leads-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      .channel(`leads-dashboard-rt-${currentStoreId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `store_id=eq.${currentStoreId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['leads'] });
       })
       .subscribe();
@@ -90,7 +91,7 @@ export default function LeadsDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, currentStoreId]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);

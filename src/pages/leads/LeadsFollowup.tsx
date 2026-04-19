@@ -43,14 +43,21 @@ export default function LeadsFollowup() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [transferStaffId, setTransferStaffId] = useState('');
 
-  const { data: allLeads = [], isLoading } = useLeads();
+  // Server-side filter to avoid fetching the entire store's lead pool.
+  const leadsFilters = useMemo(() => ({
+    dateFrom: format(dateRange.from, 'yyyy-MM-dd'),
+    dateTo: format(dateRange.to, 'yyyy-MM-dd'),
+  }), [dateRange]);
+
+  const { data: allLeads = [], isLoading } = useLeads(leadsFilters);
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
 
   useEffect(() => {
+    if (!currentStore?.id) return;
     const channel = supabase
-      .channel('leads-followup-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      .channel(`leads-followup-rt-${currentStore.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `store_id=eq.${currentStore.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['leads'] });
       })
       .subscribe();
@@ -58,7 +65,7 @@ export default function LeadsFollowup() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, currentStore?.id]);
 
   // Filter for follow-up and CNR leads returned to LEADS team with IN_POOL status
   const followupLeads = useMemo(() => {
