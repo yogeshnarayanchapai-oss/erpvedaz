@@ -24,6 +24,9 @@ import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
 import { FormattedDate } from '@/components/FormattedDate';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 type FollowupTab = 'ALL' | 'FOLLOW_UP' | 'CNR';
 
@@ -100,6 +103,9 @@ export default function LeadsFollowup() {
       return isInPool && inDateRange && matchesProduct && matchesSearch && matchesTab;
     });
   }, [allLeads, dateRange, productFilter, search, tabFilter]);
+
+  const { page: fpPage, setPage: setFpPage, pagedRows: pagedFollowup } =
+    useClientPagination(followupLeads, DEFAULT_PAGE_SIZE);
 
   // Count leads by type - only those in pool
   const leadCounts = useMemo(() => {
@@ -403,7 +409,7 @@ export default function LeadsFollowup() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {followupLeads.map((lead, index) => (
+                {pagedFollowup.map((lead, index) => (
                   <TableRow key={lead.id}>
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
                       {index + 1}
@@ -442,6 +448,14 @@ export default function LeadsFollowup() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={fpPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={followupLeads.length}
+            onPageChange={setFpPage}
+            isLoading={isLoading}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
