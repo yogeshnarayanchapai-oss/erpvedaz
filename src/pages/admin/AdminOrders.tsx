@@ -29,6 +29,9 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { toast } from 'sonner';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 interface DateRange {
   from: Date;
@@ -225,6 +228,9 @@ export default function AdminOrders() {
       return matchesStatus && matchesDelivery && matchesProduct && matchesSalesPerson && matchesDuplicate && matchesSearch && matchesInsideDeliveryStatus && matchesOrderDate;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedOrderDate, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
+
+  const { page: aoPage, setPage: setAoPage, pagedRows: pagedFilteredOrders } =
+    useClientPagination(filteredOrders, DEFAULT_PAGE_SIZE);
 
   // Count duplicates - check both order and linked lead is_duplicate
   const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
@@ -676,7 +682,7 @@ export default function AdminOrders() {
                 {isLoading ? 'Loading...' : 'No orders found'}
               </p>
             )}
-            {filteredOrders.map((order) => {
+            {pagedFilteredOrders.map((order) => {
               const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
               const productDisplay = orderItemsList.length > 0 
                 ? orderItemsList.map((item: any) => {
@@ -790,7 +796,7 @@ export default function AdminOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
+                {pagedFilteredOrders.map((order) => {
                   const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
                   const productDisplay = orderItemsList.length > 0 
                     ? orderItemsList.map((item: any) => {
