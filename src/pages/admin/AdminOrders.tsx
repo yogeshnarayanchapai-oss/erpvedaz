@@ -966,6 +966,15 @@ export default function AdminOrders() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            total={ordersTotal}
+            from={ordersFrom}
+            to={ordersTo}
+            onPageChange={setOrdersPage}
+            itemLabel="orders"
+          />
         </CardContent>
       </Card>
 

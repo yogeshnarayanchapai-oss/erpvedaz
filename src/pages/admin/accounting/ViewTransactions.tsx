@@ -576,6 +576,15 @@ export default function ViewTransactions() {
               ))}
             </TableBody>
           </Table>
+          <DataPagination
+            page={txPage}
+            totalPages={txTotalPages}
+            total={txTotal}
+            from={txFrom}
+            to={txTo}
+            onPageChange={setTxPage}
+            itemLabel="transactions"
+          />
         </CardContent>
       </Card>
 
