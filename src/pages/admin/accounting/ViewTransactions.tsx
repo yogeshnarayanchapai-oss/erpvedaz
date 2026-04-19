@@ -32,6 +32,8 @@ import { LockFilledIcon, UnlockFilledIcon } from '@/components/icons/LockIcons';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 export default function ViewTransactions() {
   const queryClient = useQueryClient();

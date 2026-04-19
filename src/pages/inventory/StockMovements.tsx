@@ -28,6 +28,8 @@ import { useAvailableStock } from '@/hooks/useAvailableStock';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 const MOVEMENT_TYPES = ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT', 'WHOLESALE_OUT', 'RTO_IN'] as const;
 

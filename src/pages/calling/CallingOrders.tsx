@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Eye, Edit, Copy, MapPin } from 'lucide-react';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { exportOrdersToCourierFormat } from '@/services/courierExportService';
 import { format, subDays } from 'date-fns';
 

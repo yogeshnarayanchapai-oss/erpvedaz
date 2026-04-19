@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
 import { DeleteLeadsButton } from '@/components/leads/DeleteLeadsButton';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { FormattedDate } from '@/components/FormattedDate';
 import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
