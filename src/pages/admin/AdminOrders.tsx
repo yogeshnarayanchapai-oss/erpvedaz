@@ -640,7 +640,8 @@ export default function AdminOrders() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              {datePreset === 'today' ? "Today's Orders" : 'Orders'} ({filteredOrders.length})
+              {datePreset === 'today' ? "Today's Orders" : 'Orders'}
+              {ordersTotal > 0 ? ` (${ordersFrom}–${ordersTo} of ${ordersTotal})` : ' (0)'}
               {selectedOrders.size > 0 && (
                 <Badge variant="secondary" className="ml-2">{selectedOrders.size} selected</Badge>
               )}

@@ -29,6 +29,8 @@ import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { LeadFiltersCard, DatePreset, FollowupFilterType } from '@/components/filters/LeadFiltersCard';
 import { AddLeadDropdown } from '@/components/filters/AddLeadDropdown';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 export default function CallingLeads() {
   const { profile } = useAuth();
@@ -209,6 +211,17 @@ export default function CallingLeads() {
       return dateB - dateA;
     });
   }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive]);
+
+  const leadsPaginationKey = `${dateRange.from}|${dateRange.to}|${datePreset}|${productFilter}|${statusFilter}|${followupFilter}|${searchQuery}|${leads.length}`;
+  const {
+    pagedRows: pagedLeads,
+    page: leadsPage,
+    setPage: setLeadsPage,
+    totalPages: leadsTotalPages,
+    total: leadsTotal,
+    from: leadsFrom,
+    to: leadsTo,
+  } = useClientPagination(leads, 100, leadsPaginationKey);
   
   // Pending calls count
   const pendingCallsCount = useMemo(() => {
@@ -784,7 +797,7 @@ Order By: ${profile?.name || 'N/A'}`;
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.map((lead, index) => {
+                {pagedLeads.map((lead, index) => {
                   const isOverdue = lead.status === 'FOLLOW_UP' && 
                     lead.next_followup_at && 
                     new Date(lead.next_followup_at) < new Date() &&
@@ -800,7 +813,7 @@ Order By: ${profile?.name || 'N/A'}`;
                       className={`${isNewLead(lead) ? 'bg-primary/5' : ''} ${isOverdue ? 'border-l-4 border-l-destructive bg-destructive/5' : ''} ${isDue && !isOverdue ? 'border-l-4 border-l-info bg-info/5' : ''}`}
                     >
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
-                      {index + 1}
+                      {leadsFrom + index}
                     </TableCell>
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       <FormattedDate date={lead.date} />
@@ -950,6 +963,15 @@ Order By: ${profile?.name || 'N/A'}`;
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={leadsPage}
+            totalPages={leadsTotalPages}
+            total={leadsTotal}
+            from={leadsFrom}
+            to={leadsTo}
+            onPageChange={setLeadsPage}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
