@@ -103,9 +103,10 @@ export default function LeadsAll() {
   });
 
   useEffect(() => {
+    if (!currentStore?.id) return;
     const channel = supabase
-      .channel('leads-all-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      .channel(`leads-all-rt-${currentStore.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `store_id=eq.${currentStore.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['leads'] });
       })
       .subscribe();
@@ -113,7 +114,7 @@ export default function LeadsAll() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, currentStore?.id]);
 
   // Sync bucket filter with URL params
   useEffect(() => {
