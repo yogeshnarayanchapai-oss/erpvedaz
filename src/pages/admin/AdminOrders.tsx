@@ -958,6 +958,14 @@ export default function AdminOrders() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={aoPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={filteredOrders.length}
+            onPageChange={setAoPage}
+            isLoading={isLoading}
+            itemLabel="orders"
+          />
         </CardContent>
       </Card>
 
