@@ -171,6 +171,18 @@ export default function StockMovements() {
   const deleteMovement = useDeleteStockMovement();
   const updateMovement = useUpdateStockMovement();
 
+  // Pagination - 100 per page
+  const movementsPaginationKey = `${dateRange.startDate}|${dateRange.endDate}|${filters.warehouseId}|${filters.productId}|${filters.movementType}|${filters.remarkSearch}|${(movements ?? []).length}`;
+  const {
+    pagedRows: pagedMovements,
+    page: movementsPage,
+    setPage: setMovementsPage,
+    totalPages: movementsTotalPages,
+    total: movementsTotal,
+    from: movementsFrom,
+    to: movementsTo,
+  } = useClientPagination(movements ?? [], 100, movementsPaginationKey);
+
   // Determine the warehouse ID to check stock for (source warehouse for transfers, regular warehouse for others)
   const stockCheckWarehouseId = form.movement_type === 'TRANSFER' ? form.from_warehouse_id : form.warehouse_id;
   const { data: availableStockData } = useAvailableStock(form.product_id || undefined, stockCheckWarehouseId || undefined);
