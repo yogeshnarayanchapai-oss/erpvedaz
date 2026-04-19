@@ -480,7 +480,7 @@ export default function LogisticsPortalOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
+                {pagedOrders.map((order) => {
                   const orderItems = (order as any).order_items || [];
                   const productDisplay = orderItems.length > 0 
                     ? orderItems.map((item: any) => `(${item.quantity || 1}) ${item.product_name}`).join(', ')
