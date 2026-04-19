@@ -37,6 +37,8 @@ import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress'
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { LeadFiltersCard, DatePreset } from '@/components/filters/LeadFiltersCard';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { toast } from 'sonner';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { FileSpreadsheet } from 'lucide-react';
@@ -270,6 +272,17 @@ export default function AdminLeads() {
     // Sort by created_at descending - newest first
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+
+  const leadsPaginationKey = `${datePreset}|${dateFrom}|${dateTo}|${selectedProduct}|${selectedStatus}|${assignedToFilter}|${search}|${filteredLeads.length}`;
+  const {
+    pagedRows: pagedLeads,
+    page: leadsPage,
+    setPage: setLeadsPage,
+    totalPages: leadsTotalPages,
+    total: leadsTotal,
+    from: leadsFrom,
+    to: leadsTo,
+  } = useClientPagination(filteredLeads, 100, leadsPaginationKey);
 
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
@@ -1045,7 +1058,7 @@ export default function AdminLeads() {
                 {isLoading ? 'Loading...' : 'No leads found'}
               </div>
             ) : (
-              filteredLeads.map((lead, index) => (
+              pagedLeads.map((lead, index) => (
                 <div 
                   key={lead.id}
                   className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/50"
@@ -1057,7 +1070,7 @@ export default function AdminLeads() {
                         checked={selectedLeads.includes(lead.id)}
                         onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
                       />
-                      <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                      <span className="text-xs text-muted-foreground">#{leadsFrom + index}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Badge variant="outline" className={cn("text-xs", getLeadStatusBadgeClass(lead.status || 'NEW'))}>
@@ -1133,10 +1146,10 @@ export default function AdminLeads() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((lead, index) => (
+                {pagedLeads.map((lead, index) => (
                   <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleViewLead(lead)}>
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
-                      {index + 1}
+                      {leadsFrom + index}
                     </TableCell>
                     <TableCell className="w-[50px] text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -1213,6 +1226,15 @@ export default function AdminLeads() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={leadsPage}
+            totalPages={leadsTotalPages}
+            total={leadsTotal}
+            from={leadsFrom}
+            to={leadsTo}
+            onPageChange={setLeadsPage}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
