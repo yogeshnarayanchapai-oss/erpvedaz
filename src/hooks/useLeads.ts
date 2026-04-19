@@ -150,11 +150,16 @@ export function useLeads(filters?: {
         query = query.eq('lead_bucket', filters.leadBucket);
       }
 
-      const { data, error } = await query.range(0, 9999);
+      // Hard cap to prevent runaway fetches on huge stores. Pages should always
+      // pass dateFrom/dateTo or createdByUserId to stay well under this limit.
+      const { data, error } = await query.range(0, 4999);
       if (error) throw error;
       return data as Lead[];
     },
     enabled: !!storeId && filters?.createdByUserId !== null,
+    staleTime: 60 * 1000, // 1 min — reduces refetch storms from realtime
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
