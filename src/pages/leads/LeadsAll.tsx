@@ -28,6 +28,9 @@ import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
@@ -186,6 +189,10 @@ export default function LeadsAll() {
 
     return leads;
   }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
+
+  // Client-side pagination — slices filteredLeads into 100/page for rendering.
+  const { page: leadsPage, setPage: setLeadsPage, pagedRows: pagedLeads } =
+    useClientPagination(filteredLeads, DEFAULT_PAGE_SIZE);
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
   const bucketCounts = useMemo(() => {
@@ -691,7 +698,7 @@ export default function LeadsAll() {
                 {isLoading ? 'Loading...' : 'No leads found'}
               </div>
             ) : (
-              filteredLeads.map((lead, index) => (
+              pagedLeads.map((lead, index) => (
                 <div 
                   key={lead.id} 
                   className={cn(
@@ -756,7 +763,7 @@ export default function LeadsAll() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((lead, index) => {
+                {pagedLeads.map((lead, index) => {
                   const isAssigned = !!lead.assigned_to_user_id;
                   return (
                     <TableRow 
@@ -812,6 +819,14 @@ export default function LeadsAll() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={leadsPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={filteredLeads.length}
+            onPageChange={setLeadsPage}
+            isLoading={isLoading}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
