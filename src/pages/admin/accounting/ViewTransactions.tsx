@@ -118,7 +118,17 @@ export default function ViewTransactions() {
     );
   });
 
-  const handleTypeSelected = (type: TransactionType) => {
+  // Pagination - 100 per page
+  const txPaginationKey = `${filters.startDate}|${filters.endDate}|${filters.type}|${filters.accountId}|${filters.partyId}|${filters.categoryId}|${filters.search}|${filteredTransactions.length}`;
+  const {
+    pagedRows: pagedTransactions,
+    page: txPage,
+    setPage: setTxPage,
+    totalPages: txTotalPages,
+    total: txTotal,
+    from: txFrom,
+    to: txTo,
+  } = useClientPagination(filteredTransactions, 100, txPaginationKey);
     switch (type) {
       case 'INCOME': setDepositDialogOpen(true); break;
       case 'EXPENSE': setExpenseDialogOpen(true); break;

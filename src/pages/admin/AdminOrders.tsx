@@ -228,6 +228,18 @@ export default function AdminOrders() {
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, selectedStatus, selectedDelivery, selectedInsideDeliveryStatus, selectedOrderDate, selectedProduct, selectedSalesPerson, showDuplicatesOnly, search]);
 
+  // Pagination - 100 per page
+  const ordersPaginationKey = `${selectedStatus}|${selectedDelivery}|${selectedInsideDeliveryStatus}|${selectedOrderDate}|${selectedProduct}|${selectedSalesPerson}|${showDuplicatesOnly}|${search}|${filteredOrders.length}`;
+  const {
+    pagedRows: pagedOrders,
+    page: ordersPage,
+    setPage: setOrdersPage,
+    totalPages: ordersTotalPages,
+    total: ordersTotal,
+    from: ordersFrom,
+    to: ordersTo,
+  } = useClientPagination(filteredOrders, 100, ordersPaginationKey);
+
   // Count duplicates - check both order and linked lead is_duplicate
   const duplicateOrderCount = orders.filter((o: any) => o.is_duplicate === true || o.leads?.is_duplicate === true).length;
 

@@ -103,6 +103,18 @@ export default function LeadsFollowup() {
     });
   }, [allLeads, dateRange, productFilter, search, tabFilter]);
 
+  // Pagination - 100 per page
+  const followupPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${search}|${tabFilter}|${followupLeads.length}`;
+  const {
+    pagedRows: pagedFollowupLeads,
+    page: followupPage,
+    setPage: setFollowupPage,
+    totalPages: followupTotalPages,
+    total: followupTotal,
+    from: followupFrom,
+    to: followupTo,
+  } = useClientPagination(followupLeads, 100, followupPaginationKey);
+
   // Count leads by type - only those in pool
   const leadCounts = useMemo(() => {
     const allInPool = allLeads.filter(l => 

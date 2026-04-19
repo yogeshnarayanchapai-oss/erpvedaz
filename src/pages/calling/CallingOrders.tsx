@@ -162,6 +162,18 @@ export default function CallingOrders() {
     
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, searchQuery]);
+
+  // Pagination - 100 per page
+  const callingOrdersPaginationKey = `${statusFilter}|${productFilter}|${deliveryFilter}|${insideDeliveryStatusFilter}|${searchQuery}|${orders.length}`;
+  const {
+    pagedRows: pagedCallingOrders,
+    page: callingPage,
+    setPage: setCallingPage,
+    totalPages: callingTotalPages,
+    total: callingTotal,
+    from: callingFrom,
+    to: callingTo,
+  } = useClientPagination(orders, 100, callingOrdersPaginationKey);
   
   // Real-time subscription
   useEffect(() => {
