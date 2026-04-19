@@ -910,6 +910,15 @@ export default function StockMovements() {
               </TableBody>
             </Table>
           )}
+          <DataPagination
+            page={movementsPage}
+            totalPages={movementsTotalPages}
+            total={movementsTotal}
+            from={movementsFrom}
+            to={movementsTo}
+            onPageChange={setMovementsPage}
+            itemLabel="movements"
+          />
         </CardContent>
       </Card>
 

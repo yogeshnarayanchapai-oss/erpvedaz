@@ -456,6 +456,15 @@ export default function LeadsFollowup() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={followupPage}
+            totalPages={followupTotalPages}
+            total={followupTotal}
+            from={followupFrom}
+            to={followupTo}
+            onPageChange={setFollowupPage}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 

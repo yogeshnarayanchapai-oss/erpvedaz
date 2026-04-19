@@ -543,6 +543,15 @@ export default function CallingOrders() {
                 )}
               </TableBody>
             </Table>
+          <DataPagination
+            page={callingPage}
+            totalPages={callingTotalPages}
+            total={callingTotal}
+            from={callingFrom}
+            to={callingTo}
+            onPageChange={setCallingPage}
+            itemLabel="orders"
+          />
           </div>
         </CardContent>
       </Card>

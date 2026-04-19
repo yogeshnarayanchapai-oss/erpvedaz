@@ -826,6 +826,15 @@ export default function LeadsAll() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={leadsPage}
+            totalPages={leadsTotalPages}
+            total={leadsTotal}
+            from={leadsFrom}
+            to={leadsTo}
+            onPageChange={setLeadsPage}
+            itemLabel="leads"
+          />
         </CardContent>
       </Card>
 
