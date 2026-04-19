@@ -22,6 +22,9 @@ import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, Inside
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePagination';
 
 const INSIDE_DELIVERY_STATUS_OPTIONS: { value: InsideDeliveryStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pending' },
@@ -160,6 +163,9 @@ export default function CallingOrders() {
     
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [allOrders, statusFilter, productFilter, deliveryFilter, insideDeliveryStatusFilter, searchQuery]);
+
+  const { page: ordersPage, setPage: setOrdersPage, pagedRows: pagedOrders } =
+    useClientPagination(orders, DEFAULT_PAGE_SIZE);
   
   // Real-time subscription
   useEffect(() => {
@@ -376,7 +382,7 @@ export default function CallingOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
+                {pagedOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-muted/50">
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       {format(new Date(order.order_date), 'dd MMM HH:mm')}
@@ -530,6 +536,14 @@ export default function CallingOrders() {
               </TableBody>
             </Table>
           </div>
+          <DataPagination
+            page={ordersPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={orders.length}
+            onPageChange={setOrdersPage}
+            isLoading={isLoading}
+            itemLabel="orders"
+          />
         </CardContent>
       </Card>
       {/* Edit Order Sheet */}
