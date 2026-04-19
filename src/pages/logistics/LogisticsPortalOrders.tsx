@@ -533,6 +533,15 @@ export default function LogisticsPortalOrders() {
               </TableBody>
             </Table>
           </div>
+          {/* Pagination */}
+          <DataPagination
+            page={page}
+            pageSize={DEFAULT_PAGE_SIZE}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            isLoading={isFetching}
+            itemLabel="orders"
+          />
         </CardContent>
       </Card>
 
