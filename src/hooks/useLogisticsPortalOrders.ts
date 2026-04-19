@@ -182,7 +182,7 @@ export function useLogisticsOrdersPaginated(opts: {
         .order('order_date', { ascending: false });
 
       if (statusFilter && statusFilter !== 'all') {
-        q = q.eq('order_status', statusFilter);
+        q = q.eq('order_status', statusFilter as any);
       } else if (excludeDeliveredCancelled) {
         q = q.not('order_status', 'in', '("DELIVERED","CANCELLED")');
       }
