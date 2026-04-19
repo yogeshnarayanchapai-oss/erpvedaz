@@ -189,6 +189,18 @@ export default function LeadsAll() {
     return leads;
   }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
 
+  // Pagination - 100 per page; resets when filters change
+  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${filteredLeads.length}`;
+  const {
+    pagedRows: pagedLeads,
+    page: leadsPage,
+    setPage: setLeadsPage,
+    totalPages: leadsTotalPages,
+    total: leadsTotal,
+    from: leadsFrom,
+    to: leadsTo,
+  } = useClientPagination(filteredLeads, 100, leadsPaginationKey);
+
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
   const bucketCounts = useMemo(() => {
     const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0 };
