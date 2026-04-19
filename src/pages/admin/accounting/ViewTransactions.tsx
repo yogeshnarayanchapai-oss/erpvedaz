@@ -129,6 +129,8 @@ export default function ViewTransactions() {
     from: txFrom,
     to: txTo,
   } = useClientPagination(filteredTransactions, 100, txPaginationKey);
+
+  const handleTypeSelected = (type: TransactionType) => {
     switch (type) {
       case 'INCOME': setDepositDialogOpen(true); break;
       case 'EXPENSE': setExpenseDialogOpen(true); break;
