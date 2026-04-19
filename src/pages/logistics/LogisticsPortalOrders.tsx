@@ -66,7 +66,7 @@ export default function LogisticsPortalOrders() {
   const todayNepal = getNepalDateString();
 
   // Single cached fetch for ALL orders
-  const { data: allCachedOrders = [], isLoading, isFetching, forceRefresh } = useAllLogisticsOrders();
+  const { data: allCachedOrders = [], isLoading, isFetching, isError, forceRefresh } = useAllLogisticsOrders();
 
   // Derive today's orders and date-filtered orders from the single cache
   const todayOrders = useMemo(() => 
@@ -210,10 +210,18 @@ export default function LogisticsPortalOrders() {
           <p className="text-muted-foreground">Manage and redirect orders for delivery</p>
         </div>
         <div className="flex items-center gap-3">
-          {isFetching && (
+          {isFetching && !isError && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <RefreshCw className="w-4 h-4 animate-spin" />
               <span className="text-sm">Updating...</span>
+            </div>
+          )}
+          {isError && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-destructive">Failed to load orders</span>
+              <Button size="sm" variant="outline" onClick={forceRefresh}>
+                <RefreshCw className="w-4 h-4 mr-1" /> Retry
+              </Button>
             </div>
           )}
         </div>
