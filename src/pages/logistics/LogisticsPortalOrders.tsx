@@ -15,6 +15,8 @@ import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirect
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { useStaff } from '@/hooks/useStaff';
+import { useClientPagination } from '@/hooks/useClientPagination';
+import { DataPagination } from '@/components/ui/data-pagination';
 
 // Nepal timezone helpers - returns date string in YYYY-MM-DD format for Nepal time
 function getNepalDateString(): string {
