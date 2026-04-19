@@ -146,6 +146,11 @@ export default function LogisticsPortalOrders() {
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [orders, allCachedOrders, activeTab, deliveryFilter, statusFilter, staffFilter, search]);
 
+  // Pagination - 100 per page; resets when filters/tab change
+  const paginationKey = `${activeTab}|${deliveryFilter}|${statusFilter}|${staffFilter}|${search}|${filteredOrders.length}`;
+  const { pagedRows: pagedOrders, page, setPage, totalPages, total, from, to } =
+    useClientPagination(filteredOrders, 100, paginationKey);
+
   // Stats (only used on dashboard)
   const stats = useMemo(() => {
     const data = activeTab === 'new' 
