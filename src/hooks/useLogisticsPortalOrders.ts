@@ -1,74 +1,107 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyLogisticsStatusUpdate, notifyOrderRedirected } from '@/lib/notificationHelpers';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 
 interface LogisticsOrdersFilters {
   dateFrom?: string;
   dateTo?: string;
 }
 
-const CACHE_KEY = 'logistics_all_orders_cache';
-const CACHE_TIMESTAMP_KEY = 'logistics_all_orders_ts';
+// Limit logistics fetch window for performance (logistics flow is short-lived)
+const FETCH_WINDOW_DAYS = 90;
+
+function getCacheKeys(storeId: string | null) {
+  const suffix = storeId || 'global';
+  return {
+    data: `logistics_all_orders_cache_${suffix}`,
+    ts: `logistics_all_orders_ts_${suffix}`,
+  };
+}
 const CACHE_MAX_AGE = 10 * 60 * 1000; // 10 minutes
 
-function getSessionCache(): any[] | null {
+function getSessionCache(storeId: string | null): any[] | null {
   try {
-    const ts = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
-    if (!ts || Date.now() - parseInt(ts) > CACHE_MAX_AGE) return null;
-    const cached = sessionStorage.getItem(CACHE_KEY);
+    const { data, ts } = getCacheKeys(storeId);
+    const tsVal = sessionStorage.getItem(ts);
+    if (!tsVal || Date.now() - parseInt(tsVal) > CACHE_MAX_AGE) return null;
+    const cached = sessionStorage.getItem(data);
     return cached ? JSON.parse(cached) : null;
   } catch { return null; }
 }
 
-function setSessionCache(data: any[]) {
+function setSessionCache(storeId: string | null, data: any[]) {
   try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
+    const keys = getCacheKeys(storeId);
+    sessionStorage.setItem(keys.data, JSON.stringify(data));
+    sessionStorage.setItem(keys.ts, String(Date.now()));
   } catch { /* storage full - ignore */ }
 }
 
 export function clearLogisticsOrdersCache() {
-  sessionStorage.removeItem(CACHE_KEY);
-  sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
+  // Clear all logistics cache entries (any store)
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith('logistics_all_orders_')) keysToRemove.push(k);
+    }
+    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+  } catch { /* ignore */ }
 }
 
 // Single hook that fetches ALL orders once and caches in sessionStorage
 export function useAllLogisticsOrders() {
   const queryClient = useQueryClient();
+  const storeId = useCurrentStoreId();
+  const invalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Realtime subscription to invalidate cache on changes
+  // Realtime subscription with debounced invalidation to avoid thrashing
   useEffect(() => {
+    if (!storeId) return;
     const channel = supabase
-      .channel('logistics-portal-orders-realtime')
+      .channel(`logistics-portal-orders-realtime-${storeId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => {
-          clearLogisticsOrdersCache();
-          queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
+          if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
+          invalidateTimeoutRef.current = setTimeout(() => {
+            clearLogisticsOrdersCache();
+            queryClient.invalidateQueries({ queryKey: ['logistics-all-orders', storeId] });
+          }, 3000); // debounce 3s
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
+    return () => {
+      if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, storeId]);
 
   const query = useQuery({
-    queryKey: ['logistics-all-orders'],
+    queryKey: ['logistics-all-orders', storeId],
+    enabled: !!storeId,
     queryFn: async () => {
       // Check sessionStorage cache first
-      const cached = getSessionCache();
+      const cached = getSessionCache(storeId);
       if (cached) return cached;
 
-      // Paginate to get ALL orders (bypass 1000 row limit)
+      // Compute date window (last N days)
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - FETCH_WINDOW_DAYS);
+      const fromIso = fromDate.toISOString();
+
+      // Paginate to get orders within the window (bypass 1000 row limit)
       const allOrders: any[] = [];
       const PAGE_SIZE = 1000;
       let page = 0;
       let hasMore = true;
 
       while (hasMore) {
-        const { data, error } = await supabase
+        let q = supabase
           .from('orders')
           .select(`
             *,
@@ -81,8 +114,13 @@ export function useAllLogisticsOrders() {
             order_items (id, product_id, product_name, quantity, unit_price, discount, total_price)
           `)
           .eq('is_deleted', false)
+          .gte('order_date', fromIso)
           .order('order_date', { ascending: false })
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (storeId) q = q.eq('store_id', storeId);
+
+        const { data, error } = await q;
 
         if (error) throw error;
         if (data && data.length > 0) {
@@ -95,17 +133,19 @@ export function useAllLogisticsOrders() {
       }
 
       // Cache in sessionStorage
-      setSessionCache(allOrders);
+      setSessionCache(storeId, allOrders);
       return allOrders;
     },
     staleTime: 5 * 60 * 1000, // 5 min
     gcTime: 10 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   const forceRefresh = useCallback(() => {
     clearLogisticsOrdersCache();
-    queryClient.invalidateQueries({ queryKey: ['logistics-all-orders'] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ['logistics-all-orders', storeId] });
+  }, [queryClient, storeId]);
 
   return { ...query, forceRefresh };
 }
