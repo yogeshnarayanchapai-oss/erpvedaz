@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
-import { useAllLogisticsOrders } from '@/hooks/useLogisticsPortalOrders';
+import { useLogisticsOrdersInRange } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
@@ -65,30 +65,30 @@ export default function LogisticsPortalOrders() {
   // Today's date in Nepal timezone (YYYY-MM-DD)
   const todayNepal = getNepalDateString();
 
-  // Single cached fetch for ALL orders
-  const { data: allCachedOrders = [], isLoading, isFetching, isError, forceRefresh } = useAllLogisticsOrders();
+  // Active tab determines which date range to fetch from server.
+  // "New Orders" = today only (small payload). "All Orders" = user-selected range.
+  const activeRange = useMemo(() => {
+    if (activeTab === 'new') {
+      const today = new Date();
+      return { from: today, to: today };
+    }
+    return allOrdersDateRange;
+  }, [activeTab, allOrdersDateRange]);
 
-  // Derive today's orders and date-filtered orders from the single cache
+  const { data: rangeOrders = [], isLoading, isFetching, isError, forceRefresh } = useLogisticsOrdersInRange(activeRange);
+
+  // For search, we use whatever is currently loaded (range-bound).
+  const allCachedOrders = rangeOrders;
+
   const todayOrders = useMemo(() => 
-    allCachedOrders.filter(o => {
+    rangeOrders.filter(o => {
       if (!o.order_date) return false;
-      const orderDate = o.order_date.substring(0, 10); // YYYY-MM-DD
-      return orderDate === todayNepal;
+      return o.order_date.substring(0, 10) === todayNepal;
     }),
-    [allCachedOrders, todayNepal]
+    [rangeOrders, todayNepal]
   );
 
-  const allOrdersFiltered = useMemo(() => {
-    const from = format(allOrdersDateRange.from, 'yyyy-MM-dd');
-    const to = format(allOrdersDateRange.to, 'yyyy-MM-dd');
-    return allCachedOrders.filter(o => {
-      if (!o.order_date) return false;
-      const orderDate = o.order_date.substring(0, 10);
-      return orderDate >= from && orderDate <= to;
-    });
-  }, [allCachedOrders, allOrdersDateRange]);
-
-  const orders = activeTab === 'new' ? todayOrders : allOrdersFiltered;
+  const orders = activeTab === 'new' ? todayOrders : rangeOrders;
 
   // For "New Orders" tab, filter out delivered/cancelled orders
   const filteredOrders = useMemo(() => {
