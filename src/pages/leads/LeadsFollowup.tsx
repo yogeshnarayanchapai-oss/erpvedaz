@@ -417,7 +417,7 @@ export default function LeadsFollowup() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {followupLeads.map((lead, index) => (
+                {pagedFollowupLeads.map((lead, index) => (
                   <TableRow key={lead.id}>
                     <TableCell className="w-[60px] text-center font-medium text-muted-foreground sticky left-0 bg-background z-10">
                       {index + 1}

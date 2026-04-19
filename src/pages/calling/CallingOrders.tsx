@@ -390,7 +390,7 @@ export default function CallingOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
+                {pagedCallingOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-muted/50">
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       {format(new Date(order.order_date), 'dd MMM HH:mm')}

@@ -813,7 +813,7 @@ export default function StockMovements() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.map((m) => {
+                {pagedMovements.map((m) => {
                   // Display warehouse: For TRANSFER show "From → To", otherwise show warehouse name
                   const warehouseDisplay = m.movement_type === 'TRANSFER' && m.from_warehouse && m.to_warehouse
                     ? `${m.from_warehouse.name} → ${m.to_warehouse.name}`

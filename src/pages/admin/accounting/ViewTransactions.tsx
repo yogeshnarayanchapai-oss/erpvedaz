@@ -490,7 +490,7 @@ export default function ViewTransactions() {
                   </TableCell>
                 </TableRow>
               )}
-              {filteredTransactions.map((transaction) => (
+              {pagedTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   {canDelete && (
                     <TableCell>

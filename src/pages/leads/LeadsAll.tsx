@@ -705,7 +705,7 @@ export default function LeadsAll() {
                 {isLoading ? 'Loading...' : 'No leads found'}
               </div>
             ) : (
-              filteredLeads.map((lead, index) => (
+              filteredLeads.length === 0 ? null : pagedLeads.map((lead, index) => (
                 <div 
                   key={lead.id} 
                   className={cn(
@@ -770,7 +770,7 @@ export default function LeadsAll() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLeads.map((lead, index) => {
+                {pagedLeads.map((lead, index) => {
                   const isAssigned = !!lead.assigned_to_user_id;
                   return (
                     <TableRow 

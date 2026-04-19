@@ -690,7 +690,7 @@ export default function AdminOrders() {
                 {isLoading ? 'Loading...' : 'No orders found'}
               </p>
             )}
-            {filteredOrders.map((order) => {
+            {pagedOrders.map((order) => {
               const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
               const productDisplay = orderItemsList.length > 0 
                 ? orderItemsList.map((item: any) => {
@@ -804,7 +804,7 @@ export default function AdminOrders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
+                {pagedOrders.map((order) => {
                   const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
                   const productDisplay = orderItemsList.length > 0 
                     ? orderItemsList.map((item: any) => {
