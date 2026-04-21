@@ -51,6 +51,41 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       const { data: transactions, error } = await query;
       if (error) throw error;
 
+      // Carry-forward: total of all transactions BEFORE the filter window so the
+      // running balance always reflects the party's true total balance, not just
+      // the filtered slice.
+      let carryForward = 0;
+      if (filters?.startDate) {
+        const { data: priorTx } = await supabase
+          .from('transactions')
+          .select('amount, transaction_type, type')
+          .eq('party_id', partyId)
+          .lt('date', filters.startDate);
+        (priorTx || []).forEach((t: any) => {
+          const txType = t.transaction_type || '';
+          let d = 0, c = 0;
+          switch (txType) {
+            case 'EXPENSE':
+            case 'PAYMENT_OUT':
+            case 'SALES_OUT':
+              d = t.amount; break;
+            case 'INCOME':
+            case 'PAYMENT_IN':
+            case 'SALES_IN':
+              c = t.amount; break;
+            default:
+              if (t.type === 'expense') d = t.amount;
+              else c = t.amount;
+          }
+          carryForward += d - c;
+        });
+        if (party && party.opening_balance > 0) {
+          carryForward += party.opening_balance_type === 'RECEIVABLE'
+            ? party.opening_balance
+            : -party.opening_balance;
+        }
+      }
+
       // Collect stock movement reference IDs
       const stockRefIds = (transactions || [])
         .filter(t => t.reference_type === 'stock_movement' && t.reference_id)
