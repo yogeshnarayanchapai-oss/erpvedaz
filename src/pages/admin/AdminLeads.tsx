@@ -1050,6 +1050,20 @@ export default function AdminLeads() {
             />
           </div>
         </CardHeader>
+        {leadsTotalPages > 1 && (
+          <div className="px-4 md:px-6">
+            <DataPagination
+              page={leadsPage}
+              totalPages={leadsTotalPages}
+              total={leadsTotal}
+              from={leadsFrom}
+              to={leadsTo}
+              onPageChange={setLeadsPage}
+              itemLabel="leads"
+              className="border-t-0 mt-0 pt-0 px-0"
+            />
+          </div>
+        )}
         <CardContent className="p-0 md:p-6 md:pt-0">
           {/* Mobile Card View */}
           <div className="md:hidden space-y-2 p-3">
