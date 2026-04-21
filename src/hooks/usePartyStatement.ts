@@ -206,8 +206,8 @@ export function usePartyStatement(partyId: string, filters?: { startDate?: strin
       });
 
       // Calculate running balance: Debit - Credit (DR = Receivable, CR = Payable)
-      // > 0 = Net Receivable, < 0 = Net Payable
-      let runningBalance = 0;
+      // Start from carry-forward so balance reflects the party's true total balance.
+      let runningBalance = carryForward;
       entries.forEach(entry => {
         runningBalance += entry.debit - entry.credit;
         entry.balance = runningBalance;
