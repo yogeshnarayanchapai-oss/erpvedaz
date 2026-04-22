@@ -92,11 +92,18 @@ export default function FollowupDashboard() {
   const handleStatusUpdate = async (status: 'FOLLOW_UP' | 'CALL_NOT_RECEIVED' | 'CANCELLED' | 'CONFIRMED') => {
     if (!selectedLead) return;
 
+    // Compulsory follow-up date & time when status is FOLLOW_UP
+    if (status === 'FOLLOW_UP' && (!followupDate || !followupTime)) {
+      toast.error('Follow-up Date र Time दुवै राख्नुहोस् (compulsory).');
+      return;
+    }
+
     try {
       await updateLeadStatus.mutateAsync({
         leadId: selectedLead.id,
         status,
         remark: callNotes,
+        next_followup_at: status === 'FOLLOW_UP' ? `${followupDate}T${followupTime}:00` : undefined,
       });
 
       await createCallLog.mutateAsync({
@@ -108,6 +115,8 @@ export default function FollowupDashboard() {
       setIsDetailOpen(false);
       setSelectedLead(null);
       setCallNotes('');
+      setFollowupDate('');
+      setFollowupTime('');
       toast.success(`Lead marked as ${status.replace('_', ' ')}`);
     } catch (error) {
       console.error(error);
