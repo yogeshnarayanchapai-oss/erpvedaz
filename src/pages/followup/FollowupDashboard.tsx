@@ -52,6 +52,8 @@ export default function FollowupDashboard() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [callNotes, setCallNotes] = useState('');
+  const [followupDate, setFollowupDate] = useState('');
+  const [followupTime, setFollowupTime] = useState('');
   const [transferStaffId, setTransferStaffId] = useState('');
   const [tagFilter, setTagFilter] = useState<TagFilter>('ALL');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('ALL');
