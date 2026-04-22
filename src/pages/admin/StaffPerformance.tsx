@@ -15,12 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ChevronDown, ChevronRight, Trophy, Medal, Award, AlertTriangle,
   Clock, PhoneOff, RotateCcw, ShieldAlert, Users, BarChart3, Loader2,
+  CalendarIcon,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { useStaffPerformance, type StaffMetric, type TeamFilter } from '@/hooks/useStaffPerformance';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 export default function StaffPerformance() {
   const { currentStore } = useCurrentStore();
@@ -125,11 +128,55 @@ export default function StaffPerformance() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
             <div>
               <Label className="text-xs">Start Date</Label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(parseISO(startDate), 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate ? parseISO(startDate) : undefined}
+                    onSelect={(d) => d && setStartDate(format(d, 'yyyy-MM-dd'))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">End Date</Label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(parseISO(endDate), 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate ? parseISO(endDate) : undefined}
+                    onSelect={(d) => d && setEndDate(format(d, 'yyyy-MM-dd'))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">Team</Label>
