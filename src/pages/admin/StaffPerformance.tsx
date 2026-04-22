@@ -164,7 +164,7 @@ export default function StaffPerformance() {
 
       {report && (
         <>
-          {/* Summary cards */}
+          {/* Summary cards (always visible above tabs) */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <SummaryCard icon={Users} label="Staff Analyzed" value={report.summary.total_staff} />
             <SummaryCard icon={Clock} label="Late Orders (4PM+)" value={report.summary.total_late_orders} tone="warn" />
@@ -174,93 +174,280 @@ export default function StaffPerformance() {
             <SummaryCard icon={AlertTriangle} label="Invalid Phones" value={report.summary.total_invalid_phones} tone="bad" />
           </div>
 
-          {/* Bonus suggestion */}
-          <Card className="border-primary/40 bg-gradient-to-br from-primary/5 to-transparent">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                Smart Bonus Suggestion (Top 3)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {report.bonusTop3.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No staff qualify for bonus in this period.</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {report.bonusTop3.map((s, i) => (
-                    <div key={s.staff_id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                      <div className="text-2xl">{['🥇', '🥈', '🥉'][i]}</div>
-                      <div className="flex-1">
-                        <p className="font-semibold">{s.staff_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Score: <b className="text-foreground">{s.score.toFixed(2)}</b> · {s.verified_confirms} delivered
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full h-auto">
+              <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="bonus" className="text-xs md:text-sm">🏆 Bonus</TabsTrigger>
+              <TabsTrigger value="late" className="text-xs md:text-sm">Late Orders</TabsTrigger>
+              <TabsTrigger value="followup" className="text-xs md:text-sm">Followups</TabsTrigger>
+              <TabsTrigger value="redirect" className="text-xs md:text-sm">Redirects</TabsTrigger>
+              <TabsTrigger value="status" className="text-xs md:text-sm">Status Changes</TabsTrigger>
+            </TabsList>
 
-              {report.excluded.length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
-                    Excluded from Bonus ({report.excluded.length})
-                  </h4>
-                  <div className="space-y-1.5">
-                    {report.excluded.map(s => (
-                      <div key={s.staff_id} className="text-xs p-2 rounded bg-destructive/5 border border-destructive/20">
-                        <span className="font-medium">{s.staff_name}</span>
-                        <span className="text-muted-foreground"> — {s.exclusion_reasons.join(', ')}</span>
-                      </div>
-                    ))}
+            {/* Overview tab — staff-wise full breakdown table */}
+            <TabsContent value="overview" className="mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Staff-wise Breakdown ({report.staff.length})</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-8"></TableHead>
+                          <TableHead>Staff</TableHead>
+                          <TableHead className="text-right">Score</TableHead>
+                          <TableHead className="text-right">Verified ✓</TableHead>
+                          <TableHead className="text-right">Late Orders</TableHead>
+                          <TableHead className="text-right">FU No-Time</TableHead>
+                          <TableHead className="text-right">FU Overdue</TableHead>
+                          <TableHead className="text-right">Redirects</TableHead>
+                          <TableHead className="text-right">Cnf→Changed</TableHead>
+                          <TableHead className="text-right">Dup Confirms</TableHead>
+                          <TableHead className="text-right">Invalid Phone</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {report.staff.length === 0 && (
+                          <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No staff data for this period.</TableCell></TableRow>
+                        )}
+                        {report.staff.map(s => (
+                          <StaffRow
+                            key={s.staff_id}
+                            staff={s}
+                            expanded={!!expanded[s.staff_id]}
+                            onToggle={() => toggleExpand(s.staff_id)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Staff-wise table */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Staff-wise Breakdown ({report.staff.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-8"></TableHead>
-                      <TableHead>Staff</TableHead>
-                      <TableHead className="text-right">Score</TableHead>
-                      <TableHead className="text-right">Verified ✓</TableHead>
-                      <TableHead className="text-right">Late Orders</TableHead>
-                      <TableHead className="text-right">FU No-Time</TableHead>
-                      <TableHead className="text-right">FU Overdue</TableHead>
-                      <TableHead className="text-right">Redirects</TableHead>
-                      <TableHead className="text-right">Cnf→Changed</TableHead>
-                      <TableHead className="text-right">Dup Confirms</TableHead>
-                      <TableHead className="text-right">Invalid Phone</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {report.staff.length === 0 && (
-                      <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No staff data for this period.</TableCell></TableRow>
-                    )}
-                    {report.staff.map(s => (
-                      <StaffRow
-                        key={s.staff_id}
-                        staff={s}
-                        expanded={!!expanded[s.staff_id]}
-                        onToggle={() => toggleExpand(s.staff_id)}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Bonus tab */}
+            <TabsContent value="bonus" className="mt-4">
+              <Card className="border-primary/40 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    Smart Bonus Suggestion (Top 3)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {report.bonusTop3.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No staff qualify for bonus in this period.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {report.bonusTop3.map((s, i) => (
+                        <div key={s.staff_id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                          <div className="text-2xl">{['🥇', '🥈', '🥉'][i]}</div>
+                          <div className="flex-1">
+                            <p className="font-semibold">{s.staff_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Score: <b className="text-foreground">{s.score.toFixed(2)}</b> · {s.verified_confirms} delivered
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {report.excluded.length > 0 && (
+                    <>
+                      <Separator className="my-4" />
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                        Excluded from Bonus ({report.excluded.length})
+                      </h4>
+                      <div className="space-y-1.5">
+                        {report.excluded.map(s => (
+                          <div key={s.staff_id} className="text-xs p-2 rounded bg-destructive/5 border border-destructive/20">
+                            <span className="font-medium">{s.staff_name}</span>
+                            <span className="text-muted-foreground"> — {s.exclusion_reasons.join(', ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Late Orders tab */}
+            <TabsContent value="late" className="mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Late Order Creation (After 4:00 PM NPT)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff</TableHead>
+                        <TableHead className="text-right">Late Orders</TableHead>
+                        <TableHead>Sample Timestamps</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.staff.filter(s => s.late_orders > 0).length === 0 && (
+                        <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No late orders 🎉</TableCell></TableRow>
+                      )}
+                      {report.staff.filter(s => s.late_orders > 0).map(s => (
+                        <TableRow key={s.staff_id}>
+                          <TableCell className="font-medium">{s.staff_name}</TableCell>
+                          <TableCell className="text-right font-semibold text-orange-600 dark:text-orange-400">{s.late_orders}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {s.late_orders_detail.slice(0, 8).map(o => (
+                                <Badge key={o.order_id} variant="outline" className="text-[10px] font-mono">
+                                  #{o.order_number} · {o.npt_time}
+                                </Badge>
+                              ))}
+                              {s.late_orders_detail.length > 8 && (
+                                <Badge variant="secondary" className="text-[10px]">+{s.late_orders_detail.length - 8} more</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Followup tab */}
+            <TabsContent value="followup" className="mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <PhoneOff className="w-4 h-4" /> Followup Issues
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff</TableHead>
+                        <TableHead className="text-right">No Time Set</TableHead>
+                        <TableHead className="text-right">Overdue</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Sample Leads</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.staff.filter(s => s.followup_no_time + s.followup_overdue > 0).length === 0 && (
+                        <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No followup issues 🎉</TableCell></TableRow>
+                      )}
+                      {report.staff.filter(s => s.followup_no_time + s.followup_overdue > 0).map(s => (
+                        <TableRow key={s.staff_id}>
+                          <TableCell className="font-medium">{s.staff_name}</TableCell>
+                          <TableCell className="text-right">{s.followup_no_time}</TableCell>
+                          <TableCell className="text-right text-destructive font-semibold">{s.followup_overdue}</TableCell>
+                          <TableCell className="text-right font-semibold">{s.followup_no_time + s.followup_overdue}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {s.followup_detail.slice(0, 5).map(f => (
+                                <Badge key={f.lead_id} variant={f.reason === 'OVERDUE' ? 'destructive' : 'secondary'} className="text-[10px]">
+                                  {f.client_name || f.contact_number || '—'}
+                                </Badge>
+                              ))}
+                              {s.followup_detail.length > 5 && (
+                                <Badge variant="outline" className="text-[10px]">+{s.followup_detail.length - 5}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Redirect tab */}
+            <TabsContent value="redirect" className="mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4" /> Redirect Reason Tracking
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff</TableHead>
+                        <TableHead className="text-right">Cancelled</TableHead>
+                        <TableHead className="text-right">Not Ordered</TableHead>
+                        <TableHead className="text-right">Already Received</TableHead>
+                        <TableHead className="text-right">Other</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.staff.filter(s => s.redirect_total > 0).length === 0 && (
+                        <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No redirects in this period.</TableCell></TableRow>
+                      )}
+                      {report.staff.filter(s => s.redirect_total > 0).map(s => (
+                        <TableRow key={s.staff_id}>
+                          <TableCell className="font-medium">{s.staff_name}</TableCell>
+                          <TableCell className="text-right">{s.redirect_cancelled}</TableCell>
+                          <TableCell className="text-right">{s.redirect_not_ordered}</TableCell>
+                          <TableCell className="text-right">{s.redirect_received}</TableCell>
+                          <TableCell className="text-right">{s.redirect_other}</TableCell>
+                          <TableCell className="text-right font-semibold">{s.redirect_total}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Status manipulation tab */}
+            <TabsContent value="status" className="mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4" /> Status Manipulation & Data Integrity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff</TableHead>
+                        <TableHead className="text-right">Confirmed→Changed</TableHead>
+                        <TableHead className="text-right">Cancel After Confirm</TableHead>
+                        <TableHead className="text-right">Duplicate Confirms</TableHead>
+                        <TableHead className="text-right">Invalid Phone</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).length === 0 && (
+                        <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No data integrity issues 🎉</TableCell></TableRow>
+                      )}
+                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).map(s => (
+                        <TableRow key={s.staff_id}>
+                          <TableCell className="font-medium">{s.staff_name}</TableCell>
+                          <TableCell className="text-right">{s.confirm_then_changed}</TableCell>
+                          <TableCell className="text-right">{s.cancel_after_confirm}</TableCell>
+                          <TableCell className="text-right text-destructive">{s.duplicate_phone_confirms}</TableCell>
+                          <TableCell className="text-right text-destructive">{s.invalid_phone_confirms}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
