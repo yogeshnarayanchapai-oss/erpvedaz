@@ -300,7 +300,10 @@ export default function StaffPerformance() {
                         Excluded from Bonus ({report.excluded.length})
                       </h4>
                       <div className="space-y-1.5">
-                        {report.excluded.map(s => (
+                        {[...report.excluded].sort((a, b) => {
+                          const issues = (s: any) => s.late_orders + s.followup_no_time + s.followup_overdue + s.confirm_then_changed + s.duplicate_phone_confirms + s.invalid_phone_confirms;
+                          return issues(b) - issues(a);
+                        }).map(s => (
                           <div key={s.staff_id} className="text-xs p-2 rounded bg-destructive/5 border border-destructive/20">
                             <span className="font-medium">{s.staff_name}</span>
                             <span className="text-muted-foreground"> — {s.exclusion_reasons.join(', ')}</span>
