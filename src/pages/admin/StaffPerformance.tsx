@@ -431,7 +431,7 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.redirect_total > 0).length === 0 && (
                         <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No redirects in this period.</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.redirect_total > 0).map(s => (
+                      {report.staff.filter(s => s.redirect_total > 0).sort((a, b) => b.redirect_total - a.redirect_total).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right">{s.redirect_cancelled}</TableCell>
