@@ -37,18 +37,47 @@ export default function StaffPerformance() {
   const perf = useStaffPerformance();
   const report = perf.data;
 
-  // Load CALLING staff only — this audit is sales-focused
+  // Load CALLING staff scoped to current store (via user_store_access).
+  // Falls back to global CALLING profiles when no store is selected.
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, name, role')
-        .eq('is_active', true)
-        .eq('role', 'CALLING')
-        .order('name');
-      setStaffOptions((data || []).map(p => ({ id: p.id, name: p.name || 'Unknown' })));
+      if (currentStore?.id) {
+        // 1) Get user_ids with CALLING access to this store
+        const { data: access } = await supabase
+          .from('user_store_access')
+          .select('user_id, store_role')
+          .eq('store_id', currentStore.id)
+          .eq('is_active', true);
+        const accessUserIds = (access || []).map(a => a.user_id);
+        if (accessUserIds.length === 0) {
+          setStaffOptions([]);
+          return;
+        }
+        // 2) Match against profiles with global role CALLING OR store_role CALLING
+        const callingByStoreRole = new Set(
+          (access || []).filter(a => a.store_role === 'CALLING').map(a => a.user_id)
+        );
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .in('id', accessUserIds)
+          .eq('is_active', true)
+          .order('name');
+        const filtered = (profiles || []).filter(
+          p => callingByStoreRole.has(p.id) || p.role === 'CALLING'
+        );
+        setStaffOptions(filtered.map(p => ({ id: p.id, name: p.name || 'Unknown' })));
+      } else {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .eq('is_active', true)
+          .eq('role', 'CALLING')
+          .order('name');
+        setStaffOptions((data || []).map(p => ({ id: p.id, name: p.name || 'Unknown' })));
+      }
     })();
-  }, []);
+  }, [currentStore?.id]);
 
   const handleGenerate = () => {
     if (!startDate || !endDate) {
