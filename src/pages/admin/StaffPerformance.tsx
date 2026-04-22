@@ -334,7 +334,7 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.late_orders > 0).length === 0 && (
                         <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No late orders 🎉</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.late_orders > 0).map(s => (
+                      {report.staff.filter(s => s.late_orders > 0).sort((a, b) => b.late_orders - a.late_orders).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right font-semibold text-orange-600 dark:text-orange-400">{s.late_orders}</TableCell>
