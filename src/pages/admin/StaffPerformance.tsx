@@ -241,7 +241,15 @@ export default function StaffPerformance() {
                         {report.staff.length === 0 && (
                           <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No staff data for this period.</TableCell></TableRow>
                         )}
-                        {report.staff.map(s => (
+                        {[...report.staff]
+                          .sort((a, b) => {
+                            // Worst first: lowest score on top, then highest issue count
+                            const aIssues = a.late_orders + a.followup_no_time + a.followup_overdue + a.confirm_then_changed + a.duplicate_phone_confirms + a.invalid_phone_confirms;
+                            const bIssues = b.late_orders + b.followup_no_time + b.followup_overdue + b.confirm_then_changed + b.duplicate_phone_confirms + b.invalid_phone_confirms;
+                            if (a.score !== b.score) return a.score - b.score;
+                            return bIssues - aIssues;
+                          })
+                          .map(s => (
                           <StaffRow
                             key={s.staff_id}
                             staff={s}
@@ -326,7 +334,7 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.late_orders > 0).length === 0 && (
                         <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No late orders 🎉</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.late_orders > 0).map(s => (
+                      {report.staff.filter(s => s.late_orders > 0).sort((a, b) => b.late_orders - a.late_orders).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right font-semibold text-orange-600 dark:text-orange-400">{s.late_orders}</TableCell>
@@ -373,7 +381,7 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.followup_no_time + s.followup_overdue > 0).length === 0 && (
                         <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No followup issues 🎉</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.followup_no_time + s.followup_overdue > 0).map(s => (
+                      {report.staff.filter(s => s.followup_no_time + s.followup_overdue > 0).sort((a, b) => (b.followup_overdue * 2 + b.followup_no_time) - (a.followup_overdue * 2 + a.followup_no_time)).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right">{s.followup_no_time}</TableCell>
@@ -423,7 +431,7 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.redirect_total > 0).length === 0 && (
                         <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No redirects in this period.</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.redirect_total > 0).map(s => (
+                      {report.staff.filter(s => s.redirect_total > 0).sort((a, b) => b.redirect_total - a.redirect_total).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right">{s.redirect_cancelled}</TableCell>
@@ -462,7 +470,11 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).length === 0 && (
                         <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No data integrity issues 🎉</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).map(s => (
+                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).sort((a, b) => {
+                        const aTotal = a.confirm_then_changed + a.cancel_after_confirm + a.duplicate_phone_confirms * 2 + a.invalid_phone_confirms * 2;
+                        const bTotal = b.confirm_then_changed + b.cancel_after_confirm + b.duplicate_phone_confirms * 2 + b.invalid_phone_confirms * 2;
+                        return bTotal - aTotal;
+                      }).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right">{s.confirm_then_changed}</TableCell>
