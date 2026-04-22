@@ -158,7 +158,7 @@ async function fetchPerformance(filters: StaffPerformanceFilters): Promise<Staff
     while (true) {
       let q = supabase
         .from('orders')
-        .select('id, order_number, order_date, created_at, order_status, customer_phone, delivery_notes, created_by_staff_id, store_id, leads:lead_id(contact_number, client_name)')
+        .select('id, order_number, order_date, created_at, order_status, delivery_notes, created_by_staff_id, store_id, leads:lead_id(contact_number, client_name)')
         .gte('order_date', startIso)
         .lte('order_date', endIso)
         .eq('is_deleted', false)
@@ -286,7 +286,7 @@ async function fetchPerformance(filters: StaffPerformanceFilters): Promise<Staff
   const phoneConfirmsByStaff = new Map<string, Map<string, number>>();
   for (const o of orders) {
     const staff = o.created_by_staff_id;
-    const phone = o.customer_phone || (o.leads as any)?.contact_number || null;
+    const phone = (o.leads as any)?.contact_number || null;
     const isConfirmedish = ['CONFIRMED', 'DELIVERED', 'DISPATCHED', 'PACKED'].includes(o.order_status || '');
 
     // Verified confirms (delivered) & cancel-after-confirm
