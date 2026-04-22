@@ -51,6 +51,7 @@ import LogisticsReport from "./pages/admin/reports/LogisticsReport";
 import SourceAnalysisReport from "./pages/admin/reports/SourceAnalysisReport";
 import AiSummaryReport from "./pages/admin/reports/AiSummaryReport";
 import AdminStaffTargets from "./pages/admin/AdminStaffTargets";
+import StaffPerformance from "./pages/admin/StaffPerformance";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import SalesActivityLog from "./pages/admin/SalesActivityLog";
 import AdminDataTools from "./pages/admin/AdminDataTools";
@@ -287,6 +288,7 @@ const App = () => (
                 <Route path="/admin/accounting/activity-log" element={<ActivityLog />} />
                 <Route path="/admin/accounting/audit" element={<AuditDashboard />} />
                 <Route path="/admin/staff-targets" element={<AdminStaffTargets />} />
+                <Route path="/admin/sales/staff-performance" element={<StaffPerformance />} />
                 <Route path="/admin/sales-settings" element={<SalesSettings />} />
                 <Route path="/admin/staff/:staffId" element={<StaffDetail />} />
                 <Route path="/admin/notifications" element={<AdminNotifications />} />
