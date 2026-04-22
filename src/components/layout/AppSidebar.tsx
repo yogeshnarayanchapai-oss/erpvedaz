@@ -221,6 +221,7 @@ const salesItems: MenuItem[] = [
   { title: 'Activity Log', url: '/admin/sales/activity-log', icon: History },
   { title: 'Reports', url: '/admin/reports', icon: FileText },
   { title: 'Staff Targets', url: '/admin/staff-targets', icon: Target },
+  { title: 'Staff Performance', url: '/admin/sales/staff-performance', icon: BarChart3 },
   {
     title: 'Courier Integration',
     url: '/admin/logistics-dashboard',
