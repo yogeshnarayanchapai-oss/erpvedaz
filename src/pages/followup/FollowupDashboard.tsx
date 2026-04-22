@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -52,6 +53,8 @@ export default function FollowupDashboard() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [callNotes, setCallNotes] = useState('');
+  const [followupDate, setFollowupDate] = useState('');
+  const [followupTime, setFollowupTime] = useState('');
   const [transferStaffId, setTransferStaffId] = useState('');
   const [tagFilter, setTagFilter] = useState<TagFilter>('ALL');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('ALL');
@@ -90,11 +93,18 @@ export default function FollowupDashboard() {
   const handleStatusUpdate = async (status: 'FOLLOW_UP' | 'CALL_NOT_RECEIVED' | 'CANCELLED' | 'CONFIRMED') => {
     if (!selectedLead) return;
 
+    // Compulsory follow-up date & time when status is FOLLOW_UP
+    if (status === 'FOLLOW_UP' && (!followupDate || !followupTime)) {
+      toast.error('Follow-up Date र Time दुवै राख्नुहोस् (compulsory).');
+      return;
+    }
+
     try {
       await updateLeadStatus.mutateAsync({
         leadId: selectedLead.id,
         status,
         remark: callNotes,
+        next_followup_at: status === 'FOLLOW_UP' ? `${followupDate}T${followupTime}:00` : undefined,
       });
 
       await createCallLog.mutateAsync({
@@ -106,6 +116,8 @@ export default function FollowupDashboard() {
       setIsDetailOpen(false);
       setSelectedLead(null);
       setCallNotes('');
+      setFollowupDate('');
+      setFollowupTime('');
       toast.success(`Lead marked as ${status.replace('_', ' ')}`);
     } catch (error) {
       console.error(error);
@@ -469,6 +481,27 @@ export default function FollowupDashboard() {
                     onChange={(e) => setCallNotes(e.target.value)}
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Follow-up Date <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="date"
+                      value={followupDate}
+                      onChange={(e) => setFollowupDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Follow-up Time <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="time"
+                      value={followupTime}
+                      onChange={(e) => setFollowupTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Required when marking as Follow Up.</p>
 
                 <div className="grid grid-cols-2 gap-2">
                   <Button 

@@ -484,6 +484,12 @@ Order By: ${profile?.name || 'N/A'}`;
   const handleSave = async () => {
     if (!editingLead) return;
 
+    // Compulsory follow-up date & time when status is FOLLOW_UP
+    if (editForm.status === 'FOLLOW_UP' && (!editForm.followup_date || !editForm.followup_time)) {
+      toast.error('Follow-up Date र Time दुवै राख्नुहोस् (compulsory).');
+      return;
+    }
+
     try {
       // Build follow-up timestamp if status is FOLLOW_UP
       let followupData: { 

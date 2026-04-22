@@ -292,15 +292,24 @@ export function useUpdateLeadStatus() {
     mutationFn: async ({ 
       leadId, 
       status, 
-      remark 
+      remark,
+      next_followup_at,
     }: { 
       leadId: string; 
       status: LeadStatus;
       remark?: string;
+      next_followup_at?: string;
     }) => {
+      const updatePayload: any = { status, remark };
+      if (status === 'FOLLOW_UP' && next_followup_at) {
+        updatePayload.next_followup_at = next_followup_at;
+        updatePayload.is_followup_reminded = false;
+        updatePayload.followup_completed = false;
+      }
+
       const { data, error } = await supabase
         .from('leads')
-        .update({ status, remark })
+        .update(updatePayload)
         .eq('id', leadId)
         .select()
         .maybeSingle();
