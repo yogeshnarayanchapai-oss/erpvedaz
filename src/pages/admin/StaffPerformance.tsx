@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ChevronDown, ChevronRight, Trophy, Medal, Award, AlertTriangle,
   Clock, PhoneOff, RotateCcw, ShieldAlert, Users, BarChart3, Loader2,
@@ -36,13 +37,14 @@ export default function StaffPerformance() {
   const perf = useStaffPerformance();
   const report = perf.data;
 
-  // Load staff list (one-time, lightweight)
+  // Load CALLING staff only — this audit is sales-focused
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('profiles')
         .select('id, name, role')
         .eq('is_active', true)
+        .eq('role', 'CALLING')
         .order('name');
       setStaffOptions((data || []).map(p => ({ id: p.id, name: p.name || 'Unknown' })));
     })();
