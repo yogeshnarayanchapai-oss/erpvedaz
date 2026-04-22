@@ -241,7 +241,15 @@ export default function StaffPerformance() {
                         {report.staff.length === 0 && (
                           <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No staff data for this period.</TableCell></TableRow>
                         )}
-                        {report.staff.map(s => (
+                        {[...report.staff]
+                          .sort((a, b) => {
+                            // Worst first: lowest score on top, then highest issue count
+                            const aIssues = a.late_orders + a.followup_no_time + a.followup_overdue + a.confirm_then_changed + a.duplicate_phone_confirms + a.invalid_phone_confirms;
+                            const bIssues = b.late_orders + b.followup_no_time + b.followup_overdue + b.confirm_then_changed + b.duplicate_phone_confirms + b.invalid_phone_confirms;
+                            if (a.score !== b.score) return a.score - b.score;
+                            return bIssues - aIssues;
+                          })
+                          .map(s => (
                           <StaffRow
                             key={s.staff_id}
                             staff={s}
