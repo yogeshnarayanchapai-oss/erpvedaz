@@ -226,10 +226,28 @@ export function LogisticsRedirectModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {[
+                        'Customer Not Ordered',
+                        'Customer Already Received Product',
+                        'Customer Cancelled',
+                      ].map((reason) => (
+                        <Button
+                          key={reason}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[11px]"
+                          onClick={() => setRemark(reason)}
+                        >
+                          {reason}
+                        </Button>
+                      ))}
+                    </div>
                     <Textarea
-                      placeholder="Redirect reason..."
+                      placeholder="Redirect reason... (or pick above)"
                       value={remark}
                       onChange={(e) => setRemark(e.target.value)}
                       rows={1}
