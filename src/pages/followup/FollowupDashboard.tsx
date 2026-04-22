@@ -483,6 +483,27 @@ export default function FollowupDashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Follow-up Date <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="date"
+                      value={followupDate}
+                      onChange={(e) => setFollowupDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Follow-up Time <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="time"
+                      value={followupTime}
+                      onChange={(e) => setFollowupTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Required when marking as Follow Up.</p>
+
+                <div className="grid grid-cols-2 gap-2">
                   <Button 
                     onClick={() => handleStatusUpdate('CONFIRMED')}
                     className="bg-success hover:bg-success/90"
