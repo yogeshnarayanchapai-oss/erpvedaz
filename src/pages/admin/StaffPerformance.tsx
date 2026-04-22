@@ -470,7 +470,11 @@ export default function StaffPerformance() {
                       {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).length === 0 && (
                         <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No data integrity issues 🎉</TableCell></TableRow>
                       )}
-                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).map(s => (
+                      {report.staff.filter(s => s.confirm_then_changed + s.cancel_after_confirm + s.duplicate_phone_confirms + s.invalid_phone_confirms > 0).sort((a, b) => {
+                        const aTotal = a.confirm_then_changed + a.cancel_after_confirm + a.duplicate_phone_confirms * 2 + a.invalid_phone_confirms * 2;
+                        const bTotal = b.confirm_then_changed + b.cancel_after_confirm + b.duplicate_phone_confirms * 2 + b.invalid_phone_confirms * 2;
+                        return bTotal - aTotal;
+                      }).map(s => (
                         <TableRow key={s.staff_id}>
                           <TableCell className="font-medium">{s.staff_name}</TableCell>
                           <TableCell className="text-right">{s.confirm_then_changed}</TableCell>
