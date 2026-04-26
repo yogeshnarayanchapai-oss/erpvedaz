@@ -90,17 +90,20 @@ export function LogisticsRedirectModal({
       return;
     }
     if (!attributedStaffId) {
-      toast.error('Please select the calling staff whose order is being redirected');
+      toast.error('Please select the old handler staff whose order is being redirected');
       return;
     }
+
+    const remarkWithOldId = oldOrderId.trim()
+      ? `${finalRemark} | Old Order ID: ${oldOrderId.trim()}`
+      : finalRemark;
 
     try {
       await redirectOrder.mutateAsync({
         orderId: order.id,
         branch: newBranch !== order.destination_branch ? newBranch : undefined,
         deliveryLocation: newDeliveryLocation !== order.delivery_location ? newDeliveryLocation : undefined,
-        courier: newCourier !== order.courier_provider ? newCourier : undefined,
-        remark: finalRemark,
+        remark: remarkWithOldId,
         userId,
         userName,
         attributedStaffId,
