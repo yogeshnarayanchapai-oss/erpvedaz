@@ -54,6 +54,7 @@ export function LogisticsRedirectModal({
   const [remarkOther, setRemarkOther] = useState('');
   const [attributedStaffId, setAttributedStaffId] = useState<string>('');
   const [oldOrderId, setOldOrderId] = useState('');
+  const [staffPopoverOpen, setStaffPopoverOpen] = useState(false);
 
   // Reset form when order changes
   useEffect(() => {
@@ -62,7 +63,7 @@ export function LogisticsRedirectModal({
       setNewDeliveryLocation(order.delivery_location || '');
       setRemark('');
       setRemarkOther('');
-      setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
+      setAttributedStaffId('');
       setOldOrderId('');
     }
   }, [order]);
