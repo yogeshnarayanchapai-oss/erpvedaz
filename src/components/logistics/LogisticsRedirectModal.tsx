@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BranchSelect } from '@/components/BranchSelect';
@@ -31,13 +32,6 @@ interface LogisticsRedirectModalProps {
   userName: string;
 }
 
-const COURIERS = [
-  { value: 'NCM', label: 'NCM Courier' },
-  { value: 'GAAUBESI', label: 'Gaaubesi Logistics' },
-  { value: 'PATHAO', label: 'Pathao' },
-  { value: 'SELF', label: 'Self Delivery' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 export function LogisticsRedirectModal({
   order,
@@ -53,20 +47,20 @@ export function LogisticsRedirectModal({
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
-  const [newCourier, setNewCourier] = useState('');
   const [remark, setRemark] = useState('');
   const [remarkOther, setRemarkOther] = useState('');
   const [attributedStaffId, setAttributedStaffId] = useState<string>('');
+  const [oldOrderId, setOldOrderId] = useState('');
 
   // Reset form when order changes
   useEffect(() => {
     if (order) {
       setNewBranch(order.destination_branch || '');
       setNewDeliveryLocation(order.delivery_location || '');
-      setNewCourier(order.courier_provider || '');
       setRemark('');
       setRemarkOther('');
       setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
+      setOldOrderId('');
     }
   }, [order]);
 
@@ -96,17 +90,20 @@ export function LogisticsRedirectModal({
       return;
     }
     if (!attributedStaffId) {
-      toast.error('Please select the calling staff whose order is being redirected');
+      toast.error('Please select the old handler staff whose order is being redirected');
       return;
     }
+
+    const remarkWithOldId = oldOrderId.trim()
+      ? `${finalRemark} | Old Order ID: ${oldOrderId.trim()}`
+      : finalRemark;
 
     try {
       await redirectOrder.mutateAsync({
         orderId: order.id,
         branch: newBranch !== order.destination_branch ? newBranch : undefined,
         deliveryLocation: newDeliveryLocation !== order.delivery_location ? newDeliveryLocation : undefined,
-        courier: newCourier !== order.courier_provider ? newCourier : undefined,
-        remark: finalRemark,
+        remark: remarkWithOldId,
         userId,
         userName,
         attributedStaffId,
@@ -235,25 +232,10 @@ export function LogisticsRedirectModal({
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Courier</Label>
-                    <Select value={newCourier} onValueChange={setNewCourier}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select courier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COURIERS.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>
-                            {c.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Calling Staff <span className="text-destructive">*</span></Label>
+                    <Label className="text-xs">Old Handler Staff <span className="text-destructive">*</span></Label>
                     <Select value={attributedStaffId} onValueChange={setAttributedStaffId}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select calling staff" />
+                        <SelectValue placeholder="Select old handler staff" />
                       </SelectTrigger>
                       <SelectContent>
                         {callingStaff.length === 0 && (
@@ -264,6 +246,15 @@ export function LogisticsRedirectModal({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Old Order ID <span className="text-muted-foreground">(optional)</span></Label>
+                    <Input
+                      placeholder="e.g. #1234"
+                      value={oldOrderId}
+                      onChange={(e) => setOldOrderId(e.target.value)}
+                      className="h-9"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
