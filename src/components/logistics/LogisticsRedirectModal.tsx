@@ -88,9 +88,15 @@ export function LogisticsRedirectModal({
   const canMarkDelivered = !['DELIVERED', 'CANCELLED', 'RETURNED'].includes(order.order_status || '');
   const canMarkReturned = !['CANCELLED', 'RETURNED'].includes(order.order_status || '');
 
+  const finalRemark = remark === 'Other' ? remarkOther.trim() : remark;
+
   const handleRedirect = async () => {
-    if (!remark.trim()) {
-      toast.error('Please add a remark for redirect');
+    if (!finalRemark) {
+      toast.error('Please select or enter a remark for redirect');
+      return;
+    }
+    if (!attributedStaffId) {
+      toast.error('Please select the calling staff whose order is being redirected');
       return;
     }
 
@@ -100,9 +106,10 @@ export function LogisticsRedirectModal({
         branch: newBranch !== order.destination_branch ? newBranch : undefined,
         deliveryLocation: newDeliveryLocation !== order.delivery_location ? newDeliveryLocation : undefined,
         courier: newCourier !== order.courier_provider ? newCourier : undefined,
-        remark,
+        remark: finalRemark,
         userId,
         userName,
+        attributedStaffId,
       });
       toast.success('Order redirected successfully');
       onClose();
