@@ -189,6 +189,7 @@ export function useLogisticsRedirectOrder() {
       remark,
       userId,
       userName,
+      attributedStaffId,
     }: {
       orderId: string;
       branch?: string;
@@ -197,6 +198,7 @@ export function useLogisticsRedirectOrder() {
       remark: string;
       userId: string;
       userName: string;
+      attributedStaffId?: string;
     }) => {
       const { data: order } = await supabase
         .from('orders')
@@ -225,6 +227,7 @@ export function useLogisticsRedirectOrder() {
       if (branch) updateData.destination_branch = branch;
       if (deliveryLocation) updateData.delivery_location = deliveryLocation;
       if (courier) updateData.courier_provider = courier;
+      if (attributedStaffId) updateData.redirect_attributed_to_staff_id = attributedStaffId;
 
       const { error } = await supabase
         .from('orders')
