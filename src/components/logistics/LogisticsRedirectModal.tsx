@@ -7,12 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { BranchSelect } from '@/components/BranchSelect';
 import { useLogisticsRedirectOrder, useLogisticsMarkDelivered, useLogisticsMarkReturned } from '@/hooks/useLogisticsPortalOrders';
 import { useCallingStaff } from '@/hooks/useStaff';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { RotateCcw, CheckCircle, Package, MapPin, Phone, User, Undo2 } from 'lucide-react';
+import { RotateCcw, CheckCircle, Package, MapPin, Phone, User, Undo2, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const REDIRECT_REASONS = [
   'Customer Not Ordered',
@@ -51,6 +54,7 @@ export function LogisticsRedirectModal({
   const [remarkOther, setRemarkOther] = useState('');
   const [attributedStaffId, setAttributedStaffId] = useState<string>('');
   const [oldOrderId, setOldOrderId] = useState('');
+  const [staffPopoverOpen, setStaffPopoverOpen] = useState(false);
 
   // Reset form when order changes
   useEffect(() => {
@@ -59,7 +63,7 @@ export function LogisticsRedirectModal({
       setNewDeliveryLocation(order.delivery_location || '');
       setRemark('');
       setRemarkOther('');
-      setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
+      setAttributedStaffId('');
       setOldOrderId('');
     }
   }, [order]);
@@ -233,19 +237,51 @@ export function LogisticsRedirectModal({
                   </div>
                   <div>
                     <Label className="text-xs">Old Handler Staff <span className="text-destructive">*</span></Label>
-                    <Select value={attributedStaffId} onValueChange={setAttributedStaffId}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select old handler staff" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {callingStaff.length === 0 && (
-                          <SelectItem value="__none" disabled>No calling staff found</SelectItem>
-                        )}
-                        {callingStaff.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={staffPopoverOpen} onOpenChange={setStaffPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full h-9 justify-between font-normal",
+                            !attributedStaffId && "text-muted-foreground"
+                          )}
+                        >
+                          {attributedStaffId
+                            ? callingStaff.find((s) => s.id === attributedStaffId)?.name || 'Select old handler staff'
+                            : 'Select old handler staff'}
+                          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search staff..." className="h-9" />
+                          <CommandList>
+                            <CommandEmpty>No calling staff found.</CommandEmpty>
+                            <CommandGroup>
+                              {callingStaff.map((s) => (
+                                <CommandItem
+                                  key={s.id}
+                                  value={s.name}
+                                  onSelect={() => {
+                                    setAttributedStaffId(s.id);
+                                    setStaffPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      attributedStaffId === s.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {s.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div>
                     <Label className="text-xs">Old Order ID <span className="text-muted-foreground">(optional)</span></Label>
