@@ -32,13 +32,6 @@ interface LogisticsRedirectModalProps {
   userName: string;
 }
 
-const COURIERS = [
-  { value: 'NCM', label: 'NCM Courier' },
-  { value: 'GAAUBESI', label: 'Gaaubesi Logistics' },
-  { value: 'PATHAO', label: 'Pathao' },
-  { value: 'SELF', label: 'Self Delivery' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 export function LogisticsRedirectModal({
   order,
