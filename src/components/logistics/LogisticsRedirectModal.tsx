@@ -249,34 +249,47 @@ export function LogisticsRedirectModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
-                    <div className="flex flex-wrap gap-1.5 mb-1.5">
-                      {[
-                        'Customer Not Ordered',
-                        'Customer Already Received Product',
-                        'Customer Cancelled',
-                      ].map((reason) => (
-                        <Button
-                          key={reason}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() => setRemark(reason)}
-                        >
-                          {reason}
-                        </Button>
-                      ))}
-                    </div>
-                    <Textarea
-                      placeholder="Redirect reason... (or pick above)"
-                      value={remark}
-                      onChange={(e) => setRemark(e.target.value)}
-                      rows={1}
-                      className="min-h-[36px] resize-none text-sm"
-                    />
+                  <div>
+                    <Label className="text-xs">Calling Staff <span className="text-destructive">*</span></Label>
+                    <Select value={attributedStaffId} onValueChange={setAttributedStaffId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select calling staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {callingStaff.length === 0 && (
+                          <SelectItem value="__none" disabled>No calling staff found</SelectItem>
+                        )}
+                        {callingStaff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <div>
+                    <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
+                    <Select value={remark} onValueChange={setRemark}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REDIRECT_REASONS.map((r) => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {remark === 'Other' && (
+                    <div className="col-span-2">
+                      <Label className="text-xs">Specify reason <span className="text-destructive">*</span></Label>
+                      <Textarea
+                        placeholder="Type the redirect reason..."
+                        value={remarkOther}
+                        onChange={(e) => setRemarkOther(e.target.value)}
+                        rows={2}
+                        className="min-h-[44px] resize-none text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </>
