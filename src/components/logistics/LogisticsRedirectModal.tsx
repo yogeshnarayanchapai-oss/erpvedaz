@@ -49,11 +49,14 @@ export function LogisticsRedirectModal({
   const redirectOrder = useLogisticsRedirectOrder();
   const markDelivered = useLogisticsMarkDelivered();
   const markReturned = useLogisticsMarkReturned();
+  const { data: callingStaff = [] } = useCallingStaff();
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
   const [newCourier, setNewCourier] = useState('');
   const [remark, setRemark] = useState('');
+  const [remarkOther, setRemarkOther] = useState('');
+  const [attributedStaffId, setAttributedStaffId] = useState<string>('');
 
   // Reset form when order changes
   useEffect(() => {
@@ -62,6 +65,8 @@ export function LogisticsRedirectModal({
       setNewDeliveryLocation(order.delivery_location || '');
       setNewCourier(order.courier_provider || '');
       setRemark('');
+      setRemarkOther('');
+      setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
     }
   }, [order]);
 
