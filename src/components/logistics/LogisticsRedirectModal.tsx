@@ -8,9 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BranchSelect } from '@/components/BranchSelect';
 import { useLogisticsRedirectOrder, useLogisticsMarkDelivered, useLogisticsMarkReturned } from '@/hooks/useLogisticsPortalOrders';
+import { useCallingStaff } from '@/hooks/useStaff';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { RotateCcw, CheckCircle, Package, MapPin, Phone, User, Undo2 } from 'lucide-react';
+
+const REDIRECT_REASONS = [
+  'Customer Not Ordered',
+  'Customer Already Received Product',
+  'Customer Cancelled',
+  'Wrong Address',
+  'Phone Switched Off / Unreachable',
+  'Customer Not Available',
+  'Other',
+];
 
 interface LogisticsRedirectModalProps {
   order: any;
