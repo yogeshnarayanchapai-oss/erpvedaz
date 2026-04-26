@@ -329,7 +329,7 @@ export function LogisticsRedirectModal({
               variant="destructive"
               size="sm"
               onClick={handleRedirect}
-              disabled={redirectOrder.isPending || !remark.trim()}
+              disabled={redirectOrder.isPending || !finalRemark || !attributedStaffId}
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Redirect
