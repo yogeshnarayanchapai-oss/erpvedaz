@@ -424,10 +424,10 @@ export default function AccountsManagement() {
                         {account.account_number || '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        {account.currency} {(account.opening_balance ?? 0).toLocaleString()}
+                        {account.currency} {Math.round(account.opening_balance ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell className={`text-right font-bold ${(account.current_balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {account.currency} {(account.current_balance ?? 0).toLocaleString()}
+                        {account.currency} {Math.round(account.current_balance ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <Badge variant={account.is_active ? 'default' : 'secondary'}>
