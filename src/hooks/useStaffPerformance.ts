@@ -158,7 +158,7 @@ async function fetchPerformance(filters: StaffPerformanceFilters): Promise<Staff
     while (true) {
       let q = supabase
         .from('orders')
-        .select('id, order_number, order_date, created_at, order_status, delivery_notes, created_by_staff_id, store_id, leads:lead_id(contact_number, client_name)')
+        .select('id, order_number, order_date, created_at, order_status, delivery_notes, created_by_staff_id, redirect_attributed_to_staff_id, store_id, leads:lead_id(contact_number, client_name)')
         .gte('order_date', startIso)
         .lte('order_date', endIso)
         .eq('is_deleted', false)
