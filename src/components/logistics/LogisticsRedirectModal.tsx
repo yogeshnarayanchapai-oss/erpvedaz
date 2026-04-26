@@ -47,20 +47,20 @@ export function LogisticsRedirectModal({
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
-  const [newCourier, setNewCourier] = useState('');
   const [remark, setRemark] = useState('');
   const [remarkOther, setRemarkOther] = useState('');
   const [attributedStaffId, setAttributedStaffId] = useState<string>('');
+  const [oldOrderId, setOldOrderId] = useState('');
 
   // Reset form when order changes
   useEffect(() => {
     if (order) {
       setNewBranch(order.destination_branch || '');
       setNewDeliveryLocation(order.delivery_location || '');
-      setNewCourier(order.courier_provider || '');
       setRemark('');
       setRemarkOther('');
       setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
+      setOldOrderId('');
     }
   }, [order]);
 
