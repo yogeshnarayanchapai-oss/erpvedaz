@@ -232,25 +232,10 @@ export function LogisticsRedirectModal({
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Courier</Label>
-                    <Select value={newCourier} onValueChange={setNewCourier}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select courier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COURIERS.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>
-                            {c.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Calling Staff <span className="text-destructive">*</span></Label>
+                    <Label className="text-xs">Old Handler Staff <span className="text-destructive">*</span></Label>
                     <Select value={attributedStaffId} onValueChange={setAttributedStaffId}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select calling staff" />
+                        <SelectValue placeholder="Select old handler staff" />
                       </SelectTrigger>
                       <SelectContent>
                         {callingStaff.length === 0 && (
@@ -261,6 +246,15 @@ export function LogisticsRedirectModal({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Old Order ID <span className="text-muted-foreground">(optional)</span></Label>
+                    <Input
+                      placeholder="e.g. #1234"
+                      value={oldOrderId}
+                      onChange={(e) => setOldOrderId(e.target.value)}
+                      className="h-9"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
