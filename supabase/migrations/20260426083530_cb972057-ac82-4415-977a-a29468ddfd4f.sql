@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS redirect_attributed_to_staff_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_redirect_attributed_staff ON public.orders(redirect_attributed_to_staff_id) WHERE redirect_attributed_to_staff_id IS NOT NULL;

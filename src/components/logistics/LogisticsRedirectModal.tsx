@@ -8,9 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BranchSelect } from '@/components/BranchSelect';
 import { useLogisticsRedirectOrder, useLogisticsMarkDelivered, useLogisticsMarkReturned } from '@/hooks/useLogisticsPortalOrders';
+import { useCallingStaff } from '@/hooks/useStaff';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { RotateCcw, CheckCircle, Package, MapPin, Phone, User, Undo2 } from 'lucide-react';
+
+const REDIRECT_REASONS = [
+  'Customer Not Ordered',
+  'Customer Already Received Product',
+  'Customer Cancelled',
+  'Wrong Address',
+  'Phone Switched Off / Unreachable',
+  'Customer Not Available',
+  'Other',
+];
 
 interface LogisticsRedirectModalProps {
   order: any;
@@ -38,11 +49,14 @@ export function LogisticsRedirectModal({
   const redirectOrder = useLogisticsRedirectOrder();
   const markDelivered = useLogisticsMarkDelivered();
   const markReturned = useLogisticsMarkReturned();
+  const { data: callingStaff = [] } = useCallingStaff();
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
   const [newCourier, setNewCourier] = useState('');
   const [remark, setRemark] = useState('');
+  const [remarkOther, setRemarkOther] = useState('');
+  const [attributedStaffId, setAttributedStaffId] = useState<string>('');
 
   // Reset form when order changes
   useEffect(() => {
@@ -51,6 +65,8 @@ export function LogisticsRedirectModal({
       setNewDeliveryLocation(order.delivery_location || '');
       setNewCourier(order.courier_provider || '');
       setRemark('');
+      setRemarkOther('');
+      setAttributedStaffId(order.sales_person_id || order.created_by_staff_id || '');
     }
   }, [order]);
 
@@ -72,9 +88,15 @@ export function LogisticsRedirectModal({
   const canMarkDelivered = !['DELIVERED', 'CANCELLED', 'RETURNED'].includes(order.order_status || '');
   const canMarkReturned = !['CANCELLED', 'RETURNED'].includes(order.order_status || '');
 
+  const finalRemark = remark === 'Other' ? remarkOther.trim() : remark;
+
   const handleRedirect = async () => {
-    if (!remark.trim()) {
-      toast.error('Please add a remark for redirect');
+    if (!finalRemark) {
+      toast.error('Please select or enter a remark for redirect');
+      return;
+    }
+    if (!attributedStaffId) {
+      toast.error('Please select the calling staff whose order is being redirected');
       return;
     }
 
@@ -84,9 +106,10 @@ export function LogisticsRedirectModal({
         branch: newBranch !== order.destination_branch ? newBranch : undefined,
         deliveryLocation: newDeliveryLocation !== order.delivery_location ? newDeliveryLocation : undefined,
         courier: newCourier !== order.courier_provider ? newCourier : undefined,
-        remark,
+        remark: finalRemark,
         userId,
         userName,
+        attributedStaffId,
       });
       toast.success('Order redirected successfully');
       onClose();
@@ -226,34 +249,47 @@ export function LogisticsRedirectModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
-                    <div className="flex flex-wrap gap-1.5 mb-1.5">
-                      {[
-                        'Customer Not Ordered',
-                        'Customer Already Received Product',
-                        'Customer Cancelled',
-                      ].map((reason) => (
-                        <Button
-                          key={reason}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() => setRemark(reason)}
-                        >
-                          {reason}
-                        </Button>
-                      ))}
-                    </div>
-                    <Textarea
-                      placeholder="Redirect reason... (or pick above)"
-                      value={remark}
-                      onChange={(e) => setRemark(e.target.value)}
-                      rows={1}
-                      className="min-h-[36px] resize-none text-sm"
-                    />
+                  <div>
+                    <Label className="text-xs">Calling Staff <span className="text-destructive">*</span></Label>
+                    <Select value={attributedStaffId} onValueChange={setAttributedStaffId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select calling staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {callingStaff.length === 0 && (
+                          <SelectItem value="__none" disabled>No calling staff found</SelectItem>
+                        )}
+                        {callingStaff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <div>
+                    <Label className="text-xs">Remark <span className="text-destructive">*</span></Label>
+                    <Select value={remark} onValueChange={setRemark}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REDIRECT_REASONS.map((r) => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {remark === 'Other' && (
+                    <div className="col-span-2">
+                      <Label className="text-xs">Specify reason <span className="text-destructive">*</span></Label>
+                      <Textarea
+                        placeholder="Type the redirect reason..."
+                        value={remarkOther}
+                        onChange={(e) => setRemarkOther(e.target.value)}
+                        rows={2}
+                        className="min-h-[44px] resize-none text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -293,7 +329,7 @@ export function LogisticsRedirectModal({
               variant="destructive"
               size="sm"
               onClick={handleRedirect}
-              disabled={redirectOrder.isPending || !remark.trim()}
+              disabled={redirectOrder.isPending || !finalRemark || !attributedStaffId}
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Redirect

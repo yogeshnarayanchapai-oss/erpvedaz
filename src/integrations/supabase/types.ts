@@ -4684,6 +4684,7 @@ export type Database = {
           payment_status: Database["public"]["Enums"]["payment_status"] | null
           product_id: string | null
           quantity: number | null
+          redirect_attributed_to_staff_id: string | null
           redirected_at: string | null
           redirected_by_user_id: string | null
           sales_person_id: string | null
@@ -4748,6 +4749,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           product_id?: string | null
           quantity?: number | null
+          redirect_attributed_to_staff_id?: string | null
           redirected_at?: string | null
           redirected_by_user_id?: string | null
           sales_person_id?: string | null
@@ -4812,6 +4814,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           product_id?: string | null
           quantity?: number | null
+          redirect_attributed_to_staff_id?: string | null
           redirected_at?: string | null
           redirected_by_user_id?: string | null
           sales_person_id?: string | null
@@ -4860,6 +4863,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_redirect_attributed_to_staff_id_fkey"
+            columns: ["redirect_attributed_to_staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

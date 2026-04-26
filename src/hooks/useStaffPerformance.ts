@@ -158,7 +158,7 @@ async function fetchPerformance(filters: StaffPerformanceFilters): Promise<Staff
     while (true) {
       let q = supabase
         .from('orders')
-        .select('id, order_number, order_date, created_at, order_status, delivery_notes, created_by_staff_id, store_id, leads:lead_id(contact_number, client_name)')
+        .select('id, order_number, order_date, created_at, order_status, delivery_notes, created_by_staff_id, redirect_attributed_to_staff_id, store_id, leads:lead_id(contact_number, client_name)')
         .gte('order_date', startIso)
         .lte('order_date', endIso)
         .eq('is_deleted', false)
@@ -269,10 +269,13 @@ async function fetchPerformance(filters: StaffPerformanceFilters): Promise<Staff
   }
 
   // ── C. Redirect reasons (delivery_notes parsing on REDIRECT orders) ────
+  // Attribute to redirect_attributed_to_staff_id (chosen by logistics) when set,
+  // otherwise fall back to the order creator.
   for (const o of orders) {
     if (o.order_status !== 'REDIRECT' && o.order_status !== 'REDIRECTED') continue;
-    if (!o.created_by_staff_id || !profileMap.has(o.created_by_staff_id)) continue;
-    const m = getOrInit(o.created_by_staff_id);
+    const attributedTo = o.redirect_attributed_to_staff_id || o.created_by_staff_id;
+    if (!attributedTo || !profileMap.has(attributedTo)) continue;
+    const m = getOrInit(attributedTo);
     if (!m) continue;
     const cls = classifyRedirectReason(o.delivery_notes);
     m.redirect_total++;
