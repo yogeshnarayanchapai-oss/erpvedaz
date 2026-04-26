@@ -122,6 +122,30 @@ export function useCreateTransaction() {
       description?: string | null;
       created_by?: string | null;
     }) => {
+      // ===== Insufficient funds check for outflow transactions =====
+      // Outflow types deduct money from the source account. Block when
+      // the account balance is negative or less than the requested amount.
+      const outflowFromAccount: TransactionType[] = ['EXPENSE', 'PAYMENT_OUT', 'SALES_IN', 'ADJUSTMENT_MINUS'];
+      const isOutflow = outflowFromAccount.includes(transaction.transaction_type);
+      const sourceAccountId = transaction.transaction_type === 'TRANSFER'
+        ? transaction.from_account_id
+        : (isOutflow ? transaction.account_id : null);
+
+      if (sourceAccountId && transaction.amount > 0) {
+        const { data: acct, error: acctErr } = await supabase
+          .from('accounts')
+          .select('id, name, current_balance')
+          .eq('id', sourceAccountId)
+          .single();
+        if (acctErr) throw acctErr;
+        const balance = Number(acct?.current_balance ?? 0);
+        if (balance <= 0 || balance < transaction.amount) {
+          throw new Error(
+            `Your account "${acct?.name ?? ''}" has insufficient funds (Available: NPR ${balance.toLocaleString()})`
+          );
+        }
+      }
+
       // Map transaction_type to legacy type field
       const legacyType = transaction.transaction_type === 'TRANSFER' ? 'transfer' 
         : ['INCOME', 'SALES_OUT', 'PAYMENT_IN', 'ADJUSTMENT_PLUS'].includes(transaction.transaction_type) ? 'income' 
