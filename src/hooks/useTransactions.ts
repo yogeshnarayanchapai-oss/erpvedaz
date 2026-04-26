@@ -141,7 +141,7 @@ export function useCreateTransaction() {
         const balance = Number(acct?.current_balance ?? 0);
         if (balance <= 0 || balance < transaction.amount) {
           throw new Error(
-            `Your account "${acct?.name ?? ''}" has insufficient funds (Available: NPR ${balance.toLocaleString()})`
+            `Your account "${acct?.name ?? ''}" has insufficient funds (Available: NPR ${Math.round(balance).toLocaleString()})`
           );
         }
       }
