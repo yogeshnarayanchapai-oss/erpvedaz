@@ -208,10 +208,10 @@ export default function AdminOrders() {
       // Order date filter
       const orderDateStr = order.order_date ? format(new Date(order.order_date), 'yyyy-MM-dd') : null;
       const matchesOrderDate = selectedOrderDate === 'all' || orderDateStr === selectedOrderDate;
-      // Inside Valley delivery status filter
+      // Delivery status filter (applies regardless of location)
       const insideDeliveryStatusVal = (order as any).inside_delivery_status || 'PENDING';
-      const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'ALL' || 
-        (selectedDelivery === 'INSIDE_VALLEY' && insideDeliveryStatusVal === selectedInsideDeliveryStatus);
+      const matchesInsideDeliveryStatus = selectedInsideDeliveryStatus === 'ALL' ||
+        insideDeliveryStatusVal === selectedInsideDeliveryStatus;
       // Check for duplicate - either order is_duplicate or linked lead is_duplicate
       const orderIsDuplicate = (order as any).is_duplicate === true || (order.leads as any)?.is_duplicate === true;
       const matchesDuplicate = !showDuplicatesOnly || orderIsDuplicate;
