@@ -655,78 +655,6 @@ export default function AdminOrders() {
         </div>
       </div>
 
-
-      {/* Order Summary Card */}
-      {orderSummary.items.length > 0 && (
-        <Card className="border-primary/20">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ClipboardList className="w-5 h-5 text-primary" />
-                Order Summary ({orderSummary.status} Orders)
-              </CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('OVD')}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    OVD Dispatch Summary (PDF)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('VD')}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    VD Dispatch Summary (PDF)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('ALL')}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    All Dispatch Summary (PDF)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportSummaryCSV}>
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Product Summary (CSV)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {orderSummary.orderCount} orders grouped by product
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-semibold">Product</TableHead>
-                    <TableHead className="font-semibold text-right">Confirmed Qty</TableHead>
-                    <TableHead className="font-semibold text-right">Total Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orderSummary.items.map((item) => (
-                    <TableRow key={item.productId}>
-                      <TableCell className="font-medium">{item.productName}</TableCell>
-                      <TableCell className="text-right">{item.confirmedQty}</TableCell>
-                      <TableCell className="text-right">NPR {item.totalAmount.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-primary/10 font-bold border-t-2 border-primary/30">
-                    <TableCell className="font-bold text-primary">Total</TableCell>
-                    <TableCell className="text-right font-bold text-primary">{orderSummary.totalQty}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">NPR {orderSummary.totalAmount.toLocaleString()}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Filters - Using shared OrderFiltersCard component */}
       <OrderFiltersCard
         searchQuery={search}
@@ -763,8 +691,39 @@ export default function AdminOrders() {
         staff={staff}
       />
 
+      {/* Export Dispatch Summary */}
+      <div className="flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('OVD')}>
+              <FileText className="w-4 h-4 mr-2" />
+              OVD Dispatch Summary (PDF)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('VD')}>
+              <FileText className="w-4 h-4 mr-2" />
+              VD Dispatch Summary (PDF)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('ALL')}>
+              <FileText className="w-4 h-4 mr-2" />
+              All Dispatch Summary (PDF)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={exportSummaryCSV}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Product Summary (CSV)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       {/* No orders message for summary */}
-      {orderSummary.items.length === 0 && filteredOrders.length === 0 && !isLoading && (
+      {filteredOrders.length === 0 && !isLoading && (
         <Card className="border-dashed">
           <CardContent className="py-6 text-center text-muted-foreground">
             No orders found for current filters.
