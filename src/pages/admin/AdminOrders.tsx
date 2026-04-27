@@ -140,7 +140,7 @@ export default function AdminOrders() {
   // Date range computed from preset and custom dates
   const dateRange = useMemo(() => {
     if (datePreset === 'today') return { from: startOfDay(today), to: endOfDay(today) };
-    if (datePreset === 'last7') return { from: startOfDay(subDays(today, 7)), to: endOfDay(today) };
+    if (datePreset === 'yesterday') return { from: startOfDay(subDays(today, 1)), to: endOfDay(subDays(today, 1)) };
     if (datePreset === 'last30') return { from: startOfDay(subDays(today, 30)), to: endOfDay(today) };
     return { from: startOfDay(new Date(customDateFrom)), to: endOfDay(new Date(customDateTo)) };
   }, [datePreset, today, customDateFrom, customDateTo]);
