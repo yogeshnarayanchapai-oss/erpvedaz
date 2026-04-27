@@ -126,7 +126,7 @@ export function OrderFiltersCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="last7">Last 7 Days</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="last30">Last 30 Days</SelectItem>
               <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
