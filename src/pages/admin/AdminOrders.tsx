@@ -647,10 +647,16 @@ export default function AdminOrders() {
                 <ClipboardList className="w-5 h-5 text-primary" />
                 Order Summary ({orderSummary.status} Orders)
               </CardTitle>
-              <Button onClick={exportSummaryCSV} variant="outline" size="sm">
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Export Summary
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={exportOVDSummaryPDF} variant="outline" size="sm">
+                  <FileText className="w-4 h-4 mr-2" />
+                  OVD Summary
+                </Button>
+                <Button onClick={exportSummaryCSV} variant="outline" size="sm">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export Summary
+                </Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               {orderSummary.orderCount} orders grouped by product
