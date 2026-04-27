@@ -649,16 +649,33 @@ export default function AdminOrders() {
                 <ClipboardList className="w-5 h-5 text-primary" />
                 Order Summary ({orderSummary.status} Orders)
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button onClick={exportOVDSummaryPDF} variant="outline" size="sm">
-                  <FileText className="w-4 h-4 mr-2" />
-                  OVD Summary
-                </Button>
-                <Button onClick={exportSummaryCSV} variant="outline" size="sm">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Export Summary
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('OVD')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    OVD Dispatch Summary (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('VD')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    VD Dispatch Summary (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('ALL')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    All Dispatch Summary (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportSummaryCSV}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Product Summary (CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <p className="text-sm text-muted-foreground">
               {orderSummary.orderCount} orders grouped by product
