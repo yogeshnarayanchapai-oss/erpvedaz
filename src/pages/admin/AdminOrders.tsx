@@ -652,6 +652,33 @@ export default function AdminOrders() {
               Duplicates ({duplicateOrderCount})
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('OVD')}>
+                <FileText className="w-4 h-4 mr-2" />
+                OVD Dispatch Summary (PDF)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('VD')}>
+                <FileText className="w-4 h-4 mr-2" />
+                VD Dispatch Summary (PDF)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportDispatchSummaryPDF('ALL')}>
+                <FileText className="w-4 h-4 mr-2" />
+                All Dispatch Summary (PDF)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportSummaryCSV}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Product Summary (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
