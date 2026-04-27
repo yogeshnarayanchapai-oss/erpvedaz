@@ -24,10 +24,10 @@ export const ORDER_STATUS_OPTIONS = [
 
 export const INSIDE_DELIVERY_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Delivery Status' },
-  { value: 'PENDING', label: 'Pending Delivery' },
+  { value: 'PENDING', label: 'Pending' },
   { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'REACHED_CNR', label: 'Location Not Reached' },
-  { value: 'CUSTOMER_CANCELLED', label: 'Customer Not Available' },
+  { value: 'REACHED_CNR', label: 'Reached - CNR' },
+  { value: 'CUSTOMER_CANCELLED', label: 'Customer Cancelled' },
 ];
 
 interface Product {
@@ -178,18 +178,19 @@ export function OrderFiltersCard({
             </SelectContent>
           </Select>
 
-          {/* Delivery Status Filter - always visible */}
-          <Select value={insideDeliveryStatusFilter} onValueChange={(v) => onInsideDeliveryStatusFilterChange(v as InsideDeliveryStatusFilter)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Delivery Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {INSIDE_DELIVERY_FILTER_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
+          {/* Delivery Status Filter - only when Inside Valley is selected */}
+          {deliveryFilter === 'INSIDE_VALLEY' && (
+            <Select value={insideDeliveryStatusFilter} onValueChange={(v) => onInsideDeliveryStatusFilterChange(v as InsideDeliveryStatusFilter)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Delivery Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {INSIDE_DELIVERY_FILTER_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {/* Product Filter */}
           <Select value={productFilter} onValueChange={onProductFilterChange}>
             <SelectTrigger className="w-[160px]">
