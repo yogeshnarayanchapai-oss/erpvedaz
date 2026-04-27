@@ -562,21 +562,21 @@ export default function AdminOrders() {
       doc.text(`Date: ${dateFrom} to ${dateTo}  |  Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 29);
 
       const body = rows.map((r) => [
-        `${r.productName} (${r.qtyPerOrder} pcs)`,
+        r.packageLabel,
         `${r.orderCount} order${r.orderCount > 1 ? 's' : ''}`,
         `${r.totalPieces} pcs`,
       ]);
 
       autoTable(doc, {
-        head: [['Product (Qty per Order)', 'Orders', 'Total Pieces']],
+        head: [['Package (Products + Qty per Order)', 'Orders', 'Total Pieces']],
         body,
         startY: 35,
-        styles: { fontSize: 11, cellPadding: 3 },
+        styles: { fontSize: 10, cellPadding: 3, valign: 'middle' },
         headStyles: { fillColor: [41, 128, 185], fontSize: 11, fontStyle: 'bold' },
         columnStyles: {
-          0: { cellWidth: 110 },
-          1: { cellWidth: 35, halign: 'center' },
-          2: { cellWidth: 35, halign: 'center' },
+          0: { cellWidth: 120 },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 30, halign: 'center' },
         },
         foot: [[
           { content: 'TOTAL', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
