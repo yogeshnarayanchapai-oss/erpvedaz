@@ -502,34 +502,50 @@ export default function AdminOrders() {
       return;
     }
 
-    type Row = { productName: string; qtyPerOrder: number; orderCount: number; totalPieces: number };
+    // Group by the full PACKAGE (combination of all products in one order)
+    type PackageItem = { productName: string; qty: number };
+    type Row = { packageLabel: string; items: PackageItem[]; orderCount: number; totalPieces: number };
     const groupMap = new Map<string, Row>();
-
-    const addEntry = (productName: string, qty: number) => {
-      const key = `${productName}__${qty}`;
-      const existing = groupMap.get(key);
-      if (existing) {
-        existing.orderCount += 1;
-        existing.totalPieces += qty;
-      } else {
-        groupMap.set(key, { productName, qtyPerOrder: qty, orderCount: 1, totalPieces: qty });
-      }
-    };
 
     scopedOrders.forEach((order) => {
       const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
+
+      // Build the package (one row per order, combining all items)
+      const itemMap = new Map<string, number>();
       if (orderItemsList.length > 0) {
         orderItemsList.forEach((item: any) => {
-          addEntry(item.product_name || 'Unknown Product', Number(item.quantity) || 1);
+          const name = item.product_name || 'Unknown Product';
+          const qty = Number(item.quantity) || 1;
+          itemMap.set(name, (itemMap.get(name) || 0) + qty);
         });
       } else {
-        addEntry(order.products?.name || 'Unknown Product', Number(order.quantity) || 1);
+        const name = order.products?.name || 'Unknown Product';
+        const qty = Number(order.quantity) || 1;
+        itemMap.set(name, (itemMap.get(name) || 0) + qty);
+      }
+
+      // Sort items inside the package alphabetically so identical combos collapse to the same key
+      const items: PackageItem[] = Array.from(itemMap.entries())
+        .map(([productName, qty]) => ({ productName, qty }))
+        .sort((a, b) => a.productName.localeCompare(b.productName));
+
+      const packageLabel = items.map((i) => `${i.productName} (${i.qty} pcs)`).join(' + ');
+      const piecesInPackage = items.reduce((s, i) => s + i.qty, 0);
+      const key = items.map((i) => `${i.productName}__${i.qty}`).join('||');
+
+      const existing = groupMap.get(key);
+      if (existing) {
+        existing.orderCount += 1;
+        existing.totalPieces += piecesInPackage;
+      } else {
+        groupMap.set(key, { packageLabel, items, orderCount: 1, totalPieces: piecesInPackage });
       }
     });
 
+    // Sort: single-product packages first, then by package label
     const rows = Array.from(groupMap.values()).sort((a, b) => {
-      if (a.productName !== b.productName) return a.productName.localeCompare(b.productName);
-      return a.qtyPerOrder - b.qtyPerOrder;
+      if (a.items.length !== b.items.length) return a.items.length - b.items.length;
+      return a.packageLabel.localeCompare(b.packageLabel);
     });
 
     const totalOrders = rows.reduce((s, r) => s + r.orderCount, 0);
