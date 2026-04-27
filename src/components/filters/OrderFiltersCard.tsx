@@ -24,10 +24,10 @@ export const ORDER_STATUS_OPTIONS = [
 
 export const INSIDE_DELIVERY_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Delivery Status' },
-  { value: 'PENDING', label: 'Pending Delivery' },
+  { value: 'PENDING', label: 'Pending' },
   { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'REACHED_CNR', label: 'Location Not Reached' },
-  { value: 'CUSTOMER_CANCELLED', label: 'Customer Not Available' },
+  { value: 'REACHED_CNR', label: 'Reached - CNR' },
+  { value: 'CUSTOMER_CANCELLED', label: 'Customer Cancelled' },
 ];
 
 interface Product {
