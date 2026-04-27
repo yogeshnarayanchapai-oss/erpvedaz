@@ -313,9 +313,14 @@ export function AdminEditOrderSheet({
               <Label>Logistic ID</Label>
               <Input value={formData.logistic_order_id} onChange={(e) => handleFormChange({ logistic_order_id: e.target.value })} placeholder="Logistic ID" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 col-span-full">
               <Label>Remark</Label>
-              <Input value={formData.delivery_notes} onChange={(e) => handleFormChange({ delivery_notes: e.target.value })} placeholder="Notes..." />
+              <Textarea
+                value={formData.delivery_notes}
+                onChange={(e) => handleFormChange({ delivery_notes: e.target.value })}
+                placeholder="Add notes / remarks..."
+                className="min-h-[120px] resize-y"
+              />
             </div>
           </div>
 
