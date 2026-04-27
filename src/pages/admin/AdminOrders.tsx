@@ -723,7 +723,7 @@ export default function AdminOrders() {
       </div>
 
       {/* No orders message for summary */}
-      {orderSummary.items.length === 0 && filteredOrders.length === 0 && !isLoading && (
+      {filteredOrders.length === 0 && !isLoading && (
         <Card className="border-dashed">
           <CardContent className="py-6 text-center text-muted-foreground">
             No orders found for current filters.
