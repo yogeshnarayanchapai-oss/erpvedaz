@@ -153,9 +153,6 @@ export function OrderFiltersCard({
           {/* Location Filter */}
           <Select value={deliveryFilter} onValueChange={(v) => {
             onDeliveryFilterChange(v as DeliveryFilter);
-            if (v !== 'INSIDE_VALLEY') {
-              onInsideDeliveryStatusFilterChange('ALL');
-            }
           }}>
             <SelectTrigger className="w-[160px]">
               <MapPin className="w-4 h-4 mr-2" />
