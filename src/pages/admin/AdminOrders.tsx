@@ -579,40 +579,42 @@ export default function AdminOrders() {
   };
 
   const exportOrdersToPDF = (orders: typeof filteredOrders, filename: string) => {
-    import('jspdf').then(({ jsPDF }) => {
-      import('jspdf-autotable').then((autoTableModule) => {
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-        const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Location', 'Branch', 'Status', 'Remarks'];
-        const rows = getOrderExportRows(orders).map(r => [
-          r.date, r.client, r.contact, r.products, r.qty, `NPR ${Number(r.amount).toLocaleString()}`, r.location, r.branch, r.status, r.remark
-        ]);
-        
-        doc.setFontSize(14);
-        doc.text(`Orders Report (${dateFrom} to ${dateTo})`, 14, 15);
-        doc.setFontSize(9);
-        doc.text(`Total: ${orders.length} orders | Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 22);
-        
-        (doc as any).autoTable({
-          head: [headers],
-          body: rows,
-          startY: 27,
-          styles: { fontSize: 7, cellPadding: 2 },
-          headStyles: { fillColor: [41, 128, 185], fontSize: 7, fontStyle: 'bold' },
-          columnStyles: {
-            0: { cellWidth: 20 },
-            4: { cellWidth: 12, halign: 'center' },
-            5: { cellWidth: 22, halign: 'right' },
-            9: { cellWidth: 40 },
-          },
-          didDrawPage: (data: any) => {
-            doc.setFontSize(7);
-            doc.text(`Page ${doc.getNumberOfPages()}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 8);
-          },
-        });
-        
-        doc.save(filename);
-        toast.success('PDF exported successfully');
+    Promise.all([import('jspdf'), import('jspdf-autotable')]).then(([{ jsPDF }, autoTableMod]) => {
+      const autoTable = (autoTableMod as any).default || (autoTableMod as any);
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const headers = ['Date', 'Client', 'Contact', 'Products', 'Qty', 'Amount', 'Location', 'Branch', 'Status', 'Remarks'];
+      const rows = getOrderExportRows(orders).map(r => [
+        r.date, r.client, r.contact, r.products, r.qty, `NPR ${Number(r.amount).toLocaleString()}`, r.location, r.branch, r.status, r.remark
+      ]);
+
+      doc.setFontSize(14);
+      doc.text(`Orders Report (${dateFrom} to ${dateTo})`, 14, 15);
+      doc.setFontSize(9);
+      doc.text(`Total: ${orders.length} orders | Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 22);
+
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        startY: 27,
+        styles: { fontSize: 7, cellPadding: 2 },
+        headStyles: { fillColor: [41, 128, 185], fontSize: 7, fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          4: { cellWidth: 12, halign: 'center' },
+          5: { cellWidth: 22, halign: 'right' },
+          9: { cellWidth: 40 },
+        },
+        didDrawPage: () => {
+          doc.setFontSize(7);
+          doc.text(`Page ${doc.getNumberOfPages()}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 8);
+        },
       });
+
+      doc.save(filename);
+      toast.success('PDF exported successfully');
+    }).catch((err) => {
+      console.error('PDF export failed', err);
+      toast.error('Failed to generate PDF');
     });
   };
 
