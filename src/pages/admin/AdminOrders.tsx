@@ -481,52 +481,49 @@ export default function AdminOrders() {
     URL.revokeObjectURL(url);
   };
 
-  const exportOVDSummaryPDF = () => {
-    // Filter: OUTSIDE_VALLEY + same status as orderSummary (CONFIRMED by default)
+  const exportDispatchSummaryPDF = (scope: 'OVD' | 'VD' | 'ALL') => {
     const summaryStatus = selectedStatus !== 'ALL' ? selectedStatus : 'CONFIRMED';
-    const ovdOrders = orders.filter((order) => {
+    const scopeLabel = scope === 'OVD' ? 'OVD (Outside Valley)' : scope === 'VD' ? 'VD (Inside Valley)' : 'All';
+    const titleLabel = scope === 'OVD' ? 'OVD Dispatch Summary' : scope === 'VD' ? 'VD Dispatch Summary' : 'All Dispatch Summary';
+
+    const scopedOrders = orders.filter((order) => {
       const matchesStatus = order.order_status === summaryStatus;
-      const isOVD = order.delivery_location === 'OUTSIDE_VALLEY';
+      const matchesScope =
+        scope === 'ALL' ||
+        (scope === 'OVD' && order.delivery_location === 'OUTSIDE_VALLEY') ||
+        (scope === 'VD' && order.delivery_location === 'INSIDE_VALLEY');
       const matchesProduct = selectedProduct === 'all' || order.product_id === selectedProduct;
       const matchesSalesPerson = selectedSalesPerson === 'all' || order.sales_person_id === selectedSalesPerson;
-      return matchesStatus && isOVD && matchesProduct && matchesSalesPerson;
+      return matchesStatus && matchesScope && matchesProduct && matchesSalesPerson;
     });
 
-    if (ovdOrders.length === 0) {
-      toast.error('No OVD (Outside Valley) orders found for current filters');
+    if (scopedOrders.length === 0) {
+      toast.error(`No ${scopeLabel} orders found for current filters`);
       return;
     }
 
-    // Group by (productName + quantity) → orderCount, totalPieces
     type Row = { productName: string; qtyPerOrder: number; orderCount: number; totalPieces: number };
     const groupMap = new Map<string, Row>();
 
-    ovdOrders.forEach((order) => {
+    const addEntry = (productName: string, qty: number) => {
+      const key = `${productName}__${qty}`;
+      const existing = groupMap.get(key);
+      if (existing) {
+        existing.orderCount += 1;
+        existing.totalPieces += qty;
+      } else {
+        groupMap.set(key, { productName, qtyPerOrder: qty, orderCount: 1, totalPieces: qty });
+      }
+    };
+
+    scopedOrders.forEach((order) => {
       const orderItemsList = Array.isArray((order as any).order_items) ? (order as any).order_items : [];
       if (orderItemsList.length > 0) {
         orderItemsList.forEach((item: any) => {
-          const productName = item.product_name || 'Unknown Product';
-          const qty = Number(item.quantity) || 1;
-          const key = `${productName}__${qty}`;
-          const existing = groupMap.get(key);
-          if (existing) {
-            existing.orderCount += 1;
-            existing.totalPieces += qty;
-          } else {
-            groupMap.set(key, { productName, qtyPerOrder: qty, orderCount: 1, totalPieces: qty });
-          }
+          addEntry(item.product_name || 'Unknown Product', Number(item.quantity) || 1);
         });
       } else {
-        const productName = order.products?.name || 'Unknown Product';
-        const qty = Number(order.quantity) || 1;
-        const key = `${productName}__${qty}`;
-        const existing = groupMap.get(key);
-        if (existing) {
-          existing.orderCount += 1;
-          existing.totalPieces += qty;
-        } else {
-          groupMap.set(key, { productName, qtyPerOrder: qty, orderCount: 1, totalPieces: qty });
-        }
+        addEntry(order.products?.name || 'Unknown Product', Number(order.quantity) || 1);
       }
     });
 
@@ -538,43 +535,46 @@ export default function AdminOrders() {
     const totalOrders = rows.reduce((s, r) => s + r.orderCount, 0);
     const totalPieces = rows.reduce((s, r) => s + r.totalPieces, 0);
 
-    import('jspdf').then(({ jsPDF }) => {
-      import('jspdf-autotable').then(() => {
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    Promise.all([import('jspdf'), import('jspdf-autotable')]).then(([{ jsPDF }, autoTableMod]) => {
+      const autoTable = (autoTableMod as any).default || (autoTableMod as any);
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        doc.setFontSize(16);
-        doc.text('OVD Dispatch Summary', 14, 16);
-        doc.setFontSize(10);
-        doc.text(`Status: ${summaryStatus}  |  Date: ${dateFrom} to ${dateTo}`, 14, 23);
-        doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 29);
+      doc.setFontSize(16);
+      doc.text(titleLabel, 14, 16);
+      doc.setFontSize(10);
+      doc.text(`Scope: ${scopeLabel}  |  Status: ${summaryStatus}`, 14, 23);
+      doc.text(`Date: ${dateFrom} to ${dateTo}  |  Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, 14, 29);
 
-        const body = rows.map((r) => [
-          `${r.productName} (${r.qtyPerOrder} pcs)`,
-          `${r.orderCount} order${r.orderCount > 1 ? 's' : ''}`,
-          `${r.totalPieces} pcs`,
-        ]);
+      const body = rows.map((r) => [
+        `${r.productName} (${r.qtyPerOrder} pcs)`,
+        `${r.orderCount} order${r.orderCount > 1 ? 's' : ''}`,
+        `${r.totalPieces} pcs`,
+      ]);
 
-        (doc as any).autoTable({
-          head: [['Product (Qty per Order)', 'Orders', 'Total Pieces']],
-          body,
-          startY: 35,
-          styles: { fontSize: 11, cellPadding: 3 },
-          headStyles: { fillColor: [41, 128, 185], fontSize: 11, fontStyle: 'bold' },
-          columnStyles: {
-            0: { cellWidth: 110 },
-            1: { cellWidth: 35, halign: 'center' },
-            2: { cellWidth: 35, halign: 'center' },
-          },
-          foot: [[
-            { content: 'TOTAL', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
-            { content: `${totalOrders} orders`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [230, 230, 230] } },
-            { content: `${totalPieces} pcs`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [230, 230, 230] } },
-          ]],
-        });
-
-        doc.save(`ovd-dispatch-summary-${dateFrom}-to-${dateTo}.pdf`);
-        toast.success('OVD Summary PDF downloaded');
+      autoTable(doc, {
+        head: [['Product (Qty per Order)', 'Orders', 'Total Pieces']],
+        body,
+        startY: 35,
+        styles: { fontSize: 11, cellPadding: 3 },
+        headStyles: { fillColor: [41, 128, 185], fontSize: 11, fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 110 },
+          1: { cellWidth: 35, halign: 'center' },
+          2: { cellWidth: 35, halign: 'center' },
+        },
+        foot: [[
+          { content: 'TOTAL', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
+          { content: `${totalOrders} orders`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [230, 230, 230] } },
+          { content: `${totalPieces} pcs`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [230, 230, 230] } },
+        ]],
       });
+
+      const fileSlug = scope === 'OVD' ? 'ovd' : scope === 'VD' ? 'vd' : 'all';
+      doc.save(`${fileSlug}-dispatch-summary-${dateFrom}-to-${dateTo}.pdf`);
+      toast.success(`${titleLabel} PDF downloaded`);
+    }).catch((err) => {
+      console.error('PDF export failed', err);
+      toast.error('Failed to generate PDF');
     });
   };
 
