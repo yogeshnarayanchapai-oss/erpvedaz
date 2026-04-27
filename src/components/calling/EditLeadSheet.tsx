@@ -294,13 +294,14 @@ export function EditLeadSheet({
                 placeholder="Enter full address"
               />
             </div>
-            <div className="space-y-1.5 col-span-full">
+            <div className="space-y-1.5">
               <Label>Remark</Label>
               <Textarea
                 value={formData.remark}
                 onChange={(e) => onFormChange({ ...formData, remark: e.target.value })}
-                placeholder="Add notes / remarks..."
-                className="min-h-[120px] resize-y"
+                placeholder="Add notes..."
+                rows={1}
+                className="min-h-[40px] resize-y"
               />
             </div>
           </div>
