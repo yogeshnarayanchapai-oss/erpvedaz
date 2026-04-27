@@ -691,6 +691,7 @@ export function useAdminUpdateOrder() {
       orderStatus?: OrderStatus;
       paymentStatus?: PaymentStatus;
       deliveryNotes?: string;
+      insideDeliveryRemark?: string;
       orderDate?: string;
       logisticOrderId?: string;
       items: {
