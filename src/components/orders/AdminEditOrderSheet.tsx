@@ -199,6 +199,7 @@ export function AdminEditOrderSheet({
         orderStatus: formData.order_status as any,
         paymentStatus: formData.payment_status as any,
         deliveryNotes: formData.delivery_notes || undefined,
+        insideDeliveryRemark: formData.delivery_notes || undefined,
         orderDate: formData.order_date || undefined,
         logisticOrderId: formData.logistic_order_id || undefined,
         items: validItems.map(item => ({
