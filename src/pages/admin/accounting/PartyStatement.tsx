@@ -436,9 +436,9 @@ export default function PartyStatement() {
                   <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
                     <TableCell className="font-medium">{party.name}</TableCell>
                     <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
-                    <TableCell className="text-right text-green-600">{party.net_receivable > 0 ? `₹${party.net_receivable.toLocaleString()}` : '-'}</TableCell>
-                    <TableCell className="text-right text-red-600">{party.net_payable > 0 ? `₹${party.net_payable.toLocaleString()}` : '-'}</TableCell>
-                    <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(partyBalance).toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-green-600">{party.net_receivable > 0 ? `₹${Math.round(party.net_receivable).toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right text-red-600">{party.net_payable > 0 ? `₹${Math.round(party.net_payable).toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.round(Math.abs(partyBalance)).toLocaleString()}</TableCell>
                     <TableCell><Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
                   </TableRow>
                 );
