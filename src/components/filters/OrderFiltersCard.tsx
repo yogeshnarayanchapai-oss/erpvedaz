@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Calendar, MapPin, Filter, X } from 'lucide-react';
 import { ActiveStoreBadge } from '@/components/filters/ActiveStoreBadge';
 
-export type DatePreset = 'today' | 'last7' | 'last30' | 'custom';
+export type DatePreset = 'today' | 'yesterday' | 'last30' | 'custom';
 export type DeliveryFilter = 'ALL' | 'INSIDE_VALLEY' | 'OUTSIDE_VALLEY';
 export type OrderStatusFilter = 'ALL' | 'CONFIRMED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'RETURNED' | 'REDIRECT' | 'CANCELLED';
 export type InsideDeliveryStatusFilter = 'ALL' | 'PENDING' | 'DELIVERED' | 'REACHED_CNR' | 'CUSTOMER_CANCELLED';
@@ -126,7 +126,7 @@ export function OrderFiltersCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="last7">Last 7 Days</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="last30">Last 30 Days</SelectItem>
               <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
