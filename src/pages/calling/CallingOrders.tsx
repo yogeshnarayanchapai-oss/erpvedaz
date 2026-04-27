@@ -480,10 +480,22 @@ export default function CallingOrders() {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <Input
-                              className="w-32 h-6 text-xs"
+                            <Textarea
+                              key={`remark-${order.id}-${order.inside_delivery_remark || ''}`}
+                              className="w-32 min-h-[28px] text-xs resize-y py-1 px-2"
+                              rows={1}
                               placeholder="Remark..."
                               defaultValue={order.inside_delivery_remark || ''}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  const val = (e.target as HTMLTextAreaElement).value;
+                                  if (val !== (order.inside_delivery_remark || '')) {
+                                    handleInsideDeliveryUpdate(order.id, (order.inside_delivery_status || 'PENDING') as InsideDeliveryStatus, val);
+                                  }
+                                  (e.target as HTMLTextAreaElement).blur();
+                                }
+                              }}
                               onBlur={(e) => {
                                 if (e.target.value !== (order.inside_delivery_remark || '')) {
                                   handleInsideDeliveryUpdate(order.id, (order.inside_delivery_status || 'PENDING') as InsideDeliveryStatus, e.target.value);
