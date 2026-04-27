@@ -691,6 +691,7 @@ export function useAdminUpdateOrder() {
       orderStatus?: OrderStatus;
       paymentStatus?: PaymentStatus;
       deliveryNotes?: string;
+      insideDeliveryRemark?: string;
       orderDate?: string;
       logisticOrderId?: string;
       items: {
@@ -782,6 +783,7 @@ export function useAdminUpdateOrder() {
       if (input.orderStatus !== undefined) orderUpdates.order_status = input.orderStatus;
       if (input.paymentStatus !== undefined) orderUpdates.payment_status = input.paymentStatus;
       if (input.deliveryNotes !== undefined) orderUpdates.delivery_notes = input.deliveryNotes;
+      if (input.insideDeliveryRemark !== undefined) orderUpdates.inside_delivery_remark = input.insideDeliveryRemark;
       if (input.orderDate !== undefined) orderUpdates.order_date = input.orderDate;
       if (input.logisticOrderId !== undefined) orderUpdates.logistic_order_id = input.logisticOrderId;
       

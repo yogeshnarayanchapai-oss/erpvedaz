@@ -121,7 +121,7 @@ export function AdminEditOrderSheet({
         delivery_location: order.delivery_location || '',
         order_status: order.order_status || 'CONFIRMED',
         payment_status: order.payment_status || 'COD',
-        delivery_notes: order.delivery_notes || '',
+        delivery_notes: (order as any).inside_delivery_remark || order.delivery_notes || '',
         order_date: order.order_date?.split('T')[0] || '',
         logistic_order_id: (order as any).logistic_order_id || '',
         orderItems: initialItems,
@@ -199,6 +199,7 @@ export function AdminEditOrderSheet({
         orderStatus: formData.order_status as any,
         paymentStatus: formData.payment_status as any,
         deliveryNotes: formData.delivery_notes || undefined,
+        insideDeliveryRemark: formData.delivery_notes || undefined,
         orderDate: formData.order_date || undefined,
         logisticOrderId: formData.logistic_order_id || undefined,
         items: validItems.map(item => ({
