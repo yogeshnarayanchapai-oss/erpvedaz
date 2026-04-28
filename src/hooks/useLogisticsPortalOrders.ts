@@ -35,41 +35,57 @@ function dateOnlyIso(d: Date): string {
 /**
  * Fetch logistics orders for a specific date range (server-side filtered).
  * Default range: today only — extend via the dateRange argument for "All Orders" tab.
+ *
+ * If `storeIds` is provided (multi-store logistics user), fetches across all of them.
+ * Otherwise falls back to the single current store from context.
  */
-export function useLogisticsOrdersInRange(dateRange?: { from: Date; to: Date }) {
+export function useLogisticsOrdersInRange(
+  dateRange?: { from: Date; to: Date },
+  storeIds?: string[]
+) {
   const queryClient = useQueryClient();
-  const storeId = useCurrentStoreId();
+  const contextStoreId = useCurrentStoreId();
   const invalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Resolve effective store list: explicit multi-store override OR single context store.
+  const effectiveStoreIds = useMemo(() => {
+    if (storeIds && storeIds.length > 0) return [...storeIds].sort();
+    return contextStoreId ? [contextStoreId] : [];
+  }, [storeIds, contextStoreId]);
+
+  const storeKey = effectiveStoreIds.join(',');
 
   const fromStr = dateRange ? dateOnlyIso(dateRange.from) : dateOnlyIso(new Date());
   const toStr = dateRange ? dateOnlyIso(dateRange.to) : dateOnlyIso(new Date());
 
-  // Realtime subscription with debounced invalidation
+  // Realtime subscription with debounced invalidation across all relevant stores
   useEffect(() => {
-    if (!storeId) return;
-    const channel = supabase
-      .channel(`logistics-orders-rt-${storeId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
-        () => {
-          if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
-          invalidateTimeoutRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeId] });
-          }, 5000); // 5s debounce
-        }
-      )
-      .subscribe();
+    if (effectiveStoreIds.length === 0) return;
+    const channels = effectiveStoreIds.map(sid =>
+      supabase
+        .channel(`logistics-orders-rt-${sid}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${sid}` },
+          () => {
+            if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
+            invalidateTimeoutRef.current = setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeKey] });
+            }, 5000);
+          }
+        )
+        .subscribe()
+    );
 
     return () => {
       if (invalidateTimeoutRef.current) clearTimeout(invalidateTimeoutRef.current);
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [queryClient, storeId]);
+  }, [queryClient, storeKey, effectiveStoreIds]);
 
   const query = useQuery({
-    queryKey: ['logistics-orders-range', storeId, fromStr, toStr],
-    enabled: !!storeId,
+    queryKey: ['logistics-orders-range', storeKey, fromStr, toStr],
+    enabled: effectiveStoreIds.length > 0,
     queryFn: async () => {
       // Server-side bounded query. Use timestamptz boundaries with NPT offset.
       const fromIso = `${fromStr}T00:00:00+05:45`;
@@ -78,7 +94,7 @@ export function useLogisticsOrdersInRange(dateRange?: { from: Date; to: Date }) 
       // Paginate to handle high-volume stores without hitting the 1000 default cap.
       const allOrders: any[] = [];
       const PAGE_SIZE = 1000;
-      const MAX_PAGES = 5; // hard cap = 5000 records to avoid UI freeze
+      const MAX_PAGES = 5; // hard cap per store = 5000 records to avoid UI freeze
       let page = 0;
       let hasMore = true;
 
@@ -86,7 +102,7 @@ export function useLogisticsOrdersInRange(dateRange?: { from: Date; to: Date }) 
         const { data, error } = await supabase
           .from('orders')
           .select(LOGISTICS_SELECT)
-          .eq('store_id', storeId!)
+          .in('store_id', effectiveStoreIds)
           .eq('is_deleted', false)
           .gte('order_date', fromIso)
           .lte('order_date', toIso)
@@ -111,8 +127,8 @@ export function useLogisticsOrdersInRange(dateRange?: { from: Date; to: Date }) 
   });
 
   const forceRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeId] });
-  }, [queryClient, storeId]);
+    queryClient.invalidateQueries({ queryKey: ['logistics-orders-range', storeKey] });
+  }, [queryClient, storeKey]);
 
   return { ...query, forceRefresh };
 }
