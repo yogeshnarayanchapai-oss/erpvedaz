@@ -61,14 +61,15 @@ export default function LogisticsPortalOrders() {
   const [staffFilter, setStaffFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Multi-store: if logistics user has access to multiple stores, fetch from all of them.
-  // OWNER still respects single-store switcher (uses availableStores filtered to current).
+  // Multi-store aggregation: for non-OWNER users, always aggregate across ALL accessible stores
+  // so switching the active store does NOT change what they see in the logistics portal.
+  // OWNER continues to respect the single-store switcher.
   const isOwner = profile?.role === 'OWNER';
   const accessibleStoreIds = useMemo(
     () => availableStores.map(s => s.id),
     [availableStores]
   );
-  const multiStoreMode = !isOwner && accessibleStoreIds.length > 1;
+  const multiStoreMode = !isOwner && accessibleStoreIds.length >= 1;
 
   // CALLING staff list — merged across all accessible stores in multi-store mode
   const { data: singleStoreStaff = [] } = useStaff('CALLING', false, undefined, false);
