@@ -93,10 +93,7 @@ export function LogisticsRedirectModal({
       toast.error('Please select or enter a remark for redirect');
       return;
     }
-    if (!attributedStaffId) {
-      toast.error('Please select the old handler staff whose order is being redirected');
-      return;
-    }
+    // Old handler staff is optional — defaults to "None" meaning no specific staff attribution.
 
     const remarkWithOldId = oldOrderId.trim()
       ? `${finalRemark} | Old Order ID: ${oldOrderId.trim()}`
@@ -236,20 +233,17 @@ export function LogisticsRedirectModal({
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Old Handler Staff <span className="text-destructive">*</span></Label>
+                    <Label className="text-xs">Old Handler Staff <span className="text-muted-foreground">(optional)</span></Label>
                     <Popover open={staffPopoverOpen} onOpenChange={setStaffPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          className={cn(
-                            "w-full h-9 justify-between font-normal",
-                            !attributedStaffId && "text-muted-foreground"
-                          )}
+                          className="w-full h-9 justify-between font-normal"
                         >
                           {attributedStaffId
-                            ? callingStaff.find((s) => s.id === attributedStaffId)?.name || 'Select old handler staff'
-                            : 'Select old handler staff'}
+                            ? callingStaff.find((s) => s.id === attributedStaffId)?.name || 'None'
+                            : 'None'}
                           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -259,6 +253,21 @@ export function LogisticsRedirectModal({
                           <CommandList>
                             <CommandEmpty>No calling staff found.</CommandEmpty>
                             <CommandGroup>
+                              <CommandItem
+                                value="None"
+                                onSelect={() => {
+                                  setAttributedStaffId('');
+                                  setStaffPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    !attributedStaffId ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                None
+                              </CommandItem>
                               {callingStaff.map((s) => (
                                 <CommandItem
                                   key={s.id}
@@ -356,7 +365,7 @@ export function LogisticsRedirectModal({
               variant="destructive"
               size="sm"
               onClick={handleRedirect}
-              disabled={redirectOrder.isPending || !finalRemark || !attributedStaffId}
+              disabled={redirectOrder.isPending || !finalRemark}
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Redirect
