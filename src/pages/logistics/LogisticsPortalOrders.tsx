@@ -11,12 +11,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Eye, RotateCcw, Package, Search, MapPin, Globe, RefreshCw, CheckCircle, Truck } from 'lucide-react';
 import { useLogisticsOrdersInRange } from '@/hooks/useLogisticsPortalOrders';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { LogisticsRedirectModal } from '@/components/logistics/LogisticsRedirectModal';
 import { DashboardDateFilter } from '@/components/dashboard/DashboardDateFilter';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
-import { useStaff } from '@/hooks/useStaff';
+import { useStaff, type StaffMember } from '@/hooks/useStaff';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 // Nepal timezone helpers - returns date string in YYYY-MM-DD format for Nepal time
 function getNepalDateString(): string {
