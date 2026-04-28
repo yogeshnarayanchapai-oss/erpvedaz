@@ -44,10 +44,11 @@ function getNepalDateDisplay(): string {
 
 export default function LogisticsPortalOrders() {
   const { user, profile } = useAuth();
+  const { availableStores } = useCurrentStore();
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
   const [activeTab, setActiveTab] = useState<'new' | 'all'>('new');
-  
+
   // Date range for "All Orders" tab
   const [allOrdersDateRange, setAllOrdersDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
@@ -60,9 +61,61 @@ export default function LogisticsPortalOrders() {
   const [staffFilter, setStaffFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Staff list
-  const { data: staff = [] } = useStaff('CALLING');
-  
+  // Multi-store: if logistics user has access to multiple stores, fetch from all of them.
+  // OWNER still respects single-store switcher (uses availableStores filtered to current).
+  const isOwner = profile?.role === 'OWNER';
+  const accessibleStoreIds = useMemo(
+    () => availableStores.map(s => s.id),
+    [availableStores]
+  );
+  const multiStoreMode = !isOwner && accessibleStoreIds.length > 1;
+
+  // CALLING staff list — merged across all accessible stores in multi-store mode
+  const { data: singleStoreStaff = [] } = useStaff('CALLING', false, undefined, false);
+  const { data: multiStoreStaff = [] } = useQuery({
+    queryKey: ['staff-multi-store', 'CALLING', accessibleStoreIds.join(',')],
+    enabled: multiStoreMode && accessibleStoreIds.length > 0,
+    queryFn: async () => {
+      // Get user IDs across all accessible stores with CALLING role (store_role or fallback profile role)
+      const { data: storeAccess } = await supabase
+        .from('user_store_access')
+        .select('user_id, store_role')
+        .in('store_id', accessibleStoreIds)
+        .eq('is_active', true);
+      if (!storeAccess) return [];
+
+      const callingFromStoreRole = storeAccess
+        .filter(u => u.store_role === 'CALLING')
+        .map(u => u.user_id);
+      const noStoreRole = storeAccess
+        .filter(u => !u.store_role)
+        .map(u => u.user_id);
+
+      let callingFromProfile: string[] = [];
+      if (noStoreRole.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('id', noStoreRole)
+          .eq('role', 'CALLING');
+        callingFromProfile = (profs || []).map(p => p.id);
+      }
+
+      const ids = Array.from(new Set([...callingFromStoreRole, ...callingFromProfile]));
+      if (ids.length === 0) return [];
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', ids)
+        .eq('is_active', true)
+        .neq('role', 'OWNER')
+        .order('name');
+      return (profiles || []) as StaffMember[];
+    },
+  });
+  const staff = multiStoreMode ? multiStoreStaff : singleStoreStaff;
+
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isRedirectModalOpen, setIsRedirectModalOpen] = useState(false);
@@ -80,7 +133,8 @@ export default function LogisticsPortalOrders() {
     return allOrdersDateRange;
   }, [activeTab, allOrdersDateRange]);
 
-  const { data: rangeOrders = [], isLoading, isFetching, isError, forceRefresh } = useLogisticsOrdersInRange(activeRange);
+  const { data: rangeOrders = [], isLoading, isFetching, isError, forceRefresh } =
+    useLogisticsOrdersInRange(activeRange, multiStoreMode ? accessibleStoreIds : undefined);
 
   // For search, we use whatever is currently loaded (range-bound).
   const allCachedOrders = rangeOrders;
