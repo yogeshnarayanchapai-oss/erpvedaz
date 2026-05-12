@@ -638,6 +638,7 @@ export default function LogisticsPortalOrders() {
         onClose={handleCloseRedirect}
         userId={user?.id || ''}
         userName={profile?.name || ''}
+        staffOverride={staff}
       />
     </div>
   );
