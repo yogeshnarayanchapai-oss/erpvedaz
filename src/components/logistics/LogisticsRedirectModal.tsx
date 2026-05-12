@@ -33,6 +33,7 @@ interface LogisticsRedirectModalProps {
   onClose: () => void;
   userId: string;
   userName: string;
+  staffOverride?: Array<{ id: string; name: string }>;
 }
 
 
@@ -42,11 +43,13 @@ export function LogisticsRedirectModal({
   onClose,
   userId,
   userName,
+  staffOverride,
 }: LogisticsRedirectModalProps) {
   const redirectOrder = useLogisticsRedirectOrder();
   const markDelivered = useLogisticsMarkDelivered();
   const markReturned = useLogisticsMarkReturned();
-  const { data: callingStaff = [] } = useCallingStaff();
+  const { data: defaultStaff = [] } = useCallingStaff();
+  const callingStaff = staffOverride && staffOverride.length > 0 ? staffOverride : defaultStaff;
 
   const [newBranch, setNewBranch] = useState('');
   const [newDeliveryLocation, setNewDeliveryLocation] = useState('');
