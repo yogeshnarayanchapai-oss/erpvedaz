@@ -397,7 +397,7 @@ export default function CallingOrders() {
                 {pagedCallingOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-muted/50">
                     <TableCell className="text-muted-foreground whitespace-nowrap">
-                      {format(new Date(order.order_date), 'dd MMM HH:mm')}
+                      {format(new Date(order.confirmed_at || order.created_at || order.order_date), 'dd MMM HH:mm')}
                     </TableCell>
                     <TableCell 
                       className="font-medium text-primary hover:underline cursor-pointer"
