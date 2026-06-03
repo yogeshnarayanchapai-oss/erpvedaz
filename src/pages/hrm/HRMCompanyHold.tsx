@@ -105,23 +105,19 @@ function HoldDetailDialog({ employee, onClose, canEdit }: { employee: EmployeeHo
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, { month: string; held: number; released: number }>();
+  const totals = useMemo(() => {
+    let held = 0, released = 0;
     entries.forEach(e => {
-      const key = e.month_start || e.created_at.slice(0, 10);
-      const label = bsLabel(key);
-      if (!map.has(label)) map.set(label, { month: label, held: 0, released: 0 });
-      const m = map.get(label)!;
-      if (e.entry_type === 'HOLD') m.held += Number(e.amount);
-      else m.released += Number(e.amount);
+      if (e.entry_type === 'HOLD') held += Number(e.amount);
+      else released += Number(e.amount);
     });
-    return Array.from(map.values());
+    return { held, released, balance: held - released };
   }, [entries]);
 
   const handleRelease = async () => {
     const a = parseFloat(amount);
     if (!a || a <= 0) return;
-    if (a > (employee?.balance || 0)) {
+    if (a > totals.balance) {
       alert('Release amount exceeds current balance');
       return;
     }
@@ -138,36 +134,19 @@ function HoldDetailDialog({ employee, onClose, canEdit }: { employee: EmployeeHo
         {employee && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-primary/10 rounded-lg"><div className="text-xs text-muted-foreground">Held</div><div className="font-bold text-primary">{formatNPR(employee.total_held)}</div></div>
-              <div className="p-3 bg-destructive/10 rounded-lg"><div className="text-xs text-muted-foreground">Released</div><div className="font-bold text-destructive">{formatNPR(employee.total_released)}</div></div>
-              <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Balance</div><div className="font-bold text-success">{formatNPR(employee.balance)}</div></div>
+              <div className="p-3 bg-primary/10 rounded-lg"><div className="text-xs text-muted-foreground">Held</div><div className="font-bold text-primary">{formatNPR(totals.held)}</div></div>
+              <div className="p-3 bg-destructive/10 rounded-lg"><div className="text-xs text-muted-foreground">Released</div><div className="font-bold text-destructive">{formatNPR(totals.released)}</div></div>
+              <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Balance</div><div className="font-bold text-success">{formatNPR(totals.balance)}</div></div>
             </div>
 
             {canEdit && (
               <div className="flex justify-end">
-                <Button onClick={() => setReleaseOpen(true)} disabled={employee.balance <= 0}>
+                <Button onClick={() => setReleaseOpen(true)} disabled={totals.balance <= 0}>
                   <ArrowDownToLine className="w-4 h-4 mr-2" /> Release Amount
                 </Button>
               </div>
             )}
 
-            <div>
-              <h3 className="font-semibold mb-2">Month-wise Summary</h3>
-              <Table>
-                <TableHeader><TableRow><TableHead>Month</TableHead><TableHead className="text-right">Held</TableHead><TableHead className="text-right">Released</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {monthly.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No entries</TableCell></TableRow>
-                  ) : monthly.map(m => (
-                    <TableRow key={m.month}>
-                      <TableCell>{m.month}</TableCell>
-                      <TableCell className="text-right text-primary">{formatNPR(m.held)}</TableCell>
-                      <TableCell className="text-right text-destructive">{formatNPR(m.released)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
 
             <div>
               <h3 className="font-semibold mb-2">All Entries</h3>
