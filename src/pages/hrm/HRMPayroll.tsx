@@ -225,7 +225,7 @@ export default function HRMPayroll() {
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right text-primary">⊟रू {(r.company_hold || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-primary">-रू {(r.company_hold || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge>
@@ -307,7 +307,7 @@ export default function HRMPayroll() {
                 <div><span className="text-muted-foreground">Basic Salary:</span><p className="font-medium">रू {viewRecord.basic_salary.toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Allowances:</span><p className="font-medium text-success">+रू {(viewRecord.allowances || 0).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Deductions:</span><p className="font-medium text-destructive">-रू {(viewRecord.deductions || 0).toLocaleString()}</p></div>
-                <div><span className="text-muted-foreground">Company Hold:</span><p className="font-medium text-primary">⊟रू {(viewRecord.company_hold || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Company Hold:</span><p className="font-medium text-primary">-रू {(viewRecord.company_hold || 0).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Net Salary:</span><p className="font-bold text-lg">रू {viewRecord.net_salary.toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Status:</span><p><Badge variant={viewRecord.payment_status === 'Paid' ? 'default' : 'secondary'}>{viewRecord.payment_status}</Badge></p></div>
                 {viewRecord.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span><p className="font-medium">{viewRecord.notes}</p></div>}
