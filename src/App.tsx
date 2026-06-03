@@ -134,6 +134,7 @@ import HRMSettings from "./pages/hrm/HRMSettings";
 import HRMAttendanceLeave from "./pages/hrm/HRMAttendanceLeave";
 import HRMCompanyInfoMerged from "./pages/hrm/HRMCompanyInfoMerged";
 import HRMSalaryPayroll from "./pages/hrm/HRMSalaryPayroll";
+import HRMCompanyHold from "./pages/hrm/HRMCompanyHold";
 import HRMOrgSettings from "./pages/hrm/HRMOrgSettings";
 
 // Knowledge Center pages (HRM)
@@ -168,6 +169,7 @@ import MyTasks from "./pages/myhr/MyTasks";
 // My HR merged pages
 import MyHRAttendanceLeave from "./pages/myhr/MyHRAttendanceLeave";
 import MyHRCompanyInfo from "./pages/myhr/MyHRCompanyInfo";
+import MySavings from "./pages/myhr/MySavings";
 
 // Leads pages
 import LeadsDashboard from "./pages/leads/LeadsDashboard";
@@ -345,6 +347,7 @@ const App = () => (
                 <Route path="/hrm/attendance-leave" element={<HRMAttendanceLeave />} />
                 {/* Route kept for backward compatibility */}
                 <Route path="/hrm/salary-payroll" element={<HRMSalaryPayroll />} />
+                <Route path="/hrm/company-hold" element={<HRMCompanyHold />} />
                 <Route path="/hrm/org-settings" element={<HRMOrgSettings />} />
                 <Route path="/hrm/knowledge-center" element={<KnowledgeCenterCourses />} />
                 <Route path="/hrm/knowledge-center/courses/:slug" element={<KnowledgeCenterCourseDetail />} />
@@ -360,6 +363,7 @@ const App = () => (
                 <Route path="/my-hr/chat" element={<HRMChat />} />
                 <Route path="/my-hr/notices" element={<HRMNotices />} />
                 <Route path="/my-hr/salary-slips" element={<StaffSelfService />} />
+                <Route path="/my-hr/savings" element={<MySavings />} />
                 {/* My HR merged routes */}
                 <Route path="/my-hr/attendance-leave" element={<MyHRAttendanceLeave />} />
                 <Route path="/my-hr/company-info" element={<MyHRCompanyInfo />} />
