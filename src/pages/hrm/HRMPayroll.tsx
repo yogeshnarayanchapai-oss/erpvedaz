@@ -225,7 +225,7 @@ export default function HRMPayroll() {
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right text-primary">⊟रू {(r.company_hold || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-primary">-रू {(r.company_hold || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge>
