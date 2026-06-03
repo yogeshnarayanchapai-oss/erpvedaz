@@ -26,19 +26,6 @@ export default function MySavings() {
     return { held, released, balance: held - released };
   }, [entries]);
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, { month: string; held: number; released: number }>();
-    entries.forEach(e => {
-      const key = e.month_start || e.created_at.slice(0, 10);
-      const label = bsLabel(key);
-      if (!map.has(label)) map.set(label, { month: label, held: 0, released: 0 });
-      const m = map.get(label)!;
-      if (e.entry_type === 'HOLD') m.held += Number(e.amount);
-      else m.released += Number(e.amount);
-    });
-    return Array.from(map.values());
-  }, [entries]);
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
