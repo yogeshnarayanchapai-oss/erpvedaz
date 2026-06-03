@@ -162,9 +162,7 @@ function HoldDetailDialog({ employee, onClose, canEdit }: { employee: EmployeeHo
                       <TableCell className="text-sm text-muted-foreground">{e.notes || '-'}</TableCell>
                       {canEdit && (
                         <TableCell>
-                          {e.entry_type === 'RELEASE' && (
-                            <Button variant="ghost" size="icon" onClick={() => del.mutate(e.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                          )}
+                          <Button variant="ghost" size="icon" onClick={() => del.mutate(e.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                         </TableCell>
                       )}
                     </TableRow>
