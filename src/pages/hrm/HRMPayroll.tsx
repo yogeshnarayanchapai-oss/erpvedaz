@@ -95,12 +95,13 @@ export default function HRMPayroll() {
   };
 
   const exportCSV = () => {
-    const headers = ['Employee', 'Basic', 'Allowances', 'Deductions', 'Net Salary', 'Status', 'Paid On'];
+    const headers = ['Employee', 'Basic', 'Allowances', 'Deductions', 'Company Hold', 'Net Salary', 'Status', 'Paid On'];
     const rows = records.map((r) => [
       r.employees?.full_name || '',
       r.basic_salary,
       r.allowances || 0,
       r.deductions || 0,
+      r.company_hold || 0,
       r.net_salary,
       r.payment_status,
       r.paid_on || '',
