@@ -26,18 +26,15 @@ export interface EmployeeHoldSummary {
 
 // Admin: list all employees with their hold summary
 export function useCompanyHoldSummary() {
-  const storeId = useCurrentStoreId();
   return useQuery({
-    queryKey: ['company-hold-summary', storeId],
+    queryKey: ['company-hold-summary', 'all-stores'],
     queryFn: async (): Promise<EmployeeHoldSummary[]> => {
       const { data, error } = await supabase
         .from('company_hold_ledger')
-        .select('employee_id, entry_type, amount, employees:employee_id(full_name, store_id)');
+        .select('employee_id, entry_type, amount, employees:employee_id(full_name)');
       if (error) throw error;
       const map = new Map<string, EmployeeHoldSummary>();
       (data || []).forEach((r: any) => {
-        // Filter by the employee's store_id (canonical), not the ledger row's store_id
-        if (storeId && r.employees?.store_id && r.employees.store_id !== storeId) return;
         const id = r.employee_id;
         if (!map.has(id)) {
           map.set(id, { employee_id: id, full_name: r.employees?.full_name || '-', total_held: 0, total_released: 0, balance: 0 });
