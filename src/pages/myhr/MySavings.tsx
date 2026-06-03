@@ -26,19 +26,6 @@ export default function MySavings() {
     return { held, released, balance: held - released };
   }, [entries]);
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, { month: string; held: number; released: number }>();
-    entries.forEach(e => {
-      const key = e.month_start || e.created_at.slice(0, 10);
-      const label = bsLabel(key);
-      if (!map.has(label)) map.set(label, { month: label, held: 0, released: 0 });
-      const m = map.get(label)!;
-      if (e.entry_type === 'HOLD') m.held += Number(e.amount);
-      else m.released += Number(e.amount);
-    });
-    return Array.from(map.values());
-  }, [entries]);
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -51,28 +38,6 @@ export default function MySavings() {
         <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Total Released</div><div className="text-2xl font-bold text-destructive">{formatNPR(totals.released)}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Available Balance</div><div className="text-2xl font-bold text-success">{formatNPR(totals.balance)}</div></CardContent></Card>
       </div>
-
-      <Card>
-        <CardHeader><CardTitle>Month-wise Summary</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Month</TableHead><TableHead className="text-right">Saved</TableHead><TableHead className="text-right">Released</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
-              ) : monthly.length === 0 ? (
-                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No savings yet</TableCell></TableRow>
-              ) : monthly.map(m => (
-                <TableRow key={m.month}>
-                  <TableCell>{m.month}</TableCell>
-                  <TableCell className="text-right text-primary">{formatNPR(m.held)}</TableCell>
-                  <TableCell className="text-right text-destructive">{formatNPR(m.released)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader><CardTitle>Transaction History</CardTitle></CardHeader>
