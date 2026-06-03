@@ -58,6 +58,7 @@ export interface PayrollRecord {
   basic_salary: number;
   allowances: number | null;
   deductions: number | null;
+  company_hold: number | null;
   net_salary: number;
   payment_status: 'Pending' | 'Paid';
   paid_on: string | null;
@@ -411,7 +412,7 @@ export function useCreatePayrollRecord() {
   const storeId = useCurrentStoreId();
 
   return useMutation({
-    mutationFn: async (input: { employee_id: string; month: string; basic_salary: number; allowances?: number; deductions?: number; notes?: string }) => {
+    mutationFn: async (input: { employee_id: string; month: string; basic_salary: number; allowances?: number; deductions?: number; company_hold?: number; notes?: string }) => {
       const { data, error } = await supabase.from('payroll_records').insert({ ...input, store_id: storeId }).select().single();
       if (error) throw error;
       return data;
@@ -450,7 +451,7 @@ export function useUpdatePayrollRecord() {
   const storeId = useCurrentStoreId();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; allowances?: number; deductions?: number; payment_status?: string; paid_on?: string; notes?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; allowances?: number; deductions?: number; company_hold?: number; payment_status?: string; paid_on?: string; notes?: string }) => {
       const { data, error } = await supabase.from('payroll_records').update(updates).eq('id', id).select('*, employees:employee_id(full_name, user_id)').single();
       if (error) throw error;
       return { data, updates };
