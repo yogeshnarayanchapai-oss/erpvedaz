@@ -266,7 +266,7 @@ export default function HRMPayroll() {
               })}
               {records.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No records. Click Generate to create payroll.'}
                   </TableCell>
                 </TableRow>
@@ -283,6 +283,11 @@ export default function HRMPayroll() {
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="space-y-2"><Label>Allowances</Label><Input type="number" value={editForm.allowances} onChange={(e) => setEditForm({ ...editForm, allowances: e.target.value })} /></div>
             <div className="space-y-2"><Label>Deductions</Label><Input type="number" value={editForm.deductions} onChange={(e) => setEditForm({ ...editForm, deductions: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Company Hold (SSF / Saving)</Label>
+              <Input type="number" value={editForm.company_hold} onChange={(e) => setEditForm({ ...editForm, company_hold: e.target.value })} placeholder="0" />
+              <p className="text-xs text-muted-foreground">यो amount payslip बाट काटिन्छ र staff को savings मा जम्मा हुन्छ</p>
+            </div>
             <div className="space-y-2"><Label>Notes</Label><Input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} /></div>
             <Button type="submit" className="w-full" disabled={updatePayroll.isPending}>Update</Button>
           </form>
@@ -301,6 +306,7 @@ export default function HRMPayroll() {
                 <div><span className="text-muted-foreground">Basic Salary:</span><p className="font-medium">रू {viewRecord.basic_salary.toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Allowances:</span><p className="font-medium text-success">+रू {(viewRecord.allowances || 0).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Deductions:</span><p className="font-medium text-destructive">-रू {(viewRecord.deductions || 0).toLocaleString()}</p></div>
+                <div><span className="text-muted-foreground">Company Hold:</span><p className="font-medium text-primary">⊟रू {(viewRecord.company_hold || 0).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Net Salary:</span><p className="font-bold text-lg">रू {viewRecord.net_salary.toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground">Status:</span><p><Badge variant={viewRecord.payment_status === 'Paid' ? 'default' : 'secondary'}>{viewRecord.payment_status}</Badge></p></div>
                 {viewRecord.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span><p className="font-medium">{viewRecord.notes}</p></div>}
