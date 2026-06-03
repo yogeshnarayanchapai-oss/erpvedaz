@@ -64,6 +64,7 @@ import {
   Store,
   Brain,
   HardDrive,
+  PiggyBank,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocation } from 'react-router-dom';
@@ -84,6 +85,7 @@ const myHRItems: MenuItem[] = [
   { title: 'Company Info', url: '/my-hr/company-info', icon: Building },
   { title: 'Team Chat', url: '/my-hr/chat', icon: MessageSquare },
   { title: 'Notices', url: '/my-hr/notices', icon: Bell },
+  { title: 'My Savings', url: '/my-hr/savings', icon: PiggyBank },
 ];
 
 // Messaging submenu for Admin
@@ -123,6 +125,7 @@ const hrmItems: MenuItem[] = [
   { title: 'Company Info', url: '/hrm/company-info', icon: Building },
   { title: 'Notices', url: '/hrm/notices', icon: Bell },
   { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
+  { title: 'Company Hold', url: '/hrm/company-hold', icon: PiggyBank },
   { title: 'Team Chat', url: '/hrm/chat', icon: MessageSquare },
 ];
 
@@ -488,6 +491,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
     { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: TrendingUp },
     { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
+    { title: 'Company Hold', url: '/hrm/company-hold', icon: PiggyBank },
     {
       title: 'My Training',
       url: '/training/my-courses',
