@@ -40,28 +40,6 @@ export default function MySavings() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Month-wise Summary</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Month</TableHead><TableHead className="text-right">Saved</TableHead><TableHead className="text-right">Released</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
-              ) : monthly.length === 0 ? (
-                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No savings yet</TableCell></TableRow>
-              ) : monthly.map(m => (
-                <TableRow key={m.month}>
-                  <TableCell>{m.month}</TableCell>
-                  <TableCell className="text-right text-primary">{formatNPR(m.held)}</TableCell>
-                  <TableCell className="text-right text-destructive">{formatNPR(m.released)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader><CardTitle>Transaction History</CardTitle></CardHeader>
         <CardContent>
           <Table>
