@@ -1824,6 +1824,60 @@ export type Database = {
           },
         ]
       }
+      company_hold_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          entry_type: string
+          id: string
+          month_start: string | null
+          notes: string | null
+          payroll_record_id: string | null
+          store_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          entry_type: string
+          id?: string
+          month_start?: string | null
+          notes?: string | null
+          payroll_record_id?: string | null
+          store_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          entry_type?: string
+          id?: string
+          month_start?: string | null
+          notes?: string | null
+          payroll_record_id?: string | null
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_hold_ledger_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_hold_ledger_payroll_record_id_fkey"
+            columns: ["payroll_record_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_info: {
         Row: {
           address: string | null
@@ -5229,6 +5283,7 @@ export type Database = {
         Row: {
           allowances: number | null
           basic_salary: number
+          company_hold: number | null
           created_at: string
           deductions: number | null
           employee_id: string
@@ -5243,6 +5298,7 @@ export type Database = {
         Insert: {
           allowances?: number | null
           basic_salary?: number
+          company_hold?: number | null
           created_at?: string
           deductions?: number | null
           employee_id: string
@@ -5257,6 +5313,7 @@ export type Database = {
         Update: {
           allowances?: number | null
           basic_salary?: number
+          company_hold?: number | null
           created_at?: string
           deductions?: number | null
           employee_id?: string
