@@ -44,7 +44,7 @@ export default function HRMPayroll() {
   const deletePayroll = useDeletePayrollRecord();
 
   const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ allowances: '', deductions: '', notes: '' });
+  const [editForm, setEditForm] = useState({ allowances: '', deductions: '', company_hold: '', notes: '' });
   const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
   const [viewRecord, setViewRecord] = useState<any>(null);
   
@@ -67,6 +67,7 @@ export default function HRMPayroll() {
     setEditForm({
       allowances: record.allowances?.toString() || '',
       deductions: record.deductions?.toString() || '',
+      company_hold: record.company_hold?.toString() || '',
       notes: record.notes || '',
     });
   };
@@ -77,6 +78,7 @@ export default function HRMPayroll() {
       id: editingRecord.id,
       allowances: editForm.allowances ? parseFloat(editForm.allowances) : 0,
       deductions: editForm.deductions ? parseFloat(editForm.deductions) : 0,
+      company_hold: editForm.company_hold ? parseFloat(editForm.company_hold) : 0,
       notes: editForm.notes || undefined,
     });
     setEditingRecord(null);
@@ -201,6 +203,7 @@ export default function HRMPayroll() {
                 <TableHead className="text-right">Basic</TableHead>
                 <TableHead className="text-right">Allowances</TableHead>
                 <TableHead className="text-right">Deductions</TableHead>
+                <TableHead className="text-right">Company Hold</TableHead>
                 <TableHead className="text-right">Net Salary</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -221,6 +224,7 @@ export default function HRMPayroll() {
                   <TableCell className="text-right">रू {r.basic_salary.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-success">+रू {(r.allowances || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-destructive">-रू {(r.deductions || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-primary">⊟रू {(r.company_hold || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right font-bold">रू {r.net_salary.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={r.payment_status === 'Paid' ? 'default' : 'secondary'}>{r.payment_status}</Badge>
