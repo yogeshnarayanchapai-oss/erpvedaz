@@ -238,6 +238,7 @@ export default function HRMSalarySlip() {
       { label: 'Basic Salary', value: viewSlip.basic_salary, color: null },
       { label: 'Allowances', value: viewSlip.allowances || 0, color: 'green' },
       { label: 'Deductions', value: viewSlip.deductions || 0, color: 'red' },
+      { label: 'Company Hold (Saving)', value: (viewSlip as any).company_hold || 0, color: 'red' },
     ];
 
     rows.forEach((row, index) => {
@@ -529,6 +530,10 @@ export default function HRMSalarySlip() {
                   <div className="grid grid-cols-2 text-sm">
                     <div className="p-2.5">Deductions</div>
                     <div className="p-2.5 text-right font-medium text-destructive">- रू {(viewSlip.deductions || 0).toLocaleString()}</div>
+                  </div>
+                  <div className="grid grid-cols-2 text-sm bg-muted/30">
+                    <div className="p-2.5">Company Hold <span className="text-xs text-muted-foreground">(Saving)</span></div>
+                    <div className="p-2.5 text-right font-medium text-primary">- रू {((viewSlip as any).company_hold || 0).toLocaleString()}</div>
                   </div>
                   <div className="grid grid-cols-2 text-sm bg-primary/5 font-bold">
                     <div className="p-3 text-primary">Net Salary</div>
