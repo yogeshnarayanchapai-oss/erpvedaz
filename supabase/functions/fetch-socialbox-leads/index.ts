@@ -97,7 +97,7 @@ serve(async (req) => {
     // so transferred/deleted leads must never be reactivated or pulled again.
     const { data: pulledLeads, error: pulledError } = await serviceSupabase
       .from('socialbox_pulled_leads')
-      .select('socialbox_lead_id, is_transferred, is_deleted, lead_data')
+      .select('socialbox_lead_id, phone, is_transferred, is_deleted, lead_data')
       .eq('store_id', storeId);
 
     if (pulledError) {
@@ -108,12 +108,15 @@ serve(async (req) => {
     }
 
     const pulledMap = new Map<string, { is_transferred: boolean; is_deleted: boolean; lead_data: any }>();
+    const pulledPhones = new Set<string>();
     (pulledLeads || []).forEach((pl: any) => {
       pulledMap.set(pl.socialbox_lead_id, { 
         is_transferred: pl.is_transferred || false,
         is_deleted: pl.is_deleted || false,
         lead_data: pl.lead_data,
       });
+      const pulledPhone = normalizePhone(pl.phone || pl.lead_data?.phone || pl.lead_data?.contact_number);
+      if (pulledPhone.length >= 10) pulledPhones.add(pulledPhone);
     });
 
     const candidatePhones = Array.from(new Set(
@@ -159,7 +162,7 @@ serve(async (req) => {
       const phone = normalizePhone(getLeadPhone(lead));
       const info = pulledMap.get(leadId);
 
-      if (info) {
+      if (info || (phone.length >= 10 && pulledPhones.has(phone))) {
         skippedAlreadyPulled.push(lead);
         continue;
       }
