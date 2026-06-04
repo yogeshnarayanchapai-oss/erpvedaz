@@ -34,20 +34,29 @@ export default function AILeads() {
   // Manual pull from SocialBox API
   const handleManualPull = useCallback(async () => {
     try {
-      const result = await fetchLeads.mutateAsync({ limit: 200 });
+      const result: any = await fetchLeads.mutateAsync({ limit: 200 });
       if (result) {
         // Refresh stored leads cache from DB
         await queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
-        if (result.new_count > 0) {
-          toast.success(`${result.new_count} new leads pulled from SocialBox`);
+        const truly = result.truly_new ?? 0;
+        const reactivated = result.reactivated ?? 0;
+        const totalActive = result.total_active ?? 0;
+        if (truly > 0 || reactivated > 0) {
+          const parts: string[] = [];
+          if (truly > 0) parts.push(`${truly} new`);
+          if (reactivated > 0) parts.push(`${reactivated} re-activated`);
+          toast.success(`${parts.join(' + ')} • ${totalActive} active`);
+        } else if (totalActive > 0) {
+          toast.info(`No new leads • ${totalActive} active`);
         } else {
-          toast.info('No new leads found from SocialBox');
+          toast.info('No leads found from SocialBox');
         }
       }
     } catch {
       // handled by hook
     }
   }, [fetchLeads, queryClient]);
+
 
   // Derive unique sources for filter
   const availableSources = Array.from(new Set(leads.map(l => l.source || 'SocialBox').filter(Boolean)));
