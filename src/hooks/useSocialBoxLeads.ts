@@ -121,7 +121,13 @@ export function useFetchSocialBoxLeads() {
       }
 
       const data = await response.json();
-      return { leads: data.leads as SocialBoxLead[], new_count: data.new_count || 0, total_active: data.total_active || 0 };
+      return {
+        leads: data.leads as SocialBoxLead[],
+        new_count: data.new_count || 0,
+        truly_new: data.truly_new || 0,
+        reactivated: data.reactivated || 0,
+        total_active: data.total_active || 0,
+      };
     },
     onError: (error: Error) => {
       toast.error('Failed to fetch SocialBox leads', { description: error.message });
