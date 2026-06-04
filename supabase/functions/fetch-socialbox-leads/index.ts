@@ -97,10 +97,24 @@ serve(async (req) => {
       });
     });
 
-    // Find truly new leads (not yet in our tracking table)
-    const newLeads = leadsArray.filter((lead: any) => !pulledMap.has(String(lead.id)));
+    // Classify
+    const newLeads: any[] = [];      // truly new (not in DB)
+    const reactivate: any[] = [];    // in DB, transferred but not deleted — re-activate
+    const skippedDeleted: any[] = []; // explicitly deleted by user — don't bring back
 
-    // Save new leads to tracking table
+    for (const lead of leadsArray) {
+      const info = pulledMap.get(String(lead.id));
+      if (!info) {
+        newLeads.push(lead);
+      } else if (info.is_deleted) {
+        skippedDeleted.push(lead);
+      } else {
+        // Already in DB and not deleted. If it was transferred, re-activate.
+        if (info.is_transferred) reactivate.push(lead);
+      }
+    }
+
+    // Insert new leads
     if (newLeads.length > 0) {
       const pullRecords = newLeads.map((lead: any) => ({
         store_id: storeId,
@@ -108,27 +122,40 @@ serve(async (req) => {
         phone: lead.phone || null,
         full_name: lead.full_name || lead.name || null,
         lead_data: lead,
+        is_transferred: false,
+        is_deleted: false,
       }));
 
-      await supabase
+      const { error: insertErr } = await supabase
         .from('socialbox_pulled_leads')
         .upsert(pullRecords, { onConflict: 'store_id,socialbox_lead_id' });
+      if (insertErr) console.error('Insert new leads error:', insertErr);
     }
 
-    // Build active leads from DB (source of truth) + new API leads
-    const activeLeads: any[] = [];
-
-    // Add new leads from API
-    for (const lead of newLeads) {
-      activeLeads.push(lead);
+    // Re-activate previously transferred leads that SocialBox still surfaces
+    if (reactivate.length > 0) {
+      const ids = reactivate.map((l: any) => String(l.id));
+      const { error: updErr } = await supabase
+        .from('socialbox_pulled_leads')
+        .update({ is_transferred: false, transferred_at: null, lead_data: undefined })
+        .eq('store_id', storeId)
+        .in('socialbox_lead_id', ids);
+      if (updErr) console.error('Reactivate leads error:', updErr);
     }
 
-    // Add ALL previously pulled, non-transferred, non-deleted leads from DB stored data
+    // Build active leads to return (new + reactivated + previously-active)
+    const activeLeads: any[] = [...newLeads, ...reactivate];
     for (const [leadId, info] of pulledMap.entries()) {
       if (!info.is_transferred && !info.is_deleted && info.lead_data) {
-        activeLeads.push(info.lead_data);
+        // Avoid duplicates with newLeads / reactivate
+        if (!activeLeads.find((l: any) => String(l.id) === leadId)) {
+          activeLeads.push(info.lead_data);
+        }
       }
     }
+
+    const surfacedCount = newLeads.length + reactivate.length;
+
 
     // Update last_synced_at
     await supabase
@@ -138,12 +165,15 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       leads: activeLeads, 
-      new_count: newLeads.length,
+      new_count: surfacedCount,
+      truly_new: newLeads.length,
+      reactivated: reactivate.length,
       total_active: activeLeads.length,
       synced_at: new Date().toISOString() 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+
 
   } catch (error) {
     console.error('fetch-socialbox-leads error:', error);
