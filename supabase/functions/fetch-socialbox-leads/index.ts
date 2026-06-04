@@ -165,12 +165,15 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       leads: activeLeads, 
-      new_count: newLeads.length,
+      new_count: surfacedCount,
+      truly_new: newLeads.length,
+      reactivated: reactivate.length,
       total_active: activeLeads.length,
       synced_at: new Date().toISOString() 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+
 
   } catch (error) {
     console.error('fetch-socialbox-leads error:', error);
