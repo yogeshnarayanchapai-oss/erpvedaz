@@ -1,10 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const normalizePhone = (value: unknown) => String(value || '').replace(/\D/g, '');
+
+const getLeadPhone = (lead: any) => lead?.phone || lead?.contact_number || lead?.mobile || lead?.number || null;
+
+const getLeadName = (lead: any) => lead?.full_name || lead?.name || lead?.client_name || null;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,6 +29,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -82,11 +93,19 @@ serve(async (req) => {
     const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
     console.log('SocialBox returned', leadsArray.length, 'leads from API');
 
-    // Get all pulled leads for this store
-    const { data: pulledLeads } = await supabase
+    // Get all previously pulled leads for this store. Any existing row means it was already seen once,
+    // so transferred/deleted leads must never be reactivated or pulled again.
+    const { data: pulledLeads, error: pulledError } = await serviceSupabase
       .from('socialbox_pulled_leads')
       .select('socialbox_lead_id, is_transferred, is_deleted, lead_data')
       .eq('store_id', storeId);
+
+    if (pulledError) {
+      console.error('Pulled leads lookup error:', pulledError);
+      return new Response(JSON.stringify({ error: 'Failed to check pulled lead history.' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     const pulledMap = new Map<string, { is_transferred: boolean; is_deleted: boolean; lead_data: any }>();
     (pulledLeads || []).forEach((pl: any) => {
@@ -97,20 +116,62 @@ serve(async (req) => {
       });
     });
 
+    const candidatePhones = Array.from(new Set(
+      leadsArray
+        .map((lead: any) => normalizePhone(getLeadPhone(lead)))
+        .filter((phone: string) => phone.length >= 10)
+    ));
+
+    const existingLeadPhones = new Set<string>();
+    const pageSize = 10000;
+    for (let from = 0; ; from += pageSize) {
+      const { data: existingLeads, error: existingError } = await serviceSupabase
+        .from('leads')
+        .select('contact_number')
+        .eq('store_id', storeId)
+        .range(from, from + pageSize - 1);
+
+      if (existingError) {
+        console.error('Existing leads lookup error:', existingError);
+        return new Response(JSON.stringify({ error: 'Failed to check existing system leads.' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      for (const row of existingLeads || []) {
+        const phone = normalizePhone((row as any).contact_number);
+        if (phone.length >= 10 && candidatePhones.includes(phone)) {
+          existingLeadPhones.add(phone);
+        }
+      }
+
+      if (!existingLeads || existingLeads.length < pageSize) break;
+    }
+
     // Classify
-    const newLeads: any[] = [];      // truly new (not in DB)
-    const reactivate: any[] = [];    // in DB, transferred but not deleted — re-activate
-    const skippedDeleted: any[] = []; // explicitly deleted by user — don't bring back
+    const newLeads: any[] = [];      // truly new (not pulled before and not already in system leads)
+    const skippedAlreadyPulled: any[] = [];
+    const skippedExistingSystem: any[] = [];
+    const seenPhones = new Set<string>();
 
     for (const lead of leadsArray) {
-      const info = pulledMap.get(String(lead.id));
+      const leadId = String(lead.id);
+      const phone = normalizePhone(getLeadPhone(lead));
+      const info = pulledMap.get(leadId);
+
+      if (info) {
+        skippedAlreadyPulled.push(lead);
+        continue;
+      }
+
+      if (phone.length >= 10 && (existingLeadPhones.has(phone) || seenPhones.has(phone))) {
+        skippedExistingSystem.push(lead);
+        continue;
+      }
+
       if (!info) {
         newLeads.push(lead);
-      } else if (info.is_deleted) {
-        skippedDeleted.push(lead);
-      } else {
-        // Already in DB and not deleted. If it was transferred, re-activate.
-        if (info.is_transferred) reactivate.push(lead);
+        if (phone.length >= 10) seenPhones.add(phone);
       }
     }
 
@@ -119,32 +180,21 @@ serve(async (req) => {
       const pullRecords = newLeads.map((lead: any) => ({
         store_id: storeId,
         socialbox_lead_id: String(lead.id),
-        phone: lead.phone || null,
-        full_name: lead.full_name || lead.name || null,
+        phone: getLeadPhone(lead),
+        full_name: getLeadName(lead),
         lead_data: lead,
         is_transferred: false,
         is_deleted: false,
       }));
 
-      const { error: insertErr } = await supabase
+      const { error: insertErr } = await serviceSupabase
         .from('socialbox_pulled_leads')
         .upsert(pullRecords, { onConflict: 'store_id,socialbox_lead_id' });
       if (insertErr) console.error('Insert new leads error:', insertErr);
     }
 
-    // Re-activate previously transferred leads that SocialBox still surfaces
-    if (reactivate.length > 0) {
-      const ids = reactivate.map((l: any) => String(l.id));
-      const { error: updErr } = await supabase
-        .from('socialbox_pulled_leads')
-        .update({ is_transferred: false, transferred_at: null, lead_data: undefined })
-        .eq('store_id', storeId)
-        .in('socialbox_lead_id', ids);
-      if (updErr) console.error('Reactivate leads error:', updErr);
-    }
-
     // Build active leads to return (new + reactivated + previously-active)
-    const activeLeads: any[] = [...newLeads, ...reactivate];
+    const activeLeads: any[] = [...newLeads];
     for (const [leadId, info] of pulledMap.entries()) {
       if (!info.is_transferred && !info.is_deleted && info.lead_data) {
         // Avoid duplicates with newLeads / reactivate
@@ -154,7 +204,7 @@ serve(async (req) => {
       }
     }
 
-    const surfacedCount = newLeads.length + reactivate.length;
+    const surfacedCount = newLeads.length;
 
 
     // Update last_synced_at
@@ -167,7 +217,9 @@ serve(async (req) => {
       leads: activeLeads, 
       new_count: surfacedCount,
       truly_new: newLeads.length,
-      reactivated: reactivate.length,
+      reactivated: 0,
+      skipped_already_pulled: skippedAlreadyPulled.length,
+      skipped_existing_system: skippedExistingSystem.length,
       total_active: activeLeads.length,
       synced_at: new Date().toISOString() 
     }), {
