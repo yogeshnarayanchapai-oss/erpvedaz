@@ -34,7 +34,7 @@ export default function AILeads() {
   // Manual pull from SocialBox API
   const handleManualPull = useCallback(async () => {
     try {
-      const result: any = await fetchLeads.mutateAsync({ limit: 200 });
+      const result: any = await fetchLeads.mutateAsync({ status: 'new', limit: 200 });
       if (result) {
         // Refresh stored leads cache from DB
         await queryClient.invalidateQueries({ queryKey: ['socialbox-stored-leads'] });
