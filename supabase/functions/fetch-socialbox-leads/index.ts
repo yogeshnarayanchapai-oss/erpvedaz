@@ -65,8 +65,10 @@ serve(async (req) => {
     }
 
     // Build query params
+    // Build query params - ALWAYS filter to status=new to avoid pulling already-pulled leads
+    const effectiveStatus = status || 'new';
     const params = new URLSearchParams();
-    if (status) params.set('status', status);
+    params.set('status', effectiveStatus);
     if (limit) params.set('limit', String(limit || 200));
 
     const apiUrl = `${config.api_base_url}${params.toString() ? '?' + params.toString() : ''}`;
