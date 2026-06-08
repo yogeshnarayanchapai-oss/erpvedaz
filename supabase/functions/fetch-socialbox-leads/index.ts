@@ -65,8 +65,10 @@ serve(async (req) => {
     }
 
     // Build query params
+    // Build query params - ALWAYS filter to status=new to avoid pulling already-pulled leads
+    const effectiveStatus = status || 'new';
     const params = new URLSearchParams();
-    if (status) params.set('status', status);
+    params.set('status', effectiveStatus);
     if (limit) params.set('limit', String(limit || 200));
 
     const apiUrl = `${config.api_base_url}${params.toString() ? '?' + params.toString() : ''}`;
@@ -90,8 +92,12 @@ serve(async (req) => {
     }
 
     const leads = await response.json();
-    const leadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
-    console.log('SocialBox returned', leadsArray.length, 'leads from API');
+    const rawLeadsArray = Array.isArray(leads) ? leads : (leads?.data || leads?.leads || []);
+    // Defense filter: if requesting 'new', drop any lead whose status isn't 'new' (server-side may ignore filter)
+    const leadsArray = effectiveStatus === 'new'
+      ? rawLeadsArray.filter((l: any) => String(l?.status || '').toLowerCase() === 'new')
+      : rawLeadsArray;
+    console.log('SocialBox returned', rawLeadsArray.length, 'leads,', leadsArray.length, 'after status filter');
 
     // Get all previously pulled leads for this store. Any existing row means it was already seen once,
     // so transferred/deleted leads must never be reactivated or pulled again.
