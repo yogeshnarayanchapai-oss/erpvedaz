@@ -37,6 +37,7 @@ import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress'
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { LeadFiltersCard, DatePreset } from '@/components/filters/LeadFiltersCard';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
 import { toast } from 'sonner';
