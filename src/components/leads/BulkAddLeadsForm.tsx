@@ -221,7 +221,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
       contact_number: row.contact_number.trim(),
       alt_phone: row.alt_phone.trim() || undefined,
       product_id: row.product_id,
-      source: row.source,
+      source: row.source || null,
       remark: row.remark.trim() || undefined,
     }));
 
