@@ -798,6 +798,7 @@ export default function AdminLeads() {
     setSelectedProduct('ALL');
     setSelectedStatus('all');
     setAssignedToFilter('all');
+    setCancelReasonFilter('ALL');
     setSelectedLeads([]);
   };
 
