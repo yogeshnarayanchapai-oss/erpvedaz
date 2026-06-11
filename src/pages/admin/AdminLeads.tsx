@@ -104,6 +104,8 @@ export default function AdminLeads() {
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [reassignStaffId, setReassignStaffId] = useState('');
 
