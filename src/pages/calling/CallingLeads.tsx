@@ -743,9 +743,6 @@ Order By: ${profile?.name || 'N/A'}`;
     setCustomDateFrom(today);
     setCustomDateTo(today);
   };
-    setCustomDateFrom(today);
-    setCustomDateTo(today);
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
