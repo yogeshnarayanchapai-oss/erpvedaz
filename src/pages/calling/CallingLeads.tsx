@@ -792,6 +792,10 @@ Order By: ${profile?.name || 'N/A'}`;
         showFollowupFilter={true}
         followupFilter={followupFilter}
         onFollowupFilterChange={setFollowupFilter}
+        showCancelReasonFilter={true}
+        cancelReasonFilter={cancelReasonFilter}
+        onCancelReasonFilterChange={setCancelReasonFilter}
+        cancelReasons={cancelReasonsList}
       />
 
 
