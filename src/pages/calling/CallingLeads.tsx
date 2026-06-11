@@ -492,6 +492,12 @@ Order By: ${profile?.name || 'N/A'}`;
       return;
     }
 
+    // Compulsory cancel reason when status is CANCELLED
+    if (editForm.status === 'CANCELLED' && !editForm.cancel_reason) {
+      toast.error('Cancel Reason छान्नुहोस् (compulsory). Admin/Manager le add gareko list bata choose garnu hos.');
+      return;
+    }
+
     try {
       // Build follow-up timestamp if status is FOLLOW_UP
       let followupData: { 
