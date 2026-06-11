@@ -31,6 +31,7 @@ import { LeadFiltersCard, DatePreset, FollowupFilterType } from '@/components/fi
 import { AddLeadDropdown } from '@/components/filters/AddLeadDropdown';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
 
 export default function CallingLeads() {
   const { profile } = useAuth();
