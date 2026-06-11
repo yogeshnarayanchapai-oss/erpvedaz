@@ -271,7 +271,8 @@ export default function AdminLeads() {
       matchesRefId ||
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
-    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch;
+    const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch && matchesCancelReason;
   }).sort((a, b) => {
     // Sort by created_at descending - newest first
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
