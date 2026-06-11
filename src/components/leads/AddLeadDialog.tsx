@@ -90,7 +90,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
 
   const handleSubmit = async () => {
     const invalidRows = rows.filter(
-      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id || !row.source
+      row => !row.client_name.trim() || !row.contact_number.trim() || !row.product_id
     );
 
     if (invalidRows.length > 0) {
@@ -123,7 +123,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
         contact_number: row.contact_number.trim(),
         alt_phone: row.alt_phone.trim() || null,
         product_id: row.product_id,
-        source: row.source,
+        source: row.source || null,
         remark: row.remark.trim() || null,
         created_by_user_id: profile?.id,
         assigned_to_user_id: profile?.id,
@@ -225,7 +225,7 @@ export function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
             <div>Phone *</div>
             <div>Alt Phone</div>
             <div>Product *</div>
-            <div>Source *</div>
+            <div>Source</div>
             <div>Remark</div>
             <div></div>
           </div>
