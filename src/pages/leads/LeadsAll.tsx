@@ -32,6 +32,7 @@ import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
 import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
 import { ManageCancelReasonsDialog } from '@/components/leads/ManageCancelReasonsDialog';
+import { exportLeadsToExcel } from '@/lib/exportLeadsExcel';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
