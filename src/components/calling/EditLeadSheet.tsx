@@ -15,6 +15,8 @@ import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { addHours, addDays, format } from 'date-fns';
 import { useProducts } from '@/hooks/useProducts';
 import { SearchableProductSelect } from '@/components/orders/SearchableProductSelect';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
+import { ManageCancelReasonsDialog } from '@/components/leads/ManageCancelReasonsDialog';
 
 const ORDER_STATUS_OPTIONS = [
   { value: 'NEW', label: 'Pending' },
@@ -64,6 +66,7 @@ export interface EditLeadFormData {
   followup_date: string;
   followup_time: string;
   followup_reason: string;
+  cancel_reason: string;
   orderItems: OrderItemLine[];
 }
 
@@ -91,6 +94,7 @@ export function EditLeadSheet({
   const { data: products = [] } = useProducts();
   const { currentStore } = useCurrentStore();
   const { data: customerInsight, isLoading: insightLoading } = useCustomerInsight(lead?.contact_number || '', currentStore?.id, !!lead);
+  const { data: cancelReasons = [] } = useLeadCancelReasons();
   
   if (!lead) return null;
 
@@ -362,6 +366,39 @@ export function EditLeadSheet({
                   </div>
                 </details>
               )}
+            </div>
+          )}
+
+          {/* Cancel Reason Section */}
+          {formData.status === 'CANCELLED' && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  Cancel Reason <span className="text-xs text-destructive">*Required</span>
+                </h4>
+                <ManageCancelReasonsDialog />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Select
+                  value={formData.cancel_reason}
+                  onValueChange={(v) => onFormChange({ ...formData, cancel_reason: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a cancel reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cancelReasons.length === 0 && (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">
+                        No reasons yet. Ask Admin/Manager to add.
+                      </div>
+                    )}
+                    {cancelReasons.map((r) => (
+                      <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 

@@ -31,6 +31,7 @@ import { LeadFiltersCard, DatePreset, FollowupFilterType } from '@/components/fi
 import { AddLeadDropdown } from '@/components/filters/AddLeadDropdown';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
 
 export default function CallingLeads() {
   const { profile } = useAuth();
@@ -65,6 +66,9 @@ export default function CallingLeads() {
     return 'ALL';
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
+  
   
   
   // Track if leadId param has been processed
@@ -193,7 +197,9 @@ export default function CallingLeads() {
         matchesFollowup = false;
       }
       
-      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesFollowup;
+      const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+
+      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesFollowup && matchesCancelReason;
     });
     
     // Sort: bring due/overdue follow-ups to top, then by created_at descending
@@ -210,9 +216,9 @@ export default function CallingLeads() {
       const dateB = new Date(b.created_at || b.date).getTime();
       return dateB - dateA;
     });
-  }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive]);
+  }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive, cancelReasonFilter]);
 
-  const leadsPaginationKey = `${dateRange.from}|${dateRange.to}|${datePreset}|${productFilter}|${statusFilter}|${followupFilter}|${searchQuery}|${leads.length}`;
+  const leadsPaginationKey = `${dateRange.from}|${dateRange.to}|${datePreset}|${productFilter}|${statusFilter}|${followupFilter}|${searchQuery}|${cancelReasonFilter}|${leads.length}`;
   const {
     pagedRows: pagedLeads,
     page: leadsPage,
@@ -282,6 +288,7 @@ export default function CallingLeads() {
     followup_date: '',
     followup_time: '',
     followup_reason: '',
+    cancel_reason: '',
     orderItems: [{ id: crypto.randomUUID(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 }],
   });
 
@@ -477,6 +484,7 @@ Order By: ${profile?.name || 'N/A'}`;
       followup_date: lead.next_followup_at ? lead.next_followup_at.split('T')[0] : '',
       followup_time: lead.next_followup_at ? lead.next_followup_at.split('T')[1]?.substring(0, 5) || '' : '',
       followup_reason: lead.followup_reason || '',
+      cancel_reason: (lead as any).cancel_reason || '',
       orderItems: orderItems,
     });
   };
@@ -487,6 +495,12 @@ Order By: ${profile?.name || 'N/A'}`;
     // Compulsory follow-up date & time when status is FOLLOW_UP
     if (editForm.status === 'FOLLOW_UP' && (!editForm.followup_date || !editForm.followup_time)) {
       toast.error('Follow-up Date र Time दुवै राख्नुहोस् (compulsory).');
+      return;
+    }
+
+    // Compulsory cancel reason when status is CANCELLED
+    if (editForm.status === 'CANCELLED' && !editForm.cancel_reason) {
+      toast.error('Cancel Reason छान्नुहोस् (compulsory). Admin/Manager le add gareko list bata choose garnu hos.');
       return;
     }
 
@@ -521,6 +535,7 @@ Order By: ${profile?.name || 'N/A'}`;
         alt_phone: editForm.alt_phone || undefined,
         remark: editForm.remark || undefined,
         date: editForm.date || undefined,
+        cancel_reason: editForm.status === 'CANCELLED' ? editForm.cancel_reason : undefined,
         ...followupData,
       });
 
@@ -723,6 +738,7 @@ Order By: ${profile?.name || 'N/A'}`;
     setProductFilter('ALL');
     setStatusFilter('ALL');
     setFollowupFilter('ALL');
+    setCancelReasonFilter('ALL');
     setDatePreset('today');
     setCustomDateFrom(today);
     setCustomDateTo(today);
@@ -776,6 +792,10 @@ Order By: ${profile?.name || 'N/A'}`;
         showFollowupFilter={true}
         followupFilter={followupFilter}
         onFollowupFilterChange={setFollowupFilter}
+        showCancelReasonFilter={true}
+        cancelReasonFilter={cancelReasonFilter}
+        onCancelReasonFilterChange={setCancelReasonFilter}
+        cancelReasons={cancelReasonsList}
       />
 
 

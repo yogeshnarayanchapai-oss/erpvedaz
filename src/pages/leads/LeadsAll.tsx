@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
 import { BulkEditLeadsForm } from '@/components/leads/BulkEditLeadsForm';
 import { DuplicateBadge } from '@/components/leads/DuplicateBadge';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
+import { ManageCancelReasonsDialog } from '@/components/leads/ManageCancelReasonsDialog';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
@@ -53,6 +55,8 @@ export default function LeadsAll() {
   const [bucketFilter, setBucketFilter] = useState<LeadBucketFilter>(initialBucket);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isReassignOpen, setIsReassignOpen] = useState(false);
@@ -168,7 +172,9 @@ export default function LeadsAll() {
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
       
-      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch;
+      const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+
+      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch && matchesCancelReason;
     });
 
     // Sort: newest first, then unassigned leads first when viewing today's leads
@@ -187,10 +193,10 @@ export default function LeadsAll() {
     }
 
     return leads;
-  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
+  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter, cancelReasonFilter]);
 
   // Pagination - 100 per page; resets when filters change
-  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${filteredLeads.length}`;
+  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${cancelReasonFilter}|${filteredLeads.length}`;
   const {
     pagedRows: pagedLeads,
     page: leadsPage,
@@ -603,6 +609,23 @@ export default function LeadsAll() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Cancel Reason</label>
+                <div className="flex gap-1">
+                  <Select value={cancelReasonFilter} onValueChange={setCancelReasonFilter}>
+                    <SelectTrigger className="w-[140px] md:w-[160px] h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Reasons</SelectItem>
+                      {cancelReasonsList.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <ManageCancelReasonsDialog iconOnly />
+                </div>
               </div>
             </div>
           </div>

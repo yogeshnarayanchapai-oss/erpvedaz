@@ -37,6 +37,7 @@ import { TodayTransferProgress } from '@/components/admin/TodayTransferProgress'
 import { LeadDetailSheet } from '@/components/leads/LeadDetailSheet';
 import { EditLeadSheet, EditLeadFormData } from '@/components/calling/EditLeadSheet';
 import { LeadFiltersCard, DatePreset } from '@/components/filters/LeadFiltersCard';
+import { useLeadCancelReasons } from '@/hooks/useLeadCancelReasons';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
 import { toast } from 'sonner';
@@ -103,6 +104,8 @@ export default function AdminLeads() {
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [reassignStaffId, setReassignStaffId] = useState('');
 
@@ -135,6 +138,7 @@ export default function AdminLeads() {
     followup_date: '',
     followup_time: '',
     followup_reason: '',
+    cancel_reason: '',
     orderItems: [{ id: crypto.randomUUID(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 }],
   });
   const [isSavingLead, setIsSavingLead] = useState(false);
@@ -267,7 +271,8 @@ export default function AdminLeads() {
       matchesRefId ||
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
-    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch;
+    const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+    return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch && matchesCancelReason;
   }).sort((a, b) => {
     // Sort by created_at descending - newest first
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -520,6 +525,7 @@ export default function AdminLeads() {
       followup_date: lead.next_followup_at ? lead.next_followup_at.split('T')[0] : '',
       followup_time: lead.next_followup_at ? lead.next_followup_at.split('T')[1]?.substring(0, 5) || '' : '',
       followup_reason: lead.followup_reason || '',
+      cancel_reason: (lead as any).cancel_reason || '',
       orderItems: orderItems,
     });
     setEditingLead(lead);
@@ -527,6 +533,13 @@ export default function AdminLeads() {
 
   const handleSaveEditedLead = async () => {
     if (!editingLead) return;
+
+    // Compulsory cancel reason
+    if (editForm.status === 'CANCELLED' && !editForm.cancel_reason) {
+      toast.error('Cancel Reason छान्नुहोस् (compulsory).');
+      return;
+    }
+
     setIsSavingLead(true);
 
     try {
@@ -560,6 +573,7 @@ export default function AdminLeads() {
         alt_phone: editForm.alt_phone || undefined,
         remark: editForm.remark || undefined,
         date: editForm.date || undefined,
+        cancel_reason: editForm.status === 'CANCELLED' ? editForm.cancel_reason : undefined,
         ...followupData,
       });
 
@@ -784,6 +798,7 @@ export default function AdminLeads() {
     setSelectedProduct('ALL');
     setSelectedStatus('all');
     setAssignedToFilter('all');
+    setCancelReasonFilter('ALL');
     setSelectedLeads([]);
   };
 
@@ -989,6 +1004,10 @@ export default function AdminLeads() {
         onAssignedToFilterChange={setAssignedToFilter}
         callingStaff={callingStaff}
         isAdmin={true}
+        showCancelReasonFilter={true}
+        cancelReasonFilter={cancelReasonFilter}
+        onCancelReasonFilterChange={setCancelReasonFilter}
+        cancelReasons={cancelReasonsList}
       />
 
       {/* Leads Table */}

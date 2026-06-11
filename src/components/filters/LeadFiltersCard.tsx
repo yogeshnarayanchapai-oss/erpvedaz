@@ -85,6 +85,11 @@ interface LeadFiltersCardProps {
   callingStaff?: { id: string; name: string }[];
   // Whether to use admin status/date options
   isAdmin?: boolean;
+  // Optional: Cancel reason filter
+  showCancelReasonFilter?: boolean;
+  cancelReasonFilter?: string;
+  onCancelReasonFilterChange?: (value: string) => void;
+  cancelReasons?: { id: string; name: string }[];
 }
 
 export function LeadFiltersCard({
@@ -110,6 +115,10 @@ export function LeadFiltersCard({
   onAssignedToFilterChange,
   callingStaff = [],
   isAdmin = false,
+  showCancelReasonFilter = false,
+  cancelReasonFilter = 'ALL',
+  onCancelReasonFilterChange,
+  cancelReasons = [],
 }: LeadFiltersCardProps) {
   const statusOptions = isAdmin ? ADMIN_STATUS_FILTER_OPTIONS : STATUS_FILTER_OPTIONS;
   const datePresets = isAdmin ? ADMIN_DATE_PRESETS : CALLING_DATE_PRESETS;
@@ -238,6 +247,21 @@ export function LeadFiltersCard({
                   <SelectItem key={staff.id} value={staff.id}>
                     {staff.name}
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Cancel Reason Filter */}
+          {showCancelReasonFilter && onCancelReasonFilterChange && (
+            <Select value={cancelReasonFilter} onValueChange={onCancelReasonFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Cancel Reasons" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Cancel Reasons</SelectItem>
+                {cancelReasons.map((r) => (
+                  <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
