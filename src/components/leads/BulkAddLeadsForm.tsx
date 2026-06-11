@@ -199,7 +199,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
     }
 
     const validRows = rows.filter(
-      row => row.client_name.trim() && row.contact_number.trim() && row.product_id && row.source
+      row => row.client_name.trim() && row.contact_number.trim() && row.product_id
     );
 
     if (validRows.length === 0) {
