@@ -529,6 +529,7 @@ Order By: ${profile?.name || 'N/A'}`;
         alt_phone: editForm.alt_phone || undefined,
         remark: editForm.remark || undefined,
         date: editForm.date || undefined,
+        cancel_reason: editForm.status === 'CANCELLED' ? editForm.cancel_reason : undefined,
         ...followupData,
       });
 
