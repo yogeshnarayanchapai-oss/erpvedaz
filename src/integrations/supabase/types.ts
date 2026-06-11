@@ -3114,6 +3114,41 @@ export type Database = {
           },
         ]
       }
+      lead_cancel_reasons: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_cancel_reasons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_history: {
         Row: {
           action: string
@@ -3278,6 +3313,7 @@ export type Database = {
           assigned_at: string | null
           assigned_to_user_id: string | null
           branch_id: string | null
+          cancel_reason: string | null
           client_name: string
           confirmed_at: string | null
           confirmed_by_user_id: string | null
@@ -3327,6 +3363,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_to_user_id?: string | null
           branch_id?: string | null
+          cancel_reason?: string | null
           client_name: string
           confirmed_at?: string | null
           confirmed_by_user_id?: string | null
@@ -3376,6 +3413,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_to_user_id?: string | null
           branch_id?: string | null
+          cancel_reason?: string | null
           client_name?: string
           confirmed_at?: string | null
           confirmed_by_user_id?: string | null
