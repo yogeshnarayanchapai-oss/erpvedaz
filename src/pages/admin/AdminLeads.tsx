@@ -1064,6 +1064,21 @@ export default function AdminLeads() {
                 Reassign ({selectedLeads.length})
               </Button>
             )}
+            {selectedLeads.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const sel = filteredLeads.filter(l => selectedLeads.includes(l.id));
+                  exportLeadsToExcel(sel, `selected_leads_${new Date().toISOString().slice(0,10)}.xlsx`);
+                  toast.success(`${sel.length} leads exported to Excel`);
+                }}
+                className="gap-1 text-xs"
+              >
+                <Download className="w-3 h-3" />
+                Export Excel ({selectedLeads.length})
+              </Button>
+            )}
             <DeleteLeadsButton 
               selectedIds={selectedLeads} 
               onDeleteComplete={() => setSelectedLeads([])} 
