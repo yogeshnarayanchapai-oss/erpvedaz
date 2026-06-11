@@ -369,6 +369,39 @@ export function EditLeadSheet({
             </div>
           )}
 
+          {/* Cancel Reason Section */}
+          {formData.status === 'CANCELLED' && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  Cancel Reason <span className="text-xs text-destructive">*Required</span>
+                </h4>
+                <ManageCancelReasonsDialog />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Select
+                  value={formData.cancel_reason}
+                  onValueChange={(v) => onFormChange({ ...formData, cancel_reason: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a cancel reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cancelReasons.length === 0 && (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">
+                        No reasons yet. Ask Admin/Manager to add.
+                      </div>
+                    )}
+                    {cancelReasons.map((r) => (
+                      <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {/* Confirmed Order Details */}
           {formData.status === 'CONFIRMED' && (
             <div className="border-t pt-4 space-y-3 flex-1 flex flex-col">
