@@ -66,6 +66,9 @@ export default function CallingLeads() {
     return 'ALL';
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
+  
   
   
   // Track if leadId param has been processed
