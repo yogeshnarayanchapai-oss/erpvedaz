@@ -193,10 +193,10 @@ export default function LeadsAll() {
     }
 
     return leads;
-  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter]);
+  }, [allLeads, dateRange, productFilter, statusFilter, bucketFilter, assignedToFilter, search, isTodayFilter, cancelReasonFilter]);
 
   // Pagination - 100 per page; resets when filters change
-  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${filteredLeads.length}`;
+  const leadsPaginationKey = `${dateRange.from.toISOString()}|${dateRange.to.toISOString()}|${productFilter}|${statusFilter}|${bucketFilter}|${assignedToFilter}|${search}|${cancelReasonFilter}|${filteredLeads.length}`;
   const {
     pagedRows: pagedLeads,
     page: leadsPage,
