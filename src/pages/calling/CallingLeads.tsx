@@ -197,7 +197,9 @@ export default function CallingLeads() {
         matchesFollowup = false;
       }
       
-      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesFollowup;
+      const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+
+      return matchesDate && matchesProduct && matchesStatus && matchesSearch && matchesFollowup && matchesCancelReason;
     });
     
     // Sort: bring due/overdue follow-ups to top, then by created_at descending
