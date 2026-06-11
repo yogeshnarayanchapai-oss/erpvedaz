@@ -610,6 +610,23 @@ export default function LeadsAll() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1 flex-shrink-0">
+                <label className="text-xs font-medium">Cancel Reason</label>
+                <div className="flex gap-1">
+                  <Select value={cancelReasonFilter} onValueChange={setCancelReasonFilter}>
+                    <SelectTrigger className="w-[140px] md:w-[160px] h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Reasons</SelectItem>
+                      {cancelReasonsList.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <ManageCancelReasonsDialog iconOnly />
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
