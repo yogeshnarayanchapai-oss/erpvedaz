@@ -1004,6 +1004,10 @@ export default function AdminLeads() {
         onAssignedToFilterChange={setAssignedToFilter}
         callingStaff={callingStaff}
         isAdmin={true}
+        showCancelReasonFilter={true}
+        cancelReasonFilter={cancelReasonFilter}
+        onCancelReasonFilterChange={setCancelReasonFilter}
+        cancelReasons={cancelReasonsList}
       />
 
       {/* Leads Table */}
