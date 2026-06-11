@@ -55,6 +55,8 @@ export default function LeadsAll() {
   const [bucketFilter, setBucketFilter] = useState<LeadBucketFilter>(initialBucket);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isReassignOpen, setIsReassignOpen] = useState(false);
