@@ -521,6 +521,7 @@ export default function AdminLeads() {
       followup_date: lead.next_followup_at ? lead.next_followup_at.split('T')[0] : '',
       followup_time: lead.next_followup_at ? lead.next_followup_at.split('T')[1]?.substring(0, 5) || '' : '',
       followup_reason: lead.followup_reason || '',
+      cancel_reason: (lead as any).cancel_reason || '',
       orderItems: orderItems,
     });
     setEditingLead(lead);
