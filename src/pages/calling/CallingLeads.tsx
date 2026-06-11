@@ -216,9 +216,9 @@ export default function CallingLeads() {
       const dateB = new Date(b.created_at || b.date).getTime();
       return dateB - dateA;
     });
-  }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive]);
+  }, [allLeads, dateRange, datePreset, customDateFrom, customDateTo, productFilter, statusFilter, searchQuery, followupFilter, isSearchActive, cancelReasonFilter]);
 
-  const leadsPaginationKey = `${dateRange.from}|${dateRange.to}|${datePreset}|${productFilter}|${statusFilter}|${followupFilter}|${searchQuery}|${leads.length}`;
+  const leadsPaginationKey = `${dateRange.from}|${dateRange.to}|${datePreset}|${productFilter}|${statusFilter}|${followupFilter}|${searchQuery}|${cancelReasonFilter}|${leads.length}`;
   const {
     pagedRows: pagedLeads,
     page: leadsPage,
