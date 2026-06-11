@@ -94,6 +94,7 @@ export function EditLeadSheet({
   const { data: products = [] } = useProducts();
   const { currentStore } = useCurrentStore();
   const { data: customerInsight, isLoading: insightLoading } = useCustomerInsight(lead?.contact_number || '', currentStore?.id, !!lead);
+  const { data: cancelReasons = [] } = useLeadCancelReasons();
   
   if (!lead) return null;
 
