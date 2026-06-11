@@ -83,6 +83,7 @@ export interface UpdateLeadInput {
   followup_reason?: string;
   is_followup_reminded?: boolean;
   followup_completed?: boolean;
+  cancel_reason?: string;
 }
 
 export function useLeads(filters?: {
