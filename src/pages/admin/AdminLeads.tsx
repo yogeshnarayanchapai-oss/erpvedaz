@@ -529,6 +529,13 @@ export default function AdminLeads() {
 
   const handleSaveEditedLead = async () => {
     if (!editingLead) return;
+
+    // Compulsory cancel reason
+    if (editForm.status === 'CANCELLED' && !editForm.cancel_reason) {
+      toast.error('Cancel Reason छान्नुहोस् (compulsory).');
+      return;
+    }
+
     setIsSavingLead(true);
 
     try {
@@ -562,6 +569,7 @@ export default function AdminLeads() {
         alt_phone: editForm.alt_phone || undefined,
         remark: editForm.remark || undefined,
         date: editForm.date || undefined,
+        cancel_reason: editForm.status === 'CANCELLED' ? editForm.cancel_reason : undefined,
         ...followupData,
       });
 
