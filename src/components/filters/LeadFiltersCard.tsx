@@ -85,6 +85,11 @@ interface LeadFiltersCardProps {
   callingStaff?: { id: string; name: string }[];
   // Whether to use admin status/date options
   isAdmin?: boolean;
+  // Optional: Cancel reason filter
+  showCancelReasonFilter?: boolean;
+  cancelReasonFilter?: string;
+  onCancelReasonFilterChange?: (value: string) => void;
+  cancelReasons?: { id: string; name: string }[];
 }
 
 export function LeadFiltersCard({
