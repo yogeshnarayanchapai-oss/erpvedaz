@@ -172,7 +172,9 @@ export default function LeadsAll() {
         lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
         lead.contact_number.includes(search);
       
-      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch;
+      const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+
+      return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch && matchesCancelReason;
     });
 
     // Sort: newest first, then unassigned leads first when viewing today's leads
