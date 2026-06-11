@@ -282,6 +282,7 @@ export default function CallingLeads() {
     followup_date: '',
     followup_time: '',
     followup_reason: '',
+    cancel_reason: '',
     orderItems: [{ id: crypto.randomUUID(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 }],
   });
 
