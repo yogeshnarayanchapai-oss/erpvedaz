@@ -279,7 +279,7 @@ export function BulkAddLeadsForm({ open, onOpenChange, prefillData, onSuccess }:
               <div>Phone *</div>
               <div>Alt Phone</div>
               <div>Product *</div>
-              <div>Source *</div>
+              <div>Source</div>
               <div>Remark</div>
               <div></div>
             </div>
