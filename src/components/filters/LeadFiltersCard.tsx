@@ -252,6 +252,21 @@ export function LeadFiltersCard({
             </Select>
           )}
 
+          {/* Cancel Reason Filter */}
+          {showCancelReasonFilter && onCancelReasonFilterChange && (
+            <Select value={cancelReasonFilter} onValueChange={onCancelReasonFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Cancel Reasons" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Cancel Reasons</SelectItem>
+                {cancelReasons.map((r) => (
+                  <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Clear Button - Only show when filters are active */}
           {hasActiveFilters && (
             <Button variant="outline" onClick={onReset}>
