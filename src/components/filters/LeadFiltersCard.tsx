@@ -115,6 +115,10 @@ export function LeadFiltersCard({
   onAssignedToFilterChange,
   callingStaff = [],
   isAdmin = false,
+  showCancelReasonFilter = false,
+  cancelReasonFilter = 'ALL',
+  onCancelReasonFilterChange,
+  cancelReasons = [],
 }: LeadFiltersCardProps) {
   const statusOptions = isAdmin ? ADMIN_STATUS_FILTER_OPTIONS : STATUS_FILTER_OPTIONS;
   const datePresets = isAdmin ? ADMIN_DATE_PRESETS : CALLING_DATE_PRESETS;
