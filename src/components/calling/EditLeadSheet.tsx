@@ -66,6 +66,7 @@ export interface EditLeadFormData {
   followup_date: string;
   followup_time: string;
   followup_reason: string;
+  cancel_reason: string;
   orderItems: OrderItemLine[];
 }
 
