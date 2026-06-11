@@ -23,7 +23,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Phone, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown } from 'lucide-react';
+import { Phone, RotateCcw, CheckSquare, Send, Plus, ArrowRightLeft, Users, Package, Eye, Edit, Lock, UserPlus, MoreHorizontal, Trash2, ChevronDown, Download } from 'lucide-react';
+import { exportLeadsToExcel } from '@/lib/exportLeadsExcel';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLeadStatusBadgeClass, formatStatusLabel } from '@/lib/statusColors';
@@ -1061,6 +1062,21 @@ export default function AdminLeads() {
               >
                 <UserPlus className="w-3 h-3" />
                 Reassign ({selectedLeads.length})
+              </Button>
+            )}
+            {selectedLeads.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const sel = filteredLeads.filter(l => selectedLeads.includes(l.id));
+                  exportLeadsToExcel(sel, `selected_leads_${new Date().toISOString().slice(0,10)}.xlsx`);
+                  toast.success(`${sel.length} leads exported to Excel`);
+                }}
+                className="gap-1 text-xs"
+              >
+                <Download className="w-3 h-3" />
+                Export Excel ({selectedLeads.length})
               </Button>
             )}
             <DeleteLeadsButton 
