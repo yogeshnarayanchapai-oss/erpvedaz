@@ -679,7 +679,21 @@ export default function LeadsAll() {
                   <Edit className="w-3 h-3 mr-1" />
                   Edit ({selectedLeads.length})
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const sel = filteredLeads.filter(l => selectedLeads.includes(l.id));
+                    exportLeadsToExcel(sel, `selected_leads_${new Date().toISOString().slice(0,10)}.xlsx`);
+                    toast.success(`${sel.length} leads exported to Excel`);
+                  }}
+                  className="text-xs"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Export Excel ({selectedLeads.length})
+                </Button>
               </>
+              
             )}
             {selectedUnassignedLeads.length > 0 && (
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
