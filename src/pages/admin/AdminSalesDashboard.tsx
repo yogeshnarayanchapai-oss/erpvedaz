@@ -469,7 +469,7 @@ export default function AdminDashboard() {
         <StatCard 
           title="Total Leads" 
           value={stats.total} 
-          description={`New: ${stats.newLeads || 0}`}
+          description={`Assigned: ${stats.assigned || 0}`}
           icon={<Users className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
