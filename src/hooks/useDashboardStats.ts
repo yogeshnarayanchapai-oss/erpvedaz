@@ -103,7 +103,10 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
       if (error) throw error;
 
       const leads = data || [];
-      
+      // "Assigned/Pending Call": leads transferred to a staff member where
+      // the calling staff hasn't yet changed status (still NEW/ASSIGNED/empty)
+      const pendingCallStatuses = ['NEW', 'ASSIGNED', null, ''];
+
       return {
         total: leads.length,
         confirmed: leads.filter(l => l.status === 'CONFIRMED' || l.order_id !== null).length,
@@ -118,8 +121,12 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
           l.order_id === null
         ).length,
         newLeads: leads.filter(l => l.status === 'NEW').length,
-        assigned: leads.filter(l => l.status === 'ASSIGNED').length,
+        assigned: leads.filter(l =>
+          l.assigned_to_user_id !== null &&
+          pendingCallStatuses.includes(l.status as any)
+        ).length,
       };
+
     },
     enabled: !!storeId,
   });
