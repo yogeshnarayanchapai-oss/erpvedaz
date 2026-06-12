@@ -104,21 +104,11 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
 
       const leads = data || [];
 
-      // "Assigned/Pending Call" is a CURRENT snapshot (not date-bound):
-      // all leads in this store that are assigned to a staff but the
-      // calling staff hasn't changed the status yet.
-      const pendingCallStatuses = ['NEW', 'ASSIGNED', null, ''];
-      let assignedPendingCount = 0;
-      if (storeId) {
-        let pendingQuery = supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('store_id', storeId)
-          .not('assigned_to_user_id', 'is', null)
-          .or('status.is.null,status.eq.,status.eq.NEW,status.eq.ASSIGNED');
-        const { count: pendingCount, error: pendingErr } = await pendingQuery;
-        if (!pendingErr) assignedPendingCount = pendingCount || 0;
-      }
+      // "Remain Call": leads in this store + date range whose status is
+      // NEW, ASSIGNED, or empty/null (calling staff hasn't actioned yet).
+      const remainCall = leads.filter(l =>
+        l.status === 'NEW' || l.status === 'ASSIGNED' || !l.status
+      ).length;
 
       return {
         total: leads.length,
@@ -134,8 +124,9 @@ export function useLeadDashboardStats(dateFrom?: string, dateTo?: string) {
           l.order_id === null
         ).length,
         newLeads: leads.filter(l => l.status === 'NEW').length,
-        assigned: assignedPendingCount,
+        assigned: remainCall,
       };
+
     },
     enabled: !!storeId,
   });
