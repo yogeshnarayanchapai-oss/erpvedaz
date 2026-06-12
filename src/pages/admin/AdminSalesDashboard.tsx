@@ -469,10 +469,11 @@ export default function AdminDashboard() {
         <StatCard 
           title="Total Leads" 
           value={stats.total} 
+          description={`New: ${stats.newLeads || 0}`}
           icon={<Users className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
-          className="cursor-pointer hover:scale-[1.02] transition-transform"
+          className="cursor-pointer hover:scale-[1.02] transition-transform [&_p.text-\\[10px\\]]:text-right [&_p.text-\\[10px\\]]:mt-2"
         />
         <StatCard 
           title="Pending Transfer" 
@@ -484,19 +485,11 @@ export default function AdminDashboard() {
           className="cursor-pointer hover:scale-[1.02] transition-transform"
         />
         <StatCard 
-          title="Total Orders" 
-          value={orders.total} 
-          icon={<ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />} 
-          variant="info" 
-          onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
-          className="cursor-pointer hover:scale-[1.02] transition-transform"
-        />
-        <StatCard 
-          title="Confirmed" 
-          value={orders.confirmed} 
+          title="Confirmed / Total Orders" 
+          value={`${orders.confirmed}/${orders.total}`} 
           icon={<CheckCircle className="w-4 h-4 md:w-5 md:h-5" />} 
           variant="success" 
-          onClick={() => handleStatCardClick('confirmed')}
+          onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
         />
         <StatCard 
