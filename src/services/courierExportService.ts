@@ -56,9 +56,9 @@ export function exportOrdersToCourierFormat(orders: Order[], filename = 'courier
     const deliveryInstruction = order.delivery_notes || '';
     
     // Staff name: prefer confirmed_by, fallback to sales_person, then created_by_staff
-    const fullStaffName = order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A';
-    // Use only first name
-    const staffFirstName = fullStaffName.split(' ')[0];
+    const fullStaffName = (order.confirmed_by_profile?.name || order.sales_person?.name || order.created_by_staff?.name || 'N/A').trim();
+    // Use only first name (trim to handle leading/extra spaces in stored names)
+    const staffFirstName = fullStaffName.split(/\s+/).filter(Boolean)[0] || 'N/A';
     
     // Lead reference ID
     const leadRefId = order.leads?.reference_id || '';
