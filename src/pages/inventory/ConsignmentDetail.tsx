@@ -20,7 +20,7 @@ import {
 } from '@/hooks/useConsignments';
 import { toast } from 'sonner';
 
-const COST_TYPES = ['PRODUCT','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
+const PAYMENT_FOR_TYPES = ['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
 
 export default function ConsignmentDetail() {
