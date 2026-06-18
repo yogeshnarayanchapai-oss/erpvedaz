@@ -19,6 +19,8 @@ import {
   useSaveConsignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus,
 } from '@/hooks/useConsignments';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PAYMENT_FOR_TYPES = ['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
@@ -63,6 +65,30 @@ export default function ConsignmentDetail() {
     acc[key] = (acc[key] || 0) + Number(p.amount || 0);
     return acc;
   }, {});
+
+  const exportCostingPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(14); doc.text(`Costing — ${c.consignment_code}`, 14, 16);
+    doc.setFontSize(10); doc.text(`Customer: ${c.customer?.name || '-'}`, 14, 23);
+    const rows: any[] = Object.entries(paidByCategory).map(([cat, amt]) => [cat, Number(amt).toLocaleString()]);
+    costs.forEach((r: any) => rows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]));
+    autoTable(doc, { startY: 28, head: [['Category (Payment For)', 'Amount']], body: rows, foot: [['Total Cost', totalCost.toLocaleString()]] });
+    doc.save(`Costing_${c.consignment_code}.pdf`);
+  };
+
+  const exportPaymentsPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(14); doc.text(`Payments — ${c.consignment_code}`, 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Received: ${totalReceived.toLocaleString()}   Paid: ${totalPaid.toLocaleString()}   Receivable: ${receivable.toLocaleString()}`, 14, 23);
+    autoTable(doc, {
+      startY: 28,
+      head: [['Date', 'Direction', 'For', 'Method', 'Amount']],
+      body: payments.map((p: any) => [p.payment_date, p.direction, p.payment_for, p.payment_method || '-', Number(p.amount).toLocaleString()]),
+    });
+    doc.save(`Payments_${c.consignment_code}.pdf`);
+  };
+
 
   const handleStatusUpdate = async () => {
     await updateStatus.mutateAsync({ id: c.id, status: statusForm.status, remarks: statusForm.remarks, storeId: c.store_id });
@@ -203,8 +229,11 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="costs" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="rounded border bg-muted/30 p-3 text-xs text-muted-foreground">
-              💡 Costs auto-track from <b>Paid</b> payments — add them in the <b>Payments</b> tab. This view shows the breakdown.
+            <div className="flex justify-between items-start gap-3">
+              <div className="rounded border bg-muted/30 p-3 text-xs text-muted-foreground flex-1">
+                💡 Costs auto-track from <b>Paid</b> payments — add them in the <b>Payments</b> tab. This view shows the breakdown.
+              </div>
+              <Button size="sm" variant="outline" onClick={exportCostingPDF}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
             </div>
             <Table>
               <TableHeader><TableRow><TableHead>Category (Payment For)</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
@@ -244,6 +273,9 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="payments" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={exportPaymentsPDF}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
+            </div>
             {!c.is_locked && (
               <form onSubmit={handleAddPayment} className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <Select value={payForm.direction} onValueChange={v => setPayForm({ ...payForm, direction: v })}>
