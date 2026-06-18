@@ -19,8 +19,6 @@ import {
   useSaveConsignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus,
 } from '@/hooks/useConsignments';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const PAYMENT_FOR_TYPES = ['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
@@ -66,60 +64,8 @@ export default function ConsignmentDetail() {
     return acc;
   }, {});
 
-  const exportReportPDF = () => {
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    doc.setFontSize(15); doc.setFont(undefined, 'bold');
-    doc.text('Consignment Report', pageW / 2, 14, { align: 'center' });
-    doc.setFontSize(11);
-    doc.text(`${c.consignment_code}  ·  ${STATUS_LABELS[c.status]}`, pageW / 2, 20, { align: 'center' });
 
-    doc.setFont(undefined, 'normal'); doc.setFontSize(9);
-    const infoLeft = [
-      ['Customer', c.customer?.name || '-'],
-      ['Product', c.product_name || '-'],
-      ['Qty / Unit', `${c.quantity ?? '-'} ${c.unit || ''}`],
-      ['Mode', c.shipment_mode || '-'],
-    ];
-    const infoRight = [
-      ['Route', `${c.origin_country || '-'} → ${c.destination || '-'}`],
-      ['Order Date', c.order_date || '-'],
-      ['ETA', c.eta || c.expected_arrival_date || '-'],
-      ['Supplier', c.supplier?.name || '-'],
-    ];
-    autoTable(doc, { startY: 25, theme: 'plain', styles: { fontSize: 9, cellPadding: 1 },
-      body: infoLeft.map((l, i) => [l[0] + ':', l[1], infoRight[i][0] + ':', infoRight[i][1]]),
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 25 }, 1: { cellWidth: 65 }, 2: { fontStyle: 'bold', cellWidth: 25 }, 3: { cellWidth: 65 } } });
 
-    let y = (doc as any).lastAutoTable.finalY + 4;
-    autoTable(doc, { startY: y, head: [['Financial Summary', 'Amount']],
-      body: [
-        ['Customer Billing', billing.toLocaleString()],
-        ['Total Cost', totalCost.toLocaleString()],
-        ['Received', totalReceived.toLocaleString()],
-        ['Receivable', receivable.toLocaleString()],
-      ],
-      foot: [[profit >= 0 ? 'Estimated Profit' : 'Estimated Loss', profit.toLocaleString()]],
-      styles: { fontSize: 9 }, headStyles: { fillColor: [40, 60, 90] }, footStyles: { fillColor: [230, 230, 230], textColor: 20, fontStyle: 'bold' },
-      columnStyles: { 1: { halign: 'right' } } });
-
-    y = (doc as any).lastAutoTable.finalY + 4;
-    const costRows: any[] = Object.entries(paidByCategory).map(([cat, amt]) => [cat, Number(amt).toLocaleString()]);
-    costs.forEach((r: any) => costRows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]));
-    if (costRows.length === 0) costRows.push(['No costs recorded', '-']);
-    autoTable(doc, { startY: y, head: [['Costing Breakdown', 'Amount']], body: costRows,
-      foot: [['Total Cost', totalCost.toLocaleString()]],
-      styles: { fontSize: 9 }, headStyles: { fillColor: [40, 60, 90] }, columnStyles: { 1: { halign: 'right' } } });
-
-    y = (doc as any).lastAutoTable.finalY + 4;
-    const payRows = payments.length === 0
-      ? [['-', '-', '-', '-', '-']]
-      : payments.map((p: any) => [p.payment_date, p.direction, p.payment_for, p.payment_method || '-', Number(p.amount).toLocaleString()]);
-    autoTable(doc, { startY: y, head: [['Date', 'Direction', 'For', 'Method', 'Amount']], body: payRows,
-      styles: { fontSize: 8 }, headStyles: { fillColor: [40, 60, 90] }, columnStyles: { 4: { halign: 'right' } } });
-
-    doc.save(`Consignment_${c.consignment_code}.pdf`);
-  };
 
 
   const handleStatusUpdate = async () => {
@@ -179,7 +125,7 @@ export default function ConsignmentDetail() {
           {c.is_completed && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600">Completed</Badge>}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportReportPDF}><Download className="h-4 w-4 mr-1" /> Export PDF</Button>
+          
           <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>
           <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>
         </div>

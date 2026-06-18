@@ -17,6 +17,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateConsignmentStatus, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
+import { exportConsignmentPDF } from '@/lib/consignmentPdf';
 import * as XLSX from 'xlsx';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -352,6 +353,7 @@ export default function ConsignmentsList() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportConsignmentPDF(r)}><Download className="h-4 w-4 mr-2" /> Export PDF</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
