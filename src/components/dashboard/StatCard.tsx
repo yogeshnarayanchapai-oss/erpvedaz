@@ -13,6 +13,7 @@ interface StatCardProps {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'destructive' | 'info';
   onClick?: () => void;
   className?: string;
+  valueClassName?: string;
 }
 
 const variantStyles = {
@@ -33,7 +34,7 @@ const iconStyles = {
   info: 'bg-info/10 text-info',
 };
 
-export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className }: StatCardProps) {
+export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className, valueClassName }: StatCardProps) {
   const Component = onClick ? 'button' : 'div';
   
   return (
@@ -49,7 +50,7 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
           <p className="stat-label truncate sm:overflow-visible sm:text-clip sm:whitespace-normal">{title}</p>
-          <p className="stat-value truncate sm:overflow-visible sm:text-clip">{value}</p>
+          <p className={cn('stat-value truncate sm:overflow-visible sm:text-clip', valueClassName)}>{value}</p>
           {description && (
             <p className="text-[10px] md:text-xs text-muted-foreground truncate sm:overflow-visible sm:whitespace-normal">{description}</p>
           )}

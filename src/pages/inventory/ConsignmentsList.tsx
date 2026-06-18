@@ -42,6 +42,17 @@ const STATUS_COLORS: Record<string, string> = {
 const IN_TRANSIT_STATUSES: ConsignmentStatus[] = ['SHIPPED', 'IN_TRANSIT', 'ARRIVED_AT_PORT'];
 const CUSTOMS_STATUSES: ConsignmentStatus[] = ['CUSTOMS_PENDING'];
 
+function formatIndianShort(n: number): string {
+  const abs = Math.abs(n);
+  if (abs === 0) return '0';
+  const crore = 10000000;
+  const lakh = 100000;
+  if (abs >= crore) {
+    return (n / crore).toFixed(2).replace(/\.00$/, '') + ' CR';
+  }
+  return (n / lakh).toFixed(1).replace(/\.0$/, '') + 'L';
+}
+
 const emptyForm: any = {
   customer_party_id: '', supplier_party_id: '',
   product_name: '', product_category: '', quantity: '', unit: '', weight: '', cbm: '',
@@ -174,7 +185,7 @@ export default function ConsignmentsList() {
         <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="h-4 w-4" />} variant="success" />
         <StatCard title="In Transit" value={stats.inTransit} icon={<Ship className="h-4 w-4" />} variant="info" />
         <StatCard title="Customs Pending" value={stats.customs} icon={<Clock className="h-4 w-4" />} variant="warning" />
-        <StatCard title="Receivable / Payable" value={`${stats.receivable.toLocaleString()} / ${stats.payable.toLocaleString()}`} description={`Est. Profit: ${stats.profit.toLocaleString()}`} icon={<Truck className="h-4 w-4" />} variant="default" />
+        <StatCard title="Receivable / Payable" value={`${formatIndianShort(stats.receivable)} / ${formatIndianShort(stats.payable)}`} description={`Est. Profit: ${formatIndianShort(stats.profit)}`} icon={<Truck className="h-4 w-4" />} variant="default" valueClassName="text-sm md:text-base font-semibold" />
       </div>
 
       <Card>
