@@ -188,7 +188,7 @@ export default function ConsignmentsList() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Consignments');
-    XLSX.writeFile(wb, `consignments_${mainTab}${mainTab === 'active' ? '_' + subFilter : ''}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `consignments_${mainTab}_${status}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
