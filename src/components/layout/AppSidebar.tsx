@@ -200,6 +200,7 @@ const inventoryItems: MenuItem[] = [
   { title: 'Parties', url: '/admin/inventory/parties', icon: Users },
   { title: 'Warehouses', url: '/admin/inventory/warehouses', icon: Warehouse },
   { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: Calculator },
+  { title: 'Consignment Management', url: '/admin/inventory/consignments', icon: Package },
 ];
 
 // Accounting submenu for Admin

@@ -109,6 +109,8 @@ import Warehouses from "./pages/inventory/Warehouses";
 import WarehouseDetail from "./pages/inventory/WarehouseDetail";
 import DailyPL from "./pages/inventory/DailyPL";
 import AIStockReorder from "./pages/inventory/AIStockReorder";
+import ConsignmentsList from "./pages/inventory/ConsignmentsList";
+import ConsignmentDetail from "./pages/inventory/ConsignmentDetail";
 
 // HRM pages
 import HRMEmployees from "./pages/hrm/HRMEmployees";
@@ -325,6 +327,8 @@ const App = () => (
                 <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
                 <Route path="/admin/inventory/daily-pl" element={<DailyPL />} />
                 <Route path="/admin/inventory/ai-reorder" element={<AIStockReorder />} />
+                <Route path="/admin/inventory/consignments" element={<ConsignmentsList />} />
+                <Route path="/admin/inventory/consignments/:id" element={<ConsignmentDetail />} />
                 <Route path="/hrm" element={<HRDashboard />} />
                 <Route path="/hrm/employees" element={<HRMEmployees />} />
                 <Route path="/hrm/employees/:id" element={<HRMEmployeeDetail />} />

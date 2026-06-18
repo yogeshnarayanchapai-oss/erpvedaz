@@ -1928,6 +1928,390 @@ export type Database = {
           },
         ]
       }
+      consignment_activity_logs: {
+        Row: {
+          action: string
+          consignment_id: string
+          details: Json | null
+          id: string
+          performed_at: string
+          performed_by: string | null
+          store_id: string
+        }
+        Insert: {
+          action: string
+          consignment_id: string
+          details?: Json | null
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          store_id: string
+        }
+        Update: {
+          action?: string
+          consignment_id?: string
+          details?: Json | null
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_activity_logs_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_costs: {
+        Row: {
+          amount: number
+          consignment_id: string
+          cost_type: string
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          store_id: string
+        }
+        Insert: {
+          amount?: number
+          consignment_id: string
+          cost_type: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          consignment_id?: string
+          cost_type?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_costs_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_documents: {
+        Row: {
+          consignment_id: string
+          doc_type: string
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          store_id: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          consignment_id: string
+          doc_type: string
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          store_id: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          consignment_id?: string
+          doc_type?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          store_id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_documents_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_payments: {
+        Row: {
+          amount: number
+          consignment_id: string
+          created_at: string
+          created_by: string | null
+          direction: string
+          id: string
+          note: string | null
+          party_id: string | null
+          payment_date: string
+          payment_for: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          reference: string | null
+          store_id: string
+        }
+        Insert: {
+          amount?: number
+          consignment_id: string
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          id?: string
+          note?: string | null
+          party_id?: string | null
+          payment_date?: string
+          payment_for?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          reference?: string | null
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          consignment_id?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          note?: string | null
+          party_id?: string | null
+          payment_date?: string
+          payment_for?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          reference?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_payments_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_payments_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          consignment_id: string
+          id: string
+          new_status: Database["public"]["Enums"]["consignment_status"]
+          previous_status:
+            | Database["public"]["Enums"]["consignment_status"]
+            | null
+          remarks: string | null
+          store_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          consignment_id: string
+          id?: string
+          new_status: Database["public"]["Enums"]["consignment_status"]
+          previous_status?:
+            | Database["public"]["Enums"]["consignment_status"]
+            | null
+          remarks?: string | null
+          store_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          consignment_id?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["consignment_status"]
+          previous_status?:
+            | Database["public"]["Enums"]["consignment_status"]
+            | null
+          remarks?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_status_history_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignments: {
+        Row: {
+          actual_profit: number | null
+          agent_name: string | null
+          carrier_name: string | null
+          cbm: number | null
+          completed_at: string | null
+          consignment_code: string
+          container_number: string | null
+          created_at: string
+          created_by: string | null
+          current_location: string | null
+          customer_billing_amount: number | null
+          customer_party_id: string | null
+          delivery_address: string | null
+          destination: string | null
+          estimated_profit: number | null
+          eta: string | null
+          expected_arrival_date: string | null
+          id: string
+          is_completed: boolean
+          is_locked: boolean
+          notes: string | null
+          order_date: string | null
+          origin_country: string | null
+          product_category: string | null
+          product_name: string | null
+          quantity: number | null
+          shipment_id: string | null
+          shipment_mode: Database["public"]["Enums"]["shipment_mode"] | null
+          status: Database["public"]["Enums"]["consignment_status"]
+          store_id: string
+          supplier_party_id: string | null
+          total_cost: number | null
+          tracking_number: string | null
+          unit: string | null
+          updated_at: string
+          vehicle_number: string | null
+          warehouse_location: string | null
+          weight: number | null
+        }
+        Insert: {
+          actual_profit?: number | null
+          agent_name?: string | null
+          carrier_name?: string | null
+          cbm?: number | null
+          completed_at?: string | null
+          consignment_code: string
+          container_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_location?: string | null
+          customer_billing_amount?: number | null
+          customer_party_id?: string | null
+          delivery_address?: string | null
+          destination?: string | null
+          estimated_profit?: number | null
+          eta?: string | null
+          expected_arrival_date?: string | null
+          id?: string
+          is_completed?: boolean
+          is_locked?: boolean
+          notes?: string | null
+          order_date?: string | null
+          origin_country?: string | null
+          product_category?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          shipment_id?: string | null
+          shipment_mode?: Database["public"]["Enums"]["shipment_mode"] | null
+          status?: Database["public"]["Enums"]["consignment_status"]
+          store_id: string
+          supplier_party_id?: string | null
+          total_cost?: number | null
+          tracking_number?: string | null
+          unit?: string | null
+          updated_at?: string
+          vehicle_number?: string | null
+          warehouse_location?: string | null
+          weight?: number | null
+        }
+        Update: {
+          actual_profit?: number | null
+          agent_name?: string | null
+          carrier_name?: string | null
+          cbm?: number | null
+          completed_at?: string | null
+          consignment_code?: string
+          container_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_location?: string | null
+          customer_billing_amount?: number | null
+          customer_party_id?: string | null
+          delivery_address?: string | null
+          destination?: string | null
+          estimated_profit?: number | null
+          eta?: string | null
+          expected_arrival_date?: string | null
+          id?: string
+          is_completed?: boolean
+          is_locked?: boolean
+          notes?: string | null
+          order_date?: string | null
+          origin_country?: string | null
+          product_category?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          shipment_id?: string | null
+          shipment_mode?: Database["public"]["Enums"]["shipment_mode"] | null
+          status?: Database["public"]["Enums"]["consignment_status"]
+          store_id?: string
+          supplier_party_id?: string | null
+          total_cost?: number | null
+          tracking_number?: string | null
+          unit?: string | null
+          updated_at?: string
+          vehicle_number?: string | null
+          warehouse_location?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignments_customer_party_id_fkey"
+            columns: ["customer_party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignments_supplier_party_id_fkey"
+            columns: ["supplier_party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_settings: {
         Row: {
           created_at: string
@@ -7797,6 +8181,24 @@ export type Database = {
         | "CANCELLED"
       channel_post_status: "PENDING" | "SCHEDULED" | "PUBLISHED" | "FAILED"
       cod_settlement_status: "PENDING" | "SETTLED" | "PARTIAL"
+      consignment_status:
+        | "INQUIRY_RECEIVED"
+        | "QUOTATION_SENT"
+        | "ORDER_CONFIRMED"
+        | "ADVANCE_RECEIVED"
+        | "SUPPLIER_ORDERED"
+        | "GOODS_READY"
+        | "PICKED_UP"
+        | "IN_ORIGIN_WAREHOUSE"
+        | "SHIPPED"
+        | "IN_TRANSIT"
+        | "ARRIVED_AT_PORT"
+        | "CUSTOMS_PENDING"
+        | "CUSTOMS_CLEARED"
+        | "IN_NEPAL_WAREHOUSE"
+        | "OUT_FOR_DELIVERY"
+        | "DELIVERED"
+        | "COMPLETED"
       courier_provider: "NCM" | "GBL" | "PATHAO" | "GAAUBESI"
       course_level: "BASIC" | "INTERMEDIATE" | "ADVANCED"
       employee_doc_status: "PENDING" | "VERIFIED" | "REJECTED"
@@ -7859,6 +8261,7 @@ export type Database = {
       payment_method_type: "CASH" | "BANK" | "ONLINE"
       payment_status: "PENDING" | "PAID" | "COD"
       question_type: "MCQ" | "TRUE_FALSE"
+      shipment_mode: "AIR" | "SEA" | "ROAD" | "COURIER"
       social_platform:
         | "FACEBOOK"
         | "INSTAGRAM"
@@ -8039,6 +8442,25 @@ export const Constants = {
       ],
       channel_post_status: ["PENDING", "SCHEDULED", "PUBLISHED", "FAILED"],
       cod_settlement_status: ["PENDING", "SETTLED", "PARTIAL"],
+      consignment_status: [
+        "INQUIRY_RECEIVED",
+        "QUOTATION_SENT",
+        "ORDER_CONFIRMED",
+        "ADVANCE_RECEIVED",
+        "SUPPLIER_ORDERED",
+        "GOODS_READY",
+        "PICKED_UP",
+        "IN_ORIGIN_WAREHOUSE",
+        "SHIPPED",
+        "IN_TRANSIT",
+        "ARRIVED_AT_PORT",
+        "CUSTOMS_PENDING",
+        "CUSTOMS_CLEARED",
+        "IN_NEPAL_WAREHOUSE",
+        "OUT_FOR_DELIVERY",
+        "DELIVERED",
+        "COMPLETED",
+      ],
       courier_provider: ["NCM", "GBL", "PATHAO", "GAAUBESI"],
       course_level: ["BASIC", "INTERMEDIATE", "ADVANCED"],
       employee_doc_status: ["PENDING", "VERIFIED", "REJECTED"],
@@ -8107,6 +8529,7 @@ export const Constants = {
       payment_method_type: ["CASH", "BANK", "ONLINE"],
       payment_status: ["PENDING", "PAID", "COD"],
       question_type: ["MCQ", "TRUE_FALSE"],
+      shipment_mode: ["AIR", "SEA", "ROAD", "COURIER"],
       social_platform: [
         "FACEBOOK",
         "INSTAGRAM",
