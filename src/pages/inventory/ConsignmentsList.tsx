@@ -102,7 +102,7 @@ export default function ConsignmentsList() {
       cost: active.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
       receivable: active.reduce((s, r: any) => s + Math.max(0, Number(r.receivable) || 0), 0),
       payable: active.reduce((s, r) => s + Math.max(0, Number(r.total_cost) || 0), 0),
-      profit: active.reduce((s, r) => s + (Number(r.estimated_profit) || 0), 0),
+      profit: allRows.filter(r => r.is_completed).reduce((s, r) => s + (Number(r.estimated_profit) || 0), 0),
     };
   }, [allRows]);
 
