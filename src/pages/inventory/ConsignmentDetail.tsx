@@ -71,8 +71,7 @@ export default function ConsignmentDetail() {
     doc.setFontSize(14); doc.text(`Costing — ${c.consignment_code}`, 14, 16);
     doc.setFontSize(10); doc.text(`Customer: ${c.customer?.name || '-'}`, 14, 23);
     const rows: any[] = Object.entries(paidByCategory).map(([cat, amt]) => [cat, Number(amt).toLocaleString()]);
-    costs.forEach((r: any) => rows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]);
-    );
+    costs.forEach((r: any) => rows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]));
     autoTable(doc, { startY: 28, head: [['Category (Payment For)', 'Amount']], body: rows, foot: [['Total Cost', totalCost.toLocaleString()]] });
     doc.save(`Costing_${c.consignment_code}.pdf`);
   };
