@@ -283,21 +283,6 @@ export default function ConsignmentsList() {
           <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
         </div>
         <div className="mt-3">
-          <Card>
-            <CardContent className="p-0 overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                  <TableHead>Code</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Mode</TableHead>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>ETA</TableHead>
-                    <TableHead>Time (Days)</TableHead>
-                    <TableHead className="text-right">Billing</TableHead>
 
           <Card>
             <CardContent className="p-0 overflow-auto">
