@@ -13,6 +13,7 @@ interface StatCardProps {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'destructive' | 'info';
   onClick?: () => void;
   className?: string;
+  valueClassName?: string;
 }
 
 const variantStyles = {
