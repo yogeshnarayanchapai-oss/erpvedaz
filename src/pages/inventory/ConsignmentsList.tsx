@@ -204,7 +204,7 @@ export default function ConsignmentsList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
+                  <TableHead>Code</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Supplier</TableHead>
                     <TableHead>Product</TableHead>
@@ -212,6 +212,7 @@ export default function ConsignmentsList() {
                     <TableHead>Route</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>ETA</TableHead>
+                    <TableHead>Time (Days)</TableHead>
                     <TableHead className="text-right">Billing</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">Profit</TableHead>
@@ -220,9 +221,9 @@ export default function ConsignmentsList() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                   ) : rows.length === 0 ? (
-                    <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
                   ) : rows.map(r => (
                     <TableRow key={r.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}>
                       <TableCell className="font-medium">
