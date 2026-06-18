@@ -201,7 +201,7 @@ export function useConsignmentCosts(id: string | undefined) {
     queryKey: ['consignment-costs', id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from('consignment_costs').select('*').eq('consignment_id', id).order('created_at');
+      const { data, error } = await (supabase as any).from('consignment_costs').select('*').eq('consignment_id', id).order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -239,7 +239,7 @@ export function useConsignmentPayments(id: string | undefined) {
     queryKey: ['consignment-payments', id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from('consignment_payments').select('*').eq('consignment_id', id).order('payment_date', { ascending: false });
+      const { data, error } = await (supabase as any).from('consignment_payments').select('*').eq('consignment_id', id).order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
