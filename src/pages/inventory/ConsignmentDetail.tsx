@@ -302,9 +302,7 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="payments" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" onClick={exportPaymentsPDF}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
-            </div>
+
             {!c.is_locked && (
               <form onSubmit={handleAddPayment} className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <Select value={payForm.direction} onValueChange={v => setPayForm({ ...payForm, direction: v })}>
