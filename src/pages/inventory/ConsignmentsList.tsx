@@ -186,7 +186,7 @@ export default function ConsignmentsList() {
       </div>
 
       <Card>
-        <CardContent className="p-3 grid grid-cols-2 md:grid-cols-6 gap-2">
+        <CardContent className="p-3 grid grid-cols-2 md:grid-cols-5 gap-2">
           <Input placeholder="Search code / customer / supplier / product" value={search} onChange={e => setSearch(e.target.value)} className="md:col-span-2" />
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
@@ -201,10 +201,6 @@ export default function ConsignmentsList() {
             </SelectContent>
           </Select>
           <Input placeholder="Origin country" value={origin} onChange={e => setOrigin(e.target.value)} />
-          <div className="flex gap-1">
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} />
-          </div>
         </CardContent>
       </Card>
 
