@@ -97,7 +97,7 @@ export function useConsignments(filters?: { search?: string; status?: string; mo
       if (ids.length) {
         const [{ data: costs }, { data: pays }] = await Promise.all([
           (supabase as any).from('consignment_costs').select('consignment_id, amount').in('consignment_id', ids),
-          (supabase as any).from('consignment_payments').select('consignment_id, direction, status, amount').in('consignment_id', ids),
+          (supabase as any).from('consignment_payments').select('consignment_id, direction, amount').in('consignment_id', ids),
         ]);
         const costMap: Record<string, number> = {};
         (costs || []).forEach((c: any) => { costMap[c.consignment_id] = (costMap[c.consignment_id] || 0) + Number(c.amount || 0); });
