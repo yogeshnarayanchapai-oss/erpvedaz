@@ -73,11 +73,8 @@ export default function ConsignmentsList() {
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-
   const { data: rows = [], isLoading } = useConsignments({
-    search, status, mode, origin, from, to,
+    search, status, mode, origin,
     completed: tab === 'completed',
   });
 

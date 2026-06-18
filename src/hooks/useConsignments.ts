@@ -71,7 +71,7 @@ export interface Consignment {
   supplier?: { id: string; name: string } | null;
 }
 
-export function useConsignments(filters?: { search?: string; status?: string; mode?: string; origin?: string; from?: string; to?: string; completed?: boolean }) {
+export function useConsignments(filters?: { search?: string; status?: string; mode?: string; origin?: string; completed?: boolean }) {
   const storeId = useCurrentStoreId();
   return useQuery({
     queryKey: ['consignments', storeId, filters],
