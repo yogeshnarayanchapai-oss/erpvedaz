@@ -55,7 +55,8 @@ function formatIndianShort(n: number): string {
 
 const emptyForm: any = {
   customer_party_id: '', supplier_party_id: '',
-  product_name: '', product_category: '', quantity: '', unit: '', weight: '', cbm: '',
+  product_name: '', product_category: '',
+  measurement_type: 'QUANTITY', measurement_value: '', quantity: '', unit: '', weight: '', cbm: '',
   origin_country: '', destination: '', shipment_mode: 'SEA',
   order_date: new Date().toISOString().slice(0,10), expected_arrival_date: '',
   notes: '',
@@ -65,6 +66,14 @@ const emptyForm: any = {
   customer_billing_amount: '',
   status: 'INQUIRY_RECEIVED' as ConsignmentStatus,
 };
+
+function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; measurement_value: string } {
+  if (c.weight != null && Number(c.weight) > 0) return { measurement_type: 'WEIGHT', measurement_value: String(c.weight) };
+  if (c.cbm != null && Number(c.cbm) > 0) return { measurement_type: 'VOLUME', measurement_value: String(c.cbm) };
+  if (c.quantity != null && Number(c.quantity) > 0) return { measurement_type: 'QUANTITY', measurement_value: String(c.quantity) };
+  return { measurement_type: 'QUANTITY', measurement_value: '' };
+}
+
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
