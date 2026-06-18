@@ -250,7 +250,7 @@ export default function ConsignmentsList() {
                 <span className="text-base font-bold">{formatIndianShort(stats.receivable)}</span>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
-                <span className="text-[10px] font-medium text-muted-foreground uppercase">Payable</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Cost</span>
                 <span className="text-base font-bold">{formatIndianShort(stats.payable)}</span>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
