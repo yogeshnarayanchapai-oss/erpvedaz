@@ -292,6 +292,7 @@ export function useAddPayment() {
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
       toast.success('Payment recorded');
     },
     onError: (e: any) => toast.error(e.message),
@@ -305,7 +306,10 @@ export function useDeletePayment() {
       const { error } = await (supabase as any).from('consignment_payments').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+    },
   });
 }
 
