@@ -17,6 +17,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateConsignmentStatus, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
+import { exportConsignmentPDF } from '@/lib/consignmentPdf';
 import * as XLSX from 'xlsx';
 
 const STATUS_COLORS: Record<string, string> = {
