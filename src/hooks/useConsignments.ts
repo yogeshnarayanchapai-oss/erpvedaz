@@ -87,8 +87,6 @@ export function useConsignments(filters?: { search?: string; status?: string; mo
       if (filters?.status && filters.status !== 'all') q = q.eq('status', filters.status);
       if (filters?.mode && filters.mode !== 'all') q = q.eq('shipment_mode', filters.mode);
       if (filters?.origin) q = q.ilike('origin_country', `%${filters.origin}%`);
-      if (filters?.from) q = q.gte('order_date', filters.from);
-      if (filters?.to) q = q.lte('order_date', filters.to);
 
       const { data, error } = await q;
       if (error) throw error;
