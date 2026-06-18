@@ -91,6 +91,39 @@ export function useConsignments(filters?: { search?: string; status?: string; mo
       const { data, error } = await q;
       if (error) throw error;
       let rows = (data || []) as Consignment[];
+
+      // Aggregate live totals from costs + payments so edits/deletes reflect immediately
+      const ids = rows.map(r => r.id);
+      if (ids.length) {
+        const [{ data: costs }, { data: pays }] = await Promise.all([
+          (supabase as any).from('consignment_costs').select('consignment_id, amount').in('consignment_id', ids),
+          (supabase as any).from('consignment_payments').select('consignment_id, direction, status, amount').in('consignment_id', ids),
+        ]);
+        const costMap: Record<string, number> = {};
+        (costs || []).forEach((c: any) => { costMap[c.consignment_id] = (costMap[c.consignment_id] || 0) + Number(c.amount || 0); });
+        const paidMap: Record<string, number> = {};
+        const recvMap: Record<string, number> = {};
+        (pays || []).forEach((p: any) => {
+          const amt = Number(p.amount || 0);
+          if (p.status !== 'PAID') return;
+          if (p.direction === 'PAID') paidMap[p.consignment_id] = (paidMap[p.consignment_id] || 0) + amt;
+          if (p.direction === 'RECEIVED') recvMap[p.consignment_id] = (recvMap[p.consignment_id] || 0) + amt;
+        });
+        rows = rows.map(r => {
+          const total_cost = (costMap[r.id] || 0) + (paidMap[r.id] || 0);
+          const received = recvMap[r.id] || 0;
+          const billing = Number(r.customer_billing_amount || 0);
+          return {
+            ...r,
+            total_cost,
+            total_received: received,
+            receivable: billing - received,
+            payable: total_cost - (paidMap[r.id] || 0), // remaining payable = manual costs not paid via payments-paid
+            estimated_profit: billing - total_cost,
+          } as any;
+        });
+      }
+
       if (filters?.search) {
         const s = filters.search.toLowerCase();
         rows = rows.filter(r =>
@@ -217,6 +250,7 @@ export function useAddCost() {
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
       toast.success('Cost added');
     },
     onError: (e: any) => toast.error(e.message),
@@ -230,7 +264,10 @@ export function useDeleteCost() {
       const { error } = await (supabase as any).from('consignment_costs').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+    },
   });
 }
 
@@ -255,6 +292,7 @@ export function useAddPayment() {
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
       toast.success('Payment recorded');
     },
     onError: (e: any) => toast.error(e.message),
@@ -268,7 +306,10 @@ export function useDeletePayment() {
       const { error } = await (supabase as any).from('consignment_payments').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+    },
   });
 }
 

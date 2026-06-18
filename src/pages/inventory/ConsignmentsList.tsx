@@ -77,17 +77,24 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'active' | 'completed'>('active');
+  const [tab, setTab] = useState<'active' | 'completed' | 'in_transit' | 'customs'>('active');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
-  const { data: rows = [], isLoading } = useConsignments({
+  const { data: tabRows = [], isLoading } = useConsignments({
     search, status, mode, origin,
-    completed: tab === 'completed',
+    completed: tab === 'completed' ? true : false,
   });
 
-  // counts (separate query unfiltered for stat cards - reuse same hook without completed filter)
+  // Restrict to in-transit / customs when those sub-tabs are selected
+  const rows = useMemo(() => {
+    if (tab === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
+    if (tab === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
+    return tabRows;
+  }, [tabRows, tab]);
+
+  // counts (separate query unfiltered for stat cards)
   const { data: allRows = [] } = useConsignments({});
 
   const stats = useMemo(() => {
@@ -97,11 +104,16 @@ export default function ConsignmentsList() {
       completed: allRows.filter(r => r.is_completed).length,
       inTransit: active.filter(r => IN_TRANSIT_STATUSES.includes(r.status)).length,
       customs: active.filter(r => CUSTOMS_STATUSES.includes(r.status)).length,
-      receivable: active.reduce((s, r) => s + (Number(r.customer_billing_amount) || 0), 0),
-      payable: active.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
+      billing: active.reduce((s, r) => s + (Number(r.customer_billing_amount) || 0), 0),
+      received: active.reduce((s, r: any) => s + (Number(r.total_received) || 0), 0),
+      cost: active.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
+      receivable: active.reduce((s, r: any) => s + Math.max(0, Number(r.receivable) || 0), 0),
+      payable: active.reduce((s, r) => s + Math.max(0, Number(r.total_cost) || 0), 0),
       profit: active.reduce((s, r) => s + (Number(r.estimated_profit) || 0), 0),
     };
   }, [allRows]);
+
+
 
   const save = useSaveConsignment();
   const del = useDeleteConsignment();
@@ -198,12 +210,49 @@ export default function ConsignmentsList() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard title="Active" value={stats.active} icon={<Package className="h-4 w-4" />} variant="primary" />
-        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="h-4 w-4" />} variant="success" />
-        <StatCard title="In Transit" value={stats.inTransit} icon={<Ship className="h-4 w-4" />} variant="info" />
-        <StatCard title="Customs Pending" value={stats.customs} icon={<Clock className="h-4 w-4" />} variant="warning" />
-        <StatCard title="Receivable / Payable" value={`${formatIndianShort(stats.receivable)} / ${formatIndianShort(stats.payable)}`} description={`Est. Profit: ${formatIndianShort(stats.profit)}`} icon={<Truck className="h-4 w-4" />} variant="default" valueClassName="text-sm md:text-base font-semibold" />
+      {/* Top summary: one status card + receivable + payable */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="md:col-span-1">
+          <CardContent className="p-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Consignment Status</div>
+            <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
+              <TabsList className="grid grid-cols-4 w-full h-auto">
+                <TabsTrigger value="active" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Active</span>
+                  <span className="text-base font-bold">{stats.active}</span>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Completed</span>
+                  <span className="text-base font-bold">{stats.completed}</span>
+                </TabsTrigger>
+                <TabsTrigger value="in_transit" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">In Transit</span>
+                  <span className="text-base font-bold">{stats.inTransit}</span>
+                </TabsTrigger>
+                <TabsTrigger value="customs" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Customs</span>
+                  <span className="text-base font-bold">{stats.customs}</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardContent>
+        </Card>
+        <StatCard
+          title="Receivable"
+          value={formatIndianShort(stats.receivable)}
+          description={`Billed: ${formatIndianShort(stats.billing)} · Received: ${formatIndianShort(stats.received)}`}
+          icon={<Truck className="h-4 w-4" />}
+          variant="success"
+          valueClassName="text-base md:text-lg font-bold"
+        />
+        <StatCard
+          title="Payable"
+          value={formatIndianShort(stats.payable)}
+          description={`Total Cost: ${formatIndianShort(stats.cost)} · Est. Profit: ${formatIndianShort(stats.profit)}`}
+          icon={<Clock className="h-4 w-4" />}
+          variant="warning"
+          valueClassName="text-base md:text-lg font-bold"
+        />
       </div>
 
       <Card>
@@ -225,12 +274,16 @@ export default function ConsignmentsList() {
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
-        <TabsList>
-          <TabsTrigger value="active">Active Consignments</TabsTrigger>
-          <TabsTrigger value="completed">Completed Consignments</TabsTrigger>
-        </TabsList>
-        <TabsContent value={tab} className="mt-3">
+      <div>
+        <div className="text-sm font-medium mb-2 capitalize">
+          {tab === 'active' && 'Active Consignments'}
+          {tab === 'completed' && 'Completed Consignments'}
+          {tab === 'in_transit' && 'In Transit Consignments'}
+          {tab === 'customs' && 'Customs Pending Consignments'}
+          <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
+        </div>
+        <div className="mt-3">
+
           <Card>
             <CardContent className="p-0 overflow-auto">
               <Table>
@@ -301,8 +354,9 @@ export default function ConsignmentsList() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
 
       {/* Create / Edit dialog */}
       <Dialog open={dlgOpen} onOpenChange={setDlgOpen}>
