@@ -252,7 +252,7 @@ export default function ConsignmentDetail() {
                 </Select>
                 <Select value={payForm.payment_for} onValueChange={v => setPayForm({ ...payForm, payment_for: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','OTHER'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{PAYMENT_FOR_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input type="number" placeholder="Amount" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} required />
                 <Input type="date" value={payForm.payment_date} onChange={e => setPayForm({ ...payForm, payment_date: e.target.value })} />
