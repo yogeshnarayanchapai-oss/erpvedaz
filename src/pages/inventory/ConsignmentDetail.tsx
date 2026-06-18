@@ -127,7 +127,7 @@ export default function ConsignmentDetail() {
           {c.is_completed && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600">Completed</Badge>}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportReportPDF}><Download className="h-4 w-4 mr-1" /> Export PDF</Button>
+          
           <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>
           <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>
         </div>
