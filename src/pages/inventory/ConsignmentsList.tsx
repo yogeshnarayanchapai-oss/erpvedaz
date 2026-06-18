@@ -78,21 +78,14 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<'active' | 'completed'>('active');
-  const [subFilter, setSubFilter] = useState<'all' | 'in_transit' | 'customs'>('all');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
-  const { data: tabRows = [], isLoading } = useConsignments({
+  const { data: rows = [], isLoading } = useConsignments({
     search, status, mode, origin,
     completed: mainTab === 'completed' ? true : false,
   });
-
-  const rows = useMemo(() => {
-    if (mainTab === 'active' && subFilter === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
-    if (mainTab === 'active' && subFilter === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
-    return tabRows;
-  }, [tabRows, mainTab, subFilter]);
 
   // counts (separate query unfiltered for stat cards)
   const { data: allRows = [] } = useConsignments({});
