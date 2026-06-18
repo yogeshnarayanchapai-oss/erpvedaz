@@ -42,6 +42,17 @@ const STATUS_COLORS: Record<string, string> = {
 const IN_TRANSIT_STATUSES: ConsignmentStatus[] = ['SHIPPED', 'IN_TRANSIT', 'ARRIVED_AT_PORT'];
 const CUSTOMS_STATUSES: ConsignmentStatus[] = ['CUSTOMS_PENDING'];
 
+function formatIndianShort(n: number): string {
+  const abs = Math.abs(n);
+  if (abs === 0) return '0';
+  const crore = 10000000;
+  const lakh = 100000;
+  if (abs >= crore) {
+    return (n / crore).toFixed(2).replace(/\.00$/, '') + ' CR';
+  }
+  return (n / lakh).toFixed(1).replace(/\.0$/, '') + 'L';
+}
+
 const emptyForm: any = {
   customer_party_id: '', supplier_party_id: '',
   product_name: '', product_category: '', quantity: '', unit: '', weight: '', cbm: '',
