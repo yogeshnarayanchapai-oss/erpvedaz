@@ -225,23 +225,41 @@ export default function ConsignmentsList() {
                     <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
                   ) : rows.map(r => (
                     <TableRow key={r.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}>
-                      <TableCell className="font-medium">{r.consignment_code}</TableCell>
+                      <TableCell className="font-medium">
+                        <button className="text-left hover:underline focus:outline-none" onClick={(e) => { e.stopPropagation(); navigate(`/admin/inventory/consignments/${r.id}`); }}>
+                          {r.consignment_code}
+                        </button>
+                      </TableCell>
                       <TableCell>{r.customer?.name || '-'}</TableCell>
                       <TableCell>{r.supplier?.name || '-'}</TableCell>
                       <TableCell>{r.product_name || '-'}</TableCell>
                       <TableCell>{r.shipment_mode || '-'}</TableCell>
                       <TableCell className="text-xs">{r.origin_country || '-'} → {r.destination || '-'}</TableCell>
-                      <TableCell><Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge></TableCell>
+                      <TableCell onDoubleClick={(e) => { e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
+                        {inlineStatusId === r.id ? (
+                          <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
+                            <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs">{r.eta || r.expected_arrival_date || '-'}</TableCell>
                       <TableCell className="text-right">{(r.customer_billing_amount || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(r.total_cost || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(r.estimated_profit || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => setDelId(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost"><Menu className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
