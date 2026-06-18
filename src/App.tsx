@@ -109,6 +109,8 @@ import Warehouses from "./pages/inventory/Warehouses";
 import WarehouseDetail from "./pages/inventory/WarehouseDetail";
 import DailyPL from "./pages/inventory/DailyPL";
 import AIStockReorder from "./pages/inventory/AIStockReorder";
+import ConsignmentsList from "./pages/inventory/ConsignmentsList";
+import ConsignmentDetail from "./pages/inventory/ConsignmentDetail";
 
 // HRM pages
 import HRMEmployees from "./pages/hrm/HRMEmployees";
