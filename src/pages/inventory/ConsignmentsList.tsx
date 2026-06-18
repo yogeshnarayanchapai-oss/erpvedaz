@@ -88,10 +88,13 @@ export default function ConsignmentsList() {
 
   const save = useSaveConsignment();
   const del = useDeleteConsignment();
+  const updateStatus = useUpdateConsignmentStatus();
+  const storeId = useCurrentStoreId();
   const [dlgOpen, setDlgOpen] = useState(false);
   const [editing, setEditing] = useState<Consignment | null>(null);
   const [form, setForm] = useState<any>(emptyForm);
   const [delId, setDelId] = useState<string | null>(null);
+  const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDlgOpen(true); };
   const openEdit = (c: Consignment) => {
