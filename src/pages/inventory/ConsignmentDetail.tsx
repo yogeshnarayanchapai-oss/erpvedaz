@@ -48,12 +48,21 @@ export default function ConsignmentDetail() {
 
   if (isLoading || !c) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
-  const totalCost = costs.reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
   const totalReceived = payments.filter((p: any) => p.direction === 'RECEIVED').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const totalPaid = payments.filter((p: any) => p.direction === 'PAID').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+  // Unified cost = total PAID payments + any manual cost entries (legacy)
+  const manualCost = costs.reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+  const totalCost = totalPaid + manualCost;
   const billing = Number(c.customer_billing_amount || 0);
   const profit = billing - totalCost;
   const receivable = billing - totalReceived;
+
+  // Group PAID payments by payment_for for cost breakdown
+  const paidByCategory = payments.filter((p: any) => p.direction === 'PAID').reduce((acc: Record<string, number>, p: any) => {
+    const key = p.payment_for || 'OTHER';
+    acc[key] = (acc[key] || 0) + Number(p.amount || 0);
+    return acc;
+  }, {});
 
   const handleStatusUpdate = async () => {
     await updateStatus.mutateAsync({ id: c.id, status: statusForm.status, remarks: statusForm.remarks, storeId: c.store_id });
