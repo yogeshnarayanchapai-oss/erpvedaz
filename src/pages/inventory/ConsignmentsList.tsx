@@ -309,59 +309,95 @@ export default function ConsignmentsList() {
         <DialogContent className="!max-w-[1100px] max-h-[90vh] overflow-auto">
           <DialogHeader><DialogTitle>{editing ? `Edit ${editing.consignment_code}` : 'New Consignment'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <section>
-              <h3 className="font-semibold text-sm mb-2">Basic Details</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div><Label>Customer</Label><SearchablePartySelect value={form.customer_party_id} onValueChange={v => setForm({ ...form, customer_party_id: v })} partyType="CUSTOMER" showAddButton={false} /></div>
-                <div><Label>Supplier</Label><SearchablePartySelect value={form.supplier_party_id} onValueChange={v => setForm({ ...form, supplier_party_id: v })} partyType="SUPPLIER" showAddButton={false} /></div>
-                <div><Label>Product Name</Label><Input value={form.product_name} onChange={e => setForm({ ...form, product_name: e.target.value })} /></div>
-                <div><Label>Category</Label><Input value={form.product_category} onChange={e => setForm({ ...form, product_category: e.target.value })} /></div>
-                <div><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
-                <div><Label>Unit</Label><Input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} /></div>
-                <div><Label>Weight (kg)</Label><Input type="number" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} /></div>
-                <div><Label>CBM / Volume</Label><Input type="number" value={form.cbm} onChange={e => setForm({ ...form, cbm: e.target.value })} /></div>
-                <div><Label>Shipment Mode</Label>
-                  <Select value={form.shipment_mode} onValueChange={v => setForm({ ...form, shipment_mode: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="AIR">Air</SelectItem><SelectItem value="SEA">Sea</SelectItem><SelectItem value="ROAD">Road</SelectItem><SelectItem value="COURIER">Courier</SelectItem></SelectContent>
-                  </Select>
+            {step === 1 && (
+              <section>
+                <h3 className="font-semibold text-sm mb-2">Basic Details</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div><Label>Customer</Label><SearchablePartySelect value={form.customer_party_id} onValueChange={v => setForm({ ...form, customer_party_id: v })} partyType="CUSTOMER" showAddButton={false} /></div>
+                  <div><Label>Supplier</Label><SearchablePartySelect value={form.supplier_party_id} onValueChange={v => setForm({ ...form, supplier_party_id: v })} partyType="SUPPLIER" showAddButton={false} /></div>
+                  <div><Label>Product Name</Label><Input value={form.product_name} onChange={e => setForm({ ...form, product_name: e.target.value })} /></div>
+                  <div><Label>Category</Label><Input value={form.product_category} onChange={e => setForm({ ...form, product_category: e.target.value })} /></div>
+                  <div>
+                    <Label>Measure By</Label>
+                    <Select value={form.measurement_type} onValueChange={v => setForm({ ...form, measurement_type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="QUANTITY">Quantity (pcs)</SelectItem>
+                        <SelectItem value="WEIGHT">Weight (kg)</SelectItem>
+                        <SelectItem value="VOLUME">Volume (CBM)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>
+                      {form.measurement_type === 'WEIGHT' ? 'Weight (kg)' : form.measurement_type === 'VOLUME' ? 'Volume (CBM)' : 'Quantity'}
+                    </Label>
+                    <Input type="number" value={form.measurement_value} onChange={e => setForm({ ...form, measurement_value: e.target.value })} placeholder="Enter value" />
+                  </div>
+                  {form.measurement_type === 'QUANTITY' && (
+                    <div><Label>Unit (e.g. pcs, box)</Label><Input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} /></div>
+                  )}
+                  <div><Label>Shipment Mode</Label>
+                    <Select value={form.shipment_mode} onValueChange={v => setForm({ ...form, shipment_mode: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="AIR">Air</SelectItem><SelectItem value="SEA">Sea</SelectItem><SelectItem value="ROAD">Road</SelectItem><SelectItem value="COURIER">Courier</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Origin Country</Label><Input value={form.origin_country} onChange={e => setForm({ ...form, origin_country: e.target.value })} /></div>
+                  <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} /></div>
+                  <div><Label>Order Date</Label><Input type="date" value={form.order_date} onChange={e => setForm({ ...form, order_date: e.target.value })} /></div>
+                  <div><Label>Expected Arrival</Label><Input type="date" value={form.expected_arrival_date} onChange={e => setForm({ ...form, expected_arrival_date: e.target.value })} /></div>
+                  <div><Label>Customer Billing Amount</Label><Input type="number" value={form.customer_billing_amount} onChange={e => setForm({ ...form, customer_billing_amount: e.target.value })} /></div>
+                  <div><Label>Status</Label>
+                    <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div><Label>Origin Country</Label><Input value={form.origin_country} onChange={e => setForm({ ...form, origin_country: e.target.value })} /></div>
-                <div><Label>Destination</Label><Input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} /></div>
-                <div><Label>Order Date</Label><Input type="date" value={form.order_date} onChange={e => setForm({ ...form, order_date: e.target.value })} /></div>
-                <div><Label>Expected Arrival</Label><Input type="date" value={form.expected_arrival_date} onChange={e => setForm({ ...form, expected_arrival_date: e.target.value })} /></div>
-                <div><Label>Customer Billing Amount</Label><Input type="number" value={form.customer_billing_amount} onChange={e => setForm({ ...form, customer_billing_amount: e.target.value })} /></div>
-                <div><Label>Status</Label>
-                  <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
-                  </Select>
+              </section>
+            )}
+
+            {step === 2 && (
+              <section>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm">Shipment Details <span className="text-xs font-normal text-muted-foreground">(optional)</span></h3>
                 </div>
-              </div>
-            </section>
-            <section>
-              <h3 className="font-semibold text-sm mb-2">Shipment Details</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div><Label>Shipment ID</Label><Input value={form.shipment_id} onChange={e => setForm({ ...form, shipment_id: e.target.value })} /></div>
-                <div><Label>Container No.</Label><Input value={form.container_number} onChange={e => setForm({ ...form, container_number: e.target.value })} /></div>
-                <div><Label>Tracking No.</Label><Input value={form.tracking_number} onChange={e => setForm({ ...form, tracking_number: e.target.value })} /></div>
-                <div><Label>Vehicle No.</Label><Input value={form.vehicle_number} onChange={e => setForm({ ...form, vehicle_number: e.target.value })} /></div>
-                <div><Label>Agent / Forwarder</Label><Input value={form.agent_name} onChange={e => setForm({ ...form, agent_name: e.target.value })} /></div>
-                <div><Label>Carrier</Label><Input value={form.carrier_name} onChange={e => setForm({ ...form, carrier_name: e.target.value })} /></div>
-                <div><Label>Warehouse Location</Label><Input value={form.warehouse_location} onChange={e => setForm({ ...form, warehouse_location: e.target.value })} /></div>
-                <div><Label>Current Location</Label><Input value={form.current_location} onChange={e => setForm({ ...form, current_location: e.target.value })} /></div>
-                <div><Label>ETA</Label><Input type="date" value={form.eta} onChange={e => setForm({ ...form, eta: e.target.value })} /></div>
-                <div className="md:col-span-3"><Label>Delivery Address</Label><Input value={form.delivery_address} onChange={e => setForm({ ...form, delivery_address: e.target.value })} /></div>
-                <div className="md:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
-              </div>
-            </section>
-            <DialogFooter>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div><Label>Shipment ID</Label><Input value={form.shipment_id} onChange={e => setForm({ ...form, shipment_id: e.target.value })} /></div>
+                  <div><Label>Container No.</Label><Input value={form.container_number} onChange={e => setForm({ ...form, container_number: e.target.value })} /></div>
+                  <div><Label>Tracking No.</Label><Input value={form.tracking_number} onChange={e => setForm({ ...form, tracking_number: e.target.value })} /></div>
+                  <div><Label>Vehicle No.</Label><Input value={form.vehicle_number} onChange={e => setForm({ ...form, vehicle_number: e.target.value })} /></div>
+                  <div><Label>Agent / Forwarder</Label><Input value={form.agent_name} onChange={e => setForm({ ...form, agent_name: e.target.value })} /></div>
+                  <div><Label>Carrier</Label><Input value={form.carrier_name} onChange={e => setForm({ ...form, carrier_name: e.target.value })} /></div>
+                  <div><Label>Warehouse Location</Label><Input value={form.warehouse_location} onChange={e => setForm({ ...form, warehouse_location: e.target.value })} /></div>
+                  <div><Label>Current Location</Label><Input value={form.current_location} onChange={e => setForm({ ...form, current_location: e.target.value })} /></div>
+                  <div><Label>ETA</Label><Input type="date" value={form.eta} onChange={e => setForm({ ...form, eta: e.target.value })} /></div>
+                  <div className="md:col-span-3"><Label>Delivery Address</Label><Input value={form.delivery_address} onChange={e => setForm({ ...form, delivery_address: e.target.value })} /></div>
+                  <div className="md:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+                </div>
+              </section>
+            )}
+
+            <DialogFooter className="flex-wrap gap-2">
+              <div className="flex-1 text-xs text-muted-foreground">Step {step} of 2</div>
               <Button type="button" variant="outline" onClick={() => setDlgOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save'}</Button>
+              {step === 1 ? (
+                <>
+                  <Button type="button" variant="secondary" onClick={() => handleSave()} disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save & Close'}</Button>
+                  <Button type="button" onClick={() => setStep(2)}>Next: Shipment →</Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" onClick={() => setStep(1)}>← Back</Button>
+                  <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save'}</Button>
+                </>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
 
       <AlertDialog open={!!delId} onOpenChange={o => !o && setDelId(null)}>
         <AlertDialogContent>
