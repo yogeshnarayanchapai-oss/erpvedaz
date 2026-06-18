@@ -261,11 +261,8 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="costs" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="flex justify-between items-start gap-3">
-              <div className="rounded border bg-muted/30 p-3 text-xs text-muted-foreground flex-1">
-                💡 Costs auto-track from <b>Paid</b> payments — add them in the <b>Payments</b> tab. This view shows the breakdown.
-              </div>
-              <Button size="sm" variant="outline" onClick={exportCostingPDF}><Download className="h-4 w-4 mr-1" />Export PDF</Button>
+            <div className="rounded border bg-muted/30 p-3 text-xs text-muted-foreground">
+              💡 Costs auto-track from <b>Paid</b> payments — add them in the <b>Payments</b> tab. This view shows the breakdown.
             </div>
             <Table>
               <TableHeader><TableRow><TableHead>Category (Payment For)</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
