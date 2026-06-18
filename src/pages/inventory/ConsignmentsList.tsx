@@ -96,6 +96,12 @@ export default function ConsignmentsList() {
   const [delId, setDelId] = useState<string | null>(null);
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
 
+  const calcDays = (r: Consignment) => {
+    const start = new Date(r.created_at).getTime();
+    const end = r.is_completed && r.completed_at ? new Date(r.completed_at).getTime() : Date.now();
+    return Math.max(0, Math.floor((end - start) / (1000 * 60 * 60 * 24)));
+  };
+
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDlgOpen(true); };
   const openEdit = (c: Consignment) => {
     setEditing(c);
@@ -139,6 +145,7 @@ export default function ConsignmentsList() {
       Destination: r.destination || '',
       Status: STATUS_LABELS[r.status],
       ETA: r.eta || r.expected_arrival_date || '',
+      'Time (Days)': calcDays(r),
       Billing: r.customer_billing_amount || 0,
       Cost: r.total_cost || 0,
       Profit: r.estimated_profit || 0,
@@ -204,7 +211,7 @@ export default function ConsignmentsList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
+                  <TableHead>Code</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Supplier</TableHead>
                     <TableHead>Product</TableHead>
@@ -212,6 +219,7 @@ export default function ConsignmentsList() {
                     <TableHead>Route</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>ETA</TableHead>
+                    <TableHead>Time (Days)</TableHead>
                     <TableHead className="text-right">Billing</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">Profit</TableHead>
@@ -220,9 +228,9 @@ export default function ConsignmentsList() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                   ) : rows.length === 0 ? (
-                    <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
                   ) : rows.map(r => (
                     <TableRow key={r.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}>
                       <TableCell className="font-medium">
@@ -246,6 +254,7 @@ export default function ConsignmentsList() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs">{r.eta || r.expected_arrival_date || '-'}</TableCell>
+                      <TableCell className="text-xs">{calcDays(r)}</TableCell>
                       <TableCell className="text-right">{(r.customer_billing_amount || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(r.total_cost || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(r.estimated_profit || 0).toLocaleString()}</TableCell>
