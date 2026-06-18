@@ -149,7 +149,8 @@ export default function ConsignmentsList() {
   };
 
   const handleSave = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (save.isPending) return;
     const num = (v: any) => v === '' || v == null ? null : Number(v);
     // Map measurement_type + value to the right column
     const mv = num(form.measurement_value);
@@ -462,13 +463,14 @@ export default function ConsignmentsList() {
               <Button type="button" variant="outline" onClick={() => setDlgOpen(false)}>Cancel</Button>
               {step === 1 ? (
                 <>
-                  <Button type="button" variant="secondary" onClick={() => handleSave()} disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save & Close'}</Button>
-                  <Button type="button" onClick={() => setStep(2)}>Next: Shipment →</Button>
+                  <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save & Close'}</Button>
+                  <Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStep(2); }}>Next: Shipment →</Button>
                 </>
               ) : (
                 <>
-                  <Button type="button" variant="outline" onClick={() => setStep(1)}>← Back</Button>
-                  <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save'}</Button>
+                  <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStep(1); }}>← Back</Button>
+                  <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save & Close'}</Button>
+                  <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Saving...' : 'Save All'}</Button>
                 </>
               )}
             </DialogFooter>
