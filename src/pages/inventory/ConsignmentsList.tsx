@@ -211,29 +211,29 @@ export default function ConsignmentsList() {
             <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Consignment Status</div>
             <div className="grid grid-cols-4 gap-2">
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('all'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('all'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Active</span>
                 <span className="text-base font-bold">{stats.active}</span>
               </button>
               <button
-                onClick={() => { setMainTab('completed'); }}
+                onClick={() => { setMainTab('completed'); setStatus('all'); }}
                 className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'completed' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Complete</span>
                 <span className="text-base font-bold">{stats.completed}</span>
               </button>
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('in_transit'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'in_transit' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('IN_TRANSIT'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'IN_TRANSIT' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">In Transit</span>
                 <span className="text-base font-bold">{stats.inTransit}</span>
               </button>
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('customs'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'customs' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('CUSTOMS_PENDING'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'CUSTOMS_PENDING' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Customs</span>
                 <span className="text-base font-bold">{stats.customs}</span>
