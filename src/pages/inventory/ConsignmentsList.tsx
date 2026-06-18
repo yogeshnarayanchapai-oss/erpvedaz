@@ -11,10 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download, Menu } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
-import { useConsignments, useSaveConsignment, useDeleteConsignment, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
+import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateConsignmentStatus, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
 import * as XLSX from 'xlsx';
 
 const STATUS_COLORS: Record<string, string> = {
