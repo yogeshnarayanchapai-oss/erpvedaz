@@ -185,7 +185,7 @@ export default function ConsignmentsList() {
         <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="h-4 w-4" />} variant="success" />
         <StatCard title="In Transit" value={stats.inTransit} icon={<Ship className="h-4 w-4" />} variant="info" />
         <StatCard title="Customs Pending" value={stats.customs} icon={<Clock className="h-4 w-4" />} variant="warning" />
-        <StatCard title="Receivable / Payable" value={`${stats.receivable.toLocaleString()} / ${stats.payable.toLocaleString()}`} description={`Est. Profit: ${stats.profit.toLocaleString()}`} icon={<Truck className="h-4 w-4" />} variant="default" />
+        <StatCard title="Receivable / Payable" value={`${formatIndianShort(stats.receivable)} / ${formatIndianShort(stats.payable)}`} description={`Est. Profit: ${formatIndianShort(stats.profit)}`} icon={<Truck className="h-4 w-4" />} variant="default" valueClassName="text-sm md:text-base font-semibold" />
       </div>
 
       <Card>
