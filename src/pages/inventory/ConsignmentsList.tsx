@@ -145,6 +145,7 @@ export default function ConsignmentsList() {
       Destination: r.destination || '',
       Status: STATUS_LABELS[r.status],
       ETA: r.eta || r.expected_arrival_date || '',
+      'Time (Days)': calcDays(r),
       Billing: r.customer_billing_amount || 0,
       Cost: r.total_cost || 0,
       Profit: r.estimated_profit || 0,
