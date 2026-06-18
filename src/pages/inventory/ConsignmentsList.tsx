@@ -78,21 +78,14 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<'active' | 'completed'>('active');
-  const [subFilter, setSubFilter] = useState<'all' | 'in_transit' | 'customs'>('all');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
-  const { data: tabRows = [], isLoading } = useConsignments({
+  const { data: rows = [], isLoading } = useConsignments({
     search, status, mode, origin,
     completed: mainTab === 'completed' ? true : false,
   });
-
-  const rows = useMemo(() => {
-    if (mainTab === 'active' && subFilter === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
-    if (mainTab === 'active' && subFilter === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
-    return tabRows;
-  }, [tabRows, mainTab, subFilter]);
 
   // counts (separate query unfiltered for stat cards)
   const { data: allRows = [] } = useConsignments({});
@@ -195,7 +188,7 @@ export default function ConsignmentsList() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Consignments');
-    XLSX.writeFile(wb, `consignments_${mainTab}${mainTab === 'active' ? '_' + subFilter : ''}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `consignments_${mainTab}_${status}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
@@ -218,29 +211,29 @@ export default function ConsignmentsList() {
             <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Consignment Status</div>
             <div className="grid grid-cols-4 gap-2">
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('all'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('all'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Active</span>
                 <span className="text-base font-bold">{stats.active}</span>
               </button>
               <button
-                onClick={() => { setMainTab('completed'); }}
+                onClick={() => { setMainTab('completed'); setStatus('all'); }}
                 className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'completed' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Complete</span>
                 <span className="text-base font-bold">{stats.completed}</span>
               </button>
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('in_transit'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'in_transit' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('IN_TRANSIT'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'IN_TRANSIT' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">In Transit</span>
                 <span className="text-base font-bold">{stats.inTransit}</span>
               </button>
               <button
-                onClick={() => { setMainTab('active'); setSubFilter('customs'); }}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'customs' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+                onClick={() => { setMainTab('active'); setStatus('CUSTOMS_PENDING'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && status === 'CUSTOMS_PENDING' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
               >
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Customs</span>
                 <span className="text-base font-bold">{stats.customs}</span>
@@ -289,24 +282,14 @@ export default function ConsignmentsList() {
       </Card>
 
       <div>
-        <Tabs value={mainTab} onValueChange={(v: any) => { setMainTab(v); if (v === 'active') setSubFilter('all'); }}>
+        <Tabs value={mainTab} onValueChange={(v: any) => { setMainTab(v); setStatus('all'); }}>
           <TabsList className="mb-2">
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
         </Tabs>
-        {mainTab === 'active' && (
-          <div className="flex gap-2 mb-2">
-            <Button variant={subFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('all')}>All Active</Button>
-            <Button variant={subFilter === 'in_transit' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('in_transit')}>In Transit</Button>
-            <Button variant={subFilter === 'customs' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('customs')}>Customs</Button>
-          </div>
-        )}
         <div className="text-sm font-medium mb-2 capitalize">
-          {mainTab === 'active' && subFilter === 'all' && 'Active Consignments'}
-          {mainTab === 'active' && subFilter === 'in_transit' && 'In Transit Consignments'}
-          {mainTab === 'active' && subFilter === 'customs' && 'Customs Pending Consignments'}
-          {mainTab === 'completed' && 'Completed Consignments'}
+          {mainTab === 'active' ? 'Active Consignments' : 'Completed Consignments'}
           <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
         </div>
         <div className="mt-3">

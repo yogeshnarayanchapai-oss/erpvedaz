@@ -105,12 +105,13 @@ export function useConsignments(filters?: { search?: string; status?: string; mo
         const recvMap: Record<string, number> = {};
         (pays || []).forEach((p: any) => {
           const amt = Number(p.amount || 0);
-          if (p.status !== 'PAID') return;
           if (p.direction === 'PAID') paidMap[p.consignment_id] = (paidMap[p.consignment_id] || 0) + amt;
           if (p.direction === 'RECEIVED') recvMap[p.consignment_id] = (recvMap[p.consignment_id] || 0) + amt;
         });
         rows = rows.map(r => {
-          const total_cost = (costMap[r.id] || 0) + (paidMap[r.id] || 0);
+          const manualCost = costMap[r.id] || 0;
+          const paid = paidMap[r.id] || 0;
+          const total_cost = manualCost + paid;
           const received = recvMap[r.id] || 0;
           const billing = Number(r.customer_billing_amount || 0);
           return {
@@ -118,7 +119,7 @@ export function useConsignments(filters?: { search?: string; status?: string; mo
             total_cost,
             total_received: received,
             receivable: billing - received,
-            payable: total_cost - (paidMap[r.id] || 0), // remaining payable = manual costs not paid via payments-paid
+            payable: manualCost, // remaining unpaid manual cost entries
             estimated_profit: billing - total_cost,
           } as any;
         });
