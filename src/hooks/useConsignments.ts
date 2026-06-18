@@ -159,7 +159,19 @@ export function useSaveConsignment() {
   const storeId = useCurrentStoreId();
   return useMutation({
     mutationFn: async (payload: Partial<Consignment> & { id?: string }) => {
-      const { id, customer, supplier, ...rest } = payload as any;
+      const { id } = payload as any;
+      const writableFields = [
+        'consignment_code', 'customer_party_id', 'supplier_party_id', 'product_name', 'product_category',
+        'quantity', 'unit', 'weight', 'cbm', 'origin_country', 'destination', 'shipment_mode', 'order_date',
+        'expected_arrival_date', 'notes', 'shipment_id', 'container_number', 'tracking_number', 'vehicle_number',
+        'agent_name', 'carrier_name', 'warehouse_location', 'current_location', 'eta', 'delivery_address',
+        'status', 'customer_billing_amount', 'total_cost', 'estimated_profit', 'actual_profit',
+        'is_completed', 'completed_at', 'is_locked',
+      ];
+      const rest = writableFields.reduce((acc: any, key) => {
+        if (Object.prototype.hasOwnProperty.call(payload, key)) acc[key] = (payload as any)[key];
+        return acc;
+      }, {});
       if (id) {
         const { data, error } = await (supabase as any).from('consignments').update(rest).eq('id', id).select().single();
         if (error) throw error;
