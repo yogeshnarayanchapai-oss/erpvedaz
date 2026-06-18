@@ -112,6 +112,7 @@ export default function ConsignmentsList() {
   const [form, setForm] = useState<any>(emptyForm);
   const [delId, setDelId] = useState<string | null>(null);
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2>(1);
 
   const calcDays = (r: Consignment) => {
     const start = new Date(r.created_at).getTime();
@@ -119,29 +120,39 @@ export default function ConsignmentsList() {
     return Math.max(0, Math.floor((end - start) / (1000 * 60 * 60 * 24)));
   };
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setDlgOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyForm); setStep(1); setDlgOpen(true); };
   const openEdit = (c: Consignment) => {
+    const m = inferMeasurement(c);
     setEditing(c);
     setForm({
       ...emptyForm, ...c,
       customer_party_id: c.customer_party_id || '',
       supplier_party_id: c.supplier_party_id || '',
       quantity: c.quantity ?? '', weight: c.weight ?? '', cbm: c.cbm ?? '',
+      measurement_type: m.measurement_type, measurement_value: m.measurement_value,
       customer_billing_amount: c.customer_billing_amount ?? '',
     });
+    setStep(1);
     setDlgOpen(true);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const num = (v: any) => v === '' || v == null ? null : Number(v);
+    // Map measurement_type + value to the right column
+    const mv = num(form.measurement_value);
+    const mappedQuantity = form.measurement_type === 'QUANTITY' ? mv : null;
+    const mappedWeight = form.measurement_type === 'WEIGHT' ? mv : null;
+    const mappedCbm = form.measurement_type === 'VOLUME' ? mv : null;
+    const { measurement_type, measurement_value, ...rest } = form;
     const payload: any = {
-      ...form,
+      ...rest,
       customer_party_id: form.customer_party_id || null,
       supplier_party_id: form.supplier_party_id || null,
-      quantity: num(form.quantity),
-      weight: num(form.weight),
-      cbm: num(form.cbm),
+      quantity: mappedQuantity,
+      weight: mappedWeight,
+      cbm: mappedCbm,
+      unit: form.measurement_type === 'QUANTITY' ? (form.unit || null) : (form.measurement_type === 'WEIGHT' ? 'kg' : form.measurement_type === 'VOLUME' ? 'CBM' : null),
       customer_billing_amount: num(form.customer_billing_amount),
       expected_arrival_date: form.expected_arrival_date || null,
       eta: form.eta || null,
@@ -150,6 +161,7 @@ export default function ConsignmentsList() {
     await save.mutateAsync(payload);
     setDlgOpen(false);
   };
+
 
   const exportXlsx = () => {
     const data = rows.map(r => ({
