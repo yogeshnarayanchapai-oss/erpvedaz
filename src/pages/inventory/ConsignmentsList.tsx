@@ -296,7 +296,6 @@ export default function ConsignmentsList() {
                     <TableHead>Mode</TableHead>
                     <TableHead>Route</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>ETA</TableHead>
                     <TableHead>Time (Days)</TableHead>
                     <TableHead className="text-right">Billing</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
