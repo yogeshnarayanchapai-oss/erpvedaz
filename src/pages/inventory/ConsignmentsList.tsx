@@ -77,17 +77,24 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'active' | 'completed'>('active');
+  const [tab, setTab] = useState<'active' | 'completed' | 'in_transit' | 'customs'>('active');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
-  const { data: rows = [], isLoading } = useConsignments({
+  const { data: tabRows = [], isLoading } = useConsignments({
     search, status, mode, origin,
-    completed: tab === 'completed',
+    completed: tab === 'completed' ? true : false,
   });
 
-  // counts (separate query unfiltered for stat cards - reuse same hook without completed filter)
+  // Restrict to in-transit / customs when those sub-tabs are selected
+  const rows = useMemo(() => {
+    if (tab === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
+    if (tab === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
+    return tabRows;
+  }, [tabRows, tab]);
+
+  // counts (separate query unfiltered for stat cards)
   const { data: allRows = [] } = useConsignments({});
 
   const stats = useMemo(() => {
@@ -97,11 +104,12 @@ export default function ConsignmentsList() {
       completed: allRows.filter(r => r.is_completed).length,
       inTransit: active.filter(r => IN_TRANSIT_STATUSES.includes(r.status)).length,
       customs: active.filter(r => CUSTOMS_STATUSES.includes(r.status)).length,
-      receivable: active.reduce((s, r) => s + (Number(r.customer_billing_amount) || 0), 0),
-      payable: active.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
+      receivable: active.reduce((s, r: any) => s + (Number(r.receivable) || 0), 0),
+      payable: active.reduce((s, r: any) => s + ((Number(r.total_cost) || 0) - (Number((r as any).total_received) || 0) > 0 ? 0 : 0) + (Number(r.total_cost) || 0), 0),
       profit: active.reduce((s, r) => s + (Number(r.estimated_profit) || 0), 0),
     };
   }, [allRows]);
+
 
   const save = useSaveConsignment();
   const del = useDeleteConsignment();
