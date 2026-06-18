@@ -1,70 +1,71 @@
-# Company Hold / My Savings Feature
+# Consignment Management Module
 
-Payroll ma अहिले Allowances ra Deductions छ — sangai **Company Hold** (SSF/saving type) field थप्ने। Hold amount payslip बाट काटिन्छ tara company ले staff को नाममा hold गर्छ। Admin ले pachi release गर्न सक्छ, history रहन्छ, ra release हुँदा calculation मिल्छ।
+A new Import/Export Consignment Management module added under the existing **Inventory** section. Reuses your existing Customers, Suppliers (Parties), Accounting (Receivable/Payable), Role/Permission system, UI components, and design tokens — nothing existing will be removed or replaced.
 
-## 1. Database (new migration)
+## Where it lives
+- Sidebar: **Inventory → Consignment Management**
+- Routes:
+  - `/inventory/consignments` — list page (tabs: Active / Completed)
+  - `/inventory/consignments/:id` — detail page
 
-**New columns on `payroll_records`:**
-- `company_hold` numeric default 0 — यो month को hold amount
-- Net salary calculation: `basic + allowances - deductions - company_hold`
+## Pages & UI
 
-**New table `company_hold_ledger`** (per-employee running balance entries):
-- employee_id, store_id, month_start (date)
-- type: `HOLD` (payroll बाट) or `RELEASE` (admin बाट)
-- amount (positive), notes, created_by, created_at
-- payroll_record_id (nullable — HOLD entries मा link)
+### List page (`ConsignmentsList.tsx`)
+- **Top summary cards (5):** Active, Completed, In Transit, Pending Customs, Receivable / Payable / Est. Profit (reusing `StatCard`).
+- **Filter bar:** search (ID / customer / supplier), status, shipment mode (Air/Sea/Road/Courier), origin country, date range, active/completed — using existing filter components.
+- **Tabs:** Active Consignments | Completed Consignments (shadcn `Tabs`).
+- **Table:** Consignment ID, Customer, Supplier, Product, Mode, Origin → Destination, Status badge (color-coded), ETA, Total Cost, Profit, Actions (View, Edit, Delete with confirm modal, Mark Completed).
+- **Create/Edit dialog:** large form (basic + shipment details). Customer/Supplier selected via existing `SearchablePartySelect` (parties table — `party_type` filters CUSTOMER / SUPPLIER / BOTH).
+- **Export buttons:** consignment list, customer-wise, supplier-wise, status-wise, profit/loss, pending payments (XLSX via existing export pattern).
 
-RLS:
-- OWNER / ADMIN / MANAGER / ACCOUNTANT → full read/write
-- Employees → own rows read only (via employee → user_id mapping)
+### Detail page (`ConsignmentDetail.tsx`)
+Sections (cards/tabs): Basic Info • Customer & Supplier • Shipment Info • **Status Timeline** (17 stages, click to advance with remarks) • **Costing** (auto-totaled) • **Payments** (linked to accounting) • **Documents** (upload/preview/download/delete) • **Activity Log** • Notes.
 
-Trigger: payroll record insert/update हुँदा matching HOLD entry auto-create / update.
+## Status flow (17 stages)
+Inquiry Received → Quotation Sent → Order Confirmed → Advance Received → Supplier Ordered → Goods Ready → Picked Up → In Origin Warehouse → Shipped → In Transit → Arrived at Port/Border → Customs Clearance Pending → Customs Cleared → In Nepal Warehouse → Out for Delivery → Delivered → Completed.
 
-## 2. Payroll Edit Dialog
-- Modal ma **Company Hold** input थप्ने (Allowances/Deductions छेउमा)
-- Net Salary live preview: Basic + Allow − Deduct − Hold
-- Save हुँदा `payroll_records.company_hold` update + ledger sync
+Each status change records: status, timestamp, user, remarks.
 
-## 3. Payslip
-- Payslip मा Company Hold line item देखाउने (deduction section तल अलग row)
-- Net Salary calculation मा include
+## Database (new tables, all `store_id`-scoped with RLS + GRANTs)
+- `consignments` — main record (consignment_code auto-generated `CNS-0001`, customer_party_id, supplier_party_id, product fields, shipment fields, status, mode, origin/destination, dates, totals, profit, is_completed, completed_at, locked).
+- `consignment_status_history` — status change log.
+- `consignment_costs` — line items per cost type (product/freight/customs/agent/transport/warehouse/packaging/other).
+- `consignment_payments` — customer & supplier payments; mirrors into existing `party_payments` / `party_transactions` so receivable/payable stays unified (no duplicate accounting logic).
+- `consignment_documents` — file metadata pointing to a new storage bucket `consignment-docs`.
+- `consignment_activity_logs` — generic audit trail.
 
-## 4. Admin Portal — Company Hold Section
-New page: `/hrm/company-hold` (ADMIN/MANAGER/ACCOUNTANT/OWNER access)
-- Staff list with: Total Held, Total Released, **Current Balance**
-- Click staff row → modal/drawer with:
-  - Month-wise breakdown (BS months)
-  - HOLD / RELEASE entries table with date, amount, notes, by-whom
-  - **Release** button → amount input + notes → creates RELEASE ledger entry
-- History tab: सबै release history with filters
+RLS: store-scoped reads/writes via existing `user_has_store_access` + `is_owner`. Role permissions wired through the existing dynamic RBAC (`system_modules` + `role_permissions`) — new module key `consignment_management`.
 
-## 5. Staff Portal — My Savings
-New page under MyHR: `/myhr/savings` (sidebar link "My Savings")
-- Card: Total Saved, Total Released, Available Balance
-- Month-wise breakdown table (अफ्नो only)
-- Release history (read-only)
+## Permissions (via existing RBAC)
+- **OWNER/ADMIN:** full CRUD, complete, unlock locked records.
+- **ACCOUNTANT:** edit costing & payments only.
+- **WAREHOUSE / LOGISTICS:** update shipment + status only.
+- **LEADS / CALLING (sales):** create + view.
+- Others: read-only per existing permission rows.
 
-## 6. Calculation logic
-- Current Balance = Σ HOLD − Σ RELEASE
-- Release validation: amount ≤ current balance
-- Release entries do NOT affect payroll net salary — separate cash-out tracking
+## Completion rules
+"Mark Completed" enabled only when: status = Delivered, ≥1 document uploaded, payment status reviewed, costing totals saved. On completion → moves to Completed tab, locks financial fields (admin can unlock), stamps `completed_at`.
 
-## Technical details
+## Reuse map (no duplication)
+| Need | Reuses |
+|---|---|
+| Customer/Supplier picker | `SearchablePartySelect` + `parties` table (`party_type` BOTH supported) |
+| Receivable/Payable | writes into existing `party_payments` + `party_transactions` |
+| Stat cards / badges / dialogs | `StatCard`, `getLeadStatusBadgeClass` pattern, shadcn `Dialog` (max-w-[1800px] per project std) |
+| Date filters | `DateQuickFilters` |
+| Role gating | `ProtectedRoute` + `useMyPermissions` |
+| Store isolation | `useCurrentStoreId` + `store_id` filter |
+| File storage | new public-read storage bucket `consignment-docs` |
 
-**Files to create:**
-- `supabase` migration (new column + table + RLS + trigger)
-- `src/hooks/useCompanyHold.ts` — queries/mutations
-- `src/pages/hrm/CompanyHold.tsx` — admin list + detail
-- `src/components/hrm/CompanyHoldDetailDialog.tsx` — month breakdown + release
-- `src/components/hrm/ReleaseHoldDialog.tsx`
-- `src/pages/myhr/MySavings.tsx` — staff view
+## Out of scope (kept untouched)
+Existing Customers, Suppliers, Parties, Inventory stock movements, Accounting transactions/ledgers, HRM, Leads, Orders — none of their files or tables are modified.
 
-**Files to edit:**
-- Payroll edit dialog component (find via HRMPayroll / HRMSalaryPayroll)
-- Payslip component (HRMSalarySlip)
-- Router (App.tsx) — add routes
-- Sidebar — add menu items with proper role gating
+## Build order
+1. DB migration (6 tables + GRANTs + RLS + storage bucket + RBAC module row).
+2. Hooks: `useConsignments`, `useConsignmentDetail`, `useConsignmentCosts`, `useConsignmentPayments`, `useConsignmentDocuments`.
+3. List page + Create/Edit dialog.
+4. Detail page with all sections.
+5. Sidebar link under Inventory + route registration.
+6. Export utilities + reports.
 
-**Role gating:** Use existing `ProtectedRoute` with roles `['OWNER','ADMIN','MANAGER','ACCOUNTANT']` for admin page; My Savings open to all authenticated employees.
-
-Net salary formula update applied wherever payroll totals are computed (search for `allowances - deductions` pattern).
+Reply **"go"** to start, or tell me anything you want changed (different status stages, drop a section, different default tab, etc.).
