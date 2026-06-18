@@ -66,27 +66,59 @@ export default function ConsignmentDetail() {
     return acc;
   }, {});
 
-  const exportCostingPDF = () => {
+  const exportReportPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(14); doc.text(`Costing — ${c.consignment_code}`, 14, 16);
-    doc.setFontSize(10); doc.text(`Customer: ${c.customer?.name || '-'}`, 14, 23);
-    const rows: any[] = Object.entries(paidByCategory).map(([cat, amt]) => [cat, Number(amt).toLocaleString()]);
-    costs.forEach((r: any) => rows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]));
-    autoTable(doc, { startY: 28, head: [['Category (Payment For)', 'Amount']], body: rows, foot: [['Total Cost', totalCost.toLocaleString()]] });
-    doc.save(`Costing_${c.consignment_code}.pdf`);
-  };
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFontSize(15); doc.setFont(undefined, 'bold');
+    doc.text('Consignment Report', pageW / 2, 14, { align: 'center' });
+    doc.setFontSize(11);
+    doc.text(`${c.consignment_code}  ·  ${STATUS_LABELS[c.status]}`, pageW / 2, 20, { align: 'center' });
 
-  const exportPaymentsPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(14); doc.text(`Payments — ${c.consignment_code}`, 14, 16);
-    doc.setFontSize(10);
-    doc.text(`Received: ${totalReceived.toLocaleString()}   Paid: ${totalPaid.toLocaleString()}   Receivable: ${receivable.toLocaleString()}`, 14, 23);
-    autoTable(doc, {
-      startY: 28,
-      head: [['Date', 'Direction', 'For', 'Method', 'Amount']],
-      body: payments.map((p: any) => [p.payment_date, p.direction, p.payment_for, p.payment_method || '-', Number(p.amount).toLocaleString()]),
-    });
-    doc.save(`Payments_${c.consignment_code}.pdf`);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+    const infoLeft = [
+      ['Customer', c.customer?.name || '-'],
+      ['Product', c.product_name || '-'],
+      ['Qty / Unit', `${c.quantity ?? '-'} ${c.unit || ''}`],
+      ['Mode', c.shipment_mode || '-'],
+    ];
+    const infoRight = [
+      ['Route', `${c.origin_country || '-'} → ${c.destination || '-'}`],
+      ['Order Date', c.order_date || '-'],
+      ['ETA', c.eta || c.expected_arrival_date || '-'],
+      ['Supplier', c.supplier?.name || '-'],
+    ];
+    autoTable(doc, { startY: 25, theme: 'plain', styles: { fontSize: 9, cellPadding: 1 },
+      body: infoLeft.map((l, i) => [l[0] + ':', l[1], infoRight[i][0] + ':', infoRight[i][1]]),
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 25 }, 1: { cellWidth: 65 }, 2: { fontStyle: 'bold', cellWidth: 25 }, 3: { cellWidth: 65 } } });
+
+    let y = (doc as any).lastAutoTable.finalY + 4;
+    autoTable(doc, { startY: y, head: [['Financial Summary', 'Amount']],
+      body: [
+        ['Customer Billing', billing.toLocaleString()],
+        ['Total Cost', totalCost.toLocaleString()],
+        ['Received', totalReceived.toLocaleString()],
+        ['Receivable', receivable.toLocaleString()],
+      ],
+      foot: [[profit >= 0 ? 'Estimated Profit' : 'Estimated Loss', profit.toLocaleString()]],
+      styles: { fontSize: 9 }, headStyles: { fillColor: [40, 60, 90] }, footStyles: { fillColor: [230, 230, 230], textColor: 20, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' } } });
+
+    y = (doc as any).lastAutoTable.finalY + 4;
+    const costRows: any[] = Object.entries(paidByCategory).map(([cat, amt]) => [cat, Number(amt).toLocaleString()]);
+    costs.forEach((r: any) => costRows.push([`${r.cost_type}${r.description ? ' - ' + r.description : ''}`, Number(r.amount).toLocaleString()]));
+    if (costRows.length === 0) costRows.push(['No costs recorded', '-']);
+    autoTable(doc, { startY: y, head: [['Costing Breakdown', 'Amount']], body: costRows,
+      foot: [['Total Cost', totalCost.toLocaleString()]],
+      styles: { fontSize: 9 }, headStyles: { fillColor: [40, 60, 90] }, columnStyles: { 1: { halign: 'right' } } });
+
+    y = (doc as any).lastAutoTable.finalY + 4;
+    const payRows = payments.length === 0
+      ? [['-', '-', '-', '-', '-']]
+      : payments.map((p: any) => [p.payment_date, p.direction, p.payment_for, p.payment_method || '-', Number(p.amount).toLocaleString()]);
+    autoTable(doc, { startY: y, head: [['Date', 'Direction', 'For', 'Method', 'Amount']], body: payRows,
+      styles: { fontSize: 8 }, headStyles: { fillColor: [40, 60, 90] }, columnStyles: { 4: { halign: 'right' } } });
+
+    doc.save(`Consignment_${c.consignment_code}.pdf`);
   };
 
 
