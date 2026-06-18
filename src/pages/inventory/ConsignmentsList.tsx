@@ -96,6 +96,12 @@ export default function ConsignmentsList() {
   const [delId, setDelId] = useState<string | null>(null);
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
 
+  const calcDays = (r: Consignment) => {
+    const start = new Date(r.created_at).getTime();
+    const end = r.is_completed && r.completed_at ? new Date(r.completed_at).getTime() : Date.now();
+    return Math.max(0, Math.floor((end - start) / (1000 * 60 * 60 * 24)));
+  };
+
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDlgOpen(true); };
   const openEdit = (c: Consignment) => {
     setEditing(c);
