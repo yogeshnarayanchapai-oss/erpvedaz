@@ -250,6 +250,7 @@ export function useAddCost() {
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
       toast.success('Cost added');
     },
     onError: (e: any) => toast.error(e.message),
@@ -263,7 +264,10 @@ export function useDeleteCost() {
       const { error } = await (supabase as any).from('consignment_costs').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+    },
   });
 }
 
