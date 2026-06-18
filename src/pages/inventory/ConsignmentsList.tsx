@@ -369,8 +369,9 @@ export default function ConsignmentsList() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
 
       {/* Create / Edit dialog */}
       <Dialog open={dlgOpen} onOpenChange={setDlgOpen}>
