@@ -327,6 +327,8 @@ const App = () => (
                 <Route path="/admin/inventory/warehouses/:warehouseId" element={<WarehouseDetail />} />
                 <Route path="/admin/inventory/daily-pl" element={<DailyPL />} />
                 <Route path="/admin/inventory/ai-reorder" element={<AIStockReorder />} />
+                <Route path="/admin/inventory/consignments" element={<ConsignmentsList />} />
+                <Route path="/admin/inventory/consignments/:id" element={<ConsignmentDetail />} />
                 <Route path="/hrm" element={<HRDashboard />} />
                 <Route path="/hrm/employees" element={<HRMEmployees />} />
                 <Route path="/hrm/employees/:id" element={<HRMEmployeeDetail />} />
