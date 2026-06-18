@@ -296,7 +296,6 @@ export default function ConsignmentsList() {
                     <TableHead>Mode</TableHead>
                     <TableHead>Route</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>ETA</TableHead>
                     <TableHead>Time (Days)</TableHead>
                     <TableHead className="text-right">Billing</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
@@ -331,7 +330,6 @@ export default function ConsignmentsList() {
                           <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs">{r.eta || r.expected_arrival_date || '-'}</TableCell>
                       <TableCell className="text-xs">{calcDays(r)}</TableCell>
                       <TableCell className="text-right">{(r.customer_billing_amount || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(r.total_cost || 0).toLocaleString()}</TableCell>
