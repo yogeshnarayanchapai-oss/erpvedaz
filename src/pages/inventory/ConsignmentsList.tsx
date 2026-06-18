@@ -282,24 +282,14 @@ export default function ConsignmentsList() {
       </Card>
 
       <div>
-        <Tabs value={mainTab} onValueChange={(v: any) => { setMainTab(v); if (v === 'active') setSubFilter('all'); }}>
+        <Tabs value={mainTab} onValueChange={(v: any) => { setMainTab(v); setStatus('all'); }}>
           <TabsList className="mb-2">
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
         </Tabs>
-        {mainTab === 'active' && (
-          <div className="flex gap-2 mb-2">
-            <Button variant={subFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('all')}>All Active</Button>
-            <Button variant={subFilter === 'in_transit' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('in_transit')}>In Transit</Button>
-            <Button variant={subFilter === 'customs' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('customs')}>Customs</Button>
-          </div>
-        )}
         <div className="text-sm font-medium mb-2 capitalize">
-          {mainTab === 'active' && subFilter === 'all' && 'Active Consignments'}
-          {mainTab === 'active' && subFilter === 'in_transit' && 'In Transit Consignments'}
-          {mainTab === 'active' && subFilter === 'customs' && 'Customs Pending Consignments'}
-          {mainTab === 'completed' && 'Completed Consignments'}
+          {mainTab === 'active' ? 'Active Consignments' : 'Completed Consignments'}
           <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
         </div>
         <div className="mt-3">
