@@ -20,7 +20,7 @@ import {
 } from '@/hooks/useConsignments';
 import { toast } from 'sonner';
 
-const COST_TYPES = ['PRODUCT','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
+const PAYMENT_FOR_TYPES = ['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
 
 export default function ConsignmentDetail() {
@@ -48,12 +48,21 @@ export default function ConsignmentDetail() {
 
   if (isLoading || !c) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
-  const totalCost = costs.reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
   const totalReceived = payments.filter((p: any) => p.direction === 'RECEIVED').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const totalPaid = payments.filter((p: any) => p.direction === 'PAID').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+  // Unified cost = total PAID payments + any manual cost entries (legacy)
+  const manualCost = costs.reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+  const totalCost = totalPaid + manualCost;
   const billing = Number(c.customer_billing_amount || 0);
   const profit = billing - totalCost;
   const receivable = billing - totalReceived;
+
+  // Group PAID payments by payment_for for cost breakdown
+  const paidByCategory = payments.filter((p: any) => p.direction === 'PAID').reduce((acc: Record<string, number>, p: any) => {
+    const key = p.payment_for || 'OTHER';
+    acc[key] = (acc[key] || 0) + Number(p.amount || 0);
+    return acc;
+  }, {});
 
   const handleStatusUpdate = async () => {
     await updateStatus.mutateAsync({ id: c.id, status: statusForm.status, remarks: statusForm.remarks, storeId: c.store_id });
@@ -194,35 +203,44 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="costs" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            {!c.is_locked && (
-              <form onSubmit={handleAddCost} className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                <Select value={costForm.cost_type} onValueChange={v => setCostForm({ ...costForm, cost_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{COST_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-                <Input className="md:col-span-2" placeholder="Description" value={costForm.description} onChange={e => setCostForm({ ...costForm, description: e.target.value })} />
-                <Input type="number" placeholder="Amount" value={costForm.amount} onChange={e => setCostForm({ ...costForm, amount: e.target.value })} required />
-                <Button type="submit">Add Cost</Button>
-              </form>
-            )}
+            <div className="rounded border bg-muted/30 p-3 text-xs text-muted-foreground">
+              💡 Costs auto-track from <b>Paid</b> payments — add them in the <b>Payments</b> tab. This view shows the breakdown.
+            </div>
             <Table>
-              <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Category (Payment For)</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
               <TableBody>
-                {costs.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4">No costs</TableCell></TableRow> : costs.map((r: any) => (
-                  <TableRow key={r.id}>
-                    <TableCell><Badge variant="outline">{r.cost_type}</Badge></TableCell>
-                    <TableCell>{r.description || '-'}</TableCell>
-                    <TableCell className="text-right">{Number(r.amount).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      {!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow><TableCell colSpan={2} className="font-bold text-right">Total</TableCell><TableCell className="text-right font-bold">{totalCost.toLocaleString()}</TableCell><TableCell></TableCell></TableRow>
+                {Object.keys(paidByCategory).length === 0 && manualCost === 0 ? (
+                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-4">No costs yet. Add a Paid payment to start.</TableCell></TableRow>
+                ) : (
+                  <>
+                    {Object.entries(paidByCategory).map(([cat, amt]) => (
+                      <TableRow key={cat}>
+                        <TableCell><Badge variant="outline">{cat}</Badge></TableCell>
+                        <TableCell className="text-right">{Number(amt).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                )}
+                {costs.length > 0 && (
+                  <>
+                    <TableRow><TableCell colSpan={2} className="text-xs italic text-muted-foreground pt-4">Legacy manual cost entries:</TableCell></TableRow>
+                    {costs.map((r: any) => (
+                      <TableRow key={r.id}>
+                        <TableCell><Badge variant="outline">{r.cost_type}</Badge> <span className="text-xs text-muted-foreground">{r.description || ''}</span></TableCell>
+                        <TableCell className="text-right">
+                          {Number(r.amount).toLocaleString()}
+                          {!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                )}
+                <TableRow><TableCell className="font-bold text-right">Total Cost</TableCell><TableCell className="text-right font-bold">{totalCost.toLocaleString()}</TableCell></TableRow>
               </TableBody>
             </Table>
           </CardContent></Card>
         </TabsContent>
+
 
         <TabsContent value="payments" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
@@ -234,7 +252,7 @@ export default function ConsignmentDetail() {
                 </Select>
                 <Select value={payForm.payment_for} onValueChange={v => setPayForm({ ...payForm, payment_for: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','OTHER'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{PAYMENT_FOR_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input type="number" placeholder="Amount" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} required />
                 <Input type="date" value={payForm.payment_date} onChange={e => setPayForm({ ...payForm, payment_date: e.target.value })} />
