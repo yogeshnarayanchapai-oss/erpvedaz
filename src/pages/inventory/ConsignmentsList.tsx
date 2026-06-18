@@ -149,7 +149,8 @@ export default function ConsignmentsList() {
   };
 
   const handleSave = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (save.isPending) return;
     const num = (v: any) => v === '' || v == null ? null : Number(v);
     // Map measurement_type + value to the right column
     const mv = num(form.measurement_value);
