@@ -77,22 +77,22 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'active' | 'completed' | 'in_transit' | 'customs'>('active');
+  const [mainTab, setMainTab] = useState<'active' | 'completed'>('active');
+  const [subFilter, setSubFilter] = useState<'all' | 'in_transit' | 'customs'>('all');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
   const [origin, setOrigin] = useState('');
   const { data: tabRows = [], isLoading } = useConsignments({
     search, status, mode, origin,
-    completed: tab === 'completed' ? true : false,
+    completed: mainTab === 'completed' ? true : false,
   });
 
-  // Restrict to in-transit / customs when those sub-tabs are selected
   const rows = useMemo(() => {
-    if (tab === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
-    if (tab === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
+    if (mainTab === 'active' && subFilter === 'in_transit') return tabRows.filter(r => IN_TRANSIT_STATUSES.includes(r.status));
+    if (mainTab === 'active' && subFilter === 'customs') return tabRows.filter(r => CUSTOMS_STATUSES.includes(r.status));
     return tabRows;
-  }, [tabRows, tab]);
+  }, [tabRows, mainTab, subFilter]);
 
   // counts (separate query unfiltered for stat cards)
   const { data: allRows = [] } = useConsignments({});
@@ -194,7 +194,7 @@ export default function ConsignmentsList() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Consignments');
-    XLSX.writeFile(wb, `consignments_${tab}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `consignments_${mainTab}${mainTab === 'active' ? '_' + subFilter : ''}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
@@ -210,49 +210,62 @@ export default function ConsignmentsList() {
         </div>
       </div>
 
-      {/* Top summary: one status card + receivable + payable */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="md:col-span-1">
+      {/* Top summary: status card + financial card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card>
           <CardContent className="p-3">
             <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Consignment Status</div>
-            <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
-              <TabsList className="grid grid-cols-4 w-full h-auto">
-                <TabsTrigger value="active" className="flex-col gap-0.5 py-1.5">
-                  <span className="text-[10px]">Active</span>
-                  <span className="text-base font-bold">{stats.active}</span>
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="flex-col gap-0.5 py-1.5">
-                  <span className="text-[10px]">Completed</span>
-                  <span className="text-base font-bold">{stats.completed}</span>
-                </TabsTrigger>
-                <TabsTrigger value="in_transit" className="flex-col gap-0.5 py-1.5">
-                  <span className="text-[10px]">In Transit</span>
-                  <span className="text-base font-bold">{stats.inTransit}</span>
-                </TabsTrigger>
-                <TabsTrigger value="customs" className="flex-col gap-0.5 py-1.5">
-                  <span className="text-[10px]">Customs</span>
-                  <span className="text-base font-bold">{stats.customs}</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => { setMainTab('active'); setSubFilter('all'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Active</span>
+                <span className="text-base font-bold">{stats.active}</span>
+              </button>
+              <button
+                onClick={() => { setMainTab('completed'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'completed' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Complete</span>
+                <span className="text-base font-bold">{stats.completed}</span>
+              </button>
+              <button
+                onClick={() => { setMainTab('active'); setSubFilter('in_transit'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'in_transit' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">In Transit</span>
+                <span className="text-base font-bold">{stats.inTransit}</span>
+              </button>
+              <button
+                onClick={() => { setMainTab('active'); setSubFilter('customs'); }}
+                className={`flex flex-col items-center justify-center gap-1 rounded-lg border p-2 transition-colors ${mainTab === 'active' && subFilter === 'customs' ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50'}`}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Customs</span>
+                <span className="text-base font-bold">{stats.customs}</span>
+              </button>
+            </div>
           </CardContent>
         </Card>
-        <StatCard
-          title="Receivable"
-          value={formatIndianShort(stats.receivable)}
-          description={`Billed: ${formatIndianShort(stats.billing)} · Received: ${formatIndianShort(stats.received)}`}
-          icon={<Truck className="h-4 w-4" />}
-          variant="success"
-          valueClassName="text-base md:text-lg font-bold"
-        />
-        <StatCard
-          title="Payable"
-          value={formatIndianShort(stats.payable)}
-          description={`Total Cost: ${formatIndianShort(stats.cost)} · Est. Profit: ${formatIndianShort(stats.profit)}`}
-          icon={<Clock className="h-4 w-4" />}
-          variant="warning"
-          valueClassName="text-base md:text-lg font-bold"
-        />
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Financial Overview</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Receivable</span>
+                <span className="text-base font-bold">{formatIndianShort(stats.receivable)}</span>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Payable</span>
+                <span className="text-base font-bold">{formatIndianShort(stats.payable)}</span>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Est. Profit</span>
+                <span className="text-base font-bold">{formatIndianShort(stats.profit)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -275,11 +288,24 @@ export default function ConsignmentsList() {
       </Card>
 
       <div>
+        <Tabs value={mainTab} onValueChange={(v: any) => { setMainTab(v); if (v === 'active') setSubFilter('all'); }}>
+          <TabsList className="mb-2">
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {mainTab === 'active' && (
+          <div className="flex gap-2 mb-2">
+            <Button variant={subFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('all')}>All Active</Button>
+            <Button variant={subFilter === 'in_transit' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('in_transit')}>In Transit</Button>
+            <Button variant={subFilter === 'customs' ? 'default' : 'outline'} size="sm" onClick={() => setSubFilter('customs')}>Customs</Button>
+          </div>
+        )}
         <div className="text-sm font-medium mb-2 capitalize">
-          {tab === 'active' && 'Active Consignments'}
-          {tab === 'completed' && 'Completed Consignments'}
-          {tab === 'in_transit' && 'In Transit Consignments'}
-          {tab === 'customs' && 'Customs Pending Consignments'}
+          {mainTab === 'active' && subFilter === 'all' && 'Active Consignments'}
+          {mainTab === 'active' && subFilter === 'in_transit' && 'In Transit Consignments'}
+          {mainTab === 'active' && subFilter === 'customs' && 'Customs Pending Consignments'}
+          {mainTab === 'completed' && 'Completed Consignments'}
           <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
         </div>
         <div className="mt-3">
