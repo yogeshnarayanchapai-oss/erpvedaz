@@ -104,11 +104,15 @@ export default function ConsignmentsList() {
       completed: allRows.filter(r => r.is_completed).length,
       inTransit: active.filter(r => IN_TRANSIT_STATUSES.includes(r.status)).length,
       customs: active.filter(r => CUSTOMS_STATUSES.includes(r.status)).length,
-      receivable: active.reduce((s, r: any) => s + (Number(r.receivable) || 0), 0),
-      payable: active.reduce((s, r: any) => s + ((Number(r.total_cost) || 0) - (Number((r as any).total_received) || 0) > 0 ? 0 : 0) + (Number(r.total_cost) || 0), 0),
+      billing: active.reduce((s, r) => s + (Number(r.customer_billing_amount) || 0), 0),
+      received: active.reduce((s, r: any) => s + (Number(r.total_received) || 0), 0),
+      cost: active.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
+      receivable: active.reduce((s, r: any) => s + Math.max(0, Number(r.receivable) || 0), 0),
+      payable: active.reduce((s, r) => s + Math.max(0, Number(r.total_cost) || 0), 0),
       profit: active.reduce((s, r) => s + (Number(r.estimated_profit) || 0), 0),
     };
   }, [allRows]);
+
 
 
   const save = useSaveConsignment();
