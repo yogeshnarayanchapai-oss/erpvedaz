@@ -210,12 +210,49 @@ export default function ConsignmentsList() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard title="Active" value={stats.active} icon={<Package className="h-4 w-4" />} variant="primary" />
-        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 className="h-4 w-4" />} variant="success" />
-        <StatCard title="In Transit" value={stats.inTransit} icon={<Ship className="h-4 w-4" />} variant="info" />
-        <StatCard title="Customs Pending" value={stats.customs} icon={<Clock className="h-4 w-4" />} variant="warning" />
-        <StatCard title="Receivable / Payable" value={`${formatIndianShort(stats.receivable)} / ${formatIndianShort(stats.payable)}`} description={`Est. Profit: ${formatIndianShort(stats.profit)}`} icon={<Truck className="h-4 w-4" />} variant="default" valueClassName="text-sm md:text-base font-semibold" />
+      {/* Top summary: one status card + receivable + payable */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="md:col-span-1">
+          <CardContent className="p-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Consignment Status</div>
+            <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
+              <TabsList className="grid grid-cols-4 w-full h-auto">
+                <TabsTrigger value="active" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Active</span>
+                  <span className="text-base font-bold">{stats.active}</span>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Completed</span>
+                  <span className="text-base font-bold">{stats.completed}</span>
+                </TabsTrigger>
+                <TabsTrigger value="in_transit" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">In Transit</span>
+                  <span className="text-base font-bold">{stats.inTransit}</span>
+                </TabsTrigger>
+                <TabsTrigger value="customs" className="flex-col gap-0.5 py-1.5">
+                  <span className="text-[10px]">Customs</span>
+                  <span className="text-base font-bold">{stats.customs}</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardContent>
+        </Card>
+        <StatCard
+          title="Receivable"
+          value={formatIndianShort(stats.receivable)}
+          description={`Billed: ${formatIndianShort(stats.billing)} · Received: ${formatIndianShort(stats.received)}`}
+          icon={<Truck className="h-4 w-4" />}
+          variant="success"
+          valueClassName="text-base md:text-lg font-bold"
+        />
+        <StatCard
+          title="Payable"
+          value={formatIndianShort(stats.payable)}
+          description={`Total Cost: ${formatIndianShort(stats.cost)} · Est. Profit: ${formatIndianShort(stats.profit)}`}
+          icon={<Clock className="h-4 w-4" />}
+          variant="warning"
+          valueClassName="text-base md:text-lg font-bold"
+        />
       </div>
 
       <Card>
@@ -237,12 +274,31 @@ export default function ConsignmentsList() {
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
-        <TabsList>
-          <TabsTrigger value="active">Active Consignments</TabsTrigger>
-          <TabsTrigger value="completed">Completed Consignments</TabsTrigger>
-        </TabsList>
-        <TabsContent value={tab} className="mt-3">
+      <div>
+        <div className="text-sm font-medium mb-2 capitalize">
+          {tab === 'active' && 'Active Consignments'}
+          {tab === 'completed' && 'Completed Consignments'}
+          {tab === 'in_transit' && 'In Transit Consignments'}
+          {tab === 'customs' && 'Customs Pending Consignments'}
+          <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
+        </div>
+        <div className="mt-3">
+          <Card>
+            <CardContent className="p-0 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                  <TableHead>Code</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Mode</TableHead>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>ETA</TableHead>
+                    <TableHead>Time (Days)</TableHead>
+                    <TableHead className="text-right">Billing</TableHead>
+
           <Card>
             <CardContent className="p-0 overflow-auto">
               <Table>
