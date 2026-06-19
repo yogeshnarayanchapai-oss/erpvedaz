@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
 import { InlineTypeSelector } from './InlineTypeSelector';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; defaultPartyId?: string; context?: 'party' | 'transaction'; }
 
