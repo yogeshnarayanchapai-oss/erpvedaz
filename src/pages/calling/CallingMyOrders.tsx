@@ -477,6 +477,9 @@ export default function CallingMyOrders() {
                           {order.order_status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={(order as any).delivery_notes || (order as any).leads?.remark || ''}>
+                        {(order as any).delivery_notes || (order as any).leads?.remark || '-'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button
