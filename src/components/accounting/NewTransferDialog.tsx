@@ -22,11 +22,11 @@ export function NewTransferDialog({ open, onOpenChange }: NewTransferDialogProps
   const createTransaction = useCreateTransaction();
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '',
+    date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '', consignment_id: null as string | null,
   });
 
   const resetForm = () => {
-    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '' });
+    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '', consignment_id: null });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +43,7 @@ export function NewTransferDialog({ open, onOpenChange }: NewTransferDialogProps
         from_account_id: formData.from_account_id, to_account_id: formData.to_account_id,
         account_id: null, reference_no: formData.reference_no || null, note: formData.note || null,
         description: formData.note || `Transfer from ${fromAccount?.name || 'Unknown'} to ${toAccount?.name || 'Unknown'}`,
+        consignment_id: formData.consignment_id,
       });
       toast.success('Transfer completed successfully');
       resetForm();
