@@ -956,6 +956,9 @@ export default function AdminOrders() {
                         {order.order_status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={(order as any).delivery_notes || (order as any).leads?.remark || ''}>
+                      {(order as any).delivery_notes || (order as any).leads?.remark || '-'}
+                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       {order.delivery_location === 'INSIDE_VALLEY' ? (
                         (effectiveRole === 'ADMIN' || effectiveRole === 'OWNER') ? (
