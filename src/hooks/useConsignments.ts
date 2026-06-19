@@ -1,7 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { toast } from 'sonner';
+
+async function logActivity(params: { consignment_id: string | null; store_id: string; action: string; details?: any }) {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    await (supabase as any).from('consignment_activity_logs').insert({
+      consignment_id: params.consignment_id,
+      store_id: params.store_id,
+      action: params.action,
+      details: params.details ?? null,
+      performed_by: user?.user?.id,
+    });
+  } catch (e) {
+    console.error('activity log failed', e);
+  }
+}
+
+async function getConsignmentMeta(id: string): Promise<{ store_id: string | null; code: string | null }> {
+  const { data } = await (supabase as any).from('consignments').select('store_id, consignment_code').eq('id', id).maybeSingle();
+  return { store_id: data?.store_id || null, code: data?.consignment_code || null };
+}
 
 export type ConsignmentStatus =
   | 'INQUIRY_RECEIVED' | 'QUOTATION_SENT' | 'ORDER_CONFIRMED' | 'ADVANCE_RECEIVED'
