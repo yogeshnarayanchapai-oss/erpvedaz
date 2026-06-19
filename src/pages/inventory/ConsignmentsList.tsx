@@ -139,6 +139,13 @@ export default function ConsignmentsList() {
   const [delId, setDelId] = useState<string | null>(null);
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { data: statusOptions = [] } = useConsignmentSettings('STATUS');
+  const activeStatusOptions = statusOptions.filter(s => s.is_active);
+  const statusLabelMap: Record<string, string> = {
+    ...STATUS_LABELS,
+    ...Object.fromEntries(statusOptions.map(s => [s.code, s.label])),
+  };
 
   const calcDays = (r: Consignment) => {
     const start = new Date(r.created_at).getTime();
