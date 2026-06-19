@@ -486,7 +486,7 @@ export default function ViewTransactions() {
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                
+                <TableHead>Consignment</TableHead>
                 <TableHead>Remark</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
