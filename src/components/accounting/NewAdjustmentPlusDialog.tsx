@@ -25,11 +25,11 @@ export function NewAdjustmentPlusDialog({ open, onOpenChange, onSwitchType }: Ne
   const createTransaction = useCreateTransaction();
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', reference_no: '', note: '',
+    date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', reference_no: '', note: '', consignment_id: null as string | null,
   });
 
   const resetForm = () => {
-    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', reference_no: '', note: '' });
+    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', reference_no: '', note: '', consignment_id: null });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +40,7 @@ export function NewAdjustmentPlusDialog({ open, onOpenChange, onSwitchType }: Ne
         account_id: formData.account_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null, description: formData.note || 'Balance Adjustment (+)',
+        consignment_id: formData.consignment_id,
       });
       toast.success('Adjustment (+) created successfully');
       resetForm();
