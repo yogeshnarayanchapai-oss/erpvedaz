@@ -388,6 +388,17 @@ export default function ViewTransactions() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Consignment</Label>
+              <ConsignmentPicker
+                value={filters.consignmentId || null}
+                onValueChange={(v) => setFilters({ ...filters, consignmentId: v || '' })}
+                placeholder="All consignments"
+              />
+            </div>
+
+
+
             <div className="space-y-2 col-span-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
