@@ -18,7 +18,7 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitch
 export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPartyId, context = 'transaction' }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
-  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: defaultPartyId || '', reference_no: '', note: '' });
+  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: defaultPartyId || '', reference_no: '', note: '', consignment_id: null as string | null });
 
   // Sync defaultPartyId when dialog opens
   const [prevOpen, setPrevOpen] = useState(false);
@@ -27,7 +27,7 @@ export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPa
   }
   if (open !== prevOpen) setPrevOpen(open);
 
-  const resetForm = () => setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '' });
+  const resetForm = () => setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', reference_no: '', note: '', consignment_id: null });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +38,7 @@ export function NewPaymentInDialog({ open, onOpenChange, onSwitchType, defaultPa
         account_id: formData.account_id, party_id: formData.party_id || null,
         reference_no: formData.reference_no || null, note: formData.note || null,
         description: formData.note || 'Payment Received',
+        consignment_id: formData.consignment_id,
       });
       resetForm();
       onOpenChange(false);
