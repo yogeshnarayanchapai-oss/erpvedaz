@@ -442,6 +442,9 @@ export default function LeadsFollowup() {
                         {formatStatusLabel(lead.status)}
                       </Badge>
                     </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>
+                      {lead.remark || '-'}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {lead.last_transfer_reason || '-'}
                     </TableCell>
