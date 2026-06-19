@@ -848,6 +848,7 @@ export default function LeadsAll() {
                           {formatStatusLabel(lead.status)}
                         </Badge>
                       </TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>{lead.remark || '-'}</TableCell>
                       <TableCell>{lead.assigned_to?.name || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{lead.current_team}</Badge>
