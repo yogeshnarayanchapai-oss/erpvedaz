@@ -413,6 +413,7 @@ export default function LeadsFollowup() {
                   <TableHead>Product</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Last Reason</TableHead>
                 </TableRow>
               </TableHeader>
