@@ -16,8 +16,9 @@ import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Do
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
-import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateConsignmentStatus, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
+import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateConsignmentStatus, useConsignmentActivityLogs, Consignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus, ShipmentMode } from '@/hooks/useConsignments';
 import { exportConsignmentPDF } from '@/lib/consignmentPdf';
+import { format, subDays } from 'date-fns';
 import * as XLSX from 'xlsx';
 
 const formatCompactAmount = (n: number): string => {
