@@ -387,6 +387,7 @@ export default function CallingOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   {showInsideDeliveryColumn && (
                     <TableHead className="table-header">Delivery Update</TableHead>
                   )}
