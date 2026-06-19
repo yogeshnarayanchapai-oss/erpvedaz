@@ -40,6 +40,14 @@ export default function ConsignmentDetail() {
   const uploadDoc = useUploadDocument();
   const delDoc = useDeleteDocument();
   const save = useSaveConsignment();
+  const { data: statusOptions = [] } = useConsignmentSettings('STATUS');
+  const { data: paymentCategories = [] } = useConsignmentSettings('PAYMENT_CATEGORY');
+  const activeStatusOptions = statusOptions.filter(s => s.is_active);
+  const activePaymentCategories = paymentCategories.filter(s => s.is_active);
+  const statusLabelMap: Record<string, string> = {
+    ...STATUS_LABELS,
+    ...Object.fromEntries(statusOptions.map(s => [s.code, s.label])),
+  };
 
   const [statusForm, setStatusForm] = useState<{ status: ConsignmentStatus; remarks: string }>({ status: 'INQUIRY_RECEIVED', remarks: '' });
   const [costForm, setCostForm] = useState({ cost_type: 'PRODUCT', description: '', amount: '' });
