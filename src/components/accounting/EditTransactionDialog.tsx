@@ -11,6 +11,7 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateActivityLog } from '@/hooks/useAccountingActivityLogs';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
