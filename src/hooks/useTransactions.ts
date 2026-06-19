@@ -126,10 +126,12 @@ export function useCreateTransaction() {
       category_id?: string | null;
       party_id?: string | null;
       order_id?: string | null;
+      consignment_id?: string | null;
       reference_no?: string | null;
       note?: string | null;
       description?: string | null;
       created_by?: string | null;
+
     }) => {
       // ===== Insufficient funds check for outflow transactions =====
       // Outflow types deduct money from the source account. Block when
