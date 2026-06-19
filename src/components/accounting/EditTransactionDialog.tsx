@@ -28,6 +28,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     party_id: '',
     reference_no: '',
     note: '',
+    consignment_id: null as string | null,
   });
 
   const { data: accounts = [] } = useActiveAccounts();
@@ -46,6 +47,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: transaction.party_id || '',
         reference_no: transaction.reference_no || '',
         note: transaction.note || '',
+        consignment_id: (transaction as any).consignment_id || null,
       });
     }
   }, [transaction]);
@@ -64,6 +66,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
+        consignment_id: formData.consignment_id,
       } as any);
 
       await createActivityLog.mutateAsync({
