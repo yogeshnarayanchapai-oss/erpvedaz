@@ -245,7 +245,7 @@ export default function ConsignmentsList() {
         <Card>
           <CardContent className="p-3">
             <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Financial Overview</div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Receivable</span>
                 <span className="text-base font-bold">{formatIndianShort(stats.receivable)}</span>
@@ -253,6 +253,10 @@ export default function ConsignmentsList() {
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Cost</span>
                 <span className="text-base font-bold">{formatIndianShort(stats.payable)}</span>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-blue-500/5">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Net (In Hand)</span>
+                <span className={`text-base font-bold ${(stats.received - stats.cost) >= 0 ? 'text-blue-600' : 'text-destructive'}`}>{formatIndianShort(stats.received - stats.cost)}</span>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border p-2 bg-card">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">Est. Profit</span>

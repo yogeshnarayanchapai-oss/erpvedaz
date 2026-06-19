@@ -266,10 +266,11 @@ export default function ConsignmentDetail() {
                 <Button type="submit">Add</Button>
               </form>
             )}
-            <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div className="p-3 rounded border bg-emerald-500/5"><div className="text-xs text-muted-foreground">Received from Customer</div><div className="font-bold">{totalReceived.toLocaleString()}</div></div>
               <div className="p-3 rounded border bg-red-500/5"><div className="text-xs text-muted-foreground">Paid out</div><div className="font-bold">{totalPaid.toLocaleString()}</div></div>
               <div className="p-3 rounded border"><div className="text-xs text-muted-foreground">Receivable</div><div className="font-bold">{receivable.toLocaleString()}</div></div>
+              <div className="p-3 rounded border bg-blue-500/5"><div className="text-xs text-muted-foreground">Net (In Hand)</div><div className={`font-bold ${(totalReceived - totalPaid) >= 0 ? 'text-blue-600' : 'text-destructive'}`}>{(totalReceived - totalPaid).toLocaleString()}</div></div>
             </div>
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Direction</TableHead><TableHead>For</TableHead><TableHead>Method</TableHead><TableHead className="text-right">Amount</TableHead><TableHead></TableHead></TableRow></TableHeader>
