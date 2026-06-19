@@ -452,7 +452,7 @@ export default function LeadsFollowup() {
                 ))}
                 {followupLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No follow-up or CNR leads in queue'}
                     </TableCell>
                   </TableRow>
