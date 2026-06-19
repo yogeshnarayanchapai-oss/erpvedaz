@@ -899,7 +899,7 @@ Order By: ${profile?.name || 'N/A'}`;
                         {formatStatusLabel(lead.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[150px] truncate">{lead.remark || '-'}</TableCell>
+                    <TableCell className="max-w-[200px]" title={lead.remark || ''}><span className={`block whitespace-pre-wrap break-words line-clamp-2 ${(lead.remark || '').length > 40 ? 'text-[10px] leading-tight' : 'text-xs'}`}>{lead.remark || '-'}</span></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button
