@@ -10,6 +10,7 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowRight } from 'lucide-react';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface NewTransferDialogProps {
   open: boolean;
