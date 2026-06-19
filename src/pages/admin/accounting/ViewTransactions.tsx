@@ -494,12 +494,12 @@ export default function ViewTransactions() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
