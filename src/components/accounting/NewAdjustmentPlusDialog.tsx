@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { InlineTypeSelector } from '@/components/accounting/InlineTypeSelector';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck } from 'lucide-react';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface NewAdjustmentPlusDialogProps {
   open: boolean;
