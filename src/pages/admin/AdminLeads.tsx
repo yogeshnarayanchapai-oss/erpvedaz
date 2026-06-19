@@ -1189,6 +1189,7 @@ export default function AdminLeads() {
                   <TableHead className="table-header">Product</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Assigned To</TableHead>
                   <TableHead className="table-header">Created By</TableHead>
                   <TableHead className="table-header text-center">Actions</TableHead>
@@ -1236,6 +1237,7 @@ export default function AdminLeads() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>{lead.remark || '-'}</TableCell>
                     <TableCell>
                       {(lead.status === 'CONFIRMED' || lead.order_id) ? (
                         <span className="text-muted-foreground">{lead.assigned_to?.name || '-'}</span>
@@ -1267,7 +1269,7 @@ export default function AdminLeads() {
                 ))}
                 {filteredLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No leads found'}
                     </TableCell>
                   </TableRow>

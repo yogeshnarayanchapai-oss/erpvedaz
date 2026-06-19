@@ -892,6 +892,7 @@ export default function AdminOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Order Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Delivery Status</TableHead>
                   <TableHead className="table-header">Payment</TableHead>
                   <TableHead className="table-header">Confirmed By</TableHead>
@@ -954,6 +955,9 @@ export default function AdminOrders() {
                       >
                         {order.order_status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={(order as any).delivery_notes || (order as any).leads?.remark || ''}>
+                      {(order as any).delivery_notes || (order as any).leads?.remark || '-'}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       {order.delivery_location === 'INSIDE_VALLEY' ? (
