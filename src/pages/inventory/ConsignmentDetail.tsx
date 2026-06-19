@@ -18,9 +18,9 @@ import {
   useConsignmentDocuments, useUploadDocument, useDeleteDocument,
   useSaveConsignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus,
 } from '@/hooks/useConsignments';
+import { useConsignmentSettings } from '@/hooks/useConsignmentSettings';
 import { toast } from 'sonner';
 
-const PAYMENT_FOR_TYPES = ['CUSTOMER','SUPPLIER','FREIGHT','CUSTOMS','AGENT','TRANSPORT','WAREHOUSE','PACKAGING','OTHER'];
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
 
 export default function ConsignmentDetail() {
@@ -40,6 +40,14 @@ export default function ConsignmentDetail() {
   const uploadDoc = useUploadDocument();
   const delDoc = useDeleteDocument();
   const save = useSaveConsignment();
+  const { data: statusOptions = [] } = useConsignmentSettings('STATUS');
+  const { data: paymentCategories = [] } = useConsignmentSettings('PAYMENT_CATEGORY');
+  const activeStatusOptions = statusOptions.filter(s => s.is_active);
+  const activePaymentCategories = paymentCategories.filter(s => s.is_active);
+  const statusLabelMap: Record<string, string> = {
+    ...STATUS_LABELS,
+    ...Object.fromEntries(statusOptions.map(s => [s.code, s.label])),
+  };
 
   const [statusForm, setStatusForm] = useState<{ status: ConsignmentStatus; remarks: string }>({ status: 'INQUIRY_RECEIVED', remarks: '' });
   const [costForm, setCostForm] = useState({ cost_type: 'PRODUCT', description: '', amount: '' });
@@ -120,7 +128,7 @@ export default function ConsignmentDetail() {
             <h1 className="text-xl font-bold">{c.consignment_code}</h1>
             <p className="text-xs text-muted-foreground">{c.product_name} · {c.origin_country} → {c.destination}</p>
           </div>
-          <Badge variant="outline">{STATUS_LABELS[c.status]}</Badge>
+          <Badge variant="outline">{(statusLabelMap[c.status] || c.status)}</Badge>
           {c.is_locked && <Badge variant="outline" className="bg-amber-500/15 text-amber-600">Locked</Badge>}
           {c.is_completed && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600">Completed</Badge>}
         </div>
@@ -185,7 +193,7 @@ export default function ConsignmentDetail() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
               <Select value={statusForm.status} onValueChange={v => setStatusForm({ ...statusForm, status: v as ConsignmentStatus })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
               </Select>
               <Input className="md:col-span-2" placeholder="Remarks" value={statusForm.remarks} onChange={e => setStatusForm({ ...statusForm, remarks: e.target.value })} />
               <Button onClick={handleStatusUpdate} disabled={updateStatus.isPending}>Update Status</Button>
@@ -196,8 +204,8 @@ export default function ConsignmentDetail() {
                 {history.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4">No history</TableCell></TableRow> : history.map((h: any) => (
                   <TableRow key={h.id}>
                     <TableCell className="text-xs">{new Date(h.changed_at).toLocaleString()}</TableCell>
-                    <TableCell>{h.previous_status ? STATUS_LABELS[h.previous_status as ConsignmentStatus] : '-'}</TableCell>
-                    <TableCell><Badge variant="outline">{STATUS_LABELS[h.new_status as ConsignmentStatus]}</Badge></TableCell>
+                    <TableCell>{h.previous_status ? (statusLabelMap[h.previous_status as string] || h.previous_status) : '-'}</TableCell>
+                    <TableCell><Badge variant="outline">{(statusLabelMap[h.new_status as string] || h.new_status)}</Badge></TableCell>
                     <TableCell className="text-xs">{h.remarks || '-'}</TableCell>
                   </TableRow>
                 ))}
@@ -258,7 +266,7 @@ export default function ConsignmentDetail() {
                 </Select>
                 <Select value={payForm.payment_for} onValueChange={v => setPayForm({ ...payForm, payment_for: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{PAYMENT_FOR_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{activePaymentCategories.map(t => <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input type="number" placeholder="Amount" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} required />
                 <Input type="date" value={payForm.payment_date} onChange={e => setPayForm({ ...payForm, payment_date: e.target.value })} />

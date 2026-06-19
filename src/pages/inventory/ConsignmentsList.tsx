@@ -12,7 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download, Menu } from 'lucide-react';
+import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download, Menu, Settings } from 'lucide-react';
+import { ConsignmentSettingsDialog } from '@/components/inventory/ConsignmentSettingsDialog';
+import { useConsignmentSettings } from '@/hooks/useConsignmentSettings';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
@@ -137,6 +139,13 @@ export default function ConsignmentsList() {
   const [delId, setDelId] = useState<string | null>(null);
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { data: statusOptions = [] } = useConsignmentSettings('STATUS');
+  const activeStatusOptions = statusOptions.filter(s => s.is_active);
+  const statusLabelMap: Record<string, string> = {
+    ...STATUS_LABELS,
+    ...Object.fromEntries(statusOptions.map(s => [s.code, s.label])),
+  };
 
   const calcDays = (r: Consignment) => {
     const start = new Date(r.created_at).getTime();
@@ -197,7 +206,7 @@ export default function ConsignmentsList() {
       Mode: r.shipment_mode || '',
       Origin: r.origin_country || '',
       Destination: r.destination || '',
-      Status: STATUS_LABELS[r.status],
+      Status: (statusLabelMap[r.status] || r.status),
       ETA: r.eta || r.expected_arrival_date || '',
       'Time (Days)': calcDays(r),
       Billing: r.customer_billing_amount || 0,
@@ -218,6 +227,7 @@ export default function ConsignmentsList() {
           <p className="text-sm text-muted-foreground">Track and manage import / export consignments end-to-end</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>
           <Button variant="outline" onClick={exportXlsx}><Download className="h-4 w-4 mr-1" /> Export</Button>
           <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>
         </div>
@@ -290,7 +300,7 @@ export default function ConsignmentsList() {
           <Input placeholder="Search code / customer / supplier / product" value={search} onChange={e => setSearch(e.target.value)} className="md:col-span-2" />
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Status</SelectItem>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="all">All Status</SelectItem>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={mode} onValueChange={setMode}>
             <SelectTrigger><SelectValue placeholder="Mode" /></SelectTrigger>
@@ -361,10 +371,10 @@ export default function ConsignmentsList() {
                             {inlineStatusId === r.id ? (
                               <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
                                 <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
-                                <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                                <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
                               </Select>
                             ) : (
-                              <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                              <Badge variant="outline" className={STATUS_COLORS[r.status]}>{(statusLabelMap[r.status] || r.status)}</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-xs">{calcDays(r)}</TableCell>
@@ -458,7 +468,7 @@ export default function ConsignmentsList() {
                   <div><Label>Status</Label>
                     <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                      <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -519,6 +529,8 @@ export default function ConsignmentsList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConsignmentSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
