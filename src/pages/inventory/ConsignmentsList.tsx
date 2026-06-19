@@ -87,7 +87,7 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
-  const [mainTab, setMainTab] = useState<'active' | 'completed'>('active');
+  const [mainTab, setMainTab] = useState<'active' | 'completed' | 'activity'>('active');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [mode, setMode] = useState('all');
