@@ -34,6 +34,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
+import { useConsignmentOptions } from '@/hooks/useConsignmentOptions';
 
 export default function ViewTransactions() {
   const queryClient = useQueryClient();
