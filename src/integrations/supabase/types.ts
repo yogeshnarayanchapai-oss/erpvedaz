@@ -1931,7 +1931,7 @@ export type Database = {
       consignment_activity_logs: {
         Row: {
           action: string
-          consignment_id: string
+          consignment_id: string | null
           details: Json | null
           id: string
           performed_at: string
@@ -1940,7 +1940,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          consignment_id: string
+          consignment_id?: string | null
           details?: Json | null
           id?: string
           performed_at?: string
@@ -1949,7 +1949,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          consignment_id?: string
+          consignment_id?: string | null
           details?: Json | null
           id?: string
           performed_at?: string

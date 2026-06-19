@@ -1,7 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { toast } from 'sonner';
+
+async function logActivity(params: { consignment_id: string | null; store_id: string; action: string; details?: any }) {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    await (supabase as any).from('consignment_activity_logs').insert({
+      consignment_id: params.consignment_id,
+      store_id: params.store_id,
+      action: params.action,
+      details: params.details ?? null,
+      performed_by: user?.user?.id,
+    });
+  } catch (e) {
+    console.error('activity log failed', e);
+  }
+}
+
+async function getConsignmentMeta(id: string): Promise<{ store_id: string | null; code: string | null }> {
+  const { data } = await (supabase as any).from('consignments').select('store_id, consignment_code').eq('id', id).maybeSingle();
+  return { store_id: data?.store_id || null, code: data?.consignment_code || null };
+}
 
 export type ConsignmentStatus =
   | 'INQUIRY_RECEIVED' | 'QUOTATION_SENT' | 'ORDER_CONFIRMED' | 'ADVANCE_RECEIVED'
@@ -174,17 +195,43 @@ export function useSaveConsignment() {
         return acc;
       }, {});
       if (id) {
+        // Fetch previous to diff numeric/billing edits
+        const { data: prev } = await (supabase as any).from('consignments').select('*').eq('id', id).single();
         const { data, error } = await (supabase as any).from('consignments').update(rest).eq('id', id).select().single();
         if (error) throw error;
+        // Log meaningful edits
+        const changed: Record<string, { from: any; to: any }> = {};
+        Object.keys(rest).forEach(k => {
+          const a = (prev as any)?.[k];
+          const b = (rest as any)[k];
+          if (String(a ?? '') !== String(b ?? '')) changed[k] = { from: a ?? null, to: b ?? null };
+        });
+        if (Object.keys(changed).length) {
+          const amountFields = ['customer_billing_amount', 'total_cost', 'estimated_profit', 'actual_profit'];
+          const isAmountEdit = Object.keys(changed).some(k => amountFields.includes(k));
+          await logActivity({
+            consignment_id: id,
+            store_id: data.store_id,
+            action: isAmountEdit ? 'AMOUNT_EDITED' : 'CONSIGNMENT_EDITED',
+            details: { code: data.consignment_code, changed },
+          });
+        }
         return data;
       }
       const { data, error } = await (supabase as any).from('consignments').insert({ ...rest, store_id: storeId }).select().single();
       if (error) throw error;
+      await logActivity({
+        consignment_id: data.id,
+        store_id: data.store_id,
+        action: 'CONSIGNMENT_CREATED',
+        details: { code: data.consignment_code, customer_billing_amount: data.customer_billing_amount },
+      });
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
       qc.invalidateQueries({ queryKey: ['consignment'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Consignment saved');
     },
     onError: (e: any) => toast.error(e.message || 'Failed to save'),
@@ -195,11 +242,21 @@ export function useDeleteConsignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const meta = await getConsignmentMeta(id);
       const { error } = await (supabase as any).from('consignments').delete().eq('id', id);
       if (error) throw error;
+      if (meta.store_id) {
+        await logActivity({
+          consignment_id: null,
+          store_id: meta.store_id,
+          action: 'CONSIGNMENT_DELETED',
+          details: { code: meta.code, id },
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Consignment deleted');
     },
     onError: (e: any) => toast.error(e.message || 'Failed to delete'),
@@ -210,7 +267,7 @@ export function useUpdateConsignmentStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, remarks, storeId }: { id: string; status: ConsignmentStatus; remarks?: string; storeId: string }) => {
-      const { data: prev } = await (supabase as any).from('consignments').select('status').eq('id', id).single();
+      const { data: prev } = await (supabase as any).from('consignments').select('status, consignment_code').eq('id', id).single();
       const patch: any = { status };
       if (status === 'COMPLETED') { patch.is_completed = true; patch.completed_at = new Date().toISOString(); patch.is_locked = true; }
       const { error } = await (supabase as any).from('consignments').update(patch).eq('id', id);
@@ -219,11 +276,18 @@ export function useUpdateConsignmentStatus() {
       await (supabase as any).from('consignment_status_history').insert({
         consignment_id: id, store_id: storeId, previous_status: prev?.status, new_status: status, remarks, changed_by: user?.user?.id,
       });
+      await logActivity({
+        consignment_id: id,
+        store_id: storeId,
+        action: 'STATUS_CHANGED',
+        details: { code: prev?.consignment_code, from: prev?.status, to: status, remarks },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
       qc.invalidateQueries({ queryKey: ['consignment'] });
       qc.invalidateQueries({ queryKey: ['consignment-history'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Status updated');
     },
     onError: (e: any) => toast.error(e.message || 'Failed'),
@@ -258,12 +322,21 @@ export function useAddCost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (row: any) => {
-      const { error } = await (supabase as any).from('consignment_costs').insert(row);
+      const { data, error } = await (supabase as any).from('consignment_costs').insert(row).select().single();
       if (error) throw error;
+      const meta = await getConsignmentMeta(row.consignment_id);
+      await logActivity({
+        consignment_id: row.consignment_id,
+        store_id: row.store_id || meta.store_id!,
+        action: 'COST_ADDED',
+        details: { code: meta.code, label: row.label || row.description, amount: row.amount },
+      });
+      return data;
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Cost added');
     },
     onError: (e: any) => toast.error(e.message),
@@ -273,13 +346,24 @@ export function useAddCost() {
 export function useDeleteCost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id }: { id: string; consignment_id: string }) => {
+    mutationFn: async ({ id, consignment_id }: { id: string; consignment_id: string }) => {
+      const { data: prev } = await (supabase as any).from('consignment_costs').select('*').eq('id', id).maybeSingle();
       const { error } = await (supabase as any).from('consignment_costs').delete().eq('id', id);
       if (error) throw error;
+      const meta = await getConsignmentMeta(consignment_id);
+      if (meta.store_id) {
+        await logActivity({
+          consignment_id,
+          store_id: meta.store_id,
+          action: 'COST_DELETED',
+          details: { code: meta.code, label: prev?.label || prev?.description, amount: prev?.amount },
+        });
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['consignment-costs', vars.consignment_id] });
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
     },
   });
 }
@@ -300,12 +384,21 @@ export function useAddPayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (row: any) => {
-      const { error } = await (supabase as any).from('consignment_payments').insert(row);
+      const { data, error } = await (supabase as any).from('consignment_payments').insert(row).select().single();
       if (error) throw error;
+      const meta = await getConsignmentMeta(row.consignment_id);
+      await logActivity({
+        consignment_id: row.consignment_id,
+        store_id: row.store_id || meta.store_id!,
+        action: row.direction === 'RECEIVED' ? 'PAYMENT_RECEIVED' : 'PAYMENT_PAID',
+        details: { code: meta.code, direction: row.direction, amount: row.amount, method: row.method, note: row.note },
+      });
+      return data;
     },
     onSuccess: (_, vars: any) => {
       qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Payment recorded');
     },
     onError: (e: any) => toast.error(e.message),
@@ -315,16 +408,93 @@ export function useAddPayment() {
 export function useDeletePayment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id }: { id: string; consignment_id: string }) => {
+    mutationFn: async ({ id, consignment_id }: { id: string; consignment_id: string }) => {
+      const { data: prev } = await (supabase as any).from('consignment_payments').select('*').eq('id', id).maybeSingle();
       const { error } = await (supabase as any).from('consignment_payments').delete().eq('id', id);
       if (error) throw error;
+      const meta = await getConsignmentMeta(consignment_id);
+      if (meta.store_id) {
+        await logActivity({
+          consignment_id,
+          store_id: meta.store_id,
+          action: 'PAYMENT_DELETED',
+          details: { code: meta.code, direction: prev?.direction, amount: prev?.amount, method: prev?.method },
+        });
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['consignment-payments', vars.consignment_id] });
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
     },
   });
 }
+
+export interface ConsignmentActivityLog {
+  id: string;
+  consignment_id: string | null;
+  store_id: string;
+  action: string;
+  details: any;
+  performed_by: string | null;
+  performed_at: string;
+  performer_name?: string | null;
+  consignment_code?: string | null;
+}
+
+export function useConsignmentActivityLogs(filters?: { startDate?: string; endDate?: string; action?: string; search?: string }) {
+  const storeId = useCurrentStoreId();
+  const filterByStore = useIsModuleStoreWise('inventory');
+  return useQuery({
+    queryKey: ['consignment-activity-logs', storeId, filterByStore, filters],
+    enabled: !!storeId,
+    queryFn: async () => {
+      let q = (supabase as any).from('consignment_activity_logs').select('*').order('performed_at', { ascending: false }).limit(500);
+      if (filterByStore && storeId) q = q.eq('store_id', storeId);
+      if (filters?.startDate) q = q.gte('performed_at', filters.startDate);
+      if (filters?.endDate) q = q.lte('performed_at', filters.endDate + 'T23:59:59');
+      if (filters?.action && filters.action !== 'all') q = q.eq('action', filters.action);
+      const { data, error } = await q;
+      if (error) throw error;
+      const logs = (data || []) as ConsignmentActivityLog[];
+
+      const performerIds = [...new Set(logs.map(l => l.performed_by).filter(Boolean))] as string[];
+      const consignmentIds = [...new Set(logs.map(l => l.consignment_id).filter(Boolean))] as string[];
+
+      const [profilesRes, consignmentsRes] = await Promise.all([
+        performerIds.length
+          ? supabase.from('profiles').select('id, name').in('id', performerIds)
+          : Promise.resolve({ data: [] as any[] }),
+        consignmentIds.length
+          ? (supabase as any).from('consignments').select('id, consignment_code').in('id', consignmentIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const pMap: Record<string, string> = {};
+      (profilesRes.data || []).forEach((p: any) => { pMap[p.id] = p.name || 'Unknown'; });
+      const cMap: Record<string, string> = {};
+      (consignmentsRes.data || []).forEach((c: any) => { cMap[c.id] = c.consignment_code; });
+
+      let enriched = logs.map(l => ({
+        ...l,
+        performer_name: l.performed_by ? pMap[l.performed_by] || null : null,
+        consignment_code: l.consignment_id ? cMap[l.consignment_id] || l.details?.code || null : l.details?.code || null,
+      }));
+
+      if (filters?.search) {
+        const s = filters.search.toLowerCase();
+        enriched = enriched.filter(l =>
+          (l.consignment_code || '').toLowerCase().includes(s) ||
+          (l.performer_name || '').toLowerCase().includes(s) ||
+          l.action.toLowerCase().includes(s) ||
+          JSON.stringify(l.details || {}).toLowerCase().includes(s)
+        );
+      }
+      return enriched;
+    },
+  });
+}
+
 
 export function useConsignmentDocuments(id: string | undefined) {
   return useQuery({
