@@ -522,3 +522,132 @@ export default function ConsignmentsList() {
     </div>
   );
 }
+
+const ACTION_LABELS: Record<string, string> = {
+  CONSIGNMENT_CREATED: 'Consignment Created',
+  CONSIGNMENT_EDITED: 'Consignment Edited',
+  CONSIGNMENT_DELETED: 'Consignment Deleted',
+  AMOUNT_EDITED: 'Amount Edited',
+  STATUS_CHANGED: 'Status Changed',
+  COST_ADDED: 'Cost Added',
+  COST_DELETED: 'Cost Deleted',
+  PAYMENT_RECEIVED: 'Payment Received',
+  PAYMENT_PAID: 'Payment Paid',
+  PAYMENT_DELETED: 'Payment Deleted',
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  CONSIGNMENT_CREATED: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+  CONSIGNMENT_EDITED: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+  CONSIGNMENT_DELETED: 'bg-red-500/15 text-red-600 border-red-500/30',
+  AMOUNT_EDITED: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+  STATUS_CHANGED: 'bg-indigo-500/15 text-indigo-600 border-indigo-500/30',
+  COST_ADDED: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  COST_DELETED: 'bg-red-500/15 text-red-600 border-red-500/30',
+  PAYMENT_RECEIVED: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  PAYMENT_PAID: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
+  PAYMENT_DELETED: 'bg-red-500/15 text-red-600 border-red-500/30',
+};
+
+function describeLog(log: any): string {
+  const d = log.details || {};
+  switch (log.action) {
+    case 'CONSIGNMENT_CREATED': return `Created ${d.code || ''}${d.customer_billing_amount ? ` · Billing NPR ${Number(d.customer_billing_amount).toLocaleString()}` : ''}`;
+    case 'CONSIGNMENT_DELETED': return `Deleted ${d.code || ''}`;
+    case 'AMOUNT_EDITED': {
+      const ch = d.changed || {};
+      return Object.entries(ch).map(([k, v]: any) => `${k}: ${v.from ?? '-'} → ${v.to ?? '-'}`).join(', ');
+    }
+    case 'CONSIGNMENT_EDITED': {
+      const ch = d.changed || {};
+      const keys = Object.keys(ch).slice(0, 3).join(', ');
+      return `Edited fields: ${keys}${Object.keys(ch).length > 3 ? '...' : ''}`;
+    }
+    case 'STATUS_CHANGED': return `${d.from || '-'} → ${d.to || '-'}${d.remarks ? ` · ${d.remarks}` : ''}`;
+    case 'COST_ADDED': return `${d.label || 'Cost'} · NPR ${Number(d.amount || 0).toLocaleString()}`;
+    case 'COST_DELETED': return `Removed ${d.label || 'cost'} · NPR ${Number(d.amount || 0).toLocaleString()}`;
+    case 'PAYMENT_RECEIVED': return `Received NPR ${Number(d.amount || 0).toLocaleString()}${d.method ? ` via ${d.method}` : ''}`;
+    case 'PAYMENT_PAID': return `Paid NPR ${Number(d.amount || 0).toLocaleString()}${d.method ? ` via ${d.method}` : ''}`;
+    case 'PAYMENT_DELETED': return `Removed ${d.direction || ''} payment · NPR ${Number(d.amount || 0).toLocaleString()}`;
+    default: return JSON.stringify(d);
+  }
+}
+
+function ActivitySection(props: {
+  startDate: string; setStartDate: (v: string) => void;
+  endDate: string; setEndDate: (v: string) => void;
+  action: string; setAction: (v: string) => void;
+  search: string; setSearch: (v: string) => void;
+  logs: any[]; isLoading: boolean;
+  onOpenConsignment: (id: string) => void;
+}) {
+  const { startDate, setStartDate, endDate, setEndDate, action, setAction, search, setSearch, logs, isLoading, onOpenConsignment } = props;
+  return (
+    <div className="space-y-3">
+      <Card>
+        <CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div>
+            <Label className="text-xs">Start Date</Label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">End Date</Label>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">Action Type</Label>
+            <Select value={action} onValueChange={setAction}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Actions</SelectItem>
+                {Object.entries(ACTION_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Search</Label>
+            <Input placeholder="Code / user / details" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="text-sm font-medium">Activity ({logs.length})</div>
+
+      <Card>
+        <CardContent className="p-0 overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Consignment</TableHead>
+                <TableHead>Details</TableHead>
+                <TableHead>By</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              ) : logs.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No activity in this period</TableCell></TableRow>
+              ) : logs.map(log => (
+                <TableRow key={log.id} className={log.consignment_id ? 'hover:bg-muted/50 cursor-pointer' : ''} onClick={() => log.consignment_id && onOpenConsignment(log.consignment_id)}>
+                  <TableCell className="text-xs whitespace-nowrap">{format(new Date(log.performed_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={ACTION_COLORS[log.action] || ''}>{ACTION_LABELS[log.action] || log.action}</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium text-xs">{log.consignment_code || '-'}</TableCell>
+                  <TableCell className="text-xs max-w-[420px] whitespace-pre-wrap break-words">{describeLog(log)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{log.performer_name || 'System'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
