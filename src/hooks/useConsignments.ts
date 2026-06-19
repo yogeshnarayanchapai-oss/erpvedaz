@@ -195,17 +195,43 @@ export function useSaveConsignment() {
         return acc;
       }, {});
       if (id) {
+        // Fetch previous to diff numeric/billing edits
+        const { data: prev } = await (supabase as any).from('consignments').select('*').eq('id', id).single();
         const { data, error } = await (supabase as any).from('consignments').update(rest).eq('id', id).select().single();
         if (error) throw error;
+        // Log meaningful edits
+        const changed: Record<string, { from: any; to: any }> = {};
+        Object.keys(rest).forEach(k => {
+          const a = (prev as any)?.[k];
+          const b = (rest as any)[k];
+          if (String(a ?? '') !== String(b ?? '')) changed[k] = { from: a ?? null, to: b ?? null };
+        });
+        if (Object.keys(changed).length) {
+          const amountFields = ['customer_billing_amount', 'total_cost', 'estimated_profit', 'actual_profit'];
+          const isAmountEdit = Object.keys(changed).some(k => amountFields.includes(k));
+          await logActivity({
+            consignment_id: id,
+            store_id: data.store_id,
+            action: isAmountEdit ? 'AMOUNT_EDITED' : 'CONSIGNMENT_EDITED',
+            details: { code: data.consignment_code, changed },
+          });
+        }
         return data;
       }
       const { data, error } = await (supabase as any).from('consignments').insert({ ...rest, store_id: storeId }).select().single();
       if (error) throw error;
+      await logActivity({
+        consignment_id: data.id,
+        store_id: data.store_id,
+        action: 'CONSIGNMENT_CREATED',
+        details: { code: data.consignment_code, customer_billing_amount: data.customer_billing_amount },
+      });
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
       qc.invalidateQueries({ queryKey: ['consignment'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Consignment saved');
     },
     onError: (e: any) => toast.error(e.message || 'Failed to save'),
@@ -216,11 +242,21 @@ export function useDeleteConsignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const meta = await getConsignmentMeta(id);
       const { error } = await (supabase as any).from('consignments').delete().eq('id', id);
       if (error) throw error;
+      if (meta.store_id) {
+        await logActivity({
+          consignment_id: null,
+          store_id: meta.store_id,
+          action: 'CONSIGNMENT_DELETED',
+          details: { code: meta.code, id },
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Consignment deleted');
     },
     onError: (e: any) => toast.error(e.message || 'Failed to delete'),
@@ -231,7 +267,7 @@ export function useUpdateConsignmentStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, remarks, storeId }: { id: string; status: ConsignmentStatus; remarks?: string; storeId: string }) => {
-      const { data: prev } = await (supabase as any).from('consignments').select('status').eq('id', id).single();
+      const { data: prev } = await (supabase as any).from('consignments').select('status, consignment_code').eq('id', id).single();
       const patch: any = { status };
       if (status === 'COMPLETED') { patch.is_completed = true; patch.completed_at = new Date().toISOString(); patch.is_locked = true; }
       const { error } = await (supabase as any).from('consignments').update(patch).eq('id', id);
@@ -240,11 +276,18 @@ export function useUpdateConsignmentStatus() {
       await (supabase as any).from('consignment_status_history').insert({
         consignment_id: id, store_id: storeId, previous_status: prev?.status, new_status: status, remarks, changed_by: user?.user?.id,
       });
+      await logActivity({
+        consignment_id: id,
+        store_id: storeId,
+        action: 'STATUS_CHANGED',
+        details: { code: prev?.consignment_code, from: prev?.status, to: status, remarks },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
       qc.invalidateQueries({ queryKey: ['consignment'] });
       qc.invalidateQueries({ queryKey: ['consignment-history'] });
+      qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
       toast.success('Status updated');
     },
     onError: (e: any) => toast.error(e.message || 'Failed'),
