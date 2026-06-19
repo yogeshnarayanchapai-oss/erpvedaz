@@ -460,6 +460,9 @@ export default function CallingOrders() {
                         {order.order_status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={order.delivery_notes || (order as any).leads?.remark || ''}>
+                      {order.delivery_notes || (order as any).leads?.remark || '-'}
+                    </TableCell>
                     {showInsideDeliveryColumn && (
                       <TableCell>
                         {canEditDeliveryStatus(
