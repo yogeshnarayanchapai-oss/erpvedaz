@@ -1189,6 +1189,7 @@ export default function AdminLeads() {
                   <TableHead className="table-header">Product</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Assigned To</TableHead>
                   <TableHead className="table-header">Created By</TableHead>
                   <TableHead className="table-header text-center">Actions</TableHead>
