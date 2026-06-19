@@ -309,89 +309,106 @@ export default function ConsignmentsList() {
           <TabsList className="mb-2">
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="text-sm font-medium mb-2 capitalize">
-          {mainTab === 'active' ? 'Active Consignments' : 'Completed Consignments'}
-          <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
-        </div>
-        <div className="mt-3">
 
-          <Card>
-            <CardContent className="p-0 overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                  <TableHead>Code</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Mode</TableHead>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time (Days)</TableHead>
-                    <TableHead className="text-right">Billing</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="text-right">In Hand</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={14} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
-                  ) : rows.length === 0 ? (
-                    <TableRow><TableCell colSpan={14} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
-                  ) : rows.map(r => (
-                    <TableRow key={r.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}>
-                      <TableCell className="font-medium">
-                        <button className="text-left hover:underline focus:outline-none" onClick={(e) => { e.stopPropagation(); navigate(`/admin/inventory/consignments/${r.id}`); }}>
-                          {r.consignment_code}
-                        </button>
-                      </TableCell>
-                      <TableCell>{r.customer?.name || '-'}</TableCell>
-                      <TableCell>{r.supplier?.name || '-'}</TableCell>
-                      <TableCell>{r.product_name || '-'}</TableCell>
-                      <TableCell>{r.shipment_mode || '-'}</TableCell>
-                      <TableCell className="text-xs">{r.origin_country || '-'} → {r.destination || '-'}</TableCell>
-                      <TableCell onDoubleClick={(e) => { e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
-                        {inlineStatusId === r.id ? (
-                          <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
-                            <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs">{calcDays(r)}</TableCell>
-                      <TableCell className="text-right">{formatCompactAmount(r.customer_billing_amount || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCompactAmount(r.total_cost || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCompactAmount(r.estimated_profit || 0)}</TableCell>
-                      <TableCell className={`text-right font-medium ${((r as any).total_received || 0) - ((r as any).total_cost || 0) < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                        {formatCompactAmount(((r as any).total_received || 0) - ((r as any).total_cost || 0))}
-                      </TableCell>
-                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost"><Menu className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => exportConsignmentPDF(r)}><Download className="h-4 w-4 mr-2" /> Export PDF</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+        {mainTab !== 'activity' && (
+          <>
+            <div className="text-sm font-medium mb-2 capitalize">
+              {mainTab === 'active' ? 'Active Consignments' : 'Completed Consignments'}
+              <span className="ml-2 text-xs text-muted-foreground">({rows.length})</span>
+            </div>
+            <div className="mt-3">
+              <Card>
+                <CardContent className="p-0 overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                      <TableHead>Code</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Mode</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Time (Days)</TableHead>
+                        <TableHead className="text-right">Billing</TableHead>
+                        <TableHead className="text-right">Cost</TableHead>
+                        <TableHead className="text-right">Profit</TableHead>
+                        <TableHead className="text-right">In Hand</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        <TableRow><TableCell colSpan={14} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                      ) : rows.length === 0 ? (
+                        <TableRow><TableCell colSpan={14} className="text-center py-8 text-muted-foreground">No consignments found</TableCell></TableRow>
+                      ) : rows.map(r => (
+                        <TableRow key={r.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}>
+                          <TableCell className="font-medium">
+                            <button className="text-left hover:underline focus:outline-none" onClick={(e) => { e.stopPropagation(); navigate(`/admin/inventory/consignments/${r.id}`); }}>
+                              {r.consignment_code}
+                            </button>
+                          </TableCell>
+                          <TableCell>{r.customer?.name || '-'}</TableCell>
+                          <TableCell>{r.supplier?.name || '-'}</TableCell>
+                          <TableCell>{r.product_name || '-'}</TableCell>
+                          <TableCell>{r.shipment_mode || '-'}</TableCell>
+                          <TableCell className="text-xs">{r.origin_country || '-'} → {r.destination || '-'}</TableCell>
+                          <TableCell onDoubleClick={(e) => { e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
+                            {inlineStatusId === r.id ? (
+                              <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
+                                <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
+                                <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">{calcDays(r)}</TableCell>
+                          <TableCell className="text-right">{formatCompactAmount(r.customer_billing_amount || 0)}</TableCell>
+                          <TableCell className="text-right">{formatCompactAmount(r.total_cost || 0)}</TableCell>
+                          <TableCell className="text-right">{formatCompactAmount(r.estimated_profit || 0)}</TableCell>
+                          <TableCell className={`text-right font-medium ${((r as any).total_received || 0) - ((r as any).total_cost || 0) < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                            {formatCompactAmount(((r as any).total_received || 0) - ((r as any).total_cost || 0))}
+                          </TableCell>
+                          <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost"><Menu className="h-4 w-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => exportConsignmentPDF(r)}><Download className="h-4 w-4 mr-2" /> Export PDF</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {mainTab === 'activity' && (
+          <ActivitySection
+            startDate={actStart} setStartDate={setActStart}
+            endDate={actEnd} setEndDate={setActEnd}
+            action={actAction} setAction={setActAction}
+            search={actSearch} setSearch={setActSearch}
+            logs={activityLogs} isLoading={actLoading}
+            onOpenConsignment={(id) => navigate(`/admin/inventory/consignments/${id}`)}
+          />
+        )}
       </div>
+
 
 
       {/* Create / Edit dialog */}
