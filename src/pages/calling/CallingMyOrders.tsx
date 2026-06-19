@@ -412,6 +412,7 @@ export default function CallingMyOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Actions</TableHead>
                 </TableRow>
               </TableHeader>
