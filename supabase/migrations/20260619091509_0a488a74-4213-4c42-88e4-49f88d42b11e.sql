@@ -1,0 +1,2 @@
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS consignment_id uuid NULL REFERENCES public.consignments(id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS idx_transactions_consignment ON public.transactions(consignment_id);

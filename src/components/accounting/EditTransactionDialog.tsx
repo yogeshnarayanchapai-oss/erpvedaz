@@ -11,6 +11,7 @@ import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateActivityLog } from '@/hooks/useAccountingActivityLogs';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -27,6 +28,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     party_id: '',
     reference_no: '',
     note: '',
+    consignment_id: null as string | null,
   });
 
   const { data: accounts = [] } = useActiveAccounts();
@@ -45,6 +47,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: transaction.party_id || '',
         reference_no: transaction.reference_no || '',
         note: transaction.note || '',
+        consignment_id: (transaction as any).consignment_id || null,
       });
     }
   }, [transaction]);
@@ -63,6 +66,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
+        consignment_id: formData.consignment_id,
       } as any);
 
       await createActivityLog.mutateAsync({
@@ -141,6 +145,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
             </div>
             <div className="space-y-1.5"><Label className="text-sm">Reference No.</Label><Input value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} placeholder="Optional" className="h-10" /></div>
           </div>
+          <div className="space-y-1.5"><Label className="text-sm">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="space-y-1.5"><Label className="text-sm">Remark</Label><Textarea value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Optional remark" rows={2} className="min-h-[60px]" /></div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancel</Button>

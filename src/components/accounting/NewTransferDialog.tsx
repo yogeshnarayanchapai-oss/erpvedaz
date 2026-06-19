@@ -10,6 +10,7 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowRight } from 'lucide-react';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface NewTransferDialogProps {
   open: boolean;
@@ -21,11 +22,11 @@ export function NewTransferDialog({ open, onOpenChange }: NewTransferDialogProps
   const createTransaction = useCreateTransaction();
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '',
+    date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '', consignment_id: null as string | null,
   });
 
   const resetForm = () => {
-    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '' });
+    setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', from_account_id: '', to_account_id: '', reference_no: '', note: '', consignment_id: null });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +43,7 @@ export function NewTransferDialog({ open, onOpenChange }: NewTransferDialogProps
         from_account_id: formData.from_account_id, to_account_id: formData.to_account_id,
         account_id: null, reference_no: formData.reference_no || null, note: formData.note || null,
         description: formData.note || `Transfer from ${fromAccount?.name || 'Unknown'} to ${toAccount?.name || 'Unknown'}`,
+        consignment_id: formData.consignment_id,
       });
       toast.success('Transfer completed successfully');
       resetForm();
@@ -80,6 +82,7 @@ export function NewTransferDialog({ open, onOpenChange }: NewTransferDialogProps
             <div className="space-y-1.5"><Label className="text-xs">Reference</Label><Input placeholder="Reference number" value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
           </div>
+          <div className="space-y-1.5"><Label className="text-xs">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Transferring...' : 'Complete Transfer'}</Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

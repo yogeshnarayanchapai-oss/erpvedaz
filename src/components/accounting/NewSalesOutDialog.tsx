@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { SearchablePartySelect } from './SearchablePartySelect';
 import { InlineTypeSelector } from './InlineTypeSelector';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface Props { open: boolean; onOpenChange: (open: boolean) => void; onSwitchType?: (type: TransactionType) => void; }
 
@@ -19,9 +20,9 @@ export function NewSalesOutDialog({ open, onOpenChange, onSwitchType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [isCash, setIsCash] = useState(false);
-  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '' });
+  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '', consignment_id: null as string | null });
 
-  const resetForm = () => { setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '' }); setIsCash(false); };
+  const resetForm = () => { setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '', consignment_id: null }); setIsCash(false); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +32,7 @@ export function NewSalesOutDialog({ open, onOpenChange, onSwitchType }: Props) {
         date: formData.date, transaction_type: 'SALES_OUT', amount: parseFloat(formData.amount),
         account_id: isCash ? formData.account_id : null, party_id: formData.party_id || null,
         note: formData.note || null, description: formData.note || 'Sale (Sales Out)',
+        consignment_id: formData.consignment_id,
       });
       resetForm();
       onOpenChange(false);
@@ -73,6 +75,7 @@ export function NewSalesOutDialog({ open, onOpenChange, onSwitchType }: Props) {
               </Select>
             </div>
           )}
+          <div className="space-y-1.5"><Label className="text-xs">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="space-y-1.5"><Label className="text-xs">Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Sales Out'}</Button>

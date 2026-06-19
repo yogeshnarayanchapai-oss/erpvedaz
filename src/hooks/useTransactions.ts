@@ -20,6 +20,7 @@ export interface Transaction {
   category_id: string | null;
   party_id: string | null;
   order_id: string | null;
+  consignment_id: string | null;
   reference_no: string | null;
   reference_type: string | null;
   reference_id: string | null;
@@ -39,6 +40,7 @@ export interface Transaction {
   account?: { id: string; name: string } | null;
   transaction_categories?: { id: string; name: string } | null;
   parties?: { id: string; name: string } | null;
+  consignment?: { id: string; consignment_code: string } | null;
 }
 
 export interface TransactionFilters {
@@ -48,8 +50,10 @@ export interface TransactionFilters {
   accountId?: string;
   partyId?: string;
   categoryId?: string;
+  consignmentId?: string;
   search?: string;
 }
+
 
 export function useTransactions(filters?: TransactionFilters) {
   const storeId = useCurrentStoreId();
@@ -65,7 +69,8 @@ export function useTransactions(filters?: TransactionFilters) {
           to_account:to_account_id(id, name),
           account:account_id(id, name),
           transaction_categories:category_id(id, name),
-          parties:party_id(id, name)
+          parties:party_id(id, name),
+          consignment:consignment_id(id, consignment_code)
         `)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
@@ -91,6 +96,10 @@ export function useTransactions(filters?: TransactionFilters) {
       if (filters?.categoryId) {
         query = query.eq('category_id', filters.categoryId);
       }
+      if (filters?.consignmentId) {
+        query = query.eq('consignment_id', filters.consignmentId);
+      }
+
 
       const { data, error } = await query;
       
@@ -117,10 +126,12 @@ export function useCreateTransaction() {
       category_id?: string | null;
       party_id?: string | null;
       order_id?: string | null;
+      consignment_id?: string | null;
       reference_no?: string | null;
       note?: string | null;
       description?: string | null;
       created_by?: string | null;
+
     }) => {
       // ===== Insufficient funds check for outflow transactions =====
       // Outflow types deduct money from the source account. Block when

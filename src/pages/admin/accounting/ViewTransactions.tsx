@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClientPagination } from '@/hooks/useClientPagination';
 import { DataPagination } from '@/components/ui/data-pagination';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 export default function ViewTransactions() {
   const queryClient = useQueryClient();
@@ -45,6 +46,7 @@ export default function ViewTransactions() {
     accountId: '',
     partyId: '',
     categoryId: '',
+    consignmentId: '',
     search: '',
   });
 
@@ -385,6 +387,17 @@ export default function ViewTransactions() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Consignment</Label>
+              <ConsignmentPicker
+                value={filters.consignmentId || null}
+                onValueChange={(v) => setFilters({ ...filters, consignmentId: v || '' })}
+                placeholder="All consignments"
+              />
+            </div>
+
+
+
             <div className="space-y-2 col-span-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
@@ -472,7 +485,7 @@ export default function ViewTransactions() {
                 <TableHead>Category</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                
+                <TableHead>Consignment</TableHead>
                 <TableHead>Remark</TableHead>
                 {canEdit && <TableHead className="w-24">Action</TableHead>}
               </TableRow>
@@ -480,12 +493,12 @@ export default function ViewTransactions() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filteredTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canDelete ? 11 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canDelete ? 12 : 10} className="text-center py-8 text-muted-foreground">
                     No transactions found
                   </TableCell>
                 </TableRow>
@@ -522,7 +535,13 @@ export default function ViewTransactions() {
                   <TableCell className="text-right font-medium">
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
-                  
+                  <TableCell className="text-sm">
+                    {(transaction as any).consignment?.consignment_code ? (
+                      <span className="font-mono">{(transaction as any).consignment.consignment_code}</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
                   </TableCell>

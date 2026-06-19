@@ -7764,6 +7764,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           category_id: string | null
+          consignment_id: string | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -7792,6 +7793,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_id?: string | null
+          consignment_id?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -7820,6 +7822,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_id?: string | null
+          consignment_id?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -7854,6 +7857,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_consignment_id_fkey"
+            columns: ["consignment_id"]
+            isOneToOne: false
+            referencedRelation: "consignments"
             referencedColumns: ["id"]
           },
           {
