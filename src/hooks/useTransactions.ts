@@ -20,6 +20,7 @@ export interface Transaction {
   category_id: string | null;
   party_id: string | null;
   order_id: string | null;
+  consignment_id: string | null;
   reference_no: string | null;
   reference_type: string | null;
   reference_id: string | null;
@@ -39,6 +40,7 @@ export interface Transaction {
   account?: { id: string; name: string } | null;
   transaction_categories?: { id: string; name: string } | null;
   parties?: { id: string; name: string } | null;
+  consignment?: { id: string; consignment_code: string } | null;
 }
 
 export interface TransactionFilters {
@@ -48,8 +50,10 @@ export interface TransactionFilters {
   accountId?: string;
   partyId?: string;
   categoryId?: string;
+  consignmentId?: string;
   search?: string;
 }
+
 
 export function useTransactions(filters?: TransactionFilters) {
   const storeId = useCurrentStoreId();
