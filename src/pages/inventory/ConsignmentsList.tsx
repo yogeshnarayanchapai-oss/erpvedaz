@@ -94,7 +94,16 @@ export default function ConsignmentsList() {
   const [origin, setOrigin] = useState('');
   const { data: rows = [], isLoading } = useConsignments({
     search, status, mode, origin,
-    completed: mainTab === 'completed' ? true : false,
+    completed: mainTab === 'completed' ? true : mainTab === 'activity' ? undefined : false,
+  });
+
+  // Activity tab filters
+  const [actStart, setActStart] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [actEnd, setActEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [actAction, setActAction] = useState('all');
+  const [actSearch, setActSearch] = useState('');
+  const { data: activityLogs = [], isLoading: actLoading } = useConsignmentActivityLogs({
+    startDate: actStart, endDate: actEnd, action: actAction, search: actSearch,
   });
 
   // counts (separate query unfiltered for stat cards)
