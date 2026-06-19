@@ -75,6 +75,7 @@ export function NewSalesOutDialog({ open, onOpenChange, onSwitchType }: Props) {
               </Select>
             </div>
           )}
+          <div className="space-y-1.5"><Label className="text-xs">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="space-y-1.5"><Label className="text-xs">Remark</Label><Textarea placeholder="Optional remark..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} /></div>
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Sales Out'}</Button>
