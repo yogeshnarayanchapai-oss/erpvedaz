@@ -69,7 +69,8 @@ export function useTransactions(filters?: TransactionFilters) {
           to_account:to_account_id(id, name),
           account:account_id(id, name),
           transaction_categories:category_id(id, name),
-          parties:party_id(id, name)
+          parties:party_id(id, name),
+          consignment:consignment_id(id, consignment_code)
         `)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
@@ -95,6 +96,10 @@ export function useTransactions(filters?: TransactionFilters) {
       if (filters?.categoryId) {
         query = query.eq('category_id', filters.categoryId);
       }
+      if (filters?.consignmentId) {
+        query = query.eq('consignment_id', filters.consignmentId);
+      }
+
 
       const { data, error } = await query;
       
