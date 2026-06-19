@@ -20,9 +20,9 @@ export function NewSalesInDialog({ open, onOpenChange, onSwitchType }: Props) {
   const { data: accounts = [] } = useActiveAccounts();
   const createTransaction = useCreateTransaction();
   const [isCash, setIsCash] = useState(false);
-  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '' });
+  const [formData, setFormData] = useState({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '', consignment_id: null as string | null });
 
-  const resetForm = () => { setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '' }); setIsCash(false); };
+  const resetForm = () => { setFormData({ date: format(new Date(), 'yyyy-MM-dd'), amount: '', account_id: '', party_id: '', note: '', consignment_id: null }); setIsCash(false); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +32,7 @@ export function NewSalesInDialog({ open, onOpenChange, onSwitchType }: Props) {
         date: formData.date, transaction_type: 'SALES_IN', amount: parseFloat(formData.amount),
         account_id: isCash ? formData.account_id : null, party_id: formData.party_id || null,
         note: formData.note || null, description: formData.note || 'Purchase (Sales In)',
+        consignment_id: formData.consignment_id,
       });
       resetForm();
       onOpenChange(false);
