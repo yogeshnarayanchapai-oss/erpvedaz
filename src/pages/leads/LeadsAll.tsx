@@ -803,6 +803,7 @@ export default function LeadsAll() {
                   <TableHead>Product</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Team</TableHead>
                 </TableRow>
@@ -847,6 +848,7 @@ export default function LeadsAll() {
                           {formatStatusLabel(lead.status)}
                         </Badge>
                       </TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>{lead.remark || '-'}</TableCell>
                       <TableCell>{lead.assigned_to?.name || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{lead.current_team}</Badge>
@@ -856,7 +858,7 @@ export default function LeadsAll() {
                 })}
                 {filteredLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No leads found'}
                     </TableCell>
                   </TableRow>

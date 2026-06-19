@@ -387,6 +387,7 @@ export default function CallingOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   {showInsideDeliveryColumn && (
                     <TableHead className="table-header">Delivery Update</TableHead>
                   )}
@@ -458,6 +459,9 @@ export default function CallingOrders() {
                       >
                         {order.order_status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={order.delivery_notes || (order as any).leads?.remark || ''}>
+                      {order.delivery_notes || (order as any).leads?.remark || '-'}
                     </TableCell>
                     {showInsideDeliveryColumn && (
                       <TableCell>

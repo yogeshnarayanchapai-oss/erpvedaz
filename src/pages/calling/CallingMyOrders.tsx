@@ -412,19 +412,20 @@ export default function CallingMyOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No orders found
                     </TableCell>
                   </TableRow>
@@ -475,6 +476,9 @@ export default function CallingMyOrders() {
                         >
                           {order.order_status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={(order as any).delivery_notes || (order as any).leads?.remark || ''}>
+                        {(order as any).delivery_notes || (order as any).leads?.remark || '-'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">

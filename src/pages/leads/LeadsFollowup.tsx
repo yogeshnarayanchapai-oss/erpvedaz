@@ -413,6 +413,7 @@ export default function LeadsFollowup() {
                   <TableHead>Product</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Last Reason</TableHead>
                 </TableRow>
               </TableHeader>
@@ -441,6 +442,9 @@ export default function LeadsFollowup() {
                         {formatStatusLabel(lead.status)}
                       </Badge>
                     </TableCell>
+                    <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>
+                      {lead.remark || '-'}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {lead.last_transfer_reason || '-'}
                     </TableCell>
@@ -448,7 +452,7 @@ export default function LeadsFollowup() {
                 ))}
                 {followupLeads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {isLoading ? 'Loading...' : 'No follow-up or CNR leads in queue'}
                     </TableCell>
                   </TableRow>
