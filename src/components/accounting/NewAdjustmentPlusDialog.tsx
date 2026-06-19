@@ -82,6 +82,7 @@ export function NewAdjustmentPlusDialog({ open, onOpenChange, onSwitchType }: Ne
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Reference</Label><Input placeholder="Reference number" value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} /></div>
           </div>
+          <div className="space-y-1.5"><Label className="text-xs">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="space-y-1.5"><Label className="text-xs">Reason / Remark *</Label><Textarea placeholder="Reason for adjustment..." value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} rows={2} required /></div>
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={createTransaction.isPending} className="flex-1">{createTransaction.isPending ? 'Saving...' : 'Save Adjustment (+)'}</Button>
