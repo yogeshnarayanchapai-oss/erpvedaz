@@ -13,6 +13,7 @@ import { SearchablePartySelect } from '@/components/accounting/SearchablePartySe
 import { SearchableCategorySelect } from '@/components/accounting/SearchableCategorySelect';
 import { InlineTypeSelector } from '@/components/accounting/InlineTypeSelector';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
 
 interface NewExpenseDialogProps {
   open: boolean;
