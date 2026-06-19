@@ -803,6 +803,7 @@ export default function LeadsAll() {
                   <TableHead>Product</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Team</TableHead>
                 </TableRow>
