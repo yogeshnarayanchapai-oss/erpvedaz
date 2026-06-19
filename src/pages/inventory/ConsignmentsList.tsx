@@ -206,7 +206,7 @@ export default function ConsignmentsList() {
       Mode: r.shipment_mode || '',
       Origin: r.origin_country || '',
       Destination: r.destination || '',
-      Status: STATUS_LABELS[r.status],
+      Status: (statusLabelMap[r.status] || r.status),
       ETA: r.eta || r.expected_arrival_date || '',
       'Time (Days)': calcDays(r),
       Billing: r.customer_billing_amount || 0,
@@ -300,7 +300,7 @@ export default function ConsignmentsList() {
           <Input placeholder="Search code / customer / supplier / product" value={search} onChange={e => setSearch(e.target.value)} className="md:col-span-2" />
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Status</SelectItem>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="all">All Status</SelectItem>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={mode} onValueChange={setMode}>
             <SelectTrigger><SelectValue placeholder="Mode" /></SelectTrigger>
@@ -371,10 +371,10 @@ export default function ConsignmentsList() {
                             {inlineStatusId === r.id ? (
                               <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
                                 <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
-                                <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                                <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
                               </Select>
                             ) : (
-                              <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                              <Badge variant="outline" className={STATUS_COLORS[r.status]}>{(statusLabelMap[r.status] || r.status)}</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-xs">{calcDays(r)}</TableCell>
@@ -468,7 +468,7 @@ export default function ConsignmentsList() {
                   <div><Label>Status</Label>
                     <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{CONSIGNMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+                      <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
