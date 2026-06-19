@@ -47,6 +47,7 @@ export default function ViewTransactions() {
     accountId: '',
     partyId: '',
     categoryId: '',
+    consignmentId: '',
     search: '',
   });
 
