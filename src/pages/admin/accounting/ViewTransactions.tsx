@@ -536,7 +536,13 @@ export default function ViewTransactions() {
                   <TableCell className="text-right font-medium">
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
-                  
+                  <TableCell className="text-sm">
+                    {(transaction as any).consignment?.consignment_code ? (
+                      <span className="font-mono">{(transaction as any).consignment.consignment_code}</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
                   </TableCell>
