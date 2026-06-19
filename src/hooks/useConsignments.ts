@@ -243,6 +243,17 @@ export function useDeleteConsignment() {
   return useMutation({
     mutationFn: async (id: string) => {
       const meta = await getConsignmentMeta(id);
+      // Block deletion if any accounting transaction references this consignment
+      const { count: txCount, error: txErr } = await (supabase as any)
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('consignment_id', id);
+      if (txErr) throw txErr;
+      if ((txCount ?? 0) > 0) {
+        throw new Error(
+          `Cannot delete: ${txCount} accounting transaction(s) are linked to this consignment. Remove or unlink them first.`
+        );
+      }
       const { error } = await (supabase as any).from('consignments').delete().eq('id', id);
       if (error) throw error;
       if (meta.store_id) {
@@ -254,6 +265,7 @@ export function useDeleteConsignment() {
         });
       }
     },
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignments'] });
       qc.invalidateQueries({ queryKey: ['consignment-activity-logs'] });
