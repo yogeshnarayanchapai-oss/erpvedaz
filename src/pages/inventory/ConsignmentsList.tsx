@@ -20,6 +20,14 @@ import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateCon
 import { exportConsignmentPDF } from '@/lib/consignmentPdf';
 import * as XLSX from 'xlsx';
 
+const formatCompactAmount = (n: number): string => {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 10000000) return `${sign}${(abs / 10000000).toFixed(abs % 10000000 === 0 ? 0 : 2).replace(/\.?0+$/, '')}Cr`;
+  if (abs >= 100000) return `${sign}${(abs / 100000).toFixed(abs % 100000 === 0 ? 0 : 2).replace(/\.?0+$/, '')}L`;
+  return Math.round(n).toLocaleString();
+};
+
 const STATUS_COLORS: Record<string, string> = {
   INQUIRY_RECEIVED: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
   QUOTATION_SENT: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
@@ -347,11 +355,11 @@ export default function ConsignmentsList() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs">{calcDays(r)}</TableCell>
-                      <TableCell className="text-right">{(r.customer_billing_amount || 0).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{(r.total_cost || 0).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{(r.estimated_profit || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{formatCompactAmount(r.customer_billing_amount || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCompactAmount(r.total_cost || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCompactAmount(r.estimated_profit || 0)}</TableCell>
                       <TableCell className={`text-right font-medium ${((r as any).total_received || 0) - ((r as any).total_cost || 0) < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                        {(((r as any).total_received || 0) - ((r as any).total_cost || 0)).toLocaleString()}
+                        {formatCompactAmount(((r as any).total_received || 0) - ((r as any).total_cost || 0))}
                       </TableCell>
                       <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                         <DropdownMenu>
