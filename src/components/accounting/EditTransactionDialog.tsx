@@ -145,6 +145,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
             </div>
             <div className="space-y-1.5"><Label className="text-sm">Reference No.</Label><Input value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} placeholder="Optional" className="h-10" /></div>
           </div>
+          <div className="space-y-1.5"><Label className="text-sm">Consignment (Optional)</Label><ConsignmentPicker value={formData.consignment_id} onValueChange={v => setFormData({ ...formData, consignment_id: v })} /></div>
           <div className="space-y-1.5"><Label className="text-sm">Remark</Label><Textarea value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Optional remark" rows={2} className="min-h-[60px]" /></div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Cancel</Button>
