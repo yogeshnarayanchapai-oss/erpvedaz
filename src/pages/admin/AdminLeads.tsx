@@ -1237,7 +1237,7 @@ export default function AdminLeads() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[180px] truncate" title={lead.remark || ''}>{lead.remark || '-'}</TableCell>
+                    <TableCell className="max-w-[200px]" title={lead.remark || ''}><span className={`block whitespace-pre-wrap break-words line-clamp-2 ${(lead.remark || '').length > 40 ? 'text-[10px] leading-tight' : 'text-xs'}`}>{lead.remark || '-'}</span></TableCell>
                     <TableCell>
                       {(lead.status === 'CONFIRMED' || lead.order_id) ? (
                         <span className="text-muted-foreground">{lead.assigned_to?.name || '-'}</span>

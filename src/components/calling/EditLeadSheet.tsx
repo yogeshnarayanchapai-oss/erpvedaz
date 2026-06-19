@@ -382,7 +382,12 @@ export function EditLeadSheet({
               <div className="grid grid-cols-1 gap-2">
                 <Select
                   value={formData.cancel_reason}
-                  onValueChange={(v) => onFormChange({ ...formData, cancel_reason: v })}
+                  onValueChange={(v) => {
+                    const existing = (formData.remark || '').trim();
+                    const parts = existing ? existing.split(',').map(s => s.trim()).filter(Boolean) : [];
+                    if (!parts.some(p => p.toLowerCase() === v.toLowerCase())) parts.push(v);
+                    onFormChange({ ...formData, cancel_reason: v, remark: parts.join(', ') });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a cancel reason..." />
