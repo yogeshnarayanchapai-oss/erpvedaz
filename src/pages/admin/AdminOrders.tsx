@@ -892,6 +892,7 @@ export default function AdminOrders() {
                   <TableHead className="table-header">Delivery</TableHead>
                   <TableHead className="table-header">Branch</TableHead>
                   <TableHead className="table-header">Order Status</TableHead>
+                  <TableHead className="table-header">Remark</TableHead>
                   <TableHead className="table-header">Delivery Status</TableHead>
                   <TableHead className="table-header">Payment</TableHead>
                   <TableHead className="table-header">Confirmed By</TableHead>
