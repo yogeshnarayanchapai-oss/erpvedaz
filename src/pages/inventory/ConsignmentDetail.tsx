@@ -305,18 +305,20 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="documents" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="flex gap-2 items-end flex-wrap">
-              <div className="space-y-1"><Label className="text-xs">Document Type</Label>
-                <Select value={docType} onValueChange={setDocType}>
-                  <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g,' ')}</SelectItem>)}</SelectContent>
-                </Select>
+            {!isReadOnly && (
+              <div className="flex gap-2 items-end flex-wrap">
+                <div className="space-y-1"><Label className="text-xs">Document Type</Label>
+                  <Select value={docType} onValueChange={setDocType}>
+                    <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g,' ')}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <label className="cursor-pointer">
+                  <input type="file" className="hidden" onChange={handleUpload} disabled={uploadDoc.isPending} />
+                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:opacity-90"><Upload className="h-4 w-4" /> {uploadDoc.isPending ? 'Uploading...' : 'Upload File'}</span>
+                </label>
               </div>
-              <label className="cursor-pointer">
-                <input type="file" className="hidden" onChange={handleUpload} disabled={uploadDoc.isPending} />
-                <span className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:opacity-90"><Upload className="h-4 w-4" /> {uploadDoc.isPending ? 'Uploading...' : 'Upload File'}</span>
-              </label>
-            </div>
+            )}
             <Table>
               <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>File</TableHead><TableHead>Uploaded</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
