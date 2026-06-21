@@ -295,7 +295,7 @@ export default function ConsignmentDetail() {
                     <TableCell>{p.payment_for}</TableCell>
                     <TableCell className="text-xs">{p.payment_method || '-'}</TableCell>
                     <TableCell className="text-right">{Number(p.amount).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delPayment.mutate({ id: p.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
+                    <TableCell className="text-right">{!c.is_locked && !isReadOnly && <Button size="icon" variant="ghost" onClick={() => delPayment.mutate({ id: p.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
