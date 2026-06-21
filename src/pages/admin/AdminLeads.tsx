@@ -970,9 +970,16 @@ export default function AdminLeads() {
                         <TableRow key={staff.id} className="hover:bg-muted/50">
                           <TableCell className="font-medium text-xs md:text-sm">{staff.name}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-primary/5 text-xs">
-                              {staff.transferCount.toLocaleString()}
-                            </Badge>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <Badge variant="outline" className="bg-primary/5 text-xs">
+                                {staff.transferCount.toLocaleString()}
+                              </Badge>
+                              <div className="text-[10px] text-muted-foreground leading-tight">
+                                <span className="text-success">A: {staff.firstAssign.toLocaleString()}</span>
+                                {' / '}
+                                <span className="text-chart-3">R: {staff.reassign.toLocaleString()}</span>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="bg-secondary/5 text-xs">
