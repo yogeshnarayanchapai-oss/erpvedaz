@@ -157,6 +157,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
           fromTeam: transfer.from_team,
           leadDate: leadData?.date || null,
           leadType: (transfer as any).lead_type || null,
+          fromUserId: transfer.from_user_id || null,
         });
       });
 
