@@ -329,7 +329,7 @@ export default function ConsignmentDetail() {
                     <TableCell className="text-xs">{new Date(d.uploaded_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="icon" variant="ghost" asChild><a href={d.file_url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a></Button>
-                      <Button size="icon" variant="ghost" onClick={() => delDoc.mutate({ id: d.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      {!isReadOnly && <Button size="icon" variant="ghost" onClick={() => delDoc.mutate({ id: d.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </TableCell>
                   </TableRow>
                 ))}
