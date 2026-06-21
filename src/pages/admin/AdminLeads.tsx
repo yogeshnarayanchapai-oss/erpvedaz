@@ -332,6 +332,21 @@ export default function AdminLeads() {
       const staffTransfers = transfersMap[staff.id] || [];
       const transferredLeadIds = new Set(staffTransfers.map(t => t.leadId));
       
+      // First assign vs Reassign: group transfers by leadId, check earliest transfer's fromUserId
+      const transfersByLead = new Map<string, { transferredAt: string; fromUserId: string | null }[]>();
+      staffTransfers.forEach(t => {
+        if (!transfersByLead.has(t.leadId)) transfersByLead.set(t.leadId, []);
+        transfersByLead.get(t.leadId)!.push({ transferredAt: t.transferredAt, fromUserId: t.fromUserId });
+      });
+      
+      let firstAssign = 0;
+      let reassign = 0;
+      transfersByLead.forEach((transfers) => {
+        const earliest = transfers.sort((a, b) => new Date(a.transferredAt).getTime() - new Date(b.transferredAt).getTime())[0];
+        if (earliest.fromUserId === null) firstAssign++;
+        else reassign++;
+      });
+      
       const productCounts: Record<string, number> = {};
       allStoreLeads.forEach(lead => {
         if (!transferredLeadIds.has(lead.id)) return;
@@ -352,6 +367,8 @@ export default function AdminLeads() {
         id: staff.id,
         name: staff.name,
         transferCount,
+        firstAssign,
+        reassign,
         newLeads,
         products: displayProducts || '-',
         fullProducts: fullProductList || '-',
