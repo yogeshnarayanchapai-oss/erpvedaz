@@ -263,7 +263,7 @@ export default function ConsignmentDetail() {
         <TabsContent value="payments" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
 
-            {!c.is_locked && (
+            {!c.is_locked && !isReadOnly && (
               <form onSubmit={handleAddPayment} className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <Select value={payForm.direction} onValueChange={v => setPayForm({ ...payForm, direction: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
