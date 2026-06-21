@@ -22,6 +22,7 @@ import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateCon
 import { exportConsignmentPDF } from '@/lib/consignmentPdf';
 import { format, subDays } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 const formatCompactAmount = (n: number): string => {
   const abs = Math.abs(n);
