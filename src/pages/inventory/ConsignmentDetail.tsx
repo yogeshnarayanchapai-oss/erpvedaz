@@ -247,7 +247,7 @@ export default function ConsignmentDetail() {
                         <TableCell><Badge variant="outline">{r.cost_type}</Badge> <span className="text-xs text-muted-foreground">{r.description || ''}</span></TableCell>
                         <TableCell className="text-right">
                           {Number(r.amount).toLocaleString()}
-                          {!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                          {!c.is_locked && !isReadOnly && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                         </TableCell>
                       </TableRow>
                     ))}
