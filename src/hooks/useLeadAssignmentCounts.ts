@@ -9,10 +9,19 @@ interface LeadAssignmentCountOptions {
   excludeSelfCreated?: boolean; // true for Admin Transfer Summary
 }
 
+interface TransferInfo {
+  leadId: string;
+  transferredAt: string;
+  fromTeam: string | null;
+  leadDate: string | null;
+  leadType: string | null;
+  fromUserId: string | null;
+}
+
 interface LeadAssignmentCountResult {
   countsByStaff: Record<string, number>;
   totalCount: number;
-  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>;
+  transfersByStaff: Record<string, TransferInfo[]>;
 }
 
 /**
@@ -58,6 +67,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
             id,
             lead_id,
             to_user_id,
+            from_user_id,
             transferred_at,
             transferred_by_user_id,
             store_id,
@@ -124,7 +134,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
 
       // Group by staff and count unique leads (Set ensures no double counting)
       const staffCounts = new Map<string, Set<string>>();
-      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>();
+      const staffTransfers = new Map<string, TransferInfo[]>();
 
       filteredTransfers.forEach(transfer => {
         const staffId = transfer.to_user_id;
@@ -147,12 +157,13 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
           fromTeam: transfer.from_team,
           leadDate: leadData?.date || null,
           leadType: (transfer as any).lead_type || null,
+          fromUserId: transfer.from_user_id || null,
         });
       });
 
       // Build result
       const countsByStaff: Record<string, number> = {};
-      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]> = {};
+      const transfersByStaff: Record<string, TransferInfo[]> = {};
       let totalCount = 0;
 
       staffCounts.forEach((leadIds, id) => {
