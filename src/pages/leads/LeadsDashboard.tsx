@@ -144,7 +144,7 @@ export default function LeadsDashboard() {
 
 
   // Fetch today's transfers from lead_transfers table (historical, never changes on reassignment)
-  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; lead_id: string; created_by_user_id: string | null; product_id: string | null }[]>([]);
+  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string; created_by_user_id: string | null; product_id: string | null }[]>([]);
   
   useEffect(() => {
     async function fetchTodayTransfers() {
@@ -154,7 +154,7 @@ export default function LeadsDashboard() {
       // Fetch from lead_transfers table with lead info (created_by_user_id, product_id, store_id)
       const { data, error } = await supabase
         .from('lead_transfers')
-        .select('to_user_id, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
+        .select('to_user_id, from_user_id, transferred_at, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
         .not('to_user_id', 'is', null)
         .eq('leads.store_id', currentStoreId)
         .gte('transferred_at', `${todayDate}T00:00:00+05:45`)
@@ -163,6 +163,8 @@ export default function LeadsDashboard() {
       if (!error && data) {
         setTodayTransfers(data.map(d => ({
           to_user_id: d.to_user_id!,
+          from_user_id: (d as any).from_user_id || null,
+          transferred_at: (d as any).transferred_at,
           lead_id: d.lead_id,
           created_by_user_id: (d.leads as any)?.created_by_user_id || null,
           product_id: (d.leads as any)?.product_id || null
@@ -208,19 +210,35 @@ export default function LeadsDashboard() {
       return { displayProducts: displayProducts || '-', fullProductList: fullProductList || '-' };
     };
 
+    // Helper: compute first-assign vs reassign counts from a list of transfers.
+    // Group by lead_id, take earliest transfer; if its from_user_id is null => first assign, else reassign.
+    const calcAssignBreakdown = (transfers: { lead_id: string; from_user_id: string | null; transferred_at: string }[]) => {
+      const byLead = new Map<string, { from_user_id: string | null; transferred_at: string }[]>();
+      transfers.forEach(t => {
+        if (!byLead.has(t.lead_id)) byLead.set(t.lead_id, []);
+        byLead.get(t.lead_id)!.push({ from_user_id: t.from_user_id, transferred_at: t.transferred_at });
+      });
+      let firstAssign = 0;
+      let reassign = 0;
+      byLead.forEach(list => {
+        const earliest = list.sort((a, b) => new Date(a.transferred_at).getTime() - new Date(b.transferred_at).getTime())[0];
+        if (earliest.from_user_id === null) firstAssign++;
+        else reassign++;
+      });
+      return { firstAssign, reassign };
+    };
+
     // For LEADS role: Show calling staff who received leads CREATED by this LEADS user
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        // Today Transfer = count transfers to this staff today for leads created by current LEADS user (from lead_transfers table - NEVER decreases)
         const transfersToStaffToday = todayTransfers.filter(t => 
           t.to_user_id === staff.id && 
           t.created_by_user_id === currentUserId
         );
-        // Use unique lead_ids to avoid counting duplicate transfers
         const uniqueLeadIds = [...new Set(transfersToStaffToday.map(t => t.lead_id))];
         const todayTransfer = uniqueLeadIds.length;
+        const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
         
-        // Remaining = leads currently assigned with pending status (from created leads)
         const currentStaffLeads = allLeadsForTransferSummary.filter(l => 
           l.created_by_user_id === currentUserId && 
           l.assigned_to_user_id === staff.id
@@ -229,7 +247,6 @@ export default function LeadsDashboard() {
           l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
         ).length;
         
-        // Products from today's transferred leads
         const todayTransferredLeads = allLeadsForTransferSummary.filter(l => uniqueLeadIds.includes(l.id));
         const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
         
@@ -237,6 +254,8 @@ export default function LeadsDashboard() {
           id: staff.id,
           name: staff.name,
           todayTransfer,
+          firstAssign,
+          reassign,
           remaining,
           products: displayProducts,
           fullProducts: fullProductList,
@@ -246,19 +265,16 @@ export default function LeadsDashboard() {
     
     // Admin/Owner: show all calling staff with combined data from ALL creators in store
     return callingStaff.map(staff => {
-      // Today Transfer = count transfers to this staff today (from lead_transfers table - NEVER decreases)
       const transfersToStaffToday = todayTransfers.filter(t => t.to_user_id === staff.id);
-      // Use unique lead_ids to avoid counting duplicate transfers
       const uniqueLeadIds = [...new Set(transfersToStaffToday.map(t => t.lead_id))];
       const todayTransfer = uniqueLeadIds.length;
+      const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
       
-      // Remaining = leads currently assigned to this staff with pending status
       const currentStaffLeads = allLeadsForTransferSummary.filter(l => l.assigned_to_user_id === staff.id);
       const remaining = currentStaffLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products from today's transferred leads
       const todayTransferredLeads = allLeadsForTransferSummary.filter(l => uniqueLeadIds.includes(l.id));
       const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
 
@@ -266,6 +282,8 @@ export default function LeadsDashboard() {
         id: staff.id,
         name: staff.name,
         todayTransfer,
+        firstAssign,
+        reassign,
         remaining,
         products: displayProducts,
         fullProducts: fullProductList,
@@ -639,9 +657,16 @@ export default function LeadsDashboard() {
                     <TableRow key={staff.id}>
                       <TableCell className="font-medium">{staff.name}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="bg-primary/10 text-primary">
-                          {staff.todayTransfer}
-                        </Badge>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Badge variant="outline" className="bg-primary/10 text-primary">
+                            {staff.todayTransfer}
+                          </Badge>
+                          <div className="text-[10px] text-muted-foreground leading-tight">
+                            <span className="text-success">A: {staff.firstAssign.toLocaleString()}</span>
+                            {' / '}
+                            <span className="text-chart-3">R: {staff.reassign.toLocaleString()}</span>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="bg-warning/10 text-warning">
