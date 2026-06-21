@@ -193,14 +193,16 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="status" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <Select value={statusForm.status} onValueChange={v => setStatusForm({ ...statusForm, status: v as ConsignmentStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
-              </Select>
-              <Input className="md:col-span-2" placeholder="Remarks" value={statusForm.remarks} onChange={e => setStatusForm({ ...statusForm, remarks: e.target.value })} />
-              <Button onClick={handleStatusUpdate} disabled={updateStatus.isPending}>Update Status</Button>
-            </div>
+            {!isReadOnly && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <Select value={statusForm.status} onValueChange={v => setStatusForm({ ...statusForm, status: v as ConsignmentStatus })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <Input className="md:col-span-2" placeholder="Remarks" value={statusForm.remarks} onChange={e => setStatusForm({ ...statusForm, remarks: e.target.value })} />
+                <Button onClick={handleStatusUpdate} disabled={updateStatus.isPending}>Update Status</Button>
+              </div>
+            )}
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Remarks</TableHead></TableRow></TableHeader>
               <TableBody>
