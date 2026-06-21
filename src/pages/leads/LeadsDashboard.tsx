@@ -210,19 +210,35 @@ export default function LeadsDashboard() {
       return { displayProducts: displayProducts || '-', fullProductList: fullProductList || '-' };
     };
 
+    // Helper: compute first-assign vs reassign counts from a list of transfers.
+    // Group by lead_id, take earliest transfer; if its from_user_id is null => first assign, else reassign.
+    const calcAssignBreakdown = (transfers: { lead_id: string; from_user_id: string | null; transferred_at: string }[]) => {
+      const byLead = new Map<string, { from_user_id: string | null; transferred_at: string }[]>();
+      transfers.forEach(t => {
+        if (!byLead.has(t.lead_id)) byLead.set(t.lead_id, []);
+        byLead.get(t.lead_id)!.push({ from_user_id: t.from_user_id, transferred_at: t.transferred_at });
+      });
+      let firstAssign = 0;
+      let reassign = 0;
+      byLead.forEach(list => {
+        const earliest = list.sort((a, b) => new Date(a.transferred_at).getTime() - new Date(b.transferred_at).getTime())[0];
+        if (earliest.from_user_id === null) firstAssign++;
+        else reassign++;
+      });
+      return { firstAssign, reassign };
+    };
+
     // For LEADS role: Show calling staff who received leads CREATED by this LEADS user
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        // Today Transfer = count transfers to this staff today for leads created by current LEADS user (from lead_transfers table - NEVER decreases)
         const transfersToStaffToday = todayTransfers.filter(t => 
           t.to_user_id === staff.id && 
           t.created_by_user_id === currentUserId
         );
-        // Use unique lead_ids to avoid counting duplicate transfers
         const uniqueLeadIds = [...new Set(transfersToStaffToday.map(t => t.lead_id))];
         const todayTransfer = uniqueLeadIds.length;
+        const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
         
-        // Remaining = leads currently assigned with pending status (from created leads)
         const currentStaffLeads = allLeadsForTransferSummary.filter(l => 
           l.created_by_user_id === currentUserId && 
           l.assigned_to_user_id === staff.id
@@ -231,7 +247,6 @@ export default function LeadsDashboard() {
           l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
         ).length;
         
-        // Products from today's transferred leads
         const todayTransferredLeads = allLeadsForTransferSummary.filter(l => uniqueLeadIds.includes(l.id));
         const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
         
@@ -239,6 +254,8 @@ export default function LeadsDashboard() {
           id: staff.id,
           name: staff.name,
           todayTransfer,
+          firstAssign,
+          reassign,
           remaining,
           products: displayProducts,
           fullProducts: fullProductList,
@@ -248,19 +265,16 @@ export default function LeadsDashboard() {
     
     // Admin/Owner: show all calling staff with combined data from ALL creators in store
     return callingStaff.map(staff => {
-      // Today Transfer = count transfers to this staff today (from lead_transfers table - NEVER decreases)
       const transfersToStaffToday = todayTransfers.filter(t => t.to_user_id === staff.id);
-      // Use unique lead_ids to avoid counting duplicate transfers
       const uniqueLeadIds = [...new Set(transfersToStaffToday.map(t => t.lead_id))];
       const todayTransfer = uniqueLeadIds.length;
+      const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
       
-      // Remaining = leads currently assigned to this staff with pending status
       const currentStaffLeads = allLeadsForTransferSummary.filter(l => l.assigned_to_user_id === staff.id);
       const remaining = currentStaffLeads.filter(l => 
         l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
       ).length;
       
-      // Products from today's transferred leads
       const todayTransferredLeads = allLeadsForTransferSummary.filter(l => uniqueLeadIds.includes(l.id));
       const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
 
@@ -268,6 +282,8 @@ export default function LeadsDashboard() {
         id: staff.id,
         name: staff.name,
         todayTransfer,
+        firstAssign,
+        reassign,
         remaining,
         products: displayProducts,
         fullProducts: fullProductList,
