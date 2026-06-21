@@ -491,6 +491,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: accountingItems,
     },
     { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: TrendingUp },
+    { title: 'Consignment Management', url: '/admin/inventory/consignments', icon: Package },
     { title: 'Salary & Payroll', url: '/hrm/salary-payroll', icon: DollarSign },
     { title: 'Company Hold', url: '/hrm/company-hold', icon: PiggyBank },
     {
