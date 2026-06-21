@@ -370,8 +370,8 @@ export default function ConsignmentsList() {
                           <TableCell>{r.product_name || '-'}</TableCell>
                           <TableCell>{r.shipment_mode || '-'}</TableCell>
                           <TableCell className="text-xs">{r.origin_country || '-'} → {r.destination || '-'}</TableCell>
-                          <TableCell onDoubleClick={(e) => { e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
-                            {inlineStatusId === r.id ? (
+                          <TableCell onDoubleClick={(e) => { if (isReadOnly) return; e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
+                            {inlineStatusId === r.id && !isReadOnly ? (
                               <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
                                 <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
                                 <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
