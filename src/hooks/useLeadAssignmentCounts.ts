@@ -67,6 +67,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
             id,
             lead_id,
             to_user_id,
+            from_user_id,
             transferred_at,
             transferred_by_user_id,
             store_id,
