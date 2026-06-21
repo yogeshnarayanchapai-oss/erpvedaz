@@ -657,9 +657,16 @@ export default function LeadsDashboard() {
                     <TableRow key={staff.id}>
                       <TableCell className="font-medium">{staff.name}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="bg-primary/10 text-primary">
-                          {staff.todayTransfer}
-                        </Badge>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Badge variant="outline" className="bg-primary/10 text-primary">
+                            {staff.todayTransfer}
+                          </Badge>
+                          <div className="text-[10px] text-muted-foreground leading-tight">
+                            <span className="text-success">A: {staff.firstAssign.toLocaleString()}</span>
+                            {' / '}
+                            <span className="text-chart-3">R: {staff.reassign.toLocaleString()}</span>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="bg-warning/10 text-warning">
