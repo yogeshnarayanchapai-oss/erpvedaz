@@ -134,7 +134,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
 
       // Group by staff and count unique leads (Set ensures no double counting)
       const staffCounts = new Map<string, Set<string>>();
-      const staffTransfers = new Map<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>();
+      const staffTransfers = new Map<string, TransferInfo[]>();
 
       filteredTransfers.forEach(transfer => {
         const staffId = transfer.to_user_id;
