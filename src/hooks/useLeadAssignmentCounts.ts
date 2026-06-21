@@ -163,7 +163,7 @@ export function useLeadAssignmentCounts(options: LeadAssignmentCountOptions) {
 
       // Build result
       const countsByStaff: Record<string, number> = {};
-      const transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]> = {};
+      const transfersByStaff: Record<string, TransferInfo[]> = {};
       let totalCount = 0;
 
       staffCounts.forEach((leadIds, id) => {
