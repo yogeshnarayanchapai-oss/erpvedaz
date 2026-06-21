@@ -230,9 +230,9 @@ export default function ConsignmentsList() {
           <p className="text-sm text-muted-foreground">Track and manage import / export consignments end-to-end</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>
+          {!isReadOnly && <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>}
           <Button variant="outline" onClick={exportXlsx}><Download className="h-4 w-4 mr-1" /> Export</Button>
-          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>
+          {!isReadOnly && <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>}
         </div>
       </div>
 
