@@ -144,7 +144,7 @@ export default function LeadsDashboard() {
 
 
   // Fetch today's transfers from lead_transfers table (historical, never changes on reassignment)
-  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; lead_id: string; created_by_user_id: string | null; product_id: string | null }[]>([]);
+  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string; created_by_user_id: string | null; product_id: string | null }[]>([]);
   
   useEffect(() => {
     async function fetchTodayTransfers() {
@@ -154,7 +154,7 @@ export default function LeadsDashboard() {
       // Fetch from lead_transfers table with lead info (created_by_user_id, product_id, store_id)
       const { data, error } = await supabase
         .from('lead_transfers')
-        .select('to_user_id, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
+        .select('to_user_id, from_user_id, transferred_at, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
         .not('to_user_id', 'is', null)
         .eq('leads.store_id', currentStoreId)
         .gte('transferred_at', `${todayDate}T00:00:00+05:45`)
@@ -163,6 +163,8 @@ export default function LeadsDashboard() {
       if (!error && data) {
         setTodayTransfers(data.map(d => ({
           to_user_id: d.to_user_id!,
+          from_user_id: (d as any).from_user_id || null,
+          transferred_at: (d as any).transferred_at,
           lead_id: d.lead_id,
           created_by_user_id: (d.leads as any)?.created_by_user_id || null,
           product_id: (d.leads as any)?.product_id || null
