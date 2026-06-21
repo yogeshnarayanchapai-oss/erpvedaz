@@ -9,10 +9,19 @@ interface LeadAssignmentCountOptions {
   excludeSelfCreated?: boolean; // true for Admin Transfer Summary
 }
 
+interface TransferInfo {
+  leadId: string;
+  transferredAt: string;
+  fromTeam: string | null;
+  leadDate: string | null;
+  leadType: string | null;
+  fromUserId: string | null;
+}
+
 interface LeadAssignmentCountResult {
   countsByStaff: Record<string, number>;
   totalCount: number;
-  transfersByStaff: Record<string, { leadId: string; transferredAt: string; fromTeam: string | null; leadDate: string | null; leadType: string | null }[]>;
+  transfersByStaff: Record<string, TransferInfo[]>;
 }
 
 /**
