@@ -137,8 +137,8 @@ export default function ConsignmentDetail() {
         </div>
         <div className="flex gap-2">
           
-          <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>
-          <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>
+          {!isReadOnly && <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>}
+          {!isReadOnly && <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>}
         </div>
       </div>
 
