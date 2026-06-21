@@ -394,9 +394,9 @@ export default function ConsignmentsList() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                                {!isReadOnly && <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>}
                                 <DropdownMenuItem onClick={() => exportConsignmentPDF(r)}><Download className="h-4 w-4 mr-2" /> Export PDF</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                                {!isReadOnly && <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
