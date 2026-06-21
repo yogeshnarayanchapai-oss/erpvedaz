@@ -22,6 +22,7 @@ import { useConsignments, useSaveConsignment, useDeleteConsignment, useUpdateCon
 import { exportConsignmentPDF } from '@/lib/consignmentPdf';
 import { format, subDays } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 const formatCompactAmount = (n: number): string => {
   const abs = Math.abs(n);
@@ -89,6 +90,8 @@ function inferMeasurement(c: Partial<Consignment>): { measurement_type: string; 
 
 export default function ConsignmentsList() {
   const navigate = useNavigate();
+  const { effectiveRole } = useEffectiveRole();
+  const isReadOnly = effectiveRole === 'ACCOUNTANT';
   const [mainTab, setMainTab] = useState<'active' | 'completed' | 'activity'>('active');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -227,9 +230,9 @@ export default function ConsignmentsList() {
           <p className="text-sm text-muted-foreground">Track and manage import / export consignments end-to-end</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>
+          {!isReadOnly && <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>}
           <Button variant="outline" onClick={exportXlsx}><Download className="h-4 w-4 mr-1" /> Export</Button>
-          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>
+          {!isReadOnly && <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>}
         </div>
       </div>
 
@@ -367,8 +370,8 @@ export default function ConsignmentsList() {
                           <TableCell>{r.product_name || '-'}</TableCell>
                           <TableCell>{r.shipment_mode || '-'}</TableCell>
                           <TableCell className="text-xs">{r.origin_country || '-'} → {r.destination || '-'}</TableCell>
-                          <TableCell onDoubleClick={(e) => { e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
-                            {inlineStatusId === r.id ? (
+                          <TableCell onDoubleClick={(e) => { if (isReadOnly) return; e.stopPropagation(); setInlineStatusId(r.id); }} onClick={(e) => e.stopPropagation()}>
+                            {inlineStatusId === r.id && !isReadOnly ? (
                               <Select value={r.status} onValueChange={(v) => { updateStatus.mutate({ id: r.id, status: v as ConsignmentStatus, storeId: storeId! }); setInlineStatusId(null); }} onOpenChange={(o) => { if (!o) setInlineStatusId(null); }}>
                                 <SelectTrigger className="h-7 text-xs w-[160px]"><SelectValue /></SelectTrigger>
                                 <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
@@ -391,9 +394,9 @@ export default function ConsignmentsList() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => navigate(`/admin/inventory/consignments/${r.id}`)}><Eye className="h-4 w-4 mr-2" /> View</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>
+                                {!isReadOnly && <DropdownMenuItem onClick={() => openEdit(r)} disabled={r.is_locked}><Edit2 className="h-4 w-4 mr-2" /> Edit</DropdownMenuItem>}
                                 <DropdownMenuItem onClick={() => exportConsignmentPDF(r)}><Download className="h-4 w-4 mr-2" /> Export PDF</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>
+                                {!isReadOnly && <DropdownMenuItem onClick={() => setDelId(r.id)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</DropdownMenuItem>}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

@@ -19,6 +19,7 @@ import {
   useSaveConsignment, CONSIGNMENT_STATUSES, STATUS_LABELS, ConsignmentStatus,
 } from '@/hooks/useConsignments';
 import { useConsignmentSettings } from '@/hooks/useConsignmentSettings';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { toast } from 'sonner';
 
 const DOC_TYPES = ['SUPPLIER_INVOICE','CUSTOMER_INVOICE','PACKING_LIST','BOL_AWB','PO','CUSTOMS','RECEIPT','DELIVERY_PROOF','OTHER'];
@@ -27,6 +28,8 @@ export default function ConsignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const storeId = useCurrentStoreId();
+  const { effectiveRole } = useEffectiveRole();
+  const isReadOnly = effectiveRole === 'ACCOUNTANT';
   const { data: c, isLoading } = useConsignment(id);
   const { data: history = [] } = useConsignmentStatusHistory(id);
   const { data: costs = [] } = useConsignmentCosts(id);
@@ -134,8 +137,8 @@ export default function ConsignmentDetail() {
         </div>
         <div className="flex gap-2">
           
-          <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>
-          <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>
+          {!isReadOnly && <Button variant="outline" onClick={toggleLock}>{c.is_locked ? <><Unlock className="h-4 w-4 mr-1" /> Unlock</> : <><Lock className="h-4 w-4 mr-1" /> Lock</>}</Button>}
+          {!isReadOnly && <Button onClick={handleComplete} disabled={c.is_completed}><CheckCircle2 className="h-4 w-4 mr-1" /> Mark Completed</Button>}
         </div>
       </div>
 
@@ -190,14 +193,16 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="status" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <Select value={statusForm.status} onValueChange={v => setStatusForm({ ...statusForm, status: v as ConsignmentStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
-              </Select>
-              <Input className="md:col-span-2" placeholder="Remarks" value={statusForm.remarks} onChange={e => setStatusForm({ ...statusForm, remarks: e.target.value })} />
-              <Button onClick={handleStatusUpdate} disabled={updateStatus.isPending}>Update Status</Button>
-            </div>
+            {!isReadOnly && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <Select value={statusForm.status} onValueChange={v => setStatusForm({ ...statusForm, status: v as ConsignmentStatus })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{activeStatusOptions.map(s => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <Input className="md:col-span-2" placeholder="Remarks" value={statusForm.remarks} onChange={e => setStatusForm({ ...statusForm, remarks: e.target.value })} />
+                <Button onClick={handleStatusUpdate} disabled={updateStatus.isPending}>Update Status</Button>
+              </div>
+            )}
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Remarks</TableHead></TableRow></TableHeader>
               <TableBody>
@@ -242,7 +247,7 @@ export default function ConsignmentDetail() {
                         <TableCell><Badge variant="outline">{r.cost_type}</Badge> <span className="text-xs text-muted-foreground">{r.description || ''}</span></TableCell>
                         <TableCell className="text-right">
                           {Number(r.amount).toLocaleString()}
-                          {!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                          {!c.is_locked && !isReadOnly && <Button size="icon" variant="ghost" onClick={() => delCost.mutate({ id: r.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -258,7 +263,7 @@ export default function ConsignmentDetail() {
         <TabsContent value="payments" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
 
-            {!c.is_locked && (
+            {!c.is_locked && !isReadOnly && (
               <form onSubmit={handleAddPayment} className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <Select value={payForm.direction} onValueChange={v => setPayForm({ ...payForm, direction: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -290,7 +295,7 @@ export default function ConsignmentDetail() {
                     <TableCell>{p.payment_for}</TableCell>
                     <TableCell className="text-xs">{p.payment_method || '-'}</TableCell>
                     <TableCell className="text-right">{Number(p.amount).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{!c.is_locked && <Button size="icon" variant="ghost" onClick={() => delPayment.mutate({ id: p.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
+                    <TableCell className="text-right">{!c.is_locked && !isReadOnly && <Button size="icon" variant="ghost" onClick={() => delPayment.mutate({ id: p.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -300,18 +305,20 @@ export default function ConsignmentDetail() {
 
         <TabsContent value="documents" className="mt-3">
           <Card><CardContent className="p-4 space-y-4">
-            <div className="flex gap-2 items-end flex-wrap">
-              <div className="space-y-1"><Label className="text-xs">Document Type</Label>
-                <Select value={docType} onValueChange={setDocType}>
-                  <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g,' ')}</SelectItem>)}</SelectContent>
-                </Select>
+            {!isReadOnly && (
+              <div className="flex gap-2 items-end flex-wrap">
+                <div className="space-y-1"><Label className="text-xs">Document Type</Label>
+                  <Select value={docType} onValueChange={setDocType}>
+                    <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace(/_/g,' ')}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <label className="cursor-pointer">
+                  <input type="file" className="hidden" onChange={handleUpload} disabled={uploadDoc.isPending} />
+                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:opacity-90"><Upload className="h-4 w-4" /> {uploadDoc.isPending ? 'Uploading...' : 'Upload File'}</span>
+                </label>
               </div>
-              <label className="cursor-pointer">
-                <input type="file" className="hidden" onChange={handleUpload} disabled={uploadDoc.isPending} />
-                <span className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:opacity-90"><Upload className="h-4 w-4" /> {uploadDoc.isPending ? 'Uploading...' : 'Upload File'}</span>
-              </label>
-            </div>
+            )}
             <Table>
               <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>File</TableHead><TableHead>Uploaded</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
@@ -322,7 +329,7 @@ export default function ConsignmentDetail() {
                     <TableCell className="text-xs">{new Date(d.uploaded_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="icon" variant="ghost" asChild><a href={d.file_url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a></Button>
-                      <Button size="icon" variant="ghost" onClick={() => delDoc.mutate({ id: d.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      {!isReadOnly && <Button size="icon" variant="ghost" onClick={() => delDoc.mutate({ id: d.id, consignment_id: c.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </TableCell>
                   </TableRow>
                 ))}
