@@ -303,22 +303,33 @@ export default function LeadsAll() {
   const handleBulkReassign = async () => {
     if (!reassignStaffId || selectedLeads.length === 0) return;
 
-    // Check if any selected leads have ASSIGNED status - they cannot be reassigned
     const selectedLeadObjects = filteredLeads.filter(l => selectedLeads.includes(l.id));
-    const assignedStatusLeads = selectedLeadObjects.filter(l => l.status === 'ASSIGNED');
-    
-    if (assignedStatusLeads.length > 0) {
-      toast.error(`Cannot reassign ${assignedStatusLeads.length} lead(s) with ASSIGNED status. Staff must first work on the lead (change status to CONFIRMED, FOLLOW_UP, CNR, or CANCELLED).`);
-      return;
+
+    // OWNER bypasses ASSIGNED-status and same-day reassignment restrictions
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    let isOwner = false;
+    if (currentUser) {
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      isOwner = currentProfile?.role === 'OWNER';
     }
 
-    // Check for same-day leads - they cannot be reassigned today
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const sameDayLeads = selectedLeadObjects.filter(l => l.date === today);
-    
-    if (sameDayLeads.length > 0) {
-      toast.error(`Cannot reassign ${sameDayLeads.length} lead(s) with today's date. Leads can only be reassigned the next day.`);
-      return;
+    if (!isOwner) {
+      const assignedStatusLeads = selectedLeadObjects.filter(l => l.status === 'ASSIGNED');
+      if (assignedStatusLeads.length > 0) {
+        toast.error(`Cannot reassign ${assignedStatusLeads.length} lead(s) with ASSIGNED status. Staff must first work on the lead (change status to CONFIRMED, FOLLOW_UP, CNR, or CANCELLED).`);
+        return;
+      }
+
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const sameDayLeads = selectedLeadObjects.filter(l => l.date === today);
+      if (sameDayLeads.length > 0) {
+        toast.error(`Cannot reassign ${sameDayLeads.length} lead(s) with today's date. Leads can only be reassigned the next day.`);
+        return;
+      }
     }
 
     try {
