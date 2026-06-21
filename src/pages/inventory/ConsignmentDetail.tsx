@@ -28,6 +28,8 @@ export default function ConsignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const storeId = useCurrentStoreId();
+  const { effectiveRole } = useEffectiveRole();
+  const isReadOnly = effectiveRole === 'ACCOUNTANT';
   const { data: c, isLoading } = useConsignment(id);
   const { data: history = [] } = useConsignmentStatusHistory(id);
   const { data: costs = [] } = useConsignmentCosts(id);
