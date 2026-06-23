@@ -34,7 +34,7 @@ export function SearchablePartySelect({
   placeholder = 'Select party...',
   disabled = false,
   partyType,
-  showNoneOption = false,
+  showNoneOption = true,
   showAddButton = true,
 }: SearchablePartySelectProps) {
   const [open, setOpen] = useState(false);
