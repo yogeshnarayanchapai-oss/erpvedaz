@@ -127,10 +127,11 @@ export function SendQuotationDialog({ open, onOpenChange, defaultProductName, cu
   const num = (v: any) => v === '' || v == null ? 0 : Number(v);
   const set = (k: keyof QuotationData) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setData(d => ({ ...d, [k]: typeof d[k] === 'number' ? num(e.target.value) : e.target.value as any }));
+  const nv = (n: number) => (n === 0 ? '' : n);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[1100px] max-h-[92vh] overflow-auto">
+      <DialogContent className="!max-w-[900px] max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -139,30 +140,29 @@ export function SendQuotationDialog({ open, onOpenChange, defaultProductName, cu
         </DialogHeader>
 
         {step === 1 && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div><Label>Product name</Label><Input value={data.productName} onChange={e => setData({ ...data, productName: e.target.value })} /></div>
-              <div><Label>HS Code</Label><Input value={data.hsCode} onChange={e => setData({ ...data, hsCode: e.target.value })} /></div>
-              <div><Label>Gross weight (kg)</Label><Input type="number" value={data.grossWeight} onChange={set('grossWeight')} /></div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div><Label className="text-xs">Product name</Label><Input className="h-8" value={data.productName} onChange={e => setData({ ...data, productName: e.target.value })} /></div>
+              <div><Label className="text-xs">HS Code</Label><Input className="h-8" value={data.hsCode} onChange={e => setData({ ...data, hsCode: e.target.value })} /></div>
+              <div><Label className="text-xs">Gross weight (kg)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.grossWeight)} onChange={set('grossWeight')} /></div>
+              <div><Label className="text-xs">Total rate per pcs (INR)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.ratePerPcs)} onChange={set('ratePerPcs')} /></div>
 
-              <div><Label>Total rate per pcs (INR)</Label><Input type="number" value={data.ratePerPcs} onChange={set('ratePerPcs')} /></div>
-              <div><Label>Total qty (kg / pcs)</Label><Input type="number" value={data.totalQty} onChange={set('totalQty')} /></div>
-              <div><Label>Exchange rate (INR→NPR)</Label><Input type="number" step="0.0001" value={data.exchangeRate} onChange={set('exchangeRate')} /></div>
+              <div><Label className="text-xs">Total qty (kg / pcs)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.totalQty)} onChange={set('totalQty')} /></div>
+              <div><Label className="text-xs">Exchange rate (INR→NPR)</Label><Input className="h-8" type="number" step="0.0001" placeholder="1.6015" value={nv(data.exchangeRate)} onChange={set('exchangeRate')} /></div>
+              <div><Label className="text-xs">Tax rate (%)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.taxRate)} onChange={set('taxRate')} /></div>
+              <div><Label className="text-xs">Duty (%)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.duty)} onChange={set('duty')} /></div>
 
-              <div><Label>Tax rate (%)</Label><Input type="number" value={data.taxRate} onChange={set('taxRate')} /></div>
-              <div><Label>Duty (%)</Label><Input type="number" value={data.duty} onChange={set('duty')} /></div>
-              <div><Label>VAT (%)</Label><Input type="number" value={data.vat} onChange={set('vat')} /></div>
+              <div><Label className="text-xs">VAT (%)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.vat)} onChange={set('vat')} /></div>
+              <div><Label className="text-xs">Transportation (India)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.transportIndia)} onChange={set('transportIndia')} /></div>
+              <div><Label className="text-xs">Custom agent (Ind+Nep)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.customAgent)} onChange={set('customAgent')} /></div>
+              <div><Label className="text-xs">Border transportation</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.borderTransport)} onChange={set('borderTransport')} /></div>
 
-              <div><Label>Transportation (India)</Label><Input type="number" value={data.transportIndia} onChange={set('transportIndia')} /></div>
-              <div><Label>Custom agent (India+Nepal)</Label><Input type="number" value={data.customAgent} onChange={set('customAgent')} /></div>
-              <div><Label>Border transportation</Label><Input type="number" value={data.borderTransport} onChange={set('borderTransport')} /></div>
-
-              <div><Label>Bank charge</Label><Input type="number" value={data.bankCharge} onChange={set('bankCharge')} /></div>
-              <div><Label>Insurance</Label><Input type="number" value={data.insurance} onChange={set('insurance')} /></div>
-              <div><Label>Nepal transportation</Label><Input type="number" value={data.nepalTransport} onChange={set('nepalTransport')} /></div>
-
-              <div><Label>Service charge (%)</Label><Input type="number" value={data.serviceChargePct} onChange={set('serviceChargePct')} /></div>
+              <div><Label className="text-xs">Bank charge</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.bankCharge)} onChange={set('bankCharge')} /></div>
+              <div><Label className="text-xs">Insurance</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.insurance)} onChange={set('insurance')} /></div>
+              <div><Label className="text-xs">Nepal transportation</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.nepalTransport)} onChange={set('nepalTransport')} /></div>
+              <div><Label className="text-xs">Service charge (%)</Label><Input className="h-8" type="number" placeholder="0" value={nv(data.serviceChargePct)} onChange={set('serviceChargePct')} /></div>
             </div>
+
 
             <Card className="p-3 bg-muted/30">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
