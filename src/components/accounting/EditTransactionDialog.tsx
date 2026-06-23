@@ -43,7 +43,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         amount: transaction.amount,
         account_id: transaction.account_id || '',
         category_id: transaction.category_id || '',
-        party_id: transaction.party_id || '',
+        party_id: transaction.party_id || 'none',
         reference_no: transaction.reference_no || '',
         note: transaction.note || '',
         consignment_id: (transaction as any).consignment_id || null,
