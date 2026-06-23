@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download, Menu, Settings } from 'lucide-react';
+import { Package, Plus, Eye, Edit2, Trash2, Truck, CheckCircle2, Clock, Ship, Download, Menu, Settings, FileText } from 'lucide-react';
+import { SendQuotationDialog } from '@/components/inventory/SendQuotationDialog';
 import { ConsignmentSettingsDialog } from '@/components/inventory/ConsignmentSettingsDialog';
 import { useConsignmentSettings } from '@/hooks/useConsignmentSettings';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -143,6 +144,7 @@ export default function ConsignmentsList() {
   const [inlineStatusId, setInlineStatusId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [quotationOpen, setQuotationOpen] = useState(false);
   const { data: statusOptions = [] } = useConsignmentSettings('STATUS');
   const activeStatusOptions = statusOptions.filter(s => s.is_active);
   const statusLabelMap: Record<string, string> = {
@@ -231,7 +233,15 @@ export default function ConsignmentsList() {
         </div>
         <div className="flex gap-2">
           {!isReadOnly && <Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-1" /> Settings</Button>}
-          <Button variant="outline" onClick={exportXlsx}><Download className="h-4 w-4 mr-1" /> Export</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" title="Export / Quotation"><Download className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportXlsx}><Download className="h-4 w-4 mr-2" /> Export Excel ({mainTab})</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setQuotationOpen(true)}><FileText className="h-4 w-4 mr-2" /> Send Quotation</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {!isReadOnly && <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> New Consignment</Button>}
         </div>
       </div>
@@ -534,6 +544,7 @@ export default function ConsignmentsList() {
       </AlertDialog>
 
       <ConsignmentSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SendQuotationDialog open={quotationOpen} onOpenChange={setQuotationOpen} />
     </div>
   );
 }
