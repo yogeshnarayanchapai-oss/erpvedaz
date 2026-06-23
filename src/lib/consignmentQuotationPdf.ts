@@ -167,17 +167,71 @@ export async function generateQuotationPDF(opts: {
 
   y = (doc as any).lastAutoTable.finalY + 6;
 
-  // Terms
+  // Terms — flow inline after the table; break to next page only when full.
+  const pageH = doc.internal.pageSize.getHeight();
+  const bottomLimit = pageH - 22; // leave room for disclaimer footer
+  const lineH = 4;
+
+  const ensureSpace = (need: number) => {
+    if (y + need > bottomLimit) { doc.addPage(); y = 14; }
+  };
+
   if (terms && terms.length) {
-    if (y > 240) { doc.addPage(); y = 14; }
+    ensureSpace(8);
     doc.setFontSize(10); doc.setFont(undefined, 'bold');
-    doc.text('Terms & Conditions', margin, y); y += 4;
-    doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+    doc.text('Terms & Conditions', margin, y); y += 5;
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+
+    // Tokenize **bold** segments and render with inline bold + word wrap.
+    const tokenize = (s: string) => {
+      const out: { text: string; bold: boolean }[] = [];
+      const re = /\*\*(.+?)\*\*/g;
+      let last = 0; let m: RegExpExecArray | null;
+      while ((m = re.exec(s)) !== null) {
+        if (m.index > last) out.push({ text: s.slice(last, m.index), bold: false });
+        out.push({ text: m[1], bold: true });
+        last = m.index + m[0].length;
+      }
+      if (last < s.length) out.push({ text: s.slice(last), bold: false });
+      return out;
+    };
+
+    const maxW = pageW - margin * 2;
+
     terms.forEach((t, i) => {
-      const lines = doc.splitTextToSize(`${i + 1}. ${t}`, pageW - margin * 2);
-      if (y + lines.length * 4 > 280) { doc.addPage(); y = 14; }
-      doc.text(lines, margin, y);
-      y += lines.length * 4 + 1;
+      const prefix = `${i + 1}. `;
+      const indent = doc.getTextWidth(prefix);
+      ensureSpace(lineH);
+      doc.setFont(undefined, 'bold');
+      doc.text(prefix, margin, y);
+      doc.setFont(undefined, 'normal');
+
+      let x = margin + indent;
+      const lineStart = margin + indent;
+      const tokens = tokenize(t);
+
+      tokens.forEach(tok => {
+        // Split into words but preserve newlines
+        const parts = tok.text.split(/(\s+)/);
+        parts.forEach(part => {
+          if (part === '') return;
+          if (/\n/.test(part)) {
+            const nls = (part.match(/\n/g) || []).length;
+            for (let k = 0; k < nls; k++) { y += lineH; ensureSpace(lineH); x = lineStart; }
+            return;
+          }
+          doc.setFont(undefined, tok.bold ? 'bold' : 'normal');
+          const w = doc.getTextWidth(part);
+          if (x + w > margin + maxW) {
+            // wrap: drop leading whitespace on new line
+            y += lineH; ensureSpace(lineH); x = lineStart;
+            if (/^\s+$/.test(part)) return;
+          }
+          doc.text(part, x, y);
+          x += w;
+        });
+      });
+      y += lineH + 1;
     });
   }
 
