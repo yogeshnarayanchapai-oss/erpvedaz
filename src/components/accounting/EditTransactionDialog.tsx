@@ -62,7 +62,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         amount: formData.amount,
         account_id: formData.account_id || null,
         category_id: formData.category_id || null,
-        party_id: formData.party_id || null,
+        party_id: formData.party_id === 'none' ? null : formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
         consignment_id: formData.consignment_id,
