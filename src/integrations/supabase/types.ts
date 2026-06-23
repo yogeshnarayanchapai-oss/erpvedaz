@@ -2120,6 +2120,39 @@ export type Database = {
           },
         ]
       }
+      consignment_quotation_terms: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          store_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          store_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consignment_setting_options: {
         Row: {
           category: string
