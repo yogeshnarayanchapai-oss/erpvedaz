@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { useUpdateTransaction, Transaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
-import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateActivityLog } from '@/hooks/useAccountingActivityLogs';
 import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
+import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -33,7 +33,6 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
 
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
-  const { data: parties = [] } = usePartiesWithBalances();
   const updateTransaction = useUpdateTransaction();
   const createActivityLog = useCreateActivityLog();
 
@@ -44,7 +43,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         amount: transaction.amount,
         account_id: transaction.account_id || '',
         category_id: transaction.category_id || '',
-        party_id: transaction.party_id || '',
+        party_id: transaction.party_id || 'none',
         reference_no: transaction.reference_no || '',
         note: transaction.note || '',
         consignment_id: (transaction as any).consignment_id || null,
@@ -63,7 +62,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         amount: formData.amount,
         account_id: formData.account_id || null,
         category_id: formData.category_id || null,
-        party_id: formData.party_id || null,
+        party_id: formData.party_id === 'none' ? null : formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
         consignment_id: formData.consignment_id,
@@ -138,10 +137,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-sm">Party</Label>
-              <Select value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })}>
-                <SelectTrigger className="h-10"><SelectValue placeholder="Select party" /></SelectTrigger>
-                <SelectContent>{parties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <SearchablePartySelect
+                value={formData.party_id}
+                onValueChange={v => setFormData({ ...formData, party_id: v })}
+                placeholder="Select party"
+                showAddButton={false}
+              />
             </div>
             <div className="space-y-1.5"><Label className="text-sm">Reference No.</Label><Input value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} placeholder="Optional" className="h-10" /></div>
           </div>
