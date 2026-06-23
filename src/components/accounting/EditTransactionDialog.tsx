@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { useUpdateTransaction, Transaction } from '@/hooks/useTransactions';
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
-import { usePartiesWithBalances } from '@/hooks/useParties';
 import { useCreateActivityLog } from '@/hooks/useAccountingActivityLogs';
 import { ConsignmentPicker } from '@/components/accounting/ConsignmentPicker';
+import { SearchablePartySelect } from '@/components/accounting/SearchablePartySelect';
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
