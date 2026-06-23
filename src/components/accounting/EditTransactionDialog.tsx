@@ -33,7 +33,6 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
 
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
-  const { data: parties = [] } = usePartiesWithBalances();
   const updateTransaction = useUpdateTransaction();
   const createActivityLog = useCreateActivityLog();
 
