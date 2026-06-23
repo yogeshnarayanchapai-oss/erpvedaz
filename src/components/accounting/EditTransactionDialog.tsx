@@ -137,10 +137,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-sm">Party</Label>
-              <Select value={formData.party_id} onValueChange={v => setFormData({ ...formData, party_id: v })}>
-                <SelectTrigger className="h-10"><SelectValue placeholder="Select party" /></SelectTrigger>
-                <SelectContent>{parties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <SearchablePartySelect
+                value={formData.party_id}
+                onValueChange={v => setFormData({ ...formData, party_id: v })}
+                placeholder="Select party"
+                showAddButton={false}
+              />
             </div>
             <div className="space-y-1.5"><Label className="text-sm">Reference No.</Label><Input value={formData.reference_no} onChange={e => setFormData({ ...formData, reference_no: e.target.value })} placeholder="Optional" className="h-10" /></div>
           </div>
