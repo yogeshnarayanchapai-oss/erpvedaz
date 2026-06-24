@@ -83,7 +83,7 @@ export function TodayTransferProgress({
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
             <Send className="w-5 h-5 text-success mb-1" />
             <span className="text-2xl font-bold">{todayLeadsTransferred.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Today Lead</span>
+            <span className="text-xs text-muted-foreground">New Lead</span>
           </CardContent>
         </Card>
 
@@ -91,7 +91,7 @@ export function TodayTransferProgress({
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
             <PhoneOff className="w-5 h-5 text-destructive mb-1" />
             <span className="text-2xl font-bold">{cnrLeadsTransferred.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">CNR Lead</span>
+            <span className="text-xs text-muted-foreground">Reassign Lead</span>
           </CardContent>
         </Card>
       </div>
