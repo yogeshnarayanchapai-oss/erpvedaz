@@ -289,8 +289,13 @@ export default function LeadsDashboard() {
 
   // Product Leads Summary - uses filtered leads based on role
   const productSummary = useMemo(() => {
+    // For Admin/Owner: count across ALL store leads (use allLeadsForTransferSummary which is store-wide)
+    // For LEADS role: count only leads they created
+    const sourceLeads = isAdminOrOwner 
+      ? allLeadsForTransferSummary 
+      : allLeadsForTransferSummary.filter(l => l.created_by_user_id === currentUserId);
     return products.map(product => {
-      const productLeads = filteredLeads.filter(l => l.product_id === product.id);
+      const productLeads = sourceLeads.filter(l => l.product_id === product.id);
       const leadsToday = productLeads.filter(l => l.date === today).length;
       const transferredToday = productLeads.filter(l => 
         l.date === today && l.assigned_to_user_id !== null
@@ -307,7 +312,7 @@ export default function LeadsDashboard() {
         remainingInPool,
       };
     }).filter(p => p.leadsToday >= 1);
-  }, [products, filteredLeads, today]);
+  }, [products, allLeadsForTransferSummary, isAdminOrOwner, currentUserId, today]);
 
   // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
   const todayProgressStats = useMemo(() => {
