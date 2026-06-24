@@ -371,7 +371,7 @@ export default function AdminLeads() {
       return {
         id: staff.id,
         name: staff.name,
-        transferCount,
+        transferCount: firstAssign + reassign,
         firstAssign,
         reassign,
         newLeads,
