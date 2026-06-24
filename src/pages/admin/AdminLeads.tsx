@@ -333,19 +333,28 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED'
       ).length;
       
-      // First assign vs Reassign: group transfers by leadId, check earliest transfer's fromUserId
-      const transfersByLead = new Map<string, { transferredAt: string; fromUserId: string | null }[]>();
+      // New vs Reassign: use the same lead_type classification as the top cards.
+      // Group by leadId first so A/R always sums to the displayed transferred count.
+      const transfersByLead = new Map<string, { transferredAt: string; leadType: string | null; fromTeam: string | null }[]>();
       staffTransfers.forEach(t => {
         if (!transfersByLead.has(t.leadId)) transfersByLead.set(t.leadId, []);
-        transfersByLead.get(t.leadId)!.push({ transferredAt: t.transferredAt, fromUserId: t.fromUserId });
+        transfersByLead.get(t.leadId)!.push({ transferredAt: t.transferredAt, leadType: t.leadType, fromTeam: t.fromTeam });
       });
       
       let firstAssign = 0;
       let reassign = 0;
       transfersByLead.forEach((transfers) => {
         const earliest = transfers.sort((a, b) => new Date(a.transferredAt).getTime() - new Date(b.transferredAt).getTime())[0];
-        if (earliest.fromUserId === null) firstAssign++;
-        else reassign++;
+        if (earliest.leadType === 'NEW') {
+          firstAssign++;
+        } else if (
+          earliest.leadType === 'REASSIGN' ||
+          earliest.leadType === 'CNR_POOL' ||
+          earliest.leadType === 'FOLLOW_UP_POOL' ||
+          (earliest.leadType === null && earliest.fromTeam !== null && earliest.fromTeam !== 'LEADS')
+        ) {
+          reassign++;
+        }
       });
       
       const productCounts: Record<string, number> = {};
