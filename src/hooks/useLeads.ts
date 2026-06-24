@@ -182,6 +182,8 @@ export function useLeadsForTransferSummary() {
           assigned_at,
           status,
           product_id,
+          date,
+          current_team,
           products:product_id(name)
         `)
         .eq('store_id', storeId)
@@ -195,6 +197,8 @@ export function useLeadsForTransferSummary() {
         assigned_at: string | null;
         status: string | null;
         product_id: string | null;
+        date: string | null;
+        current_team: string | null;
         products?: { name: string } | null;
       }>;
     },
