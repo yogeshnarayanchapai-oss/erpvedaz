@@ -316,7 +316,7 @@ export function EditLeadSheet({
             <div className="border-t pt-4 space-y-3">
               <h4 className="font-medium flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Schedule Follow-Up
+                Schedule Follow-Up <span className="text-xs text-destructive">*Required</span>
               </h4>
               <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-1.5">
