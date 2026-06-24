@@ -503,7 +503,28 @@ export function EditLeadSheet({
 
           {/* Action buttons - pushed to bottom */}
           <div className="flex gap-3 pt-4 border-t mt-auto">
-            <Button onClick={onSave} className="flex-1" disabled={isSaving}>
+            <Button
+              onClick={() => {
+                if (formData.status === 'FOLLOW_UP') {
+                  if (!formData.followup_preset || !formData.followup_date || !formData.followup_time) {
+                    toast.error('Please schedule the follow-up time (date & time are required).');
+                    return;
+                  }
+                  const scheduled = new Date(`${formData.followup_date}T${formData.followup_time}`);
+                  if (isNaN(scheduled.getTime())) {
+                    toast.error('Invalid follow-up date/time.');
+                    return;
+                  }
+                  if (scheduled.getTime() <= Date.now()) {
+                    toast.error('Follow-up time must be in the future.');
+                    return;
+                  }
+                }
+                onSave();
+              }}
+              className="flex-1"
+              disabled={isSaving}
+            >
               <CheckCircle className="w-4 h-4 mr-2" />
               Save Changes
             </Button>
