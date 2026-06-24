@@ -319,18 +319,19 @@ export default function AdminLeads() {
     return callingStaff.map(staff => {
       const transferCount = countsMap[staff.id] || 0;
       
-      // New = leads currently assigned to this staff with NEW/ASSIGNED/null status (excluding self-created)
-      const staffCurrentLeads = allStoreLeads.filter(l => 
-        l.assigned_to_user_id === staff.id && l.created_by_user_id !== staff.id
-      );
-      const newLeads = staffCurrentLeads.filter(l => 
-        l.status === 'ASSIGNED' || l.status === 'NEW' || !l.status
-      ).length;
-      
       // Products: get product counts from staff leads that were transferred in date range
       // We need to look up lead products from allStoreLeads using the lead IDs from transfers
       const staffTransfers = transfersMap[staff.id] || [];
       const transferredLeadIds = new Set(staffTransfers.map(t => t.leadId));
+
+      // New = only leads transferred to this staff in the selected date range
+      // that are still with the same staff and still in ASSIGNED status.
+      // Do not count old all-time assigned leads here.
+      const newLeads = allStoreLeads.filter(l =>
+        transferredLeadIds.has(l.id) &&
+        l.assigned_to_user_id === staff.id &&
+        l.status === 'ASSIGNED'
+      ).length;
       
       // First assign vs Reassign: group transfers by leadId, check earliest transfer's fromUserId
       const transfersByLead = new Map<string, { transferredAt: string; fromUserId: string | null }[]>();
