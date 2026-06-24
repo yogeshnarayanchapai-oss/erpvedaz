@@ -317,7 +317,8 @@ export default function AdminLeads() {
     const transfersMap = leadAssignmentCounts?.transfersByStaff || {};
     
     return callingStaff.map(staff => {
-      const transferCount = countsMap[staff.id] || 0;
+      // transferCount is recomputed below as firstAssign + reassign so the
+      // Transferred column always equals A + R (matches top card totals).
       
       // Products: get product counts from staff leads that were transferred in date range
       // We need to look up lead products from allStoreLeads using the lead IDs from transfers
