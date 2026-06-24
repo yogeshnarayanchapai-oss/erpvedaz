@@ -269,8 +269,12 @@ export default function LeadsDashboard() {
       const todayTransfer = uniqueLeadIds.length;
       const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
       
-      const currentStaffLeads = allLeadsForTransferSummary.filter(l => l.assigned_to_user_id === staff.id);
-      const remaining = currentStaffLeads.filter(l => l.status === 'ASSIGNED').length;
+      // "New" = of leads transferred to this staff TODAY, those still in ASSIGNED status
+      const remaining = allLeadsForTransferSummary.filter(l =>
+        uniqueLeadIds.includes(l.id) &&
+        l.assigned_to_user_id === staff.id &&
+        l.status === 'ASSIGNED'
+      ).length;
       
       const todayTransferredLeads = allLeadsForTransferSummary.filter(l => uniqueLeadIds.includes(l.id));
       const { displayProducts, fullProductList } = calculateProducts(todayTransferredLeads);
