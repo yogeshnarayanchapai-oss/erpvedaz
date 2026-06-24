@@ -317,7 +317,8 @@ export default function AdminLeads() {
     const transfersMap = leadAssignmentCounts?.transfersByStaff || {};
     
     return callingStaff.map(staff => {
-      const transferCount = countsMap[staff.id] || 0;
+      // transferCount is recomputed below as firstAssign + reassign so the
+      // Transferred column always equals A + R (matches top card totals).
       
       // Products: get product counts from staff leads that were transferred in date range
       // We need to look up lead products from allStoreLeads using the lead IDs from transfers
@@ -333,25 +334,19 @@ export default function AdminLeads() {
         l.status === 'ASSIGNED'
       ).length;
       
-      // New vs Reassign: use the same lead_type classification as the top cards.
-      // Group by leadId first so A/R always sums to the displayed transferred count.
-      const transfersByLead = new Map<string, { transferredAt: string; leadType: string | null; fromTeam: string | null }[]>();
-      staffTransfers.forEach(t => {
-        if (!transfersByLead.has(t.leadId)) transfersByLead.set(t.leadId, []);
-        transfersByLead.get(t.leadId)!.push({ transferredAt: t.transferredAt, leadType: t.leadType, fromTeam: t.fromTeam });
-      });
-      
+      // New vs Reassign: count per transfer event using the same lead_type
+      // classification as the top "New Lead" / "Reassign Lead" cards.
+      // A = NEW assignments, R = reassignments/pool transfers.
       let firstAssign = 0;
       let reassign = 0;
-      transfersByLead.forEach((transfers) => {
-        const earliest = transfers.sort((a, b) => new Date(a.transferredAt).getTime() - new Date(b.transferredAt).getTime())[0];
-        if (earliest.leadType === 'NEW') {
+      staffTransfers.forEach((t) => {
+        if (t.leadType === 'NEW') {
           firstAssign++;
         } else if (
-          earliest.leadType === 'REASSIGN' ||
-          earliest.leadType === 'CNR_POOL' ||
-          earliest.leadType === 'FOLLOW_UP_POOL' ||
-          (earliest.leadType === null && earliest.fromTeam !== null && earliest.fromTeam !== 'LEADS')
+          t.leadType === 'REASSIGN' ||
+          t.leadType === 'CNR_POOL' ||
+          t.leadType === 'FOLLOW_UP_POOL' ||
+          (t.leadType === null && t.fromTeam !== null && t.fromTeam !== 'LEADS')
         ) {
           reassign++;
         }
@@ -376,7 +371,7 @@ export default function AdminLeads() {
       return {
         id: staff.id,
         name: staff.name,
-        transferCount,
+        transferCount: firstAssign + reassign,
         firstAssign,
         reassign,
         newLeads,
