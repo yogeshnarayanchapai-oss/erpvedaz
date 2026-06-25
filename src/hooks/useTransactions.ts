@@ -21,6 +21,7 @@ export interface Transaction {
   party_id: string | null;
   order_id: string | null;
   consignment_id: string | null;
+  consignment_ids: string[] | null;
   reference_no: string | null;
   reference_type: string | null;
   reference_id: string | null;
@@ -97,7 +98,7 @@ export function useTransactions(filters?: TransactionFilters) {
         query = query.eq('category_id', filters.categoryId);
       }
       if (filters?.consignmentId) {
-        query = query.eq('consignment_id', filters.consignmentId);
+        query = query.contains('consignment_ids', [filters.consignmentId]);
       }
 
 
@@ -127,6 +128,7 @@ export function useCreateTransaction() {
       party_id?: string | null;
       order_id?: string | null;
       consignment_id?: string | null;
+      consignment_ids?: string[] | null;
       reference_no?: string | null;
       note?: string | null;
       description?: string | null;

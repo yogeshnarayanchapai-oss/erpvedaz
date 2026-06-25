@@ -13,6 +13,7 @@ import { useTransactions, Transaction, useDeleteTransaction, TransactionType, us
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
+import { useConsignmentOptions } from '@/hooks/useConsignmentOptions';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
 import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
@@ -97,6 +98,7 @@ export default function ViewTransactions() {
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
+  const { data: consignmentOptions = [] } = useConsignmentOptions();
   const { canEdit, effectiveRole } = useAccountingEditAccess();
   const deleteTransaction = useDeleteTransaction();
   const updateApproval = useUpdateApprovalStatus();
@@ -536,11 +538,24 @@ export default function ViewTransactions() {
                     NPR {transaction.amount.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {(transaction as any).consignment?.consignment_code ? (
-                      <span className="font-mono">{(transaction as any).consignment.consignment_code}</span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    {(() => {
+                      const ids: string[] = ((transaction as any).consignment_ids as string[] | null) ?? ((transaction as any).consignment_id ? [(transaction as any).consignment_id] : []);
+                      const codes = ids
+                        .map((id) => consignmentOptions.find((c) => c.id === id)?.consignment_code)
+                        .filter(Boolean) as string[];
+                      // Fallback to the joined single consignment if options haven't loaded yet
+                      if (codes.length === 0 && (transaction as any).consignment?.consignment_code) {
+                        codes.push((transaction as any).consignment.consignment_code);
+                      }
+                      if (codes.length === 0) return <span className="text-muted-foreground">-</span>;
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {codes.map((code) => (
+                            <Badge key={code} variant="secondary" className="font-mono text-xs">{code}</Badge>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {transaction.note || '-'}
