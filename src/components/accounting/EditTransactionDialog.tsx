@@ -65,7 +65,8 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: formData.party_id === 'none' ? null : formData.party_id || null,
         reference_no: formData.reference_no || null,
         note: formData.note || null,
-        consignment_id: formData.consignment_id,
+        consignment_id: formData.consignment_ids[0] ?? null,
+        consignment_ids: formData.consignment_ids,
       } as any);
 
       await createActivityLog.mutateAsync({
