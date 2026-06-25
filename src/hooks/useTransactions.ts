@@ -98,7 +98,7 @@ export function useTransactions(filters?: TransactionFilters) {
         query = query.eq('category_id', filters.categoryId);
       }
       if (filters?.consignmentId) {
-        query = query.eq('consignment_id', filters.consignmentId);
+        query = query.contains('consignment_ids', [filters.consignmentId]);
       }
 
 
