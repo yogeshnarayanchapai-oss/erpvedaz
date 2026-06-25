@@ -7798,6 +7798,7 @@ export type Database = {
           approved_by: string | null
           category_id: string | null
           consignment_id: string | null
+          consignment_ids: string[]
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -7827,6 +7828,7 @@ export type Database = {
           approved_by?: string | null
           category_id?: string | null
           consignment_id?: string | null
+          consignment_ids?: string[]
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -7856,6 +7858,7 @@ export type Database = {
           approved_by?: string | null
           category_id?: string | null
           consignment_id?: string | null
+          consignment_ids?: string[]
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
