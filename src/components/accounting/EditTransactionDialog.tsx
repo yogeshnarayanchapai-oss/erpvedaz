@@ -28,7 +28,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     party_id: '',
     reference_no: '',
     note: '',
-    consignment_id: null as string | null,
+    consignment_ids: [] as string[],
   });
 
   const { data: accounts = [] } = useActiveAccounts();
