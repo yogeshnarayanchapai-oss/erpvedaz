@@ -46,7 +46,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         party_id: transaction.party_id || 'none',
         reference_no: transaction.reference_no || '',
         note: transaction.note || '',
-        consignment_id: (transaction as any).consignment_id || null,
+        consignment_ids: ((transaction as any).consignment_ids as string[] | null) ?? ((transaction as any).consignment_id ? [(transaction as any).consignment_id] : []),
       });
     }
   }, [transaction]);
