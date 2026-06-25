@@ -128,6 +128,7 @@ export function useCreateTransaction() {
       party_id?: string | null;
       order_id?: string | null;
       consignment_id?: string | null;
+      consignment_ids?: string[] | null;
       reference_no?: string | null;
       note?: string | null;
       description?: string | null;
