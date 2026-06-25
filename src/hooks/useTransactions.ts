@@ -21,6 +21,7 @@ export interface Transaction {
   party_id: string | null;
   order_id: string | null;
   consignment_id: string | null;
+  consignment_ids: string[] | null;
   reference_no: string | null;
   reference_type: string | null;
   reference_id: string | null;
