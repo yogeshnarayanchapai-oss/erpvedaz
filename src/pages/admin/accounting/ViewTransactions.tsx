@@ -13,6 +13,7 @@ import { useTransactions, Transaction, useDeleteTransaction, TransactionType, us
 import { useActiveAccounts } from '@/hooks/useAccounts';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { usePartiesWithBalances } from '@/hooks/useParties';
+import { useConsignmentOptions } from '@/hooks/useConsignmentOptions';
 import { useAccountingEditAccess } from '@/hooks/useAccountingEditAccess';
 import { EditTransactionDialog } from '@/components/accounting/EditTransactionDialog';
 import { NewDepositDialog } from '@/components/accounting/NewDepositDialog';
