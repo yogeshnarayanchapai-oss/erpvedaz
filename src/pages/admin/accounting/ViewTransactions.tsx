@@ -97,6 +97,7 @@ export default function ViewTransactions() {
   const { data: accounts = [] } = useActiveAccounts();
   const { data: categories = [] } = useTransactionCategories();
   const { data: parties = [] } = usePartiesWithBalances();
+  const { data: consignmentOptions = [] } = useConsignmentOptions();
   const { canEdit, effectiveRole } = useAccountingEditAccess();
   const deleteTransaction = useDeleteTransaction();
   const updateApproval = useUpdateApprovalStatus();
