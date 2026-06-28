@@ -124,7 +124,7 @@ const reportCards = [
 export default function ReportsHub() {
   const navigate = useNavigate();
   const { effectiveRole } = useEffectiveRole();
-  const visibleReportCards = effectiveRole === 'SALES_MANAGER'
+  const visibleReportCards = (effectiveRole as string) === 'SALES_MANAGER'
     ? reportCards.filter((card) => [
         '/admin/reports/sales',
         '/admin/reports/products',

@@ -226,7 +226,7 @@ function DashboardLayoutInner() {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    if (!loading && user && profile && effectiveRole === 'SALES_MANAGER' && !isAllowedForSalesManager(location.pathname)) {
+    if (!loading && user && profile && (effectiveRole as string) === 'SALES_MANAGER' && !isAllowedForSalesManager(location.pathname)) {
       navigate('/admin/sales/dashboard', { replace: true });
     }
   }, [effectiveRole, loading, location.pathname, navigate, profile, user]);
@@ -287,7 +287,7 @@ function DashboardLayoutInner() {
               <Separator orientation="vertical" className="h-4 hidden lg:block" />
               
                 <UnifiedNotificationBell 
-                  showViewAll={effectiveRole !== 'SALES_MANAGER' && isAdminOrManager(effectiveRole)}
+                  showViewAll={(effectiveRole as string) !== 'SALES_MANAGER' && isAdminOrManager(effectiveRole)}
                 viewAllPath="/admin/notifications"
               />
               
@@ -312,7 +312,7 @@ function DashboardLayoutInner() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {effectiveRole !== 'SALES_MANAGER' && (
+                  {(effectiveRole as string) !== 'SALES_MANAGER' && (
                     <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
