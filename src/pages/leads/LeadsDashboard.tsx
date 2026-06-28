@@ -144,7 +144,8 @@ export default function LeadsDashboard() {
 
 
   // Fetch today's transfers from lead_transfers table (historical, never changes on reassignment)
-  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string }[]>([]);
+  type TodayTransfer = { to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string };
+  const [todayTransfers, setTodayTransfers] = useState<TodayTransfer[]>([]);
   
   useEffect(() => {
     async function fetchTodayTransfers() {
@@ -162,10 +163,10 @@ export default function LeadsDashboard() {
         .lte('transferred_at', `${todayDate}T23:59:59+05:45`);
       
       if (!error && data) {
-        setTodayTransfers(data.map(d => ({
-          to_user_id: d.to_user_id!,
-          from_user_id: (d as any).from_user_id || null,
-          transferred_at: (d as any).transferred_at,
+        setTodayTransfers((data as TodayTransfer[]).map(d => ({
+          to_user_id: d.to_user_id,
+          from_user_id: d.from_user_id || null,
+          transferred_at: d.transferred_at,
           lead_id: d.lead_id,
         })));
       }
@@ -312,7 +313,7 @@ export default function LeadsDashboard() {
         remainingInPool,
       };
     }).filter(p => p.leadsToday >= 1);
-  }, [products, allLeadsForTransferSummary, isAdminOrOwner, currentUserId, today]);
+  }, [products, allLeadsForTransferSummary, today]);
 
   // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
   const todayProgressStats = useMemo(() => {
