@@ -47,7 +47,6 @@ const SALES_MANAGER_ALLOWED_PATHS = [
   '/admin/logistics',
   '/admin/logistics-dashboard',
   '/admin/logistics-settings',
-  '/manager/dashboard',
   '/settings/profile',
 ];
 
