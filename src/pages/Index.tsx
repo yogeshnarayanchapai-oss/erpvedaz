@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 const Index = () => {
   const { user, profile, loading, signOut } = useAuth();
@@ -75,7 +75,8 @@ const Index = () => {
       FOLLOWUP: '/followup/dashboard',
       LOGISTICS: '/logistics/orders',
       MARKETING: '/marketing/dashboard',
-      MANAGER: '/admin/sales/dashboard',
+      MANAGER: '/admin/dashboard',
+      SALES_MANAGER: '/admin/sales/dashboard',
       HR: '/hr/dashboard',
       ACCOUNTANT: '/admin/accounting/dashboard-new',
       WAREHOUSE: '/admin/inventory/stock-summary',

@@ -7,14 +7,15 @@ import type { Database } from '@/integrations/supabase/types';
 
 export type AppRole = Database['public']['Enums']['app_role'];
 
-// All available roles (MANAGER is repurposed as "Sales Manager")
-export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
+// All available roles
+export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
 
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
   OWNER: 'Admin',           // Highest privilege - displays as "Admin"
   ADMIN: 'Admin Manager',   // Second level - displays as "Admin Manager" (full admin scope)
-  MANAGER: 'Sales Manager', // Sales-only manager (admin-like access scoped to Sales)
+  MANAGER: 'Manager',       // Original Manager role (admin-equivalent access)
+  SALES_MANAGER: 'Sales Manager', // Sales-only manager (scoped to Sales menu)
   LEADS: 'Leads',
   CALLING: 'Calling',
   FOLLOWUP: 'Follow-up',
@@ -31,7 +32,7 @@ export function getRoleDisplayLabel(role: AppRole | string | null | undefined): 
   return ROLE_DISPLAY_LABELS[role as AppRole] || role;
 }
 
-// Role options for dropdowns (excludes MANAGER as it's absorbed into ADMIN which displays as Manager)
+// Role options for dropdowns
 export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'CALLING', label: 'Calling' },
   { value: 'LOGISTICS', label: 'Logistics' },
@@ -41,9 +42,10 @@ export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
-  { value: 'ADMIN', label: 'Admin Manager' },  // ADMIN displays as Admin Manager (full scope)
-  { value: 'OWNER', label: 'Admin' },           // OWNER displays as Admin (highest)
+  { value: 'SALES_MANAGER', label: 'Sales Manager' },
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'ADMIN', label: 'Admin Manager' },
+  { value: 'OWNER', label: 'Admin' },
 ];
 
 // Role options excluding admin-level roles (for non-admin assignment)
@@ -56,8 +58,9 @@ export const STAFF_ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
-  { value: 'ADMIN', label: 'Admin Manager' },  // ADMIN displays as Admin Manager (full scope)
+  { value: 'SALES_MANAGER', label: 'Sales Manager' },
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'ADMIN', label: 'Admin Manager' },
 ];
 
 // Check if user has admin-level access (OWNER in database = Admin in UI)
@@ -65,7 +68,7 @@ export function isAdminRole(role: string | null | undefined): boolean {
   return role === 'OWNER';
 }
 
-// Check if user has manager-level access (ADMIN in database = Manager in UI)  
+// Check if user has manager-level access  
 export function isManagerRole(role: string | null | undefined): boolean {
   return role === 'ADMIN' || role === 'MANAGER';
 }
@@ -77,9 +80,10 @@ export function isAdminOrManager(role: string | null | undefined): boolean {
 
 // Role badge colors
 export const roleColors: Record<string, string> = {
-  OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',    // Admin (highest)
-  ADMIN: 'bg-primary/10 text-primary border-primary/20',              // Manager
-  MANAGER: 'bg-primary/10 text-primary border-primary/20',            // Legacy Manager
+  OWNER: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+  ADMIN: 'bg-primary/10 text-primary border-primary/20',
+  MANAGER: 'bg-primary/10 text-primary border-primary/20',
+  SALES_MANAGER: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   LEADS: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
   CALLING: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   FOLLOWUP: 'bg-amber-500/10 text-amber-600 border-amber-500/20',

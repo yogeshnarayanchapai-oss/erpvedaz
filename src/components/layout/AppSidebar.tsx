@@ -73,7 +73,7 @@ import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 import { useBranding } from '@/hooks/useBranding';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
@@ -337,8 +337,52 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: hrmItems,
     },
   ],
-  // MANAGER is repurposed as "Sales Manager" — only Sales-related navigation is shown
+  // MANAGER: original admin-equivalent manager — mirrors ADMIN menus
   MANAGER: [
+    { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+    {
+      title: 'Users',
+      url: '/admin/users',
+      icon: Users,
+      children: [
+        { title: 'All Users', url: '/admin/users', icon: Users },
+        { title: 'Roles & Permissions', url: '/admin/roles-permissions', icon: Shield },
+      ],
+    },
+    {
+      title: 'Sales',
+      url: '/admin/products',
+      icon: TrendingUp,
+      children: salesItems,
+    },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    {
+      title: 'Inventory',
+      url: '/admin/inventory/stock-summary',
+      icon: Warehouse,
+      children: inventoryItems,
+    },
+    {
+      title: 'Accounting',
+      url: '/admin/accounting/dashboard-new',
+      icon: Calculator,
+      children: accountingItems,
+    },
+    {
+      title: 'Marketing',
+      url: '/admin/marketing/ads',
+      icon: Megaphone,
+      children: marketingItems,
+    },
+    {
+      title: 'HRM',
+      url: '/hrm/employees',
+      icon: Briefcase,
+      children: hrmItems,
+    },
+  ],
+  // SALES_MANAGER: sales-only access
+  SALES_MANAGER: [
     { title: 'Sales Dashboard', url: '/admin/sales/dashboard', icon: LayoutDashboard },
     {
       title: 'Sales',

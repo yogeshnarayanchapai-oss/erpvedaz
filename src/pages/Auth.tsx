@@ -16,7 +16,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -78,7 +78,8 @@ export default function Auth() {
       FOLLOWUP: '/followup/dashboard',
       LOGISTICS: '/logistics/orders',
       MARKETING: '/marketing/dashboard',
-      MANAGER: '/admin/sales/dashboard',
+      MANAGER: '/admin/dashboard',
+      SALES_MANAGER: '/admin/sales/dashboard',
       HR: '/hr/dashboard',
       ACCOUNTANT: '/admin/accounting/dashboard-new',
       WAREHOUSE: '/admin/inventory/stock-summary',
