@@ -68,7 +68,7 @@ export function useSidebarBadges() {
           .then(({ count }) => { badges.myTasks = count || 0; })
       );
 
-      if (role === 'ADMIN' || role === 'MANAGER' || role === 'OWNER') {
+      if (role === 'ADMIN' || role === 'MANAGER' || role === 'OWNER' || role === 'SALES_MANAGER') {
         // Fetch view state
         const viewStatePromise = supabase
           .from('user_view_state')
@@ -248,7 +248,7 @@ export function useSidebarBadges() {
       }
 
       // My HR badge for staff
-      const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'HR'].includes(role);
+      const isStaffRole = !['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'HR'].includes(role);
       if (isStaffRole) {
         promises.push(
           fetchHRNotificationsCount(user.id).then(count => { badges.myHR = count; })

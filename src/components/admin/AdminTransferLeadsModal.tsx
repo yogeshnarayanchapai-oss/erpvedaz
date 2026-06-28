@@ -44,7 +44,7 @@ export function AdminTransferLeadsModal({
   const { currentStore } = useCurrentStore();
   const { profile } = useAuth();
   const isOwner = profile?.role === 'OWNER';
-  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'MANAGER';
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'MANAGER' || profile?.role === 'SALES_MANAGER';
   const isLeadsRole = profile?.role === 'LEADS';
   const canSeeAllLeads = isOwner || isAdmin; // Admin/Owner sees ALL leads, LEADS role sees only their created leads
   const queryClient = useQueryClient();

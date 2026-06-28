@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoMarkSeen } from '@/hooks/useViewState';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useLeadAssignmentCounts } from '@/hooks/useLeadAssignmentCounts';
 import { useCreateCallLog } from '@/hooks/useCallLogs';
 import { useUpdateOrderItems } from '@/hooks/useOrderItems';
@@ -57,6 +58,7 @@ export default function AdminLeads() {
   const today = new Date();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+  const { effectiveRole } = useEffectiveRole();
   const storeId = useCurrentStoreId();
   
   // Read initial values from URL params
@@ -145,8 +147,8 @@ export default function AdminLeads() {
   const [isSavingLead, setIsSavingLead] = useState(false);
 
   // Check if user has permission (ADMIN, OWNER or MANAGER role)
-  const canReturnLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'LEADS';
-  const canManageLeads = profile?.role === 'ADMIN' || profile?.role === 'OWNER' || profile?.role === 'MANAGER';
+  const canReturnLeads = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'LEADS' || effectiveRole === 'SALES_MANAGER';
+  const canManageLeads = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER' || effectiveRole === 'SALES_MANAGER';
 
   // Clear URL params after reading
   useEffect(() => {
