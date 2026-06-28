@@ -337,7 +337,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: hrmItems,
     },
   ],
-  // MANAGER is repurposed as "Sales Manager" — admin-like access scoped to Sales menu only
+  // MANAGER is repurposed as "Sales Manager" — only Sales-related navigation is shown
   MANAGER: [
     { title: 'Sales Dashboard', url: '/admin/sales/dashboard', icon: LayoutDashboard },
     {
@@ -345,19 +345,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       url: '/admin/products',
       icon: TrendingUp,
       children: salesItems,
-    },
-    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
-    {
-      title: 'My Training',
-      url: '/training/my-courses',
-      icon: GraduationCap,
-      children: myTrainingItems,
-    },
-    {
-      title: 'My HR',
-      url: '/my-hr',
-      icon: Briefcase,
-      children: myHRItems,
     },
   ],
   MARKETING: [
