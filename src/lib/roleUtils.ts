@@ -13,7 +13,7 @@ export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'LEADS', 'CALL
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
   OWNER: 'Admin',           // Highest privilege - displays as "Admin"
-  ADMIN: 'Manager',         // Second level - displays as "Manager"
+  ADMIN: 'Admin Manager',   // Second level - displays as "Admin Manager" (full admin scope)
   MANAGER: 'Sales Manager', // Sales-only manager (admin-like access scoped to Sales)
   LEADS: 'Leads',
   CALLING: 'Calling',
@@ -42,7 +42,7 @@ export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
-  { value: 'ADMIN', label: 'Manager' },         // ADMIN displays as Manager
+  { value: 'ADMIN', label: 'Admin Manager' },  // ADMIN displays as Admin Manager (full scope)
   { value: 'OWNER', label: 'Admin' },           // OWNER displays as Admin (highest)
 ];
 
@@ -57,7 +57,7 @@ export const STAFF_ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
-  { value: 'ADMIN', label: 'Manager' },         // ADMIN displays as Manager
+  { value: 'ADMIN', label: 'Admin Manager' },  // ADMIN displays as Admin Manager (full scope)
 ];
 
 // Check if user has admin-level access (OWNER in database = Admin in UI)
