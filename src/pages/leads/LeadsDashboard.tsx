@@ -144,30 +144,30 @@ export default function LeadsDashboard() {
 
 
   // Fetch today's transfers from lead_transfers table (historical, never changes on reassignment)
-  const [todayTransfers, setTodayTransfers] = useState<{ to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string; created_by_user_id: string | null; product_id: string | null }[]>([]);
+  type TodayTransfer = { to_user_id: string; from_user_id: string | null; transferred_at: string; lead_id: string };
+  const [todayTransfers, setTodayTransfers] = useState<TodayTransfer[]>([]);
   
   useEffect(() => {
     async function fetchTodayTransfers() {
       if (!currentStoreId) return;
       
       const todayDate = getNepalDate();
-      // Fetch from lead_transfers table with lead info (created_by_user_id, product_id, store_id)
+      // Fetch transfers directly by store_id. Avoid embedding leads here because LEADS-role
+      // users can be blocked by lead-row visibility even when they should see store transfer summary.
       const { data, error } = await supabase
         .from('lead_transfers')
-        .select('to_user_id, from_user_id, transferred_at, lead_id, leads!inner(created_by_user_id, product_id, store_id)')
+        .select('to_user_id, from_user_id, transferred_at, lead_id')
         .not('to_user_id', 'is', null)
-        .eq('leads.store_id', currentStoreId)
+        .eq('store_id', currentStoreId)
         .gte('transferred_at', `${todayDate}T00:00:00+05:45`)
         .lte('transferred_at', `${todayDate}T23:59:59+05:45`);
       
       if (!error && data) {
-        setTodayTransfers(data.map(d => ({
-          to_user_id: d.to_user_id!,
-          from_user_id: (d as any).from_user_id || null,
-          transferred_at: (d as any).transferred_at,
+        setTodayTransfers((data as TodayTransfer[]).map(d => ({
+          to_user_id: d.to_user_id,
+          from_user_id: d.from_user_id || null,
+          transferred_at: d.transferred_at,
           lead_id: d.lead_id,
-          created_by_user_id: (d.leads as any)?.created_by_user_id || null,
-          product_id: (d.leads as any)?.product_id || null
         })));
       }
     }
@@ -313,7 +313,7 @@ export default function LeadsDashboard() {
         remainingInPool,
       };
     }).filter(p => p.leadsToday >= 1);
-  }, [products, allLeadsForTransferSummary, isAdminOrOwner, currentUserId, today]);
+  }, [products, allLeadsForTransferSummary, today]);
 
   // Today's Progress Stats (like AdminLeads) - uses filtered leads based on role
   const todayProgressStats = useMemo(() => {
