@@ -39,7 +39,7 @@ export default function LeadsDashboard() {
   const currentStoreId = currentStore?.id;
   
   // Check if user is Admin/Owner (sees all store data) or LEADS role (sees only own data)
-  const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER';
+  const isAdminOrOwner = effectiveRole === 'ADMIN' || effectiveRole === 'OWNER' || effectiveRole === 'MANAGER' || effectiveRole === 'SALES_MANAGER';
   const currentUserId = user?.id;
   
   // IMPORTANT: For non-admin users, avoid fetching the entire store lead pool (can be huge).
