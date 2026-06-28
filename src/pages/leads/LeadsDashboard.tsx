@@ -228,13 +228,11 @@ export default function LeadsDashboard() {
       return { firstAssign, reassign };
     };
 
-    // For LEADS role: Show calling staff who received leads CREATED by this LEADS user
+    // For LEADS role: Show ALL calling staff transfers today in the store
+    // (LEADS users coordinate the pool, so they should see the same summary as Admin)
     if (!isAdminOrOwner && currentUserId) {
       return callingStaff.map(staff => {
-        const transfersToStaffToday = todayTransfers.filter(t => 
-          t.to_user_id === staff.id && 
-          t.created_by_user_id === currentUserId
-        );
+        const transfersToStaffToday = todayTransfers.filter(t => t.to_user_id === staff.id);
         const uniqueLeadIds = [...new Set(transfersToStaffToday.map(t => t.lead_id))];
         const todayTransfer = uniqueLeadIds.length;
         const { firstAssign, reassign } = calcAssignBreakdown(transfersToStaffToday);
@@ -261,6 +259,7 @@ export default function LeadsDashboard() {
         };
       }).filter(s => s.todayTransfer >= 1);
     }
+
     
     // Admin/Owner: show all calling staff with combined data from ALL creators in store
     return callingStaff.map(staff => {
