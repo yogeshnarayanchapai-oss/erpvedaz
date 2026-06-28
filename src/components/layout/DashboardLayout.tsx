@@ -28,7 +28,41 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useDateMode } from '@/contexts/DateModeContext';
+
+const SALES_MANAGER_ALLOWED_PREFIX_PATHS = [
+  '/admin/sales/dashboard',
+  '/admin/products',
+  '/admin/branches',
+  '/admin/leads',
+  '/admin/ai-leads',
+  '/admin/orders',
+  '/orders',
+  '/admin/customers',
+  '/admin/sales/activity-log',
+  '/admin/staff-targets',
+  '/admin/sales/staff-performance',
+  '/admin/logistics',
+  '/admin/logistics-dashboard',
+  '/admin/logistics-settings',
+];
+
+const SALES_MANAGER_ALLOWED_EXACT_PATHS = [
+  '/admin/reports',
+  '/admin/reports/daily-performance',
+  '/admin/reports/sales',
+  '/admin/reports/products',
+  '/admin/reports/leads',
+  '/admin/reports/calling',
+  '/admin/reports/source-analysis',
+  '/admin/reports/ai-summary',
+  '/settings/profile',
+];
+
+const isAllowedForSalesManager = (pathname: string) =>
+  SALES_MANAGER_ALLOWED_EXACT_PATHS.includes(pathname) ||
+  SALES_MANAGER_ALLOWED_PREFIX_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
 // Date Format selector with current date display for profile dropdown
 function DateFormatSelector() {
@@ -66,11 +100,12 @@ function DateFormatSelector() {
 function DashboardLayoutInner() {
   const { user, profile, loading, signOut } = useAuth();
   const { currentStore } = useCurrentStore();
+  const { effectiveRole } = useEffectiveRole();
   const { dateMode } = useDateMode();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const portalName = getRoleDisplayLabel(profile?.role);
+  const portalName = getRoleDisplayLabel(effectiveRole || profile?.role);
   const storeName = currentStore?.name || 'Dashboard';
   
   // Get formatted date based on selected date mode
@@ -190,6 +225,12 @@ function DashboardLayoutInner() {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (!loading && user && profile && effectiveRole === 'MANAGER' && !isAllowedForSalesManager(location.pathname)) {
+      navigate('/admin/sales/dashboard', { replace: true });
+    }
+  }, [effectiveRole, loading, location.pathname, navigate, profile, user]);
+
   // Update document title based on portal, page and store
   useEffect(() => {
     const portalFirstWord = portalName.split(' ')[0];
@@ -245,8 +286,8 @@ function DashboardLayoutInner() {
               </div>
               <Separator orientation="vertical" className="h-4 hidden lg:block" />
               
-              <UnifiedNotificationBell 
-                showViewAll={isAdminOrManager(profile.role)}
+                <UnifiedNotificationBell 
+                  showViewAll={effectiveRole !== 'MANAGER' && isAdminOrManager(effectiveRole)}
                 viewAllPath="/admin/notifications"
               />
               
@@ -266,15 +307,17 @@ function DashboardLayoutInner() {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{profile.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
-                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(profile.role)}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(effectiveRole)}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
+                  {effectiveRole !== 'MANAGER' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                  )}
                   
                   <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
                     <User className="mr-2 h-4 w-4" />
