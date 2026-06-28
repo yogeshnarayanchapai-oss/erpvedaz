@@ -31,7 +31,7 @@ import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useDateMode } from '@/contexts/DateModeContext';
 
-const SALES_MANAGER_ALLOWED_PATHS = [
+const SALES_MANAGER_ALLOWED_PREFIX_PATHS = [
   '/admin/sales/dashboard',
   '/admin/products',
   '/admin/branches',
@@ -47,11 +47,23 @@ const SALES_MANAGER_ALLOWED_PATHS = [
   '/admin/logistics',
   '/admin/logistics-dashboard',
   '/admin/logistics-settings',
+];
+
+const SALES_MANAGER_ALLOWED_EXACT_PATHS = [
+  '/admin/reports',
+  '/admin/reports/daily-performance',
+  '/admin/reports/sales',
+  '/admin/reports/products',
+  '/admin/reports/leads',
+  '/admin/reports/calling',
+  '/admin/reports/source-analysis',
+  '/admin/reports/ai-summary',
   '/settings/profile',
 ];
 
 const isAllowedForSalesManager = (pathname: string) =>
-  SALES_MANAGER_ALLOWED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  SALES_MANAGER_ALLOWED_EXACT_PATHS.includes(pathname) ||
+  SALES_MANAGER_ALLOWED_PREFIX_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
 // Date Format selector with current date display for profile dropdown
 function DateFormatSelector() {
