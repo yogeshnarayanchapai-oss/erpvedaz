@@ -42,7 +42,7 @@ export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
-  { value: 'ADMIN', label: 'Manager' },         // ADMIN displays as Manager
+  { value: 'ADMIN', label: 'Admin Manager' },  // ADMIN displays as Admin Manager (full scope)
   { value: 'OWNER', label: 'Admin' },           // OWNER displays as Admin (highest)
 ];
 
