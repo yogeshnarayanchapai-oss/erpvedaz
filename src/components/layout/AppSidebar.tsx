@@ -337,45 +337,16 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       children: hrmItems,
     },
   ],
+  // MANAGER is repurposed as "Sales Manager" — admin-like access scoped to Sales menu only
   MANAGER: [
-    { title: 'Dashboard', url: '/admin/sales/dashboard', icon: LayoutDashboard },
+    { title: 'Sales Dashboard', url: '/admin/sales/dashboard', icon: LayoutDashboard },
     {
       title: 'Sales',
       url: '/admin/products',
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
-    {
-      title: 'Inventory',
-      url: '/admin/inventory/stock-summary',
-      icon: Warehouse,
-      children: inventoryItems,
-    },
-    {
-      title: 'Accounting',
-      url: '/admin/accounting/dashboard-new',
-      icon: Calculator,
-      children: accountingItems,
-    },
-    {
-      title: 'Marketing',
-      url: '/admin/marketing/ads',
-      icon: Megaphone,
-      children: marketingItems,
-    },
-    {
-      title: 'Knowledge Center',
-      url: '/hrm/knowledge-center',
-      icon: BookOpen,
-      children: knowledgeCenterItems,
-    },
-    {
-      title: 'HRM',
-      url: '/hrm/employees',
-      icon: Briefcase,
-      children: hrmItems,
-    },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
     {
       title: 'My Training',
       url: '/training/my-courses',

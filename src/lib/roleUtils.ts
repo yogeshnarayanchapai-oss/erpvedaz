@@ -12,9 +12,9 @@ export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'LEADS', 'CALLING', 'FOLL
 
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
-  OWNER: 'Admin',        // Highest privilege - displays as "Admin"
-  ADMIN: 'Manager',      // Second level - displays as "Manager"
-  MANAGER: 'Manager',    // Legacy - mapped to same as ADMIN
+  OWNER: 'Admin',           // Highest privilege - displays as "Admin"
+  ADMIN: 'Manager',         // Second level - displays as "Manager"
+  MANAGER: 'Sales Manager', // Sales-only manager (admin-like access scoped to Sales)
   LEADS: 'Leads',
   CALLING: 'Calling',
   FOLLOWUP: 'Follow-up',
@@ -41,8 +41,9 @@ export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'ADMIN', label: 'Manager' },      // ADMIN displays as Manager
-  { value: 'OWNER', label: 'Admin' },        // OWNER displays as Admin (highest)
+  { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
+  { value: 'ADMIN', label: 'Manager' },         // ADMIN displays as Manager
+  { value: 'OWNER', label: 'Admin' },           // OWNER displays as Admin (highest)
 ];
 
 // Role options excluding admin-level roles (for non-admin assignment)
@@ -55,7 +56,8 @@ export const STAFF_ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'ADMIN', label: 'Manager' },      // ADMIN displays as Manager
+  { value: 'MANAGER', label: 'Sales Manager' }, // Sales-scoped manager
+  { value: 'ADMIN', label: 'Manager' },         // ADMIN displays as Manager
 ];
 
 // Check if user has admin-level access (OWNER in database = Admin in UI)
