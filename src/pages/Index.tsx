@@ -75,7 +75,7 @@ const Index = () => {
       FOLLOWUP: '/followup/dashboard',
       LOGISTICS: '/logistics/orders',
       MARKETING: '/marketing/dashboard',
-      MANAGER: '/manager/dashboard',
+      MANAGER: '/admin/sales/dashboard',
       HR: '/hr/dashboard',
       ACCOUNTANT: '/admin/accounting/dashboard-new',
       WAREHOUSE: '/admin/inventory/stock-summary',

@@ -31,6 +31,29 @@ import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useDateMode } from '@/contexts/DateModeContext';
 
+const SALES_MANAGER_ALLOWED_PATHS = [
+  '/admin/sales/dashboard',
+  '/admin/products',
+  '/admin/branches',
+  '/admin/leads',
+  '/admin/ai-leads',
+  '/admin/orders',
+  '/orders',
+  '/admin/customers',
+  '/admin/sales/activity-log',
+  '/admin/reports',
+  '/admin/staff-targets',
+  '/admin/sales/staff-performance',
+  '/admin/logistics',
+  '/admin/logistics-dashboard',
+  '/admin/logistics-settings',
+  '/manager/dashboard',
+  '/settings/profile',
+];
+
+const isAllowedForSalesManager = (pathname: string) =>
+  SALES_MANAGER_ALLOWED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
 // Date Format selector with current date display for profile dropdown
 function DateFormatSelector() {
   const { dateMode, setDateMode } = useDateMode();
@@ -192,6 +215,12 @@ function DashboardLayoutInner() {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (!loading && user && profile && effectiveRole === 'MANAGER' && !isAllowedForSalesManager(location.pathname)) {
+      navigate('/admin/sales/dashboard', { replace: true });
+    }
+  }, [effectiveRole, loading, location.pathname, navigate, profile, user]);
+
   // Update document title based on portal, page and store
   useEffect(() => {
     const portalFirstWord = portalName.split(' ')[0];
@@ -248,7 +277,7 @@ function DashboardLayoutInner() {
               <Separator orientation="vertical" className="h-4 hidden lg:block" />
               
                 <UnifiedNotificationBell 
-                  showViewAll={isAdminOrManager(effectiveRole)}
+                  showViewAll={effectiveRole !== 'MANAGER' && isAdminOrManager(effectiveRole)}
                 viewAllPath="/admin/notifications"
               />
               
@@ -273,10 +302,12 @@ function DashboardLayoutInner() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
+                  {effectiveRole !== 'MANAGER' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                  )}
                   
                   <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
                     <User className="mr-2 h-4 w-4" />
