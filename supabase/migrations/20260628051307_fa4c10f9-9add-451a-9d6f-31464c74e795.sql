@@ -1,0 +1,2 @@
+UPDATE public.profiles SET role = 'SALES_MANAGER'::app_role WHERE email = 'amity9738@gmail.com';
+UPDATE public.user_store_access SET store_role = 'SALES_MANAGER'::app_role WHERE store_role = 'MANAGER'::app_role AND user_id IN (SELECT id FROM public.profiles WHERE email = 'amity9738@gmail.com');
