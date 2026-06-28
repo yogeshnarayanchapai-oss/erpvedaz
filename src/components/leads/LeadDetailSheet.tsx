@@ -37,7 +37,7 @@ export function LeadDetailSheet({
   if (!lead) return null;
 
   // Permission check: can confirm orders if admin, manager, or calling staff
-  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'MANAGER';
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'MANAGER' || profile?.role === 'SALES_MANAGER';
   const canConfirmOrders = isAdmin || profile?.role === 'CALLING';
   
   // Can show "Confirm as Order" if lead is not already confirmed and user has permission

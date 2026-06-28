@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
 
 /**
  * Returns the effective role for the current user based on the current store context.

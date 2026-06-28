@@ -70,12 +70,12 @@ export function isAdminRole(role: string | null | undefined): boolean {
 
 // Check if user has manager-level access  
 export function isManagerRole(role: string | null | undefined): boolean {
-  return role === 'ADMIN' || role === 'MANAGER';
+  return role === 'ADMIN' || role === 'MANAGER' || role === 'SALES_MANAGER';
 }
 
 // Check if user has admin or manager level access
 export function isAdminOrManager(role: string | null | undefined): boolean {
-  return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER';
+  return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'SALES_MANAGER';
 }
 
 // Role badge colors

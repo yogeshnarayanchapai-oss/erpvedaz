@@ -485,7 +485,7 @@ export function useTransferToFollowup() {
         .eq('id', user.id)
         .maybeSingle();
 
-      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'SALES_MANAGER' || userProfile?.role === 'OWNER';
 
       // Get current lead to capture assigned_to_user_id and verify ownership
       const { data: lead, error: fetchError } = await supabase
@@ -617,7 +617,7 @@ export function useMarkAsCNR() {
         .eq('id', user.id)
         .maybeSingle();
 
-      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'SALES_MANAGER' || userProfile?.role === 'OWNER';
 
       // Get lead details for notification and verification
       const { data: lead } = await supabase
@@ -715,7 +715,7 @@ export function useTransferToLeads() {
         .eq('id', user.id)
         .maybeSingle();
 
-      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'OWNER';
+      const isAdminOrManager = userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER' || userProfile?.role === 'SALES_MANAGER' || userProfile?.role === 'OWNER';
 
       // Get lead details to verify ownership and for notification
       const { data: lead } = await supabase
