@@ -84,7 +84,7 @@ export default function ManagerDashboard() {
       {/* Header with Date Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Manager Dashboard</h1>
+          <h1 className="text-2xl font-bold">Sales Manager Dashboard</h1>
           <p className="text-muted-foreground">Team performance overview and approvals</p>
         </div>
         <DashboardDateFilter value={dateRange} onChange={setDateRange} />

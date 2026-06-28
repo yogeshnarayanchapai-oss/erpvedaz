@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getCurrentBSDate, getBSMonthName } from '@/lib/nepaliDate';
 import { getRoleDisplayLabel, isAdminOrManager } from '@/lib/roleUtils';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { useDateMode } from '@/contexts/DateModeContext';
 
 // Date Format selector with current date display for profile dropdown
@@ -66,11 +67,12 @@ function DateFormatSelector() {
 function DashboardLayoutInner() {
   const { user, profile, loading, signOut } = useAuth();
   const { currentStore } = useCurrentStore();
+  const { effectiveRole } = useEffectiveRole();
   const { dateMode } = useDateMode();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const portalName = getRoleDisplayLabel(profile?.role);
+  const portalName = getRoleDisplayLabel(effectiveRole || profile?.role);
   const storeName = currentStore?.name || 'Dashboard';
   
   // Get formatted date based on selected date mode
@@ -245,8 +247,8 @@ function DashboardLayoutInner() {
               </div>
               <Separator orientation="vertical" className="h-4 hidden lg:block" />
               
-              <UnifiedNotificationBell 
-                showViewAll={isAdminOrManager(profile.role)}
+                <UnifiedNotificationBell 
+                  showViewAll={isAdminOrManager(effectiveRole)}
                 viewAllPath="/admin/notifications"
               />
               
@@ -266,7 +268,7 @@ function DashboardLayoutInner() {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{profile.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
-                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(profile.role)}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleDisplayLabel(effectiveRole)}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
