@@ -12,9 +12,9 @@ export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'LEADS', 'CALLING', 'FOLL
 
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
-  OWNER: 'Admin',        // Highest privilege - displays as "Admin"
-  ADMIN: 'Manager',      // Second level - displays as "Manager"
-  MANAGER: 'Manager',    // Legacy - mapped to same as ADMIN
+  OWNER: 'Admin',           // Highest privilege - displays as "Admin"
+  ADMIN: 'Manager',         // Second level - displays as "Manager"
+  MANAGER: 'Sales Manager', // Sales-only manager (admin-like access scoped to Sales)
   LEADS: 'Leads',
   CALLING: 'Calling',
   FOLLOWUP: 'Follow-up',
