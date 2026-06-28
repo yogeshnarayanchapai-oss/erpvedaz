@@ -41,7 +41,6 @@ const SALES_MANAGER_ALLOWED_PREFIX_PATHS = [
   '/orders',
   '/admin/customers',
   '/admin/sales/activity-log',
-  '/admin/reports',
   '/admin/staff-targets',
   '/admin/sales/staff-performance',
   '/admin/logistics',
