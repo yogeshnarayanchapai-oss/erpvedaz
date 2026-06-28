@@ -291,13 +291,10 @@ export default function LeadsDashboard() {
     }).filter(s => s.todayTransfer >= 1);
   }, [isAdminOrOwner, currentUserId, todayTransfers, allLeadsForTransferSummary, callingStaff, products]);
 
-  // Product Leads Summary - uses filtered leads based on role
+  // Product Leads Summary - shows store-wide data for all roles on the dashboard
   const productSummary = useMemo(() => {
-    // For Admin/Owner: count across ALL store leads (use allLeadsForTransferSummary which is store-wide)
-    // For LEADS role: count only leads they created
-    const sourceLeads = isAdminOrOwner 
-      ? allLeadsForTransferSummary 
-      : allLeadsForTransferSummary.filter(l => l.created_by_user_id === currentUserId);
+    const sourceLeads = allLeadsForTransferSummary;
+
     return products.map(product => {
       const productLeads = sourceLeads.filter(l => l.product_id === product.id);
       const leadsToday = productLeads.filter(l => l.date === today).length;
