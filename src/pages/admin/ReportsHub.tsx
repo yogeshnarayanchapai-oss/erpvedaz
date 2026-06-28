@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import {
   BarChart3, TrendingUp, DollarSign, FileText, ArrowUpDown,
   BookOpen, Landmark, Activity, Package, Users, Phone,
@@ -122,6 +123,17 @@ const reportCards = [
 
 export default function ReportsHub() {
   const navigate = useNavigate();
+  const { effectiveRole } = useEffectiveRole();
+  const visibleReportCards = effectiveRole === 'MANAGER'
+    ? reportCards.filter((card) => [
+        '/admin/reports/sales',
+        '/admin/reports/products',
+        '/admin/reports/leads',
+        '/admin/reports/calling',
+        '/admin/reports/source-analysis',
+        '/admin/reports/ai-summary',
+      ].includes(card.url))
+    : reportCards;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -131,7 +143,7 @@ export default function ReportsHub() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {reportCards.map((card) => {
+        {visibleReportCards.map((card) => {
           const Icon = card.icon;
           return (
             <button
