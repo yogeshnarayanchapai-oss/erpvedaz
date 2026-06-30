@@ -168,7 +168,7 @@ export default function AdminLeads() {
   const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
   const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
 
-  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo });
+  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
