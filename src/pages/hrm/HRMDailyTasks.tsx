@@ -169,7 +169,7 @@ export default function HRMDailyTasks() {
 
   // Group for "By User" view: role -> staff (or "All staff") -> tasks
   const groupedByUser = (() => {
-    type Group = { key: string; roleName: string; staffName: string; tasks: DailyTask[] };
+    type Group = { key: string; roleName: string; staffName: string; target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] };
     const map = new Map<string, Group>();
     for (const t of visibleTasks) {
       const roleName = t.target_role ? getRoleDisplayLabel(t.target_role as any) : 'All Roles';
@@ -177,7 +177,7 @@ export default function HRMDailyTasks() {
         ? (staff.find(s => s.id === t.assigned_staff_id)?.full_name || 'Unknown Staff')
         : 'All Staff';
       const key = `${t.target_role || 'none'}::${t.assigned_staff_id || 'none'}`;
-      if (!map.has(key)) map.set(key, { key, roleName, staffName, tasks: [] });
+      if (!map.has(key)) map.set(key, { key, roleName, staffName, target_role: t.target_role, assigned_staff_id: t.assigned_staff_id, tasks: [] });
       map.get(key)!.tasks.push(t);
     }
     return Array.from(map.values()).sort((a, b) =>
@@ -186,6 +186,21 @@ export default function HRMDailyTasks() {
   })();
 
   const toggleGroup = (k: string) => setExpanded(p => ({ ...p, [k]: !p[k] }));
+
+  const addToGroup = (g: { target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] }) => {
+    const sample = g.tasks[0];
+    setEditing(null);
+    setTitles(['']);
+    setForm({
+      target_role: g.target_role,
+      assigned_staff_id: g.assigned_staff_id,
+      frequency: sample?.frequency || 'daily',
+      specific_date: sample?.specific_date || null,
+      selected_weekdays: sample?.selected_weekdays || [],
+      is_active: true,
+    });
+    setOpen(true);
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -282,18 +297,31 @@ export default function HRMDailyTasks() {
                 const isOpen = !!expanded[g.key];
                 return (
                   <div key={g.key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(g.key)}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-left"
-                    >
-                      {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{g.staffName}</div>
-                        <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
-                      </div>
-                      <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
-                    </button>
+                    <div className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(g.key)}
+                        className="flex-1 flex items-center gap-2 text-left min-w-0"
+                      >
+                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{g.staffName}</div>
+                          <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
+                      </button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        title="Add task to this group"
+                        onClick={(e) => { e.stopPropagation(); addToGroup(g); }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
                     {isOpen && (
                       <div className="bg-muted/20 px-3 py-2 space-y-1">
                         {g.tasks.map(t => (
