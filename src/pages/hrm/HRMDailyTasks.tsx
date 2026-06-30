@@ -145,13 +145,42 @@ export default function HRMDailyTasks() {
     load();
   };
 
-  const filteredStaff = form.department_id
-    ? staff.filter(s => s.department_id === form.department_id)
-    : staff;
+  const q = search.trim().toLowerCase();
+  const visibleTasks = q
+    ? tasks.filter(t => {
+        const deptName = depts.find(d => d.id === t.department_id)?.name || '';
+        const staffName = staff.find(s => s.id === t.assigned_staff_id)?.full_name || '';
+        return (
+          t.title.toLowerCase().includes(q) ||
+          deptName.toLowerCase().includes(q) ||
+          staffName.toLowerCase().includes(q)
+        );
+      })
+    : tasks;
+
+  // Group for "By User" view: department -> staff (or "All staff") -> tasks
+  const groupedByUser = (() => {
+    type Group = { key: string; deptName: string; staffName: string; tasks: DailyTask[] };
+    const map = new Map<string, Group>();
+    for (const t of visibleTasks) {
+      const deptName = depts.find(d => d.id === t.department_id)?.name || (t.department_id ? 'Unknown Dept' : 'All Departments');
+      const staffName = t.assigned_staff_id
+        ? (staff.find(s => s.id === t.assigned_staff_id)?.full_name || 'Unknown Staff')
+        : 'All Staff';
+      const key = `${t.department_id || 'none'}::${t.assigned_staff_id || 'none'}`;
+      if (!map.has(key)) map.set(key, { key, deptName, staffName, tasks: [] });
+      map.get(key)!.tasks.push(t);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.deptName.localeCompare(b.deptName) || a.staffName.localeCompare(b.staffName)
+    );
+  })();
+
+  const toggleGroup = (k: string) => setExpanded(p => ({ ...p, [k]: !p[k] }));
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold">Daily Task Setup</h1>
           <p className="text-xs text-muted-foreground">Create department or staff-specific daily tasks. Reviewed next day at check-in.</p>
@@ -159,11 +188,41 @@ export default function HRMDailyTasks() {
         <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Add Task</Button>
       </div>
 
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search task, staff, department..."
+            className="pl-7 h-8 text-sm"
+          />
+        </div>
+        <div className="inline-flex rounded-md border bg-background overflow-hidden">
+          <Button
+            size="sm"
+            variant={viewMode === 'task' ? 'default' : 'ghost'}
+            className="rounded-none h-8 px-3"
+            onClick={() => setViewMode('task')}
+          >
+            By Task
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === 'user' ? 'default' : 'ghost'}
+            className="rounded-none h-8 px-3"
+            onClick={() => setViewMode('user')}
+          >
+            By User
+          </Button>
+        </div>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
-          ) : (
+          ) : viewMode === 'task' ? (
             <Table>
               <TableHeader>
                 <TableRow className="h-9">
@@ -176,10 +235,10 @@ export default function HRMDailyTasks() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tasks.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-6">No daily tasks yet.</TableCell></TableRow>
+                {visibleTasks.length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-6">No daily tasks.</TableCell></TableRow>
                 )}
-                {tasks.map(t => (
+                {visibleTasks.map(t => (
                   <TableRow key={t.id} className="h-9">
                     <TableCell className="py-1 text-sm font-medium">{t.title}</TableCell>
                     <TableCell className="py-1 text-xs">{depts.find(d => d.id === t.department_id)?.name || '-'}</TableCell>
@@ -205,8 +264,56 @@ export default function HRMDailyTasks() {
                 ))}
               </TableBody>
             </Table>
+          ) : (
+            <div className="divide-y">
+              {groupedByUser.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-6">No daily tasks.</div>
+              )}
+              {groupedByUser.map(g => {
+                const isOpen = !!expanded[g.key];
+                return (
+                  <div key={g.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(g.key)}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-left"
+                    >
+                      {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">{g.staffName}</div>
+                        <div className="text-[11px] text-muted-foreground">{g.deptName}</div>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="bg-muted/20 px-3 py-2 space-y-1">
+                        {g.tasks.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 text-sm py-1">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{t.title}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {t.frequency === 'weekdays' ? (t.selected_weekdays || []).join(',') : t.frequency}
+                                {t.frequency === 'specific_date' && t.specific_date ? ` (${t.specific_date})` : ''}
+                              </div>
+                            </div>
+                            <Switch checked={t.is_active} onCheckedChange={() => toggleActive(t)} />
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(t)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(t.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
+
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
