@@ -297,18 +297,31 @@ export default function HRMDailyTasks() {
                 const isOpen = !!expanded[g.key];
                 return (
                   <div key={g.key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(g.key)}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-left"
-                    >
-                      {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{g.staffName}</div>
-                        <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
-                      </div>
-                      <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
-                    </button>
+                    <div className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(g.key)}
+                        className="flex-1 flex items-center gap-2 text-left min-w-0"
+                      >
+                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{g.staffName}</div>
+                          <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
+                      </button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        title="Add task to this group"
+                        onClick={(e) => { e.stopPropagation(); addToGroup(g); }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
                     {isOpen && (
                       <div className="bg-muted/20 px-3 py-2 space-y-1">
                         {g.tasks.map(t => (
