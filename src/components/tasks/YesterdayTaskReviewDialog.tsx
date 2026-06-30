@@ -53,11 +53,10 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
       .eq('is_active', true);
     const dow = DOW[new Date(taskDate).getDay()];
     const applicable = ((data as any) || []).filter((t: DailyTask) => {
-      if (t.assigned_staff_id) {
-        if (t.assigned_staff_id !== employeeId) return false;
-      } else if (t.department_id) {
-        if (t.department_id !== departmentId) return false;
-      }
+      // Must be assigned to this staff OR their department — skip unassigned/global tasks
+      const matchStaff = t.assigned_staff_id && t.assigned_staff_id === employeeId;
+      const matchDept = !t.assigned_staff_id && t.department_id && t.department_id === departmentId;
+      if (!matchStaff && !matchDept) return false;
       if (t.frequency === 'daily') return true;
       if (t.frequency === 'specific_date') return t.specific_date === taskDate;
       if (t.frequency === 'weekdays') return (t.selected_weekdays || []).includes(dow);
