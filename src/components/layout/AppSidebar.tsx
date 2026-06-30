@@ -396,6 +396,19 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    {
+      title: 'My Training',
+      url: '/training/my-courses',
+      icon: GraduationCap,
+      children: myTrainingItems,
+    },
+    {
+      title: 'My HR',
+      url: '/my-hr',
+      icon: Briefcase,
+      children: myHRItems,
+    },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
   MARKETING: [
     { title: 'Dashboard', url: '/marketing/dashboard', icon: LayoutDashboard },
