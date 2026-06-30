@@ -399,7 +399,26 @@ export default function HRMDailyTasks() {
               <Label className="text-xs">Title{!editing && 's'} *</Label>
               <div className="space-y-1.5 mt-1">
                 {titles.map((title, i) => (
-                  <div key={i} className="flex gap-1.5">
+                  <div
+                    key={i}
+                    className="flex gap-1.5 items-center"
+                    draggable
+                    onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                      const to = i;
+                      if (isNaN(from) || from === to) return;
+                      const nt = [...titles]; const ni = [...titleIds];
+                      const [mt] = nt.splice(from, 1); const [mi] = ni.splice(from, 1);
+                      nt.splice(to, 0, mt); ni.splice(to, 0, mi);
+                      setTitles(nt); setTitleIds(ni);
+                    }}
+                  >
+                    <span className="cursor-grab active:cursor-grabbing text-muted-foreground shrink-0" title="Drag to reorder">
+                      <GripVertical className="w-4 h-4" />
+                    </span>
                     <Input
                       value={title}
                       placeholder={`Task ${i + 1}`}
@@ -424,6 +443,7 @@ export default function HRMDailyTasks() {
                     )}
                   </div>
                 ))}
+
                 <Button
                   type="button"
                   size="sm"
