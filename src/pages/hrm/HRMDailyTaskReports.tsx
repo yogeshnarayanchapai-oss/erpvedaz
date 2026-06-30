@@ -188,6 +188,7 @@ export default function HRMDailyTaskReports() {
                 <Table>
                   <TableHeader>
                     <TableRow className="h-9">
+                      <TableHead className="py-1 w-10"></TableHead>
                       <TableHead className="py-1">Task Date</TableHead>
                       <TableHead className="py-1">Submitted</TableHead>
                       <TableHead className="py-1">Staff</TableHead>
@@ -199,9 +200,10 @@ export default function HRMDailyTaskReports() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">No submissions found</TableCell></TableRow>}
-                    {filtered.map(s => (
+                    {filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-6 text-xs text-muted-foreground">No submissions found</TableCell></TableRow>}
+                    {viewMode === 'flat' ? filtered.map(s => (
                       <TableRow key={s.id} className="h-9">
+                        <TableCell className="py-1 w-10"></TableCell>
                         <TableCell className="py-1 text-xs">{s.task_date || '-'}</TableCell>
                         <TableCell className="py-1 text-xs">{s.submission_date}</TableCell>
                         <TableCell className="py-1 text-xs">{staffMap[s.staff_id]?.full_name || '-'}</TableCell>
@@ -211,7 +213,52 @@ export default function HRMDailyTaskReports() {
                         <TableCell className="py-1 text-xs">{s.remark || '-'}</TableCell>
                         <TableCell className="py-1 text-xs">{s.checkin_time ? format(new Date(s.checkin_time), 'HH:mm') : '-'}</TableCell>
                       </TableRow>
-                    ))}
+                    )) : groupedByStaff.map(([staffId, rows]) => {
+                      const expanded = !!expandedStaff[staffId];
+                      const emp = staffMap[staffId];
+                      const doneCount = rows.filter(r => r.is_done).length;
+                      const notDoneCount = rows.length - doneCount;
+                      return (
+                        <>
+                          <TableRow key={staffId} className="h-9 cursor-pointer hover:bg-muted/40" onClick={() => toggleStaff(staffId)}>
+                            <TableCell className="py-1 w-10">
+                              <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={e => { e.stopPropagation(); toggleStaff(staffId); }}>
+                                {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="py-1 text-xs font-medium" colSpan={3}>
+                              <div className="flex items-center gap-2">
+                                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                                {emp?.full_name || 'Unassigned'}
+                                <span className="text-[10px] text-muted-foreground">({rows.length})</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-1 text-xs">{emp ? (deptMap[emp.department_id]?.name || '-') : '-'}</TableCell>
+                            <TableCell className="py-1 text-xs"></TableCell>
+                            <TableCell className="py-1 text-xs">
+                              <span className="text-green-600">{doneCount}</span>
+                              <span className="text-muted-foreground mx-1">/</span>
+                              <span className="text-red-600">{notDoneCount}</span>
+                            </TableCell>
+                            <TableCell className="py-1 text-xs"></TableCell>
+                            <TableCell className="py-1 text-xs"></TableCell>
+                          </TableRow>
+                          {expanded && rows.map(s => (
+                            <TableRow key={s.id} className="h-9 bg-muted/20">
+                              <TableCell className="py-1 w-10"></TableCell>
+                              <TableCell className="py-1 text-xs">{s.task_date || '-'}</TableCell>
+                              <TableCell className="py-1 text-xs">{s.submission_date}</TableCell>
+                              <TableCell className="py-1 text-xs">{staffMap[s.staff_id]?.full_name || '-'}</TableCell>
+                              <TableCell className="py-1 text-xs">{deptMap[s.department_id || '']?.name || '-'}</TableCell>
+                              <TableCell className="py-1 text-xs">{taskMap[s.daily_task_id]?.title || '-'}</TableCell>
+                              <TableCell className="py-1"><Badge variant={s.is_done ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">{s.is_done ? 'Done' : 'Not Done'}</Badge></TableCell>
+                              <TableCell className="py-1 text-xs">{s.remark || '-'}</TableCell>
+                              <TableCell className="py-1 text-xs">{s.checkin_time ? format(new Date(s.checkin_time), 'HH:mm') : '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
