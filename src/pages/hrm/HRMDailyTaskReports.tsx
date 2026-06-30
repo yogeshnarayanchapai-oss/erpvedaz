@@ -166,19 +166,17 @@ export default function HRMDailyTaskReports() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Tabs defaultValue="submissions" className="flex-1">
+      <Tabs defaultValue="submissions">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
           <TabsList>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="overrides">Overrides</TabsTrigger>
           </TabsList>
-        </Tabs>
-        <div className="flex items-center gap-1">
-          <Button variant={viewMode === 'flat' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('flat')}>Flat</Button>
-          <Button variant={viewMode === 'staff' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('staff')}>By Staff</Button>
+          <div className="flex items-center gap-1">
+            <Button variant={viewMode === 'flat' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('flat')}>Flat</Button>
+            <Button variant={viewMode === 'staff' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('staff')}>By Staff</Button>
+          </div>
         </div>
-      </div>
-      <Tabs defaultValue="submissions">
         <TabsContent value="submissions">
           <Card>
             <CardContent className="p-0">
