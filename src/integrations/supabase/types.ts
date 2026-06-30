@@ -2736,6 +2736,60 @@ export type Database = {
           },
         ]
       }
+      daily_checkout_tasks: {
+        Row: {
+          assigned_staff_id: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          description: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          priority: number
+          selected_weekdays: number[] | null
+          specific_date: string | null
+          store_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_staff_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          priority?: number
+          selected_weekdays?: number[] | null
+          specific_date?: string | null
+          store_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_staff_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          priority?: number
+          selected_weekdays?: number[] | null
+          specific_date?: string | null
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_pl: {
         Row: {
           actual_profit: number
@@ -2930,6 +2984,89 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_task_checkout_overrides: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          override_by: string | null
+          override_reason: string | null
+          override_time: string
+          staff_id: string
+          store_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          override_by?: string | null
+          override_reason?: string | null
+          override_time?: string
+          staff_id: string
+          store_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          override_by?: string | null
+          override_reason?: string | null
+          override_time?: string
+          staff_id?: string
+          store_id?: string | null
+        }
+        Relationships: []
+      }
+      daily_task_submissions: {
+        Row: {
+          checkout_time: string | null
+          created_at: string
+          daily_task_id: string
+          department_id: string | null
+          id: string
+          is_done: boolean
+          remark: string | null
+          staff_id: string
+          store_id: string | null
+          submission_date: string
+          submitted_at: string
+        }
+        Insert: {
+          checkout_time?: string | null
+          created_at?: string
+          daily_task_id: string
+          department_id?: string | null
+          id?: string
+          is_done?: boolean
+          remark?: string | null
+          staff_id: string
+          store_id?: string | null
+          submission_date?: string
+          submitted_at?: string
+        }
+        Update: {
+          checkout_time?: string | null
+          created_at?: string
+          daily_task_id?: string
+          department_id?: string | null
+          id?: string
+          is_done?: boolean
+          remark?: string | null
+          staff_id?: string
+          store_id?: string | null
+          submission_date?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_task_submissions_daily_task_id_fkey"
+            columns: ["daily_task_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checkout_tasks"
             referencedColumns: ["id"]
           },
         ]
