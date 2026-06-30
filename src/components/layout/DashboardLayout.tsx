@@ -47,6 +47,9 @@ const SALES_MANAGER_ALLOWED_PREFIX_PATHS = [
   '/admin/logistics',
   '/admin/logistics-dashboard',
   '/admin/logistics-settings',
+  '/my-hr',
+  '/my-tasks',
+  '/training',
 ];
 
 const SALES_MANAGER_ALLOWED_EXACT_PATHS = [
