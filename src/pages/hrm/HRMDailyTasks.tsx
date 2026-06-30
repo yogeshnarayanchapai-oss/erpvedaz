@@ -336,8 +336,10 @@ export default function HRMDailyTasks() {
                       >
                         {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">{g.staffName}</div>
-                          <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
+                          <div className="text-sm font-medium">{g.assigned_staff_id ? g.staffName : g.roleName}</div>
+                          {g.assigned_staff_id && (
+                            <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
+                          )}
                         </div>
                         <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
                       </button>
