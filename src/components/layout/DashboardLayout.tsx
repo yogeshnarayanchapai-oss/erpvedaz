@@ -292,6 +292,9 @@ function DashboardLayoutInner() {
                 viewAllPath="/admin/notifications"
               />
               
+              {/* Daily Task Review button */}
+              <DailyTaskReviewButton />
+
               {/* Attendance Check In/Out button */}
               <AttendanceButton />
               
