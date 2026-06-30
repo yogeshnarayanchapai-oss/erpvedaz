@@ -94,6 +94,7 @@ export function useLeads(filters?: {
   dateFrom?: string;
   dateTo?: string;
   leadBucket?: LeadBucket;
+  search?: string;
   /**
    * When provided, fetch only leads created by this user.
    * Use `null` to explicitly pause the query until the caller has a user id.
@@ -152,9 +153,20 @@ export function useLeads(filters?: {
         query = query.eq('lead_bucket', filters.leadBucket);
       }
 
+      const searchTerm = filters?.search?.trim();
+      if (searchTerm) {
+        const escapedSearch = searchTerm.replace(/[%_,]/g, '\\$&');
+        query = query.or([
+          `client_name.ilike.%${escapedSearch}%`,
+          `contact_number.ilike.%${escapedSearch}%`,
+          `alt_phone.ilike.%${escapedSearch}%`,
+          `reference_id.ilike.%${escapedSearch}%`,
+        ].join(','));
+      }
+
       // Hard cap to prevent runaway fetches on huge stores. Pages should always
       // pass dateFrom/dateTo or createdByUserId to stay well under this limit.
-      const { data, error } = await query.range(0, 4999);
+      const { data, error } = await query.range(0, searchTerm ? 9999 : 4999);
       if (error) throw error;
       return data as Lead[];
     },

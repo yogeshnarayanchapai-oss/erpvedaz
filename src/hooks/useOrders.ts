@@ -139,6 +139,7 @@ export function useOrders(filters?: {
   deliveryLocation?: DeliveryLocation | 'ALL';
   sentToLogistics?: boolean;
   storeId?: string;
+  search?: string;
 }) {
   const currentStoreId = useCurrentStoreId();
   const storeId = filters?.storeId || currentStoreId;
@@ -146,6 +147,30 @@ export function useOrders(filters?: {
   return useQuery({
     queryKey: ['orders', filters, storeId],
     queryFn: async () => {
+      const searchTerm = filters?.search?.trim();
+      let matchingLeadIds: string[] = [];
+
+      if (searchTerm) {
+        const escapedSearch = searchTerm.replace(/[%_,]/g, '\\$&');
+        let leadQuery = supabase
+          .from('leads')
+          .select('id')
+          .or([
+            `client_name.ilike.%${escapedSearch}%`,
+            `contact_number.ilike.%${escapedSearch}%`,
+            `alt_phone.ilike.%${escapedSearch}%`,
+            `reference_id.ilike.%${escapedSearch}%`,
+          ].join(','));
+
+        if (storeId) {
+          leadQuery = leadQuery.eq('store_id', storeId);
+        }
+
+        const { data: leadMatches, error: leadSearchError } = await leadQuery.range(0, 9999);
+        if (leadSearchError) throw leadSearchError;
+        matchingLeadIds = (leadMatches || []).map((lead) => lead.id);
+      }
+
       let query = supabase
         .from('orders')
         .select(`
@@ -188,7 +213,27 @@ export function useOrders(filters?: {
         query = query.eq('sent_to_logistics', filters.sentToLogistics);
       }
 
-      const { data, error } = await query;
+      if (searchTerm) {
+        const escapedSearch = searchTerm.replace(/[%_,]/g, '\\$&');
+        const searchFilters = [
+          `logistic_order_id.ilike.%${escapedSearch}%`,
+          `courier_tracking_code.ilike.%${escapedSearch}%`,
+          `partner_order_id.ilike.%${escapedSearch}%`,
+        ];
+
+        const orderNumber = Number(searchTerm);
+        if (Number.isInteger(orderNumber)) {
+          searchFilters.push(`order_number.eq.${orderNumber}`);
+        }
+
+        if (matchingLeadIds.length > 0) {
+          searchFilters.push(`lead_id.in.(${matchingLeadIds.join(',')})`);
+        }
+
+        query = query.or(searchFilters.join(','));
+      }
+
+      const { data, error } = await query.range(0, searchTerm ? 9999 : 4999);
       if (error) throw error;
       return data as Order[];
     },
