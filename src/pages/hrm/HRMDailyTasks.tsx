@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -19,24 +17,39 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X } from 'lucide-react';
 
 interface DailyTask {
   id: string;
   title: string;
-  description: string | null;
   department_id: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
   selected_weekdays: string[] | null;
-  is_mandatory: boolean;
   is_active: boolean;
-  priority: number;
   store_id: string | null;
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+interface FormState {
+  department_id: string | null;
+  assigned_staff_id: string | null;
+  frequency: string;
+  specific_date: string | null;
+  selected_weekdays: string[];
+  is_active: boolean;
+}
+
+const blankForm = (): FormState => ({
+  department_id: null,
+  assigned_staff_id: null,
+  frequency: 'daily',
+  specific_date: null,
+  selected_weekdays: [],
+  is_active: true,
+});
 
 export default function HRMDailyTasks() {
   const storeId = useCurrentStoreId();
@@ -46,16 +59,13 @@ export default function HRMDailyTasks() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DailyTask | null>(null);
-  const [form, setForm] = useState<Partial<DailyTask>>({
-    title: '', description: '', department_id: null, assigned_staff_id: null,
-    frequency: 'daily', specific_date: null, selected_weekdays: [],
-    is_mandatory: true, is_active: true, priority: 1,
-  });
+  const [titles, setTitles] = useState<string[]>(['']);
+  const [form, setForm] = useState<FormState>(blankForm());
 
   const load = async () => {
     setLoading(true);
     const [t, d, s] = await Promise.all([
-      supabase.from('daily_checkout_tasks' as any).select('*').order('priority').order('created_at'),
+      supabase.from('daily_checkout_tasks' as any).select('*').order('created_at'),
       supabase.from('departments').select('id, name'),
       supabase.from('employees').select('id, full_name, department_id').eq('status', 'Active'),
     ]);
@@ -69,42 +79,48 @@ export default function HRMDailyTasks() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({
-      title: '', description: '', department_id: null, assigned_staff_id: null,
-      frequency: 'daily', specific_date: null, selected_weekdays: [],
-      is_mandatory: true, is_active: true, priority: 1,
-    });
+    setTitles(['']);
+    setForm(blankForm());
     setOpen(true);
   };
 
   const openEdit = (t: DailyTask) => {
     setEditing(t);
-    setForm({ ...t });
+    setTitles([t.title]);
+    setForm({
+      department_id: t.department_id,
+      assigned_staff_id: t.assigned_staff_id,
+      frequency: t.frequency,
+      specific_date: t.specific_date,
+      selected_weekdays: t.selected_weekdays || [],
+      is_active: t.is_active,
+    });
     setOpen(true);
   };
 
   const save = async () => {
-    if (!form.title?.trim()) return toast.error('Title required');
-    const payload: any = {
-      title: form.title,
-      description: form.description || null,
+    const cleanTitles = titles.map(t => t.trim()).filter(Boolean);
+    if (cleanTitles.length === 0) return toast.error('At least one title required');
+
+    const base: any = {
       department_id: form.department_id || null,
       assigned_staff_id: form.assigned_staff_id || null,
       frequency: form.frequency || 'daily',
       specific_date: form.frequency === 'specific_date' ? form.specific_date : null,
-      selected_weekdays: form.frequency === 'weekdays' ? (form.selected_weekdays || []) : null,
-      is_mandatory: !!form.is_mandatory,
+      selected_weekdays: form.frequency === 'weekdays' ? form.selected_weekdays : null,
       is_active: form.is_active !== false,
-      priority: Number(form.priority) || 1,
       store_id: storeId,
     };
+
     let res;
     if (editing) {
-      res = await supabase.from('daily_checkout_tasks' as any).update(payload).eq('id', editing.id);
+      res = await supabase.from('daily_checkout_tasks' as any)
+        .update({ ...base, title: cleanTitles[0] })
+        .eq('id', editing.id);
     } else {
       const { data: u } = await supabase.auth.getUser();
-      payload.created_by = u.user?.id;
-      res = await supabase.from('daily_checkout_tasks' as any).insert(payload);
+      const rows = cleanTitles.map(title => ({ ...base, title, created_by: u.user?.id }));
+      res = await supabase.from('daily_checkout_tasks' as any).insert(rows);
     }
     if (res.error) return toast.error(res.error.message);
     toast.success('Saved');
@@ -151,15 +167,13 @@ export default function HRMDailyTasks() {
                   <TableHead className="h-9 py-1">Department</TableHead>
                   <TableHead className="h-9 py-1">Staff</TableHead>
                   <TableHead className="h-9 py-1">Frequency</TableHead>
-                  <TableHead className="h-9 py-1">Type</TableHead>
                   <TableHead className="h-9 py-1">Active</TableHead>
-                  <TableHead className="h-9 py-1">Pri</TableHead>
                   <TableHead className="h-9 py-1 w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tasks.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-6">No daily tasks yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-6">No daily tasks yet.</TableCell></TableRow>
                 )}
                 {tasks.map(t => (
                   <TableRow key={t.id} className="h-9">
@@ -171,14 +185,8 @@ export default function HRMDailyTasks() {
                       {t.frequency === 'specific_date' && t.specific_date ? ` (${t.specific_date})` : ''}
                     </TableCell>
                     <TableCell className="py-1">
-                      <Badge variant={t.is_mandatory ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 py-0">
-                        {t.is_mandatory ? 'Mandatory' : 'Optional'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-1">
                       <Switch checked={t.is_active} onCheckedChange={() => toggleActive(t)} />
                     </TableCell>
-                    <TableCell className="py-1 text-xs">{t.priority}</TableCell>
                     <TableCell className="py-1">
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(t)}>
@@ -198,20 +206,51 @@ export default function HRMDailyTasks() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit' : 'Add'} Daily Task</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Title *</Label>
-              <Input value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} />
+              <Label className="text-xs">Title{!editing && 's'} *</Label>
+              <div className="space-y-1.5 mt-1">
+                {titles.map((title, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <Input
+                      value={title}
+                      placeholder={`Task ${i + 1}`}
+                      onChange={e => {
+                        const next = [...titles];
+                        next[i] = e.target.value;
+                        setTitles(next);
+                      }}
+                    />
+                    {!editing && titles.length > 1 && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 shrink-0"
+                        onClick={() => setTitles(titles.filter((_, idx) => idx !== i))}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {!editing && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTitles([...titles, ''])}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add row
+                  </Button>
+                )}
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Description / Instruction</Label>
-              <Textarea rows={2} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Department</Label>
                 <Select value={form.department_id || 'none'} onValueChange={v => setForm({ ...form, department_id: v === 'none' ? null : v, assigned_staff_id: null })}>
@@ -223,7 +262,7 @@ export default function HRMDailyTasks() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Specific Staff (priority)</Label>
+                <Label className="text-xs">Specific Staff</Label>
                 <Select value={form.assigned_staff_id || 'none'} onValueChange={v => setForm({ ...form, assigned_staff_id: v === 'none' ? null : v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -232,8 +271,6 @@ export default function HRMDailyTasks() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Frequency</Label>
                 <Select value={form.frequency} onValueChange={v => setForm({ ...form, frequency: v })}>
@@ -245,11 +282,8 @@ export default function HRMDailyTasks() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-xs">Priority</Label>
-                <Input type="number" min={1} value={form.priority || 1} onChange={e => setForm({ ...form, priority: Number(e.target.value) })} />
-              </div>
             </div>
+
             {form.frequency === 'specific_date' && (
               <div>
                 <Label className="text-xs">Date</Label>
@@ -263,12 +297,11 @@ export default function HRMDailyTasks() {
                   {WEEKDAYS.map(d => (
                     <label key={d} className="flex items-center gap-1 text-xs">
                       <Checkbox
-                        checked={(form.selected_weekdays || []).includes(d)}
+                        checked={form.selected_weekdays.includes(d)}
                         onCheckedChange={(c) => {
-                          const cur = form.selected_weekdays || [];
                           setForm({
                             ...form,
-                            selected_weekdays: c ? [...cur, d] : cur.filter(x => x !== d),
+                            selected_weekdays: c ? [...form.selected_weekdays, d] : form.selected_weekdays.filter(x => x !== d),
                           });
                         }}
                       />
@@ -278,16 +311,11 @@ export default function HRMDailyTasks() {
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={!!form.is_mandatory} onCheckedChange={c => setForm({ ...form, is_mandatory: c })} />
-                Mandatory
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={form.is_active !== false} onCheckedChange={c => setForm({ ...form, is_active: c })} />
-                Active
-              </label>
-            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={form.is_active !== false} onCheckedChange={c => setForm({ ...form, is_active: c })} />
+              Active
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

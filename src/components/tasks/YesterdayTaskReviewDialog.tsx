@@ -13,16 +13,14 @@ import { format, subDays } from 'date-fns';
 interface DailyTask {
   id: string;
   title: string;
-  description: string | null;
   department_id: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
   selected_weekdays: string[] | null;
-  is_mandatory: boolean;
   is_active: boolean;
-  priority: number;
 }
+
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -76,8 +74,8 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
         .eq('staff_id', employeeId)
         .eq('task_date', taskDate);
       const done = new Set(((existing as any) || []).map((e: any) => e.daily_task_id));
-      const pending = applicable.filter((t: DailyTask) => !done.has(t.id))
-        .sort((a: DailyTask, b: DailyTask) => a.priority - b.priority);
+      const pending = applicable.filter((t: DailyTask) => !done.has(t.id));
+
       setTasks(pending);
       const init: any = {};
       pending.forEach((t: DailyTask) => { init[t.id] = { done: false, remark: '' }; });
@@ -157,9 +155,8 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                     <div className="col-span-12 md:col-span-5">
                       <div className="text-sm font-medium leading-tight">
                         {t.title}
-                        {t.is_mandatory && <span className="text-[10px] text-destructive ml-1">*</span>}
                       </div>
-                      {t.description && <div className="text-[11px] text-muted-foreground">{t.description}</div>}
+
                     </div>
                     <label className="col-span-3 md:col-span-2 flex items-center gap-1.5 text-xs">
                       <Checkbox
