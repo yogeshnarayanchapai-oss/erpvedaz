@@ -194,7 +194,7 @@ export default function HRMDailyTaskReports() {
                       <TableHead className="py-1">Task</TableHead>
                       <TableHead className="py-1">Status</TableHead>
                       <TableHead className="py-1">Remark</TableHead>
-                      <TableHead className="py-1">Check-in</TableHead>
+                      <TableHead className="py-1">Time</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
