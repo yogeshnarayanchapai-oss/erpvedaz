@@ -74,8 +74,8 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
         .eq('staff_id', employeeId)
         .eq('task_date', taskDate);
       const done = new Set(((existing as any) || []).map((e: any) => e.daily_task_id));
-      const pending = applicable.filter((t: DailyTask) => !done.has(t.id))
-        .sort((a: DailyTask, b: DailyTask) => a.priority - b.priority);
+      const pending = applicable.filter((t: DailyTask) => !done.has(t.id));
+
       setTasks(pending);
       const init: any = {};
       pending.forEach((t: DailyTask) => { init[t.id] = { done: false, remark: '' }; });
