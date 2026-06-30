@@ -195,11 +195,11 @@ const myTrainingItems: MenuItem[] = [
 // Inventory submenu for Admin
 const inventoryItems: MenuItem[] = [
   { title: 'Stock Summary', url: '/admin/inventory/stock-summary', icon: Package },
+  { title: 'Products', url: '/admin/products', icon: Package },
   { title: 'Stock Movements', url: '/admin/inventory/movements', icon: ArrowLeftRight },
   { title: 'Activity Log', url: '/admin/inventory/activity-log', icon: History },
   { title: 'Parties', url: '/admin/inventory/parties', icon: Users },
   { title: 'Warehouses', url: '/admin/inventory/warehouses', icon: Warehouse },
-  { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: Calculator },
   { title: 'Consignment Management', url: '/admin/inventory/consignments', icon: Package },
 ];
 
@@ -216,7 +216,7 @@ const accountingItems: MenuItem[] = [
 // Sales submenu for Admin/Owner
 const salesItems: MenuItem[] = [
   { title: 'Sales Dashboard', url: '/admin/sales/dashboard', icon: TrendingUp },
-  { title: 'Products', url: '/admin/products', icon: Package },
+  { title: 'Daily P/L', url: '/admin/inventory/daily-pl', icon: Calculator },
   { title: 'Branches', url: '/admin/branches', icon: Building2 },
   { title: 'Leads', url: '/admin/leads', icon: Phone },
   { title: 'AI Leads', url: '/admin/ai-leads', icon: Brain },
@@ -518,7 +518,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Warehouse,
       children: inventoryItems,
     },
-    { title: 'Products', url: '/admin/products', icon: Package },
     {
       title: 'My Training',
       url: '/training/my-courses',
