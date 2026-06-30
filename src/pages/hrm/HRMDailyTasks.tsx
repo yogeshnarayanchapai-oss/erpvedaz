@@ -151,12 +151,13 @@ export default function HRMDailyTasks() {
       // Update existing rows, insert new ones, delete removed ones
       const keptIds = new Set(pairs.filter(p => p.id).map(p => p.id as string));
       const toDelete = editingGroup.originalIds.filter(id => !keptIds.has(id));
-      for (const p of pairs) {
+      for (let i = 0; i < pairs.length; i++) {
+        const p = pairs[i];
         if (p.id) {
-          const r = await supabase.from('daily_checkout_tasks' as any).update({ ...base, title: p.title }).eq('id', p.id);
+          const r = await supabase.from('daily_checkout_tasks' as any).update({ ...base, title: p.title, sort_order: i }).eq('id', p.id);
           if (r.error) lastError = r.error;
         } else {
-          const r = await supabase.from('daily_checkout_tasks' as any).insert({ ...base, title: p.title, created_by: u.user?.id });
+          const r = await supabase.from('daily_checkout_tasks' as any).insert({ ...base, title: p.title, sort_order: i, created_by: u.user?.id });
           if (r.error) lastError = r.error;
         }
       }
@@ -167,16 +168,16 @@ export default function HRMDailyTasks() {
     } else if (editing) {
       const first = pairs[0];
       const r1 = await supabase.from('daily_checkout_tasks' as any)
-        .update({ ...base, title: first.title })
+        .update({ ...base, title: first.title, sort_order: 0 })
         .eq('id', editing.id);
       if (r1.error) lastError = r1.error;
       if (pairs.length > 1) {
-        const extra = pairs.slice(1).map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+        const extra = pairs.slice(1).map((p, idx) => ({ ...base, title: p.title, sort_order: idx + 1, created_by: u.user?.id }));
         const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extra);
         if (r2.error) lastError = r2.error;
       }
     } else {
-      const rows = pairs.map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+      const rows = pairs.map((p, i) => ({ ...base, title: p.title, sort_order: i, created_by: u.user?.id }));
       const r = await supabase.from('daily_checkout_tasks' as any).insert(rows);
       if (r.error) lastError = r.error;
     }
