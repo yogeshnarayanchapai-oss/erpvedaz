@@ -378,7 +378,7 @@ export default function HRMDailyTasks() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">- None -</SelectItem>
-                    {filteredStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                    {(form.department_id ? staff.filter(s => s.department_id === form.department_id) : staff).map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
