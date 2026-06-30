@@ -183,7 +183,7 @@ export default function AdminOrders() {
   const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
   const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
 
-  const { data: orders = [], isLoading, isFetched } = useOrders({ dateFrom: queryDateFrom, dateTo: queryDateTo });
+  const { data: orders = [], isLoading, isFetched } = useOrders({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
   const { data: products = [] } = useProducts();
   const { data: staff = [] } = useStaff();
 
