@@ -232,20 +232,6 @@ export default function HRMDailyTasks() {
 
   const toggleGroup = (k: string) => setExpanded(p => ({ ...p, [k]: !p[k] }));
 
-  const addToGroup = (g: { target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] }) => {
-    const sample = g.tasks[0];
-    setEditing(null);
-    setTitles(['']);
-    setForm({
-      target_role: g.target_role,
-      assigned_staff_id: g.assigned_staff_id,
-      frequency: sample?.frequency || 'daily',
-      specific_date: sample?.specific_date || null,
-      selected_weekdays: sample?.selected_weekdays || [],
-      is_active: true,
-    });
-    setOpen(true);
-  };
 
   return (
     <div className="p-4 space-y-4">
