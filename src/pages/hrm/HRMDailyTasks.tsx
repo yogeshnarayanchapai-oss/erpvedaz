@@ -387,7 +387,7 @@ export default function HRMDailyTasks() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit' : 'Add'} Daily Task</DialogTitle>
+            <DialogTitle>{editingGroup ? 'Edit Group Tasks' : editing ? 'Edit Daily Task' : 'Add Daily Task'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
