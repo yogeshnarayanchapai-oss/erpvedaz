@@ -47,7 +47,7 @@ export default function HRMDailyTaskReports() {
   const load = async () => {
     setLoading(true);
     const [t, s, d, sub, ov] = await Promise.all([
-      supabase.from('daily_checkout_tasks' as any).select('*'),
+      supabase.from('daily_checkout_tasks' as any).select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
       supabase.from('employees').select('id, full_name, department_id'),
       supabase.from('departments').select('id, name'),
       supabase.from('daily_task_submissions' as any)
