@@ -64,7 +64,9 @@ export default function HRMDailyTasks() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DailyTask | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{ originalIds: string[] } | null>(null);
   const [titles, setTitles] = useState<string[]>(['']);
+  const [titleIds, setTitleIds] = useState<(string | null)[]>([null]);
   const [form, setForm] = useState<FormState>(blankForm());
   const [viewMode, setViewMode] = useState<'task' | 'user'>('user');
   const [search, setSearch] = useState('');
