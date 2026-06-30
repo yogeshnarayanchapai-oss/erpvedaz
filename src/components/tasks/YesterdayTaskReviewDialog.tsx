@@ -13,16 +13,14 @@ import { format, subDays } from 'date-fns';
 interface DailyTask {
   id: string;
   title: string;
-  description: string | null;
   department_id: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
   selected_weekdays: string[] | null;
-  is_mandatory: boolean;
   is_active: boolean;
-  priority: number;
 }
+
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
