@@ -275,6 +275,8 @@ export default function AdminLeads() {
       lead.client_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_number.includes(search);
     const matchesCancelReason = cancelReasonFilter === 'ALL' || (lead as any).cancel_reason === cancelReasonFilter;
+    // When searching by text, bypass other filters so user can find lead regardless of status/product/assignedTo
+    if (isSearching) return matchesSearch;
     return matchesProduct && matchesStatus && matchesAssignedTo && matchesSearch && matchesCancelReason;
   }).sort((a, b) => {
     // Sort by created_at descending - newest first
