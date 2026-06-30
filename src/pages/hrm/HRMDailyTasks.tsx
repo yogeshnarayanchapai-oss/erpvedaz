@@ -121,6 +121,11 @@ export default function HRMDailyTasks() {
       res = await supabase.from('daily_checkout_tasks' as any)
         .update({ ...base, title: cleanTitles[0] })
         .eq('id', editing.id);
+      if (!res.error && cleanTitles.length > 1) {
+        const { data: u } = await supabase.auth.getUser();
+        const extra = cleanTitles.slice(1).map(title => ({ ...base, title, created_by: u.user?.id }));
+        res = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+      }
     } else {
       const { data: u } = await supabase.auth.getUser();
       const rows = cleanTitles.map(title => ({ ...base, title, created_by: u.user?.id }));
@@ -336,7 +341,7 @@ export default function HRMDailyTasks() {
                         setTitles(next);
                       }}
                     />
-                    {!editing && titles.length > 1 && (
+                    {titles.length > 1 && (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -348,16 +353,14 @@ export default function HRMDailyTasks() {
                     )}
                   </div>
                 ))}
-                {!editing && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setTitles([...titles, ''])}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add row
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTitles([...titles, ''])}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add row
+                </Button>
               </div>
             </div>
 
