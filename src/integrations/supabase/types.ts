@@ -2748,6 +2748,7 @@ export type Database = {
           selected_weekdays: number[] | null
           specific_date: string | null
           store_id: string | null
+          target_role: Database["public"]["Enums"]["app_role"] | null
           title: string
           updated_at: string
         }
@@ -2762,6 +2763,7 @@ export type Database = {
           selected_weekdays?: number[] | null
           specific_date?: string | null
           store_id?: string | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
           title: string
           updated_at?: string
         }
@@ -2776,6 +2778,7 @@ export type Database = {
           selected_weekdays?: number[] | null
           specific_date?: string | null
           store_id?: string | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
           title?: string
           updated_at?: string
         }
