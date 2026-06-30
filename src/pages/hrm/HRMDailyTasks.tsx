@@ -341,7 +341,7 @@ export default function HRMDailyTasks() {
                         setTitles(next);
                       }}
                     />
-                    {!editing && titles.length > 1 && (
+                    {titles.length > 1 && (
                       <Button
                         size="icon"
                         variant="ghost"
@@ -353,16 +353,14 @@ export default function HRMDailyTasks() {
                     )}
                   </div>
                 ))}
-                {!editing && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setTitles([...titles, ''])}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add row
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTitles([...titles, ''])}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add row
+                </Button>
               </div>
             </div>
 
