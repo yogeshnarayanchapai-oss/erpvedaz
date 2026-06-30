@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Users } from 'lucide-react';
 
 interface Submission {
   id: string;
