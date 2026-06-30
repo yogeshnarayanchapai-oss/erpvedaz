@@ -155,9 +155,8 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                     <div className="col-span-12 md:col-span-5">
                       <div className="text-sm font-medium leading-tight">
                         {t.title}
-                        {t.is_mandatory && <span className="text-[10px] text-destructive ml-1">*</span>}
                       </div>
-                      {t.description && <div className="text-[11px] text-muted-foreground">{t.description}</div>}
+
                     </div>
                     <label className="col-span-3 md:col-span-2 flex items-center gap-1.5 text-xs">
                       <Checkbox
