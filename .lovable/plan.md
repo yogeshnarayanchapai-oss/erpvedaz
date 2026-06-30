@@ -1,90 +1,89 @@
-# Daily Checkout Tasks — Extension of Task Management
+# Daily Task Assignment Plan — Role-wise
 
-Extending the existing Task Management module **without touching** existing tasks, attendance, checkout, roles, or permissions. All new functionality lives in new tables + new pages + a pre-checkout popup hook.
+System ma active 34 staff xan. Tini lai role anusar daily checkout tasks assign garne plan. Approve gare paxi `daily_checkout_tasks` table ma bulk insert garerai dinxu (sort_order sahit, target_role anusar — yaslai jun role ma assign garyo tyo role ka sabai users lai automatically apply hunx).
 
-## 1. Database (new tables only)
+## Role-wise Active Staff Count
+- OWNER: 1 (Yogesh)
+- ADMIN: 4 (Anil, Darshan, Man, Ramesh)
+- SALES_MANAGER: 2 (Amit, Kamal)
+- LEADS: 3
+- CALLING: 16
+- LOGISTICS: 6
+- HR: 1 (Hemanta)
+- ACCOUNTANT: 1 (Hemant)
 
-Three new tables, fully isolated from existing `tasks`:
+## Tasks per Role (Daily Frequency)
 
-- `**daily_checkout_tasks**` — title, description, store_id, department_id (nullable), assigned_staff_id (nullable), frequency (`DAILY` | `SPECIFIC_DATE` | `WEEKDAYS`), specific_date, selected_weekdays (int[]), is_mandatory, is_active, priority, created_by, timestamps.
-- `**daily_task_submissions**` — daily_task_id, staff_id (profile id), department_id, store_id, submission_date, is_done, remark, submitted_at, checkout_time.
-- `**daily_task_checkout_overrides**` — staff_id, date, override_by, override_reason, override_time, store_id.
+### CALLING (16 staff)
+1. Aajako assigned sabai naya leads ma call gareko
+2. Follow-up due leads sabai complete gareko
+3. CNR leads (no response) lai retry call gareko (minimum 2 attempt)
+4. Confirmed orders ko address & product detail double-check gareko
+5. Cancel/CNR ko proper remark with reason lekheko
+6. Daily target achievement update gareko
 
-RLS:
+### LEADS (3 staff)
+1. Naya leads system ma pull/upload gareko (SocialBox/manual)
+2. Duplicate phone check garera clean gareko
+3. Leads calling staff lai assign/reassign gareko balanced way ma
+4. Source-wise lead quality report check gareko
+5. Pending unassigned leads zero ma rakheko
 
-- Admin/Owner/Manager/HR/SALES_MANAGER → full manage within store.
-- Staff → SELECT own assigned tasks; INSERT own submissions; SELECT own submissions.
-- All tables get proper `GRANT` to `authenticated` + `service_role`.
-- If admin/owner/manager/hr/sales manager has aasigned daily work they should also checkout tick.
+### LOGISTICS (6 staff)
+1. Confirmed orders courier ma dispatch gareko (Inside + Outside valley)
+2. Courier tracking update gareko (delivered/RTO/pending)
+3. RTO orders inventory ma fir wapas entry gareko
+4. COD settlement courier sanga reconcile gareko
+5. Pending dispatch orders zero ma rakheko
+6. Customer delivery issue/complaint solve gareko
 
-No existing table is modified.
+### ADMIN (4 staff)
+1. Daily P/L review gareko
+2. Staff performance & target progress check gareko
+3. Pending high-alert issues solve gareko
+4. Inventory low-stock alerts review gareko
+5. Today ko sales vs target comparison gareko
+6. Team chat ma important update reply gareko
 
-## 2. Admin pages (new submenus under Task Management)
+### SALES_MANAGER (2 staff)
+1. Sales dashboard ma aajako revenue review gareko
+2. Calling staff ko performance monitor gareko
+3. Lead conversion rate check gareko
+4. Product-wise sales target progress check gareko
+5. Underperforming staff lai feedback/coaching diyeko
 
-Add two routes under the existing HRM/Tasks section in `AppSidebar.tsx`:
+### HR (1 staff — Hemanta)
+1. Attendance & leave requests review/approve gareko
+2. Absent/late staff lai follow-up gareko
+3. Pending HR tickets/documents process gareko
+4. Birthday/anniversary wishes pathayeko (if any)
+5. Daily task submission compliance check gareko
 
-- `**/hrm/daily-tasks/setup**` → `DailyTaskSetup.tsx`
-  - Compact table layout (not cards): Title · Department · Staff · Frequency · Mandatory · Active · Priority · Actions.
-  - Add/Edit dialog with all fields, weekday multiselect, department/staff pickers (reuse existing `useStaff` / departments).
-  - Activate/deactivate toggle inline.
-- `**/hrm/daily-tasks/reports**` → `DailyTaskReports.tsx`
-  - Summary cards: assigned / done / not done / submitted staff / not-submitted staff / dept completion %.
-  - Filters: date range, single date, staff, dept, task, status, mandatory, submitted/not.
-  - Table of submissions + a "Not Submitted" section computed from assigned-vs-submitted diff.
-  - Override records listed at bottom; admin can create override entry.
+### ACCOUNTANT (1 staff — Hemant)
+1. Daily transactions (income/expense) entry & verify gareko
+2. Party payments (received/paid) reconcile gareko
+3. Consignment payments update gareko
+4. Bank/cash ledger balance check gareko
+5. Pending bills/invoices process gareko
 
-Sidebar entries are only shown to admin-equivalent roles (existing `roleUtils` helpers).
+### OWNER (1 — Yogesh)
+1. Daily P/L & Net cash position review gareko
+2. All store ko summary check gareko
+3. Critical alerts (consignment in-hand negative, high RTO) review gareko
 
-## 3. Staff checkout integration (safe hook into existing `AttendanceButton`)
+## Database Action (after approval)
+Insert into `daily_checkout_tasks` for each role:
+- `title` = task text
+- `target_role` = role (CALLING/LEADS/etc)
+- `assigned_staff_id` = NULL (role-wide)
+- `frequency` = 'daily'
+- `is_active` = true
+- `sort_order` = 1..N per role
+- `store_id` = default store (will use existing active store)
+- `created_by` = OWNER id
 
-`src/components/layout/AttendanceButton.tsx` is the single checkout entry point. Minimal change:
+Total tasks: ~40 rows across 8 roles.
 
-- Before calling `checkOut.mutate()`, fetch today's active assigned daily tasks for the user via a new `useTodayDailyTasks()` hook (resolves dept tasks + staff-specific tasks, dedupes by task id, staff-specific wins).
-- If list is empty → existing checkout runs unchanged.
-- If list is non-empty → open new `DailyTaskCheckoutDialog`.
-- On successful submit → insert rows into `daily_task_submissions`, then trigger the original `checkOut.mutate(todayRecord.id)`.
-
-Existing check-in flow and attendance hook are untouched.
-
-## 4. Compact checkout popup
-
-`src/components/tasks/DailyTaskCheckoutDialog.tsx`:
-
-- Single Dialog, max-h with internal scroll, sticky footer "Submit Daily Tasks & Checkout".
-- Each task = one compact row: title (truncate + tooltip for description) · Done switch · remark input.
-- Mobile: stacked compact rows, no horizontal scroll.
-- Validation: not-done ⇒ remark required (inline red helper text), submit disabled until valid.
-- Loading + error toasts via existing `sonner`.
-
-## 5. Optional staff dashboard widget
-
-Small "Today's Daily Tasks" card in `MyHRDashboard.tsx` showing compact rows of assigned tasks with done/pending status for today. View-only; submission still happens at checkout.
-
-## 6. Emergency override
-
-In Daily Task Reports, an "Override Checkout" action for admin/owner lets them insert an override record for a staff/date. When `AttendanceButton` finds an override row for today, it skips the popup and runs normal checkout.
-
-## 7. Permissions
-
-Reuse existing role checks:
-
-- Setup + Reports pages gated to OWNER/ADMIN/MANAGER/HR/SALES_MANAGER via existing `ProtectedRoute` patterns and sidebar `roleUtils`.
-- Submissions readable by self for all staff; admin sees all in store.
-
-## Files added
-
-- `supabase/migrations/<ts>_daily_checkout_tasks.sql`
-- `src/hooks/useDailyCheckoutTasks.ts`
-- `src/components/tasks/DailyTaskCheckoutDialog.tsx`
-- `src/components/tasks/DailyTaskFormDialog.tsx`
-- `src/pages/hrm/DailyTaskSetup.tsx`
-- `src/pages/hrm/DailyTaskReports.tsx`
-
-## Files touched (additive only)
-
-- `src/components/layout/AttendanceButton.tsx` — pre-checkout popup hook.
-- `src/components/layout/AppSidebar.tsx` — two new menu entries under Tasks/HRM.
-- `src/App.tsx` — two new routes.
-- `src/pages/myhr/MyHRDashboard.tsx` — optional widget.
-
-Nothing existing is renamed, removed, or repurposed.
+## Question before execution
+1. Sabai store ma same task chahincha ki specific store ma matra? (Currently single-store default ma rakhne plan x.)
+2. Kunai task add/remove/edit garna parx ki list lai as-is approve garne?
