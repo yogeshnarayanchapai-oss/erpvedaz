@@ -179,11 +179,6 @@ export default function HRMDailyTaskReports() {
         </div>
       </div>
 
-      <Tabs defaultValue="submissions">
-        <TabsList>
-          <TabsTrigger value="submissions">Submissions</TabsTrigger>
-          <TabsTrigger value="overrides">Overrides</TabsTrigger>
-        </TabsList>
         <TabsContent value="submissions">
           <Card>
             <CardContent className="p-0">
