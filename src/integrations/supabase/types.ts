@@ -2990,6 +2990,7 @@ export type Database = {
       }
       daily_task_checkout_overrides: {
         Row: {
+          checkin_date: string | null
           created_at: string
           date: string
           id: string
@@ -2998,8 +2999,10 @@ export type Database = {
           override_time: string
           staff_id: string
           store_id: string | null
+          task_date: string | null
         }
         Insert: {
+          checkin_date?: string | null
           created_at?: string
           date?: string
           id?: string
@@ -3008,8 +3011,10 @@ export type Database = {
           override_time?: string
           staff_id: string
           store_id?: string | null
+          task_date?: string | null
         }
         Update: {
+          checkin_date?: string | null
           created_at?: string
           date?: string
           id?: string
@@ -3018,11 +3023,13 @@ export type Database = {
           override_time?: string
           staff_id?: string
           store_id?: string | null
+          task_date?: string | null
         }
         Relationships: []
       }
       daily_task_submissions: {
         Row: {
+          checkin_time: string | null
           checkout_time: string | null
           created_at: string
           daily_task_id: string
@@ -3034,8 +3041,10 @@ export type Database = {
           store_id: string | null
           submission_date: string
           submitted_at: string
+          task_date: string | null
         }
         Insert: {
+          checkin_time?: string | null
           checkout_time?: string | null
           created_at?: string
           daily_task_id: string
@@ -3047,8 +3056,10 @@ export type Database = {
           store_id?: string | null
           submission_date?: string
           submitted_at?: string
+          task_date?: string | null
         }
         Update: {
+          checkin_time?: string | null
           checkout_time?: string | null
           created_at?: string
           daily_task_id?: string
@@ -3060,6 +3071,7 @@ export type Database = {
           store_id?: string | null
           submission_date?: string
           submitted_at?: string
+          task_date?: string | null
         }
         Relationships: [
           {
