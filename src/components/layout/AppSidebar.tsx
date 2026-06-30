@@ -234,6 +234,12 @@ const salesItems: MenuItem[] = [
   },
 ];
 
+const taskItems: MenuItem[] = [
+  { title: 'All Tasks', url: '/hrm/tasks', icon: CheckSquare },
+  { title: 'Daily Task Setup', url: '/hrm/daily-tasks', icon: CheckSquare },
+  { title: 'Daily Task Reports', url: '/hrm/daily-task-reports', icon: CheckSquare },
+];
+
 const menuItems: Record<AppRole, MenuItem[]> = {
   OWNER: [
     { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
@@ -253,7 +259,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -296,7 +302,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -355,7 +361,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',

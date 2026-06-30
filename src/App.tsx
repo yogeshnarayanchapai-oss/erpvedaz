@@ -130,6 +130,8 @@ import HRMLeaveQuota from "./pages/hrm/HRMLeaveQuota";
 import HRMEmployeeDetail from "./pages/hrm/HRMEmployeeDetail";
 import HRMStaffDocuments from "./pages/hrm/HRMStaffDocuments";
 import HRMTasks from "./pages/hrm/HRMTasks";
+import HRMDailyTasks from "./pages/hrm/HRMDailyTasks";
+import HRMDailyTaskReports from "./pages/hrm/HRMDailyTaskReports";
 import HRMSettings from "./pages/hrm/HRMSettings";
 
 // HRM merged pages
@@ -346,6 +348,8 @@ const App = () => (
                 <Route path="/hrm/attendance" element={<HRMAttendance />} />
                 <Route path="/hrm/chat" element={<HRMChat />} />
                 <Route path="/hrm/tasks" element={<HRMTasks />} />
+                <Route path="/hrm/daily-tasks" element={<HRMDailyTasks />} />
+                <Route path="/hrm/daily-task-reports" element={<HRMDailyTaskReports />} />
                 <Route path="/hrm/settings" element={<HRMSettings />} />
                 {/* HRM merged routes */}
                 <Route path="/hrm/attendance-leave" element={<HRMAttendanceLeave />} />
