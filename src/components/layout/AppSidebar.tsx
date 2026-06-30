@@ -518,7 +518,6 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: Warehouse,
       children: inventoryItems,
     },
-    { title: 'Products', url: '/admin/products', icon: Package },
     {
       title: 'My Training',
       url: '/training/my-courses',
