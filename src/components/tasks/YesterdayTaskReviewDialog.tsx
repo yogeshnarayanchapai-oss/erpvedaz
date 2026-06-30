@@ -50,7 +50,9 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
     const { data } = await supabase
       .from('daily_checkout_tasks' as any)
       .select('*')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
     const dow = DOW[new Date(taskDate).getDay()];
     const applicable = ((data as any) || []).filter((t: DailyTask) => {
       // Must be assigned to this staff OR their role — skip unassigned/global tasks

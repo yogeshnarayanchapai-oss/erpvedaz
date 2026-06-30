@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
 
 interface DailyTask {
   id: string;
@@ -30,7 +30,9 @@ interface DailyTask {
   selected_weekdays: string[] | null;
   is_active: boolean;
   store_id: string | null;
+  sort_order?: number;
 }
+
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -76,7 +78,7 @@ export default function HRMDailyTasks() {
   const load = async () => {
     setLoading(true);
     const [t, s] = await Promise.all([
-      supabase.from('daily_checkout_tasks' as any).select('*').order('created_at'),
+      supabase.from('daily_checkout_tasks' as any).select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
       supabase.from('employees').select('id, full_name').eq('status', 'Active'),
     ]);
     setTasks(((t.data as any) || []) as DailyTask[]);
@@ -149,12 +151,13 @@ export default function HRMDailyTasks() {
       // Update existing rows, insert new ones, delete removed ones
       const keptIds = new Set(pairs.filter(p => p.id).map(p => p.id as string));
       const toDelete = editingGroup.originalIds.filter(id => !keptIds.has(id));
-      for (const p of pairs) {
+      for (let i = 0; i < pairs.length; i++) {
+        const p = pairs[i];
         if (p.id) {
-          const r = await supabase.from('daily_checkout_tasks' as any).update({ ...base, title: p.title }).eq('id', p.id);
+          const r = await supabase.from('daily_checkout_tasks' as any).update({ ...base, title: p.title, sort_order: i }).eq('id', p.id);
           if (r.error) lastError = r.error;
         } else {
-          const r = await supabase.from('daily_checkout_tasks' as any).insert({ ...base, title: p.title, created_by: u.user?.id });
+          const r = await supabase.from('daily_checkout_tasks' as any).insert({ ...base, title: p.title, sort_order: i, created_by: u.user?.id });
           if (r.error) lastError = r.error;
         }
       }
@@ -165,16 +168,16 @@ export default function HRMDailyTasks() {
     } else if (editing) {
       const first = pairs[0];
       const r1 = await supabase.from('daily_checkout_tasks' as any)
-        .update({ ...base, title: first.title })
+        .update({ ...base, title: first.title, sort_order: 0 })
         .eq('id', editing.id);
       if (r1.error) lastError = r1.error;
       if (pairs.length > 1) {
-        const extra = pairs.slice(1).map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+        const extra = pairs.slice(1).map((p, idx) => ({ ...base, title: p.title, sort_order: idx + 1, created_by: u.user?.id }));
         const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extra);
         if (r2.error) lastError = r2.error;
       }
     } else {
-      const rows = pairs.map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+      const rows = pairs.map((p, i) => ({ ...base, title: p.title, sort_order: i, created_by: u.user?.id }));
       const r = await supabase.from('daily_checkout_tasks' as any).insert(rows);
       if (r.error) lastError = r.error;
     }
@@ -396,7 +399,26 @@ export default function HRMDailyTasks() {
               <Label className="text-xs">Title{!editing && 's'} *</Label>
               <div className="space-y-1.5 mt-1">
                 {titles.map((title, i) => (
-                  <div key={i} className="flex gap-1.5">
+                  <div
+                    key={i}
+                    className="flex gap-1.5 items-center"
+                    draggable
+                    onDragStart={e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                      const to = i;
+                      if (isNaN(from) || from === to) return;
+                      const nt = [...titles]; const ni = [...titleIds];
+                      const [mt] = nt.splice(from, 1); const [mi] = ni.splice(from, 1);
+                      nt.splice(to, 0, mt); ni.splice(to, 0, mi);
+                      setTitles(nt); setTitleIds(ni);
+                    }}
+                  >
+                    <span className="cursor-grab active:cursor-grabbing text-muted-foreground shrink-0" title="Drag to reorder">
+                      <GripVertical className="w-4 h-4" />
+                    </span>
                     <Input
                       value={title}
                       placeholder={`Task ${i + 1}`}
@@ -421,6 +443,7 @@ export default function HRMDailyTasks() {
                     )}
                   </div>
                 ))}
+
                 <Button
                   type="button"
                   size="sm"
