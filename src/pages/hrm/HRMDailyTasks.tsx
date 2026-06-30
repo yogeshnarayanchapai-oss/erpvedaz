@@ -16,13 +16,14 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
+import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import { toast } from 'sonner';
 import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface DailyTask {
   id: string;
   title: string;
-  department_id: string | null;
+  target_role: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
@@ -33,8 +34,13 @@ interface DailyTask {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const ROLES = [
+  'OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING',
+  'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE',
+] as const;
+
 interface FormState {
-  department_id: string | null;
+  target_role: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
@@ -43,7 +49,7 @@ interface FormState {
 }
 
 const blankForm = (): FormState => ({
-  department_id: null,
+  target_role: null,
   assigned_staff_id: null,
   frequency: 'daily',
   specific_date: null,
@@ -54,8 +60,7 @@ const blankForm = (): FormState => ({
 export default function HRMDailyTasks() {
   const storeId = useCurrentStoreId();
   const [tasks, setTasks] = useState<DailyTask[]>([]);
-  const [depts, setDepts] = useState<{ id: string; name: string }[]>([]);
-  const [staff, setStaff] = useState<{ id: string; full_name: string; department_id: string | null }[]>([]);
+  const [staff, setStaff] = useState<{ id: string; full_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DailyTask | null>(null);
@@ -68,13 +73,11 @@ export default function HRMDailyTasks() {
 
   const load = async () => {
     setLoading(true);
-    const [t, d, s] = await Promise.all([
+    const [t, s] = await Promise.all([
       supabase.from('daily_checkout_tasks' as any).select('*').order('created_at'),
-      supabase.from('departments').select('id, name'),
-      supabase.from('employees').select('id, full_name, department_id').eq('status', 'Active'),
+      supabase.from('employees').select('id, full_name').eq('status', 'Active'),
     ]);
     setTasks(((t.data as any) || []) as DailyTask[]);
-    setDepts((d.data || []) as any);
     setStaff((s.data || []) as any);
     setLoading(false);
   };
@@ -92,7 +95,7 @@ export default function HRMDailyTasks() {
     setEditing(t);
     setTitles([t.title]);
     setForm({
-      department_id: t.department_id,
+      target_role: t.target_role,
       assigned_staff_id: t.assigned_staff_id,
       frequency: t.frequency,
       specific_date: t.specific_date,
@@ -107,7 +110,7 @@ export default function HRMDailyTasks() {
     if (cleanTitles.length === 0) return toast.error('At least one title required');
 
     const base: any = {
-      department_id: form.department_id || null,
+      target_role: form.target_role || null,
       assigned_staff_id: form.assigned_staff_id || null,
       frequency: form.frequency || 'daily',
       specific_date: form.frequency === 'specific_date' ? form.specific_date : null,
@@ -153,31 +156,32 @@ export default function HRMDailyTasks() {
   const q = search.trim().toLowerCase();
   const visibleTasks = q
     ? tasks.filter(t => {
-        const deptName = depts.find(d => d.id === t.department_id)?.name || '';
+        const roleName = t.target_role ? getRoleDisplayLabel(t.target_role as any) : '';
         const staffName = staff.find(s => s.id === t.assigned_staff_id)?.full_name || '';
         return (
           t.title.toLowerCase().includes(q) ||
-          deptName.toLowerCase().includes(q) ||
+          roleName.toLowerCase().includes(q) ||
+          (t.target_role || '').toLowerCase().includes(q) ||
           staffName.toLowerCase().includes(q)
         );
       })
     : tasks;
 
-  // Group for "By User" view: department -> staff (or "All staff") -> tasks
+  // Group for "By User" view: role -> staff (or "All staff") -> tasks
   const groupedByUser = (() => {
-    type Group = { key: string; deptName: string; staffName: string; tasks: DailyTask[] };
+    type Group = { key: string; roleName: string; staffName: string; tasks: DailyTask[] };
     const map = new Map<string, Group>();
     for (const t of visibleTasks) {
-      const deptName = depts.find(d => d.id === t.department_id)?.name || (t.department_id ? 'Unknown Dept' : 'All Departments');
+      const roleName = t.target_role ? getRoleDisplayLabel(t.target_role as any) : 'All Roles';
       const staffName = t.assigned_staff_id
         ? (staff.find(s => s.id === t.assigned_staff_id)?.full_name || 'Unknown Staff')
         : 'All Staff';
-      const key = `${t.department_id || 'none'}::${t.assigned_staff_id || 'none'}`;
-      if (!map.has(key)) map.set(key, { key, deptName, staffName, tasks: [] });
+      const key = `${t.target_role || 'none'}::${t.assigned_staff_id || 'none'}`;
+      if (!map.has(key)) map.set(key, { key, roleName, staffName, tasks: [] });
       map.get(key)!.tasks.push(t);
     }
     return Array.from(map.values()).sort((a, b) =>
-      a.deptName.localeCompare(b.deptName) || a.staffName.localeCompare(b.staffName)
+      a.roleName.localeCompare(b.roleName) || a.staffName.localeCompare(b.staffName)
     );
   })();
 
@@ -188,7 +192,7 @@ export default function HRMDailyTasks() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold">Daily Task Setup</h1>
-          <p className="text-xs text-muted-foreground">Create department or staff-specific daily tasks. Reviewed next day at check-in.</p>
+          <p className="text-xs text-muted-foreground">Create role or staff-specific daily tasks. Reviewed via the Tasks button.</p>
         </div>
         <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Add Task</Button>
       </div>
@@ -199,7 +203,7 @@ export default function HRMDailyTasks() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search task, staff, department..."
+            placeholder="Search task, staff, role..."
             className="pl-7 h-8 text-sm"
           />
         </div>
@@ -232,7 +236,7 @@ export default function HRMDailyTasks() {
               <TableHeader>
                 <TableRow className="h-9">
                   <TableHead className="h-9 py-1">Title</TableHead>
-                  <TableHead className="h-9 py-1">Department</TableHead>
+                  <TableHead className="h-9 py-1">Role</TableHead>
                   <TableHead className="h-9 py-1">Staff</TableHead>
                   <TableHead className="h-9 py-1">Frequency</TableHead>
                   <TableHead className="h-9 py-1">Active</TableHead>
@@ -246,7 +250,7 @@ export default function HRMDailyTasks() {
                 {visibleTasks.map(t => (
                   <TableRow key={t.id} className="h-9">
                     <TableCell className="py-1 text-sm font-medium">{t.title}</TableCell>
-                    <TableCell className="py-1 text-xs">{depts.find(d => d.id === t.department_id)?.name || '-'}</TableCell>
+                    <TableCell className="py-1 text-xs">{t.target_role ? getRoleDisplayLabel(t.target_role as any) : '-'}</TableCell>
                     <TableCell className="py-1 text-xs">{staff.find(s => s.id === t.assigned_staff_id)?.full_name || '-'}</TableCell>
                     <TableCell className="py-1 text-xs">
                       {t.frequency === 'weekdays' ? (t.selected_weekdays || []).join(',') : t.frequency}
@@ -286,7 +290,7 @@ export default function HRMDailyTasks() {
                       {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium">{g.staffName}</div>
-                        <div className="text-[11px] text-muted-foreground">{g.deptName}</div>
+                        <div className="text-[11px] text-muted-foreground">{g.roleName}</div>
                       </div>
                       <span className="text-[11px] text-muted-foreground">{g.tasks.length} task{g.tasks.length !== 1 ? 's' : ''}</span>
                     </button>
@@ -366,12 +370,12 @@ export default function HRMDailyTasks() {
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs">Department</Label>
-                <Select value={form.department_id || 'none'} onValueChange={v => setForm({ ...form, department_id: v === 'none' ? null : v, assigned_staff_id: null })}>
+                <Label className="text-xs">Role</Label>
+                <Select value={form.target_role || 'none'} onValueChange={v => setForm({ ...form, target_role: v === 'none' ? null : v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">All / None</SelectItem>
-                    {depts.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {ROLES.map(r => <SelectItem key={r} value={r}>{getRoleDisplayLabel(r as any)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -381,7 +385,7 @@ export default function HRMDailyTasks() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">- None -</SelectItem>
-                    {(form.department_id ? staff.filter(s => s.department_id === form.department_id) : staff).map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                    {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
