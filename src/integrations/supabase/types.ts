@@ -2746,6 +2746,7 @@ export type Database = {
           id: string
           is_active: boolean
           selected_weekdays: number[] | null
+          sort_order: number
           specific_date: string | null
           store_id: string | null
           target_role: Database["public"]["Enums"]["app_role"] | null
@@ -2761,6 +2762,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           selected_weekdays?: number[] | null
+          sort_order?: number
           specific_date?: string | null
           store_id?: string | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
@@ -2776,6 +2778,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           selected_weekdays?: number[] | null
+          sort_order?: number
           specific_date?: string | null
           store_id?: string | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
