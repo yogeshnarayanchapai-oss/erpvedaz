@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
 
 interface DailyTask {
   id: string;
@@ -30,7 +30,9 @@ interface DailyTask {
   selected_weekdays: string[] | null;
   is_active: boolean;
   store_id: string | null;
+  sort_order?: number;
 }
+
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
