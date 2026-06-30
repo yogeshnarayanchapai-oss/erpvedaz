@@ -17,7 +17,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface DailyTask {
   id: string;
