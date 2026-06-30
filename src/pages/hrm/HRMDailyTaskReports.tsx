@@ -219,7 +219,7 @@ export default function HRMDailyTaskReports() {
                       const doneCount = rows.filter(r => r.is_done).length;
                       const notDoneCount = rows.length - doneCount;
                       return (
-                        <>
+                        <Fragment key={staffId}>
                           <TableRow key={staffId} className="h-9 cursor-pointer hover:bg-muted/40" onClick={() => toggleStaff(staffId)}>
                             <TableCell className="py-1 w-10">
                               <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={e => { e.stopPropagation(); toggleStaff(staffId); }}>
