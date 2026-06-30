@@ -41,6 +41,8 @@ export default function HRMDailyTaskReports() {
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [taskFilter, setTaskFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'flat' | 'staff'>('flat');
+  const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     setLoading(true);
