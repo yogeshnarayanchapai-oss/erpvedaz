@@ -81,6 +81,24 @@ export default function HRMDailyTaskReports() {
     return true;
   });
 
+  const groupedByStaff = useMemo(() => {
+    const map: Record<string, Submission[]> = {};
+    filtered.forEach(s => {
+      const key = s.staff_id || '__unassigned';
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    return Object.entries(map).sort((a, b) => {
+      const nameA = staffMap[a[0]]?.full_name || '';
+      const nameB = staffMap[b[0]]?.full_name || '';
+      return nameA.localeCompare(nameB);
+    });
+  }, [filtered, staffMap]);
+
+  const toggleStaff = (staffId: string) => {
+    setExpandedStaff(prev => ({ ...prev, [staffId]: !prev[staffId] }));
+  };
+
   const totalDone = filtered.filter(s => s.is_done).length;
   const totalNotDone = filtered.length - totalDone;
   const submittedStaff = new Set(filtered.map(s => s.staff_id)).size;
