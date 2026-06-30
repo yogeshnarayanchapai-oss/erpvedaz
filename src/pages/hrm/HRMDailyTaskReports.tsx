@@ -256,7 +256,7 @@ export default function HRMDailyTaskReports() {
                               <TableCell className="py-1 text-xs">{s.checkin_time ? format(new Date(s.checkin_time), 'HH:mm') : '-'}</TableCell>
                             </TableRow>
                           ))}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </TableBody>
