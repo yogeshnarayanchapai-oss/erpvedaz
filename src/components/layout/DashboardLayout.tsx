@@ -11,6 +11,7 @@ import { StoreSwitcher } from './StoreSwitcher';
 import { TeamChatButton } from '@/components/chat/TeamChatButton';
 import { NoticePopup } from '@/components/hrm/NoticePopup';
 import { AttendanceButton } from './AttendanceButton';
+import { DailyTaskReviewButton } from './DailyTaskReviewButton';
 import { Loader2, Calendar, User, LogOut as LogOutIcon, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -291,6 +292,9 @@ function DashboardLayoutInner() {
                 viewAllPath="/admin/notifications"
               />
               
+              {/* Daily Task Review button */}
+              <DailyTaskReviewButton />
+
               {/* Attendance Check In/Out button */}
               <AttendanceButton />
               
