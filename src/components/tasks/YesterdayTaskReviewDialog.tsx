@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 interface DailyTask {
   id: string;
   title: string;
-  department_id: string | null;
+  target_role: string | null;
   assigned_staff_id: string | null;
   frequency: string;
   specific_date: string | null;
@@ -35,10 +35,10 @@ interface Props {
   onClose: () => void;
   onComplete: () => void;
   employeeId: string;
-  departmentId: string | null;
+  userRole: string | null;
 }
 
-export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeId, departmentId }: Props) {
+export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeId, userRole }: Props) {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [submitted, setSubmitted] = useState<Record<string, ExistingSubmission>>({});
@@ -53,10 +53,10 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
       .eq('is_active', true);
     const dow = DOW[new Date(taskDate).getDay()];
     const applicable = ((data as any) || []).filter((t: DailyTask) => {
-      // Must be assigned to this staff OR their department — skip unassigned/global tasks
+      // Must be assigned to this staff OR their role — skip unassigned/global tasks
       const matchStaff = t.assigned_staff_id && t.assigned_staff_id === employeeId;
-      const matchDept = !t.assigned_staff_id && t.department_id && t.department_id === departmentId;
-      if (!matchStaff && !matchDept) return false;
+      const matchRole = !t.assigned_staff_id && t.target_role && userRole && t.target_role === userRole;
+      if (!matchStaff && !matchRole) return false;
       if (t.frequency === 'daily') return true;
       if (t.frequency === 'specific_date') return t.specific_date === taskDate;
       if (t.frequency === 'weekdays') return (t.selected_weekdays || []).includes(dow);
@@ -87,7 +87,7 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
   useEffect(() => {
     if (!open) return;
     loadData();
-  }, [open, employeeId, departmentId]);
+  }, [open, employeeId, userRole]);
 
   const submitOne = async (t: DailyTask) => {
     const s = state[t.id];

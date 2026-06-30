@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_checkout_tasks ADD COLUMN IF NOT EXISTS target_role public.app_role;
