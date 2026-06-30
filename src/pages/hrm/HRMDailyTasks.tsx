@@ -346,10 +346,10 @@ export default function HRMDailyTasks() {
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7 shrink-0"
-                        title="Add task to this group"
-                        onClick={(e) => { e.stopPropagation(); addToGroup(g); }}
+                        title="Edit group"
+                        onClick={(e) => { e.stopPropagation(); openEditGroup(g); }}
                       >
-                        <Plus className="w-4 h-4" />
+                        <Pencil className="w-4 h-4" />
                       </Button>
                     </div>
 
