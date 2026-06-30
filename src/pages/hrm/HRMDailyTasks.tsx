@@ -121,6 +121,11 @@ export default function HRMDailyTasks() {
       res = await supabase.from('daily_checkout_tasks' as any)
         .update({ ...base, title: cleanTitles[0] })
         .eq('id', editing.id);
+      if (!res.error && cleanTitles.length > 1) {
+        const { data: u } = await supabase.auth.getUser();
+        const extra = cleanTitles.slice(1).map(title => ({ ...base, title, created_by: u.user?.id }));
+        res = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+      }
     } else {
       const { data: u } = await supabase.auth.getUser();
       const rows = cleanTitles.map(title => ({ ...base, title, created_by: u.user?.id }));
