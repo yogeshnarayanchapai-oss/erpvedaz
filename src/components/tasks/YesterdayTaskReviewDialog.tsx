@@ -118,7 +118,25 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
     setSubmitted(p => ({ ...p, [t.id]: { daily_task_id: t.id, is_done: s.done, remark: s.remark || null } }));
   };
 
+  const submitAll = async () => {
+    const pending = tasks.filter(t => !submitted[t.id]);
+    // validate
+    for (const t of pending) {
+      const s = state[t.id];
+      if (!s?.done && !s?.remark?.trim()) {
+        setState(p => ({ ...p, [t.id]: { ...p[t.id], err: 'Remark required for Not Done' } }));
+        toast.error(`Remark required: ${t.title}`);
+        return;
+      }
+    }
+    for (const t of pending) {
+      await submitOne(t);
+    }
+    toast.success('All tasks submitted');
+  };
+
   const allSubmitted = tasks.length > 0 && tasks.every(t => submitted[t.id]);
+  const anyPending = tasks.some(t => !submitted[t.id]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
