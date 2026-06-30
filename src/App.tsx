@@ -348,6 +348,8 @@ const App = () => (
                 <Route path="/hrm/attendance" element={<HRMAttendance />} />
                 <Route path="/hrm/chat" element={<HRMChat />} />
                 <Route path="/hrm/tasks" element={<HRMTasks />} />
+                <Route path="/hrm/daily-tasks" element={<HRMDailyTasks />} />
+                <Route path="/hrm/daily-task-reports" element={<HRMDailyTaskReports />} />
                 <Route path="/hrm/settings" element={<HRMSettings />} />
                 {/* HRM merged routes */}
                 <Route path="/hrm/attendance-leave" element={<HRMAttendanceLeave />} />
