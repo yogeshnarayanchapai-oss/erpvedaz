@@ -259,7 +259,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -302,7 +302,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
@@ -361,7 +361,7 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
-    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare },
+    { title: 'Task Management', url: '/hrm/tasks', icon: CheckSquare, children: taskItems },
     {
       title: 'Inventory',
       url: '/admin/inventory/stock-summary',
