@@ -130,6 +130,8 @@ import HRMLeaveQuota from "./pages/hrm/HRMLeaveQuota";
 import HRMEmployeeDetail from "./pages/hrm/HRMEmployeeDetail";
 import HRMStaffDocuments from "./pages/hrm/HRMStaffDocuments";
 import HRMTasks from "./pages/hrm/HRMTasks";
+import HRMDailyTasks from "./pages/hrm/HRMDailyTasks";
+import HRMDailyTaskReports from "./pages/hrm/HRMDailyTaskReports";
 import HRMSettings from "./pages/hrm/HRMSettings";
 
 // HRM merged pages
