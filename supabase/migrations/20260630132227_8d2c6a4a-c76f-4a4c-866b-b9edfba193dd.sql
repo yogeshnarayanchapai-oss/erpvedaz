@@ -1,0 +1,2 @@
+ALTER TABLE public.daily_checkout_tasks DROP CONSTRAINT IF EXISTS daily_checkout_tasks_frequency_check;
+ALTER TABLE public.daily_checkout_tasks ADD CONSTRAINT daily_checkout_tasks_frequency_check CHECK (frequency = ANY (ARRAY['daily','specific_date','weekdays','DAILY','SPECIFIC_DATE','WEEKDAYS']));
