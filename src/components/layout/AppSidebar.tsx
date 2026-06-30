@@ -234,6 +234,12 @@ const salesItems: MenuItem[] = [
   },
 ];
 
+const taskItems: MenuItem[] = [
+  { title: 'All Tasks', url: '/hrm/tasks', icon: CheckSquare },
+  { title: 'Daily Task Setup', url: '/hrm/daily-tasks', icon: CheckSquare },
+  { title: 'Daily Task Reports', url: '/hrm/daily-task-reports', icon: CheckSquare },
+];
+
 const menuItems: Record<AppRole, MenuItem[]> = {
   OWNER: [
     { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
