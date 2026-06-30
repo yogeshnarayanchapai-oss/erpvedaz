@@ -88,14 +88,18 @@ export default function HRMDailyTasks() {
 
   const openCreate = () => {
     setEditing(null);
+    setEditingGroup(null);
     setTitles(['']);
+    setTitleIds([null]);
     setForm(blankForm());
     setOpen(true);
   };
 
   const openEdit = (t: DailyTask) => {
     setEditing(t);
+    setEditingGroup(null);
     setTitles([t.title]);
+    setTitleIds([t.id]);
     setForm({
       target_role: t.target_role,
       assigned_staff_id: t.assigned_staff_id,
@@ -107,9 +111,26 @@ export default function HRMDailyTasks() {
     setOpen(true);
   };
 
+  const openEditGroup = (g: { target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] }) => {
+    setEditing(null);
+    const sample = g.tasks[0];
+    setEditingGroup({ originalIds: g.tasks.map(t => t.id) });
+    setTitles(g.tasks.map(t => t.title));
+    setTitleIds(g.tasks.map(t => t.id));
+    setForm({
+      target_role: g.target_role,
+      assigned_staff_id: g.assigned_staff_id,
+      frequency: sample?.frequency || 'daily',
+      specific_date: sample?.specific_date || null,
+      selected_weekdays: sample?.selected_weekdays || [],
+      is_active: sample ? sample.is_active : true,
+    });
+    setOpen(true);
+  };
+
   const save = async () => {
-    const cleanTitles = titles.map(t => t.trim()).filter(Boolean);
-    if (cleanTitles.length === 0) return toast.error('At least one title required');
+    const pairs = titles.map((t, i) => ({ title: t.trim(), id: titleIds[i] ?? null })).filter(p => p.title);
+    if (pairs.length === 0) return toast.error('At least one title required');
 
     const base: any = {
       target_role: form.target_role || null,
@@ -121,26 +142,48 @@ export default function HRMDailyTasks() {
       store_id: storeId,
     };
 
-    let res;
-    if (editing) {
-      res = await supabase.from('daily_checkout_tasks' as any)
-        .update({ ...base, title: cleanTitles[0] })
+    const { data: u } = await supabase.auth.getUser();
+    let lastError: any = null;
+
+    if (editingGroup) {
+      // Update existing rows, insert new ones, delete removed ones
+      const keptIds = new Set(pairs.filter(p => p.id).map(p => p.id as string));
+      const toDelete = editingGroup.originalIds.filter(id => !keptIds.has(id));
+      for (const p of pairs) {
+        if (p.id) {
+          const r = await supabase.from('daily_checkout_tasks' as any).update({ ...base, title: p.title }).eq('id', p.id);
+          if (r.error) lastError = r.error;
+        } else {
+          const r = await supabase.from('daily_checkout_tasks' as any).insert({ ...base, title: p.title, created_by: u.user?.id });
+          if (r.error) lastError = r.error;
+        }
+      }
+      if (toDelete.length) {
+        const r = await supabase.from('daily_checkout_tasks' as any).delete().in('id', toDelete);
+        if (r.error) lastError = r.error;
+      }
+    } else if (editing) {
+      const first = pairs[0];
+      const r1 = await supabase.from('daily_checkout_tasks' as any)
+        .update({ ...base, title: first.title })
         .eq('id', editing.id);
-      if (!res.error && cleanTitles.length > 1) {
-        const { data: u } = await supabase.auth.getUser();
-        const extra = cleanTitles.slice(1).map(title => ({ ...base, title, created_by: u.user?.id }));
-        res = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+      if (r1.error) lastError = r1.error;
+      if (pairs.length > 1) {
+        const extra = pairs.slice(1).map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+        const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+        if (r2.error) lastError = r2.error;
       }
     } else {
-      const { data: u } = await supabase.auth.getUser();
-      const rows = cleanTitles.map(title => ({ ...base, title, created_by: u.user?.id }));
-      res = await supabase.from('daily_checkout_tasks' as any).insert(rows);
+      const rows = pairs.map(p => ({ ...base, title: p.title, created_by: u.user?.id }));
+      const r = await supabase.from('daily_checkout_tasks' as any).insert(rows);
+      if (r.error) lastError = r.error;
     }
-    if (res.error) return toast.error(res.error.message);
+    if (lastError) return toast.error(lastError.message);
     toast.success('Saved');
     setOpen(false);
     load();
   };
+
 
   const remove = async (id: string) => {
     if (!confirm('Delete this daily task?')) return;
