@@ -207,8 +207,11 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
 
         <div className="p-3 border-t bg-background flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>Close</Button>
+          {anyPending && (
+            <Button className="flex-1" onClick={submitAll}>Submit All</Button>
+          )}
           {allSubmitted && (
-            <Button className="flex-1" onClick={onComplete}>Submit</Button>
+            <Button className="flex-1" onClick={onComplete}>Done</Button>
           )}
         </div>
       </DialogContent>
