@@ -178,7 +178,7 @@ export default function HRMDailyTaskReports() {
           <Button variant={viewMode === 'staff' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('staff')}>By Staff</Button>
         </div>
       </div>
-
+      <Tabs defaultValue="submissions">
         <TabsContent value="submissions">
           <Card>
             <CardContent className="p-0">
