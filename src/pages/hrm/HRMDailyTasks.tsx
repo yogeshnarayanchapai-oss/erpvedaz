@@ -409,7 +409,10 @@ export default function HRMDailyTasks() {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 shrink-0"
-                        onClick={() => setTitles(titles.filter((_, idx) => idx !== i))}
+                        onClick={() => {
+                          setTitles(titles.filter((_, idx) => idx !== i));
+                          setTitleIds(titleIds.filter((_, idx) => idx !== i));
+                        }}
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -420,7 +423,7 @@ export default function HRMDailyTasks() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setTitles([...titles, ''])}
+                  onClick={() => { setTitles([...titles, '']); setTitleIds([...titleIds, null]); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add row
                 </Button>
