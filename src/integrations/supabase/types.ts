@@ -2742,12 +2742,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           department_id: string | null
-          description: string | null
           frequency: string
           id: string
           is_active: boolean
-          is_mandatory: boolean
-          priority: number
           selected_weekdays: number[] | null
           specific_date: string | null
           store_id: string | null
@@ -2759,12 +2756,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department_id?: string | null
-          description?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
-          is_mandatory?: boolean
-          priority?: number
           selected_weekdays?: number[] | null
           specific_date?: string | null
           store_id?: string | null
@@ -2776,12 +2770,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department_id?: string | null
-          description?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
-          is_mandatory?: boolean
-          priority?: number
           selected_weekdays?: number[] | null
           specific_date?: string | null
           store_id?: string | null

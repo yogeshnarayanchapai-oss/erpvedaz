@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_checkout_tasks DROP COLUMN IF EXISTS description, DROP COLUMN IF EXISTS is_mandatory, DROP COLUMN IF EXISTS priority;
