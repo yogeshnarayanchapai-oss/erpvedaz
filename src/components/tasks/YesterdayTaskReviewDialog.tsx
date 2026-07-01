@@ -139,6 +139,8 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
 
   const allSubmitted = tasks.length > 0 && tasks.every(t => submitted[t.id]);
   const anyPending = tasks.some(t => !submitted[t.id]);
+  const submittedCount = tasks.filter(t => submitted[t.id]).length;
+  const pendingCount = tasks.length - submittedCount;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
