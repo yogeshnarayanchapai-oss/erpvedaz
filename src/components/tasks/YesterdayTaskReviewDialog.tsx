@@ -161,18 +161,18 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                 const s = state[t.id];
                 const isSubmitted = !!submitted[t.id];
                 return (
-                  <div key={t.id} className="py-1 flex flex-wrap md:flex-nowrap items-center gap-2">
+                  <div key={t.id} className="py-1.5 flex flex-wrap md:flex-nowrap items-center gap-2">
                     <div className="w-full md:flex-1 md:min-w-0">
-                      <div className="text-[11px] font-medium leading-tight flex items-center gap-1.5 flex-wrap">
+                      <div className="text-xs font-medium leading-tight flex items-center gap-1.5 flex-wrap">
                         <span className="break-words line-clamp-2" title={t.title}>{t.title}</span>
                         {isSubmitted && (
-                          <Badge variant="secondary" className="h-4 px-1 text-[9px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
+                          <Badge variant="secondary" className="h-4 px-1 text-[10px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
                             <CheckCircle2 className="w-2.5 h-2.5" /> Submitted
                           </Badge>
                         )}
                       </div>
                     </div>
-                    <label className="flex items-center gap-1 text-[10px] shrink-0">
+                    <label className="flex items-center gap-1 text-xs shrink-0">
                       <Checkbox
                         checked={s?.done}
                         disabled={isSubmitted}
@@ -182,17 +182,17 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                     </label>
                     <div className="w-full md:w-auto md:min-w-[180px] md:max-w-[260px]">
                       <Input
-                        className="h-6 text-[10px] w-full"
+                        className="h-7 text-xs w-full"
                         placeholder={s?.done ? 'Remark (optional)' : 'Remark (required)'}
                         value={s?.remark || ''}
                         disabled={isSubmitted}
                         onChange={(e) => setState(p => ({ ...p, [t.id]: { ...p[t.id], remark: e.target.value } }))}
                       />
-                      {s?.err && <div className="text-[10px] text-destructive mt-0.5">{s.err}</div>}
+                      {s?.err && <div className="text-xs text-destructive mt-0.5">{s.err}</div>}
                     </div>
                     <Button
                       size="sm"
-                      className="h-6 text-[10px] px-2 shrink-0"
+                      className="h-7 text-xs px-2 shrink-0"
                       disabled={isSubmitted || s?.saving}
                       onClick={() => submitOne(t)}
                     >
@@ -206,12 +206,12 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
         </div>
 
         <div className="p-3 border-t bg-background flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onClose}>Close</Button>
+          <Button variant="outline" className="flex-1 h-8 text-xs" onClick={onClose}>Close</Button>
           {anyPending && (
-            <Button className="flex-1" onClick={submitAll}>Submit All</Button>
+            <Button className="flex-1 h-8 text-xs" onClick={submitAll}>Submit All</Button>
           )}
           {allSubmitted && (
-            <Button className="flex-1" onClick={onComplete}>Done</Button>
+            <Button className="flex-1 h-8 text-xs" onClick={onComplete}>Done</Button>
           )}
         </div>
       </DialogContent>
