@@ -142,10 +142,10 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-[95vw] md:max-w-4xl p-0 gap-0 max-h-[90vh] flex flex-col">
-        <DialogHeader className="p-3 pb-2 border-b">
-          <DialogTitle className="text-sm">Today Daily Task Review</DialogTitle>
-          <DialogDescription className="text-[11px]">
+      <DialogContent className="max-w-[98vw] md:max-w-6xl p-0 gap-0 max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-2.5 pb-1.5 border-b">
+          <DialogTitle className="text-[13px]">Today Daily Task Review</DialogTitle>
+          <DialogDescription className="text-[10px]">
             Submit today's ({taskDate}) assigned tasks. Once submitted, cannot be edited.
           </DialogDescription>
         </DialogHeader>
@@ -161,9 +161,9 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                 const s = state[t.id];
                 const isSubmitted = !!submitted[t.id];
                 return (
-                  <div key={t.id} className="py-2 flex flex-wrap md:flex-nowrap items-center gap-2">
+                  <div key={t.id} className="py-1 flex flex-wrap md:flex-nowrap items-center gap-2">
                     <div className="w-full md:flex-1 md:min-w-0">
-                      <div className="text-[12px] font-medium leading-snug flex items-center gap-1.5 flex-wrap">
+                      <div className="text-[11px] font-medium leading-tight flex items-center gap-1.5 flex-wrap">
                         <span className="break-words">{t.title}</span>
                         {isSubmitted && (
                           <Badge variant="secondary" className="h-4 px-1 text-[9px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
@@ -172,7 +172,7 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                         )}
                       </div>
                     </div>
-                    <label className="flex items-center gap-1 text-[11px] shrink-0">
+                    <label className="flex items-center gap-1 text-[10px] shrink-0">
                       <Checkbox
                         checked={s?.done}
                         disabled={isSubmitted}
@@ -180,9 +180,9 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                       />
                       Done
                     </label>
-                    <div className="flex-1 min-w-[140px] md:min-w-[220px] md:max-w-[320px]">
+                    <div className="flex-1 min-w-[160px] md:min-w-[320px] md:max-w-[480px]">
                       <Input
-                        className="h-7 text-[11px]"
+                        className="h-6 text-[10px]"
                         placeholder={s?.done ? 'Remark (optional)' : 'Remark (required)'}
                         value={s?.remark || ''}
                         disabled={isSubmitted}
@@ -192,7 +192,7 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                     </div>
                     <Button
                       size="sm"
-                      className="h-7 text-[11px] px-2 shrink-0"
+                      className="h-6 text-[10px] px-2 shrink-0"
                       disabled={isSubmitted || s?.saving}
                       onClick={() => submitOne(t)}
                     >
