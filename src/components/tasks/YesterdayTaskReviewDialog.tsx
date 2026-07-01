@@ -139,15 +139,29 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
 
   const allSubmitted = tasks.length > 0 && tasks.every(t => submitted[t.id]);
   const anyPending = tasks.some(t => !submitted[t.id]);
+  const submittedCount = tasks.filter(t => submitted[t.id]).length;
+  const pendingCount = tasks.length - submittedCount;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-[95vw] md:max-w-4xl p-0 gap-0 max-h-[90vh] flex flex-col">
         <DialogHeader className="p-2.5 pb-1.5 border-b">
-          <DialogTitle className="text-[13px]">Today Daily Task Review</DialogTitle>
-          <DialogDescription className="text-[10px]">
-            Submit today's ({taskDate}) assigned tasks. Once submitted, cannot be edited.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <DialogTitle className="text-[13px]">Today Daily Task Review</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Submit today's ({taskDate}) assigned tasks. Once submitted, cannot be edited.
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                {submittedCount} Submitted
+              </Badge>
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-100">
+                {pendingCount} Pending
+              </Badge>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-3 py-1">
