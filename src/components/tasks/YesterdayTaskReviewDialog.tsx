@@ -161,43 +161,48 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                 const s = state[t.id];
                 const isSubmitted = !!submitted[t.id];
                 return (
-                  <div key={t.id} className="py-1.5 flex flex-wrap md:flex-nowrap items-center gap-2">
-                    <div className="w-full md:flex-1 md:min-w-0">
-                      <div className="text-xs font-medium leading-tight flex items-center gap-1.5 flex-wrap">
-                        <span className="break-words line-clamp-2" title={t.title}>{t.title}</span>
-                        {isSubmitted && (
-                          <Badge variant="secondary" className="h-4 px-1 text-[10px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
-                            <CheckCircle2 className="w-2.5 h-2.5" /> Submitted
-                          </Badge>
-                        )}
+                  <div key={t.id} className="py-1.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                    <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                      <span
+                        className="text-[11px] sm:text-xs font-medium leading-tight break-words line-clamp-2 flex-1"
+                        title={t.title}
+                      >
+                        {t.title}
+                      </span>
+                      {isSubmitted && (
+                        <Badge variant="secondary" className="h-4 px-1 text-[10px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100 shrink-0">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Submitted
+                        </Badge>
+                      )}
+                      <label className="flex items-center gap-1 text-[10px] sm:text-xs shrink-0 mt-0.5">
+                        <Checkbox
+                          checked={s?.done}
+                          disabled={isSubmitted}
+                          onCheckedChange={(c) => setState(p => ({ ...p, [t.id]: { ...p[t.id], done: !!c } }))}
+                        />
+                        Done
+                      </label>
+                    </div>
+                    <div className="flex items-start gap-1.5 sm:shrink-0">
+                      <div className="flex-1 sm:flex-none sm:w-[220px] md:w-[260px]">
+                        <Input
+                          className="h-7 text-xs w-full"
+                          placeholder={s?.done ? 'Remark (optional)' : 'Remark (required)'}
+                          value={s?.remark || ''}
+                          disabled={isSubmitted}
+                          onChange={(e) => setState(p => ({ ...p, [t.id]: { ...p[t.id], remark: e.target.value } }))}
+                        />
+                        {s?.err && <div className="text-[10px] text-destructive mt-0.5">{s.err}</div>}
                       </div>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs px-2 shrink-0"
+                        disabled={isSubmitted || s?.saving}
+                        onClick={() => submitOne(t)}
+                      >
+                        {s?.saving ? <Loader2 className="w-3 h-3 animate-spin" /> : isSubmitted ? 'Done' : 'Submit'}
+                      </Button>
                     </div>
-                    <label className="flex items-center gap-1 text-xs shrink-0">
-                      <Checkbox
-                        checked={s?.done}
-                        disabled={isSubmitted}
-                        onCheckedChange={(c) => setState(p => ({ ...p, [t.id]: { ...p[t.id], done: !!c } }))}
-                      />
-                      Done
-                    </label>
-                    <div className="w-full md:w-auto md:min-w-[180px] md:max-w-[260px]">
-                      <Input
-                        className="h-7 text-xs w-full"
-                        placeholder={s?.done ? 'Remark (optional)' : 'Remark (required)'}
-                        value={s?.remark || ''}
-                        disabled={isSubmitted}
-                        onChange={(e) => setState(p => ({ ...p, [t.id]: { ...p[t.id], remark: e.target.value } }))}
-                      />
-                      {s?.err && <div className="text-xs text-destructive mt-0.5">{s.err}</div>}
-                    </div>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs px-2 shrink-0"
-                      disabled={isSubmitted || s?.saving}
-                      onClick={() => submitOne(t)}
-                    >
-                      {s?.saving ? <Loader2 className="w-3 h-3 animate-spin" /> : isSubmitted ? 'Done' : 'Submit'}
-                    </Button>
                   </div>
                 );
               })}
