@@ -142,37 +142,37 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-xl p-0 gap-0 max-h-[90vh] flex flex-col">
-        <DialogHeader className="p-4 pb-2 border-b">
-          <DialogTitle className="text-base">Today Daily Task Review</DialogTitle>
-          <DialogDescription className="text-xs">
+      <DialogContent className="max-w-[95vw] md:max-w-4xl p-0 gap-0 max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-3 pb-2 border-b">
+          <DialogTitle className="text-sm">Today Daily Task Review</DialogTitle>
+          <DialogDescription className="text-[11px]">
             Submit today's ({taskDate}) assigned tasks. Once submitted, cannot be edited.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
+        <div className="flex-1 overflow-y-auto px-3 py-1">
           {loading ? (
             <div className="p-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
           ) : tasks.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">No tasks assigned for today.</div>
+            <div className="p-6 text-center text-xs text-muted-foreground">No tasks assigned for today.</div>
           ) : (
             <div className="divide-y">
               {tasks.map(t => {
                 const s = state[t.id];
                 const isSubmitted = !!submitted[t.id];
                 return (
-                  <div key={t.id} className="py-2.5 grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-12 md:col-span-4">
-                      <div className="text-sm font-medium leading-tight flex items-center gap-1.5">
-                        {t.title}
+                  <div key={t.id} className="py-2 flex flex-wrap md:flex-nowrap items-center gap-2">
+                    <div className="w-full md:flex-1 md:min-w-0">
+                      <div className="text-[12px] font-medium leading-snug flex items-center gap-1.5 flex-wrap">
+                        <span className="break-words">{t.title}</span>
                         {isSubmitted && (
-                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
-                            <CheckCircle2 className="w-3 h-3" /> Submitted
+                          <Badge variant="secondary" className="h-4 px-1 text-[9px] gap-0.5 bg-green-100 text-green-700 hover:bg-green-100">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Submitted
                           </Badge>
                         )}
                       </div>
                     </div>
-                    <label className="col-span-3 md:col-span-2 flex items-center gap-1.5 text-xs">
+                    <label className="flex items-center gap-1 text-[11px] shrink-0">
                       <Checkbox
                         checked={s?.done}
                         disabled={isSubmitted}
@@ -180,9 +180,9 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                       />
                       Done
                     </label>
-                    <div className="col-span-6 md:col-span-4">
+                    <div className="flex-1 min-w-[140px] md:min-w-[220px] md:max-w-[320px]">
                       <Input
-                        className="h-8 text-xs"
+                        className="h-7 text-[11px]"
                         placeholder={s?.done ? 'Remark (optional)' : 'Remark (required)'}
                         value={s?.remark || ''}
                         disabled={isSubmitted}
@@ -190,16 +190,14 @@ export function YesterdayTaskReviewDialog({ open, onClose, onComplete, employeeI
                       />
                       {s?.err && <div className="text-[10px] text-destructive mt-0.5">{s.err}</div>}
                     </div>
-                    <div className="col-span-3 md:col-span-2 flex justify-end">
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs px-2"
-                        disabled={isSubmitted || s?.saving}
-                        onClick={() => submitOne(t)}
-                      >
-                        {s?.saving ? <Loader2 className="w-3 h-3 animate-spin" /> : isSubmitted ? 'Done' : 'Submit'}
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      className="h-7 text-[11px] px-2 shrink-0"
+                      disabled={isSubmitted || s?.saving}
+                      onClick={() => submitOne(t)}
+                    >
+                      {s?.saving ? <Loader2 className="w-3 h-3 animate-spin" /> : isSubmitted ? 'Done' : 'Submit'}
+                    </Button>
                   </div>
                 );
               })}
