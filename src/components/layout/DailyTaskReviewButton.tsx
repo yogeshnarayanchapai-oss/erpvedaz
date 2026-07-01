@@ -21,12 +21,21 @@ export function DailyTaskReviewButton() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const statusKey = ['daily-task-status', today, effectiveRole];
 
+  // Cache until next 9am — refresh only on dialog close otherwise
+  const now = new Date();
+  const next9 = new Date(now);
+  next9.setHours(9, 0, 0, 0);
+  if (now >= next9) next9.setDate(next9.getDate() + 1);
+  const staleMs = next9.getTime() - now.getTime();
+
   const { data: status } = useQuery({
     queryKey: statusKey,
     enabled: !!isActiveEmployee && !!effectiveRole,
-    staleTime: 5 * 60 * 1000,
+    staleTime: staleMs,
+    gcTime: staleMs,
     refetchOnWindowFocus: false,
-    refetchInterval: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return { total: 0, done: 0 };
