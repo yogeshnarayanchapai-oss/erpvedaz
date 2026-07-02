@@ -202,12 +202,12 @@ export default function HRMDailyTaskReports() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Submissions</div><div className="text-lg font-bold">{filtered.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Submissions</div><div className="text-lg font-bold">{submittedInstances.length}</div></CardContent></Card>
         <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Done</div><div className="text-lg font-bold text-green-600">{totalDone}</div></CardContent></Card>
         <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Not Done</div><div className="text-lg font-bold text-red-600">{totalNotDone}</div></CardContent></Card>
         <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Not Submitted</div><div className="text-lg font-bold text-amber-600">{notSubmittedCount}</div></CardContent></Card>
         <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Staff Submitted</div><div className="text-lg font-bold">{submittedStaff}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Overdue</div><div className="text-lg font-bold">{overrides.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Overdue</div><div className="text-lg font-bold">{missingInstances.length}</div></CardContent></Card>
       </div>
 
       <Card>
