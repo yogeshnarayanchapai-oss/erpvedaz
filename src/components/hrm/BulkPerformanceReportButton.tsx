@@ -514,6 +514,22 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     else if (last < first) trendWord = '↓ Down';
     else trendWord = '→ Stable';
   }
+  let trendRemark = 'No rating data available for trend analysis.';
+  if (rated.length >= 2) {
+    const vals = rated.map(m => ratingOrder[m.overallRating] || 0);
+    const first = vals[0]; const last = vals[vals.length - 1];
+    const allSame = vals.every(v => v === first);
+    const allHigh = rated.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
+    const allLow = rated.every(m => m.overallRating === 'Low');
+    if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
+    else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
+    else if (allSame) trendRemark = `Consistently ${rated[0].overallRating} — Stable performance.`;
+    else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
+    else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
+    else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
+  } else if (rated.length === 1) {
+    trendRemark = 'Insufficient trend data (only 1 month with ratings).';
+  }
   const pct = (m: EmployeeMonthData) => m.maxScore > 0 ? Math.round((m.totalScore / m.maxScore) * 100) : 0;
   autoTable(doc, {
     startY: y, theme: 'grid',
@@ -536,7 +552,17 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     },
     margin,
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = (doc as any).lastAutoTable.finalY + 2;
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 41, 59);
+  doc.text('Trend — ', margin.left, y);
+  const trendLabelW = doc.getTextWidth('Trend — ');
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(trendRemark, margin.left + trendLabelW, y);
+  y += 8;
 
   // Remarks
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
