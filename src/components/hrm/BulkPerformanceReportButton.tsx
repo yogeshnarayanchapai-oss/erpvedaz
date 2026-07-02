@@ -578,10 +578,19 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
   else if (emp.salesRating === 'Good') remarks.push(`- Sales: Good ${emp.conversionRate.toFixed(1)}%. Push to 60%+.`);
   else if (emp.salesRating === 'Medium') remarks.push(`- Sales: Average ${emp.conversionRate.toFixed(1)}%. Needs improvement.`);
   else remarks.push(`- Sales: Low ${emp.conversionRate.toFixed(1)}%. Coaching required.`);
-  if (emp.taskRating === 'No Rating') remarks.push('- Tasks: No data. Excluded from score.');
-  else if (emp.taskRating === 'Excellent') remarks.push('- Tasks: All on time. Excellent management.');
-  else if (emp.taskRating === 'Medium') remarks.push(`- Tasks: ${emp.duePercent.toFixed(0)}% overdue. Improve time mgmt.`);
-  else remarks.push(`- Tasks: ${emp.overdueTasks}/${emp.totalTasks} overdue. Major improvement needed.`);
+  if (emp.taskRating === 'No Rating') remarks.push('- Tasks: No regular/daily task data. Excluded from score.');
+  else if (emp.taskRating === 'Excellent') remarks.push('- Tasks: Regular and daily tasks are on track. Excellent management.');
+  else if (emp.taskRating === 'Medium') remarks.push(`- Tasks: ${emp.scoredTaskDuePercent.toFixed(0)}% scored task issues including daily task not done/not submitted. Improve time mgmt.`);
+  else remarks.push(`- Tasks: ${emp.scoredTaskIssues}/${emp.scoredTaskTotal} scored task issues including daily task pending/not done. Major improvement needed.`);
+  if (emp.dailyTotal > 0) {
+    const dailyPct = ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1);
+    remarks.push(`- Daily Tasks: Total ${emp.dailyTotal}, Done ${emp.dailyDone}, Not Done ${emp.dailyNotDone}, Not Submitted ${emp.dailyNotSubmitted}, Completion ${dailyPct}%. Counted in Tasks score.`);
+    emp.dailyRemarks.slice(0, 3).forEach(r => remarks.push(`  • ${r}`));
+    if (emp.dailyRemarks.length > 3) remarks.push(`  • ${emp.dailyRemarks.length - 3} more Not Done remark(s).`);
+  } else {
+    remarks.push('- Daily Tasks: No daily task assignment found for this month.');
+  }
+  remarks.push(`- Trend: ${trendRemark}`);
   remarks.push('');
   if (emp.promotionSuggestion === 'Highly Recommended') remarks.push('PROMOTION: Highly recommended based on outstanding performance.');
   else if (emp.promotionSuggestion === 'Recommended') remarks.push('PROMOTION: Recommended for consideration.');
@@ -595,6 +604,21 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     doc.text(lines, margin.left + 2, y);
     y += lines.length * 3.5;
   });
+
+  // Signature section — same as individual employee export.
+  if (y > pageHeight - 55) {
+    doc.addPage();
+    y = 24;
+  }
+  const sigY = Math.max(y + 20, pageHeight - 30);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(margin.left, sigY, 74, sigY);
+  doc.line(pageWidth - 74, sigY, pageWidth - margin.left, sigY);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Employee Signature', margin.left, sigY + 4);
+  doc.text('Manager Signature', pageWidth - 74, sigY + 4);
 
   // Footer
   doc.setFontSize(6.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(148, 163, 184);
