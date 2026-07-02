@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
@@ -109,7 +109,7 @@ async function fetchMonthDataForAllEmployees(
     return all;
   };
 
-  const [attResult, taskData, transferData, orderData] = await Promise.all([
+  const [attResult, taskData, transferData, orderData, dailyTasksRes, dailySubsRes, profilesRes] = await Promise.all([
     supabase
       .from('attendance_records')
       .select('employee_id, status, late_minutes')
@@ -138,9 +138,60 @@ async function fetchMonthDataForAllEmployees(
       .gte('order_date', `${dateFrom}T00:00:00`)
       .lte('order_date', `${dateTo}T23:59:59`)
       .range(from, to)),
+    supabase.from('daily_checkout_tasks' as any).select('*').eq('is_active', true),
+    supabase.from('daily_task_submissions' as any)
+      .select('daily_task_id, staff_id, submission_date, is_done')
+      .gte('submission_date', dateFrom)
+      .lte('submission_date', dateTo),
+    userIds.length ? supabase.from('profiles').select('id, role').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const attData = attResult.data || [];
+  const dailyTasksAll = (dailyTasksRes.data || []) as any[];
+  const dailySubs = (dailySubsRes.data || []) as any[];
+  const profiles = ((profilesRes as any).data || []) as any[];
+  const roleByUserId: Record<string, string> = {};
+  profiles.forEach(p => { roleByUserId[p.id] = p.role; });
+
+  // Build expected daily-task instances per employee (staff_id)
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const effectiveTo = dateTo > today ? today : dateTo;
+  let days: Date[] = [];
+  try { days = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(effectiveTo) }); } catch { days = []; }
+  const subKey = new Map<string, { is_done: boolean }>();
+  dailySubs.forEach(s => subKey.set(`${s.submission_date}|${s.daily_task_id}|${s.staff_id}`, { is_done: !!s.is_done }));
+
+  // Map employee -> { done, notDone, notSubmitted }
+  const dailyByEmp = new Map<string, { done: number; notDone: number; notSubmitted: number }>();
+  const activeEmps = employees; // already active
+  days.forEach(d => {
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const dow = DOW[d.getDay()];
+    dailyTasksAll.forEach(task => {
+      if (task.frequency === 'daily') { /* ok */ }
+      else if (task.frequency === 'specific_date') { if (task.specific_date !== dateStr) return; }
+      else if (task.frequency === 'weekdays') { if (!(task.selected_weekdays || []).includes(dow)) return; }
+      else return;
+
+      let targets: typeof activeEmps = [];
+      if (task.assigned_staff_id) {
+        const emp = activeEmps.find(e => e.id === task.assigned_staff_id);
+        if (emp) targets = [emp];
+      } else if (task.target_role) {
+        targets = activeEmps.filter(e => e.user_id && roleByUserId[e.user_id] === task.target_role);
+      }
+      targets.forEach(emp => {
+        const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+        const sub = subKey.get(`${dateStr}|${task.id}|${emp.id}`);
+        if (!sub) cur.notSubmitted++;
+        else if (sub.is_done) cur.done++;
+        else cur.notDone++;
+        dailyByEmp.set(emp.id, cur);
+      });
+    });
+  });
+
 
 
   const attByEmp = new Map<string, typeof attData>();
@@ -203,20 +254,29 @@ async function fetchMonthDataForAllEmployees(
     const { rating: salesRating, score: salesScore } = getSalesRating(conversionRate, hasSalesData);
 
     const tasks = emp.user_id ? (tasksByUser.get(emp.user_id) || []) : [];
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
-    const onTimeTasks = tasks.filter(t => {
+    const regTotal = tasks.length;
+    const regCompleted = tasks.filter(t => t.status === 'COMPLETED').length;
+    const regOnTime = tasks.filter(t => {
       if (t.status !== 'COMPLETED' || !t.completed_date) return false;
       return new Date(t.completed_date) <= new Date(t.due_date);
     }).length;
-    const overdueTasks = tasks.filter(t => {
+    const regOverdue = tasks.filter(t => {
       if (t.status === 'COMPLETED' && t.completed_date) {
         return new Date(t.completed_date) > new Date(t.due_date);
       }
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
+
+    // Merge daily task instances into task counts
+    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+    const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
+    const totalTasks = regTotal + dailyTotal;
+    const completedTasks = regCompleted + daily.done;
+    const onTimeTasks = regOnTime + daily.done;
+    const overdueTasks = regOverdue + daily.notDone + daily.notSubmitted;
     const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
     const { rating: taskRating, score: taskScore } = getTaskRating(overdueTasks, totalTasks);
+
 
     const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
     const totalScore = attendanceScore + salesScore + taskScore;
