@@ -49,6 +49,10 @@ interface EmployeeMonthData {
   onTimeTasks: number;
   overdueTasks: number;
   duePercent: number;
+  dailyTotal: number;
+  dailyDone: number;
+  dailyNotDone: number;
+  dailyNotSubmitted: number;
   promotionSuggestion: string;
 }
 
