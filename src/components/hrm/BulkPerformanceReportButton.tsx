@@ -150,10 +150,13 @@ async function fetchMonthDataForAllEmployees(
       .lte('order_date', `${dateTo}T23:59:59`)
       .range(from, to)),
     supabase.from('daily_checkout_tasks' as any).select('*').eq('is_active', true),
-    supabase.from('daily_task_submissions' as any)
+    fetchPaged<any>((from, to) => supabase
+      .from('daily_task_submissions' as any)
       .select('daily_task_id, staff_id, submission_date, task_date, is_done, remark')
+      .in('staff_id', empIds)
       .gte('submission_date', dateFrom)
-      .lte('submission_date', dateTo),
+      .lte('submission_date', dateTo)
+      .range(from, to)),
     userIds.length ? supabase.from('profiles').select('id, role').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -188,7 +191,12 @@ async function fetchMonthDataForAllEmployees(
       if (createdDate && dateStr < createdDate) return;
       if (task.frequency === 'daily') { /* ok */ }
       else if (task.frequency === 'specific_date') { if (task.specific_date !== dateStr) return; }
-      else if (task.frequency === 'weekdays') { if (!(task.selected_weekdays || []).includes(dow)) return; }
+      else if (task.frequency === 'weekdays') {
+        const selected = task.selected_weekdays || [];
+        const dayNum = d.getDay();
+        const matchWeekday = selected.some((v: any) => String(v) === dow || Number(v) === dayNum || String(v) === String(dayNum));
+        if (!matchWeekday) return;
+      }
       else return;
 
       let targets: typeof activeEmps = [];
@@ -295,7 +303,6 @@ async function fetchMonthDataForAllEmployees(
       }
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
-    const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
     const regularDuePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
     // Daily task breakdown also affects the Tasks score and 3-month trend.
