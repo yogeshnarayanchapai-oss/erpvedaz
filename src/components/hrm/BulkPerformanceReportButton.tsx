@@ -53,6 +53,10 @@ interface EmployeeMonthData {
   dailyDone: number;
   dailyNotDone: number;
   dailyNotSubmitted: number;
+  dailyRemarks: string[];
+  scoredTaskTotal: number;
+  scoredTaskIssues: number;
+  scoredTaskDuePercent: number;
   promotionSuggestion: string;
 }
 
@@ -146,28 +150,22 @@ async function fetchMonthDataForAllEmployees(
       .lte('order_date', `${dateTo}T23:59:59`)
       .range(from, to)),
     supabase.from('daily_checkout_tasks' as any).select('*').eq('is_active', true),
-    supabase.from('daily_task_submissions' as any)
-      .select('daily_task_id, staff_id, submission_date, is_done')
+    fetchPaged<any>((from, to) => supabase
+      .from('daily_task_submissions' as any)
+      .select('daily_task_id, staff_id, submission_date, task_date, is_done, remark')
+      .in('staff_id', empIds)
       .gte('submission_date', dateFrom)
-      .lte('submission_date', dateTo),
+      .lte('submission_date', dateTo)
+      .range(from, to)),
     userIds.length ? supabase.from('profiles').select('id, role').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const attData = attResult.data || [];
   const dailyTasksAll = (dailyTasksRes.data || []) as any[];
-  const dailySubs = (dailySubsRes.data || []) as any[];
+  const dailySubs = (dailySubsRes || []) as any[];
   const profiles = ((profilesRes as any).data || []) as any[];
   const roleByUserId: Record<string, string> = {};
   profiles.forEach(p => { roleByUserId[p.id] = p.role; });
-  console.log('[PerfReport]', dateFrom, '→', dateTo, {
-    dailyTasksAll: dailyTasksAll.length,
-    dailyTasksErr: (dailyTasksRes as any).error,
-    dailySubs: dailySubs.length,
-    dailySubsErr: (dailySubsRes as any).error,
-    profiles: profiles.length,
-    empIds: empIds.length,
-    userIds: userIds.length,
-  });
 
   // Build expected daily-task instances per employee (staff_id)
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -175,19 +173,30 @@ async function fetchMonthDataForAllEmployees(
   const effectiveTo = dateTo > today ? today : dateTo;
   let days: Date[] = [];
   try { days = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(effectiveTo) }); } catch { days = []; }
-  const subKey = new Map<string, { is_done: boolean }>();
-  dailySubs.forEach(s => subKey.set(`${s.submission_date}|${s.daily_task_id}|${s.staff_id}`, { is_done: !!s.is_done }));
+  const subKey = new Map<string, { is_done: boolean; remark: string | null }>();
+  dailySubs.forEach(s => {
+    const dateKey = s.task_date || s.submission_date;
+    if (!dateKey) return;
+    subKey.set(`${dateKey}|${s.daily_task_id}|${s.staff_id}`, { is_done: !!s.is_done, remark: s.remark || null });
+  });
 
   // Map employee -> { done, notDone, notSubmitted }
-  const dailyByEmp = new Map<string, { done: number; notDone: number; notSubmitted: number }>();
+  const dailyByEmp = new Map<string, { done: number; notDone: number; notSubmitted: number; remarks: string[] }>();
   const activeEmps = employees; // already active
   days.forEach(d => {
     const dateStr = format(d, 'yyyy-MM-dd');
     const dow = DOW[d.getDay()];
     dailyTasksAll.forEach(task => {
+      const createdDate = task.created_at ? String(task.created_at).slice(0, 10) : null;
+      if (createdDate && dateStr < createdDate) return;
       if (task.frequency === 'daily') { /* ok */ }
       else if (task.frequency === 'specific_date') { if (task.specific_date !== dateStr) return; }
-      else if (task.frequency === 'weekdays') { if (!(task.selected_weekdays || []).includes(dow)) return; }
+      else if (task.frequency === 'weekdays') {
+        const selected = task.selected_weekdays || [];
+        const dayNum = d.getDay();
+        const matchWeekday = selected.some((v: any) => String(v) === dow || Number(v) === dayNum || String(v) === String(dayNum));
+        if (!matchWeekday) return;
+      }
       else return;
 
       let targets: typeof activeEmps = [];
@@ -206,17 +215,18 @@ async function fetchMonthDataForAllEmployees(
         targets = activeEmps.filter(e => e.department_id === task.department_id);
       }
       targets.forEach(emp => {
-        const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+        const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0, remarks: [] };
         const sub = subKey.get(`${dateStr}|${task.id}|${emp.id}`);
         if (!sub) cur.notSubmitted++;
         else if (sub.is_done) cur.done++;
-        else cur.notDone++;
+        else {
+          cur.notDone++;
+          if (sub.remark?.trim()) cur.remarks.push(`${task.title}: ${sub.remark.trim()}`);
+        }
         dailyByEmp.set(emp.id, cur);
       });
     });
   });
-  console.log('[PerfReport] dailyByEmp entries:', Array.from(dailyByEmp.entries()).slice(0, 10));
-  console.log('[PerfReport] days count:', days.length, 'today:', today, 'effectiveTo:', effectiveTo);
 
 
 
@@ -279,7 +289,7 @@ async function fetchMonthDataForAllEmployees(
     const hasSalesData = totalLeads > 0 && conversionRate > 0;
     const { rating: salesRating, score: salesScore } = getSalesRating(conversionRate, hasSalesData);
 
-    // Regular tasks only — match individual Export Report (daily tasks tracked separately)
+    // Regular task counts are shown separately, but the task rating/score includes daily task issues too.
     const tasks = emp.user_id ? (tasksByUser.get(emp.user_id) || []) : [];
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
@@ -293,12 +303,15 @@ async function fetchMonthDataForAllEmployees(
       }
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
-    const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
-    const { rating: taskRating, score: taskScore } = getTaskRating(overdueTasks, totalTasks);
+    const regularDuePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
-    // Daily task breakdown (kept for the separate Daily Task Summary table only — does not affect scores)
-    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+    // Daily task breakdown affects Tasks score, Overall Score, Remarks, and 3-month trend.
+    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0, remarks: [] };
     const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
+    const scoredTaskTotal = totalTasks + dailyTotal;
+    const scoredTaskIssues = overdueTasks + daily.notDone + daily.notSubmitted;
+    const scoredTaskDuePercent = scoredTaskTotal > 0 ? (scoredTaskIssues / scoredTaskTotal) * 100 : 0;
+    const { rating: taskRating, score: taskScore } = getTaskRating(scoredTaskIssues, scoredTaskTotal);
 
 
 
@@ -330,8 +343,10 @@ async function fetchMonthDataForAllEmployees(
       totalScore, maxScore, overallRating,
       present, late, absent, leave, workingDays, totalLateMinutes, attendanceRate,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders, conversionRate, totalSales,
-      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
+      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent: regularDuePercent,
       dailyTotal, dailyDone: daily.done, dailyNotDone: daily.notDone, dailyNotSubmitted: daily.notSubmitted,
+      dailyRemarks: daily.remarks,
+      scoredTaskTotal, scoredTaskIssues, scoredTaskDuePercent,
       promotionSuggestion,
     };
   });
@@ -418,7 +433,7 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     body: [
       [emp.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)', emp.attendanceRating, emp.attendanceRating === 'No Rating' ? '-' : `${emp.attendanceScore}/30`, '', ''],
       [emp.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)', emp.salesRating, emp.salesRating === 'No Rating' ? '-' : `${emp.salesScore}/40`, '', ''],
-      [emp.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)', emp.taskRating, emp.taskRating === 'No Rating' ? '-' : `${emp.taskScore}/30`, '', ''],
+      [emp.taskRating === 'No Rating' ? 'Tasks incl. Daily (N/A)' : 'Tasks incl. Daily (30)', emp.taskRating, emp.taskRating === 'No Rating' ? '-' : `${emp.taskScore}/30`, '', ''],
     ],
     didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 1) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
@@ -460,14 +475,14 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
   doc.text('Task Summary', margin.left, y); y += 2;
   autoTable(doc, {
     startY: y, theme: 'grid', headStyles: lightHead, styles: lightBody,
-    head: [['Total Tasks', 'Completed', 'On Time', 'Overdue', 'Due %', 'Rating']],
-    body: [[emp.totalTasks, emp.completedTasks, emp.onTimeTasks, emp.overdueTasks, `${emp.duePercent.toFixed(1)}%`, emp.taskRating]],
-    didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
+    head: [['Regular Tasks', 'Completed', 'On Time', 'Overdue', 'Regular Due %', 'Scored Total', 'Scored Issues', 'Rating']],
+    body: [[emp.totalTasks, emp.completedTasks, emp.onTimeTasks, emp.overdueTasks, `${emp.duePercent.toFixed(1)}%`, emp.scoredTaskTotal, emp.scoredTaskIssues, emp.taskRating]],
+    didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 7) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
     margin,
   });
   y = (doc as any).lastAutoTable.finalY + 5;
 
-  // Daily Task Summary (separate breakdown)
+  // Daily Task Summary (shown separately; already counted in Tasks score above)
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
   doc.text('Daily Task Summary', margin.left, y); y += 2;
   const dailyCompletionPct = emp.dailyTotal > 0 ? ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1) : '0.0';
@@ -499,6 +514,22 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     else if (last < first) trendWord = '↓ Down';
     else trendWord = '→ Stable';
   }
+  let trendRemark = 'No rating data available for trend analysis.';
+  if (rated.length >= 2) {
+    const vals = rated.map(m => ratingOrder[m.overallRating] || 0);
+    const first = vals[0]; const last = vals[vals.length - 1];
+    const allSame = vals.every(v => v === first);
+    const allHigh = rated.every(m => m.overallRating === 'Excellent' || m.overallRating === 'Good');
+    const allLow = rated.every(m => m.overallRating === 'Low');
+    if (allSame && allHigh) trendRemark = 'Consistently Excellent/Good — Maintain this standard.';
+    else if (allSame && allLow) trendRemark = 'Consistently Low — Urgent improvement plan needed.';
+    else if (allSame) trendRemark = `Consistently ${rated[0].overallRating} — Stable performance.`;
+    else if (last > first) trendRemark = 'Upgrading — Performance is improving. Keep it up!';
+    else if (last < first) trendRemark = 'Downgrading — Performance is declining. Needs attention.';
+    else trendRemark = 'Fluctuating — Inconsistent performance. Needs stability.';
+  } else if (rated.length === 1) {
+    trendRemark = 'Insufficient trend data (only 1 month with ratings).';
+  }
   const pct = (m: EmployeeMonthData) => m.maxScore > 0 ? Math.round((m.totalScore / m.maxScore) * 100) : 0;
   autoTable(doc, {
     startY: y, theme: 'grid',
@@ -521,7 +552,17 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     },
     margin,
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = (doc as any).lastAutoTable.finalY + 2;
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 41, 59);
+  doc.text('Trend — ', margin.left, y);
+  const trendLabelW = doc.getTextWidth('Trend — ');
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(trendRemark, margin.left + trendLabelW, y);
+  y += 8;
 
   // Remarks
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
@@ -537,10 +578,19 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
   else if (emp.salesRating === 'Good') remarks.push(`- Sales: Good ${emp.conversionRate.toFixed(1)}%. Push to 60%+.`);
   else if (emp.salesRating === 'Medium') remarks.push(`- Sales: Average ${emp.conversionRate.toFixed(1)}%. Needs improvement.`);
   else remarks.push(`- Sales: Low ${emp.conversionRate.toFixed(1)}%. Coaching required.`);
-  if (emp.taskRating === 'No Rating') remarks.push('- Tasks: No data. Excluded from score.');
-  else if (emp.taskRating === 'Excellent') remarks.push('- Tasks: All on time. Excellent management.');
-  else if (emp.taskRating === 'Medium') remarks.push(`- Tasks: ${emp.duePercent.toFixed(0)}% overdue. Improve time mgmt.`);
-  else remarks.push(`- Tasks: ${emp.overdueTasks}/${emp.totalTasks} overdue. Major improvement needed.`);
+  if (emp.taskRating === 'No Rating') remarks.push('- Tasks: No regular/daily task data. Excluded from score.');
+  else if (emp.taskRating === 'Excellent') remarks.push('- Tasks: Regular and daily tasks are on track. Excellent management.');
+  else if (emp.taskRating === 'Medium') remarks.push(`- Tasks: ${emp.scoredTaskDuePercent.toFixed(0)}% scored task issues including daily task not done/not submitted. Improve time mgmt.`);
+  else remarks.push(`- Tasks: ${emp.scoredTaskIssues}/${emp.scoredTaskTotal} scored task issues including daily task pending/not done. Major improvement needed.`);
+  if (emp.dailyTotal > 0) {
+    const dailyPct = ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1);
+    remarks.push(`- Daily Tasks: Total ${emp.dailyTotal}, Done ${emp.dailyDone}, Not Done ${emp.dailyNotDone}, Not Submitted ${emp.dailyNotSubmitted}, Completion ${dailyPct}%. Counted in Tasks score.`);
+    emp.dailyRemarks.slice(0, 3).forEach(r => remarks.push(`  • ${r}`));
+    if (emp.dailyRemarks.length > 3) remarks.push(`  • ${emp.dailyRemarks.length - 3} more Not Done remark(s).`);
+  } else {
+    remarks.push('- Daily Tasks: No daily task assignment found for this month.');
+  }
+  remarks.push(`- Trend: ${trendRemark}`);
   remarks.push('');
   if (emp.promotionSuggestion === 'Highly Recommended') remarks.push('PROMOTION: Highly recommended based on outstanding performance.');
   else if (emp.promotionSuggestion === 'Recommended') remarks.push('PROMOTION: Recommended for consideration.');
@@ -554,6 +604,21 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     doc.text(lines, margin.left + 2, y);
     y += lines.length * 3.5;
   });
+
+  // Signature section — same as individual employee export.
+  if (y > pageHeight - 55) {
+    doc.addPage();
+    y = 24;
+  }
+  const sigY = Math.max(y + 20, pageHeight - 30);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(margin.left, sigY, 74, sigY);
+  doc.line(pageWidth - 74, sigY, pageWidth - margin.left, sigY);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Employee Signature', margin.left, sigY + 4);
+  doc.text('Manager Signature', pageWidth - 74, sigY + 4);
 
   // Footer
   doc.setFontSize(6.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(148, 163, 184);
