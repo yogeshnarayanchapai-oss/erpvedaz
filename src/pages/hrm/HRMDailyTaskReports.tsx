@@ -189,10 +189,10 @@ export default function HRMDailyTaskReports() {
     setExpandedStaff(prev => ({ ...prev, [staffId]: !prev[staffId] }));
   };
 
-  const totalDone = filtered.filter(s => s.is_done).length;
-  const totalNotDone = filtered.length - totalDone;
-  const notSubmittedCount = filteredInstances.filter(i => !i.submission).length;
-  const submittedStaff = new Set(filtered.map(s => s.staff_id)).size;
+  const totalDone = submittedInstances.filter(i => i.submission?.is_done).length;
+  const totalNotDone = submittedInstances.filter(i => i.submission && !i.submission.is_done).length;
+  const notSubmittedCount = missingInstances.length;
+  const submittedStaff = new Set(submittedInstances.map(i => i.staffId)).size;
 
   return (
     <div className="p-4 space-y-4">
