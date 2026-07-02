@@ -93,38 +93,55 @@ async function fetchMonthDataForAllEmployees(
   const empIds = employees.map(e => e.id);
   const userIds = employees.map(e => e.user_id).filter(Boolean) as string[];
 
-  const [attResult, taskResult, transferResult, orderResult] = await Promise.all([
+  // Paginate large tables (lead_transfers, orders, tasks) to bypass 1000-row default cap
+  const fetchPaged = async <T,>(build: (from: number, to: number) => any): Promise<T[]> => {
+    const all: T[] = [];
+    const PAGE = 1000;
+    let page = 0;
+    while (true) {
+      const { data, error } = await build(page * PAGE, (page + 1) * PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all.push(...(data as T[]));
+      if (data.length < PAGE) break;
+      page++;
+    }
+    return all;
+  };
+
+  const [attResult, taskData, transferData, orderData] = await Promise.all([
     supabase
       .from('attendance_records')
       .select('employee_id, status, late_minutes')
       .in('employee_id', empIds)
       .gte('date', dateFrom)
       .lte('date', dateTo),
-    supabase
+    fetchPaged<any>((from, to) => supabase
       .from('tasks')
       .select('assigned_to_user_id, status, due_date, completed_date')
       .in('assigned_to_user_id', userIds)
       .gte('due_date', dateFrom)
-      .lte('due_date', dateTo),
-    supabase
+      .lte('due_date', dateTo)
+      .range(from, to)),
+    fetchPaged<any>((from, to) => supabase
       .from('lead_transfers')
       .select('to_user_id, id')
       .in('to_user_id', userIds)
       .gte('transferred_at', `${dateFrom}T00:00:00+05:45`)
-      .lte('transferred_at', `${dateTo}T23:59:59+05:45`),
-    supabase
+      .lte('transferred_at', `${dateTo}T23:59:59+05:45`)
+      .range(from, to)),
+    fetchPaged<any>((from, to) => supabase
       .from('orders')
       .select('sales_person_id, amount, order_status, delivery_location, inside_delivery_status')
       .eq('is_deleted', false)
       .in('sales_person_id', userIds)
       .gte('order_date', `${dateFrom}T00:00:00`)
-      .lte('order_date', `${dateTo}T23:59:59`),
+      .lte('order_date', `${dateTo}T23:59:59`)
+      .range(from, to)),
   ]);
 
   const attData = attResult.data || [];
-  const taskData = taskResult.data || [];
-  const transferData = transferResult.data || [];
-  const orderData = orderResult.data || [];
+
 
   const attByEmp = new Map<string, typeof attData>();
   attData.forEach(r => {
