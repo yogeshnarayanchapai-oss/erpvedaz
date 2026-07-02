@@ -482,7 +482,7 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
   });
   y = (doc as any).lastAutoTable.finalY + 5;
 
-  // Daily Task Summary (separate breakdown)
+  // Daily Task Summary (shown separately; already counted in Tasks score above)
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
   doc.text('Daily Task Summary', margin.left, y); y += 2;
   const dailyCompletionPct = emp.dailyTotal > 0 ? ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1) : '0.0';
