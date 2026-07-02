@@ -53,6 +53,10 @@ interface EmployeeMonthData {
   dailyDone: number;
   dailyNotDone: number;
   dailyNotSubmitted: number;
+  dailyRemarks: string[];
+  scoredTaskTotal: number;
+  scoredTaskIssues: number;
+  scoredTaskDuePercent: number;
   promotionSuggestion: string;
 }
 
@@ -147,7 +151,7 @@ async function fetchMonthDataForAllEmployees(
       .range(from, to)),
     supabase.from('daily_checkout_tasks' as any).select('*').eq('is_active', true),
     supabase.from('daily_task_submissions' as any)
-      .select('daily_task_id, staff_id, submission_date, is_done')
+      .select('daily_task_id, staff_id, submission_date, task_date, is_done, remark')
       .gte('submission_date', dateFrom)
       .lte('submission_date', dateTo),
     userIds.length ? supabase.from('profiles').select('id, role').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
@@ -159,15 +163,6 @@ async function fetchMonthDataForAllEmployees(
   const profiles = ((profilesRes as any).data || []) as any[];
   const roleByUserId: Record<string, string> = {};
   profiles.forEach(p => { roleByUserId[p.id] = p.role; });
-  console.log('[PerfReport]', dateFrom, '→', dateTo, {
-    dailyTasksAll: dailyTasksAll.length,
-    dailyTasksErr: (dailyTasksRes as any).error,
-    dailySubs: dailySubs.length,
-    dailySubsErr: (dailySubsRes as any).error,
-    profiles: profiles.length,
-    empIds: empIds.length,
-    userIds: userIds.length,
-  });
 
   // Build expected daily-task instances per employee (staff_id)
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -175,16 +170,22 @@ async function fetchMonthDataForAllEmployees(
   const effectiveTo = dateTo > today ? today : dateTo;
   let days: Date[] = [];
   try { days = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(effectiveTo) }); } catch { days = []; }
-  const subKey = new Map<string, { is_done: boolean }>();
-  dailySubs.forEach(s => subKey.set(`${s.submission_date}|${s.daily_task_id}|${s.staff_id}`, { is_done: !!s.is_done }));
+  const subKey = new Map<string, { is_done: boolean; remark: string | null }>();
+  dailySubs.forEach(s => {
+    const dateKey = s.task_date || s.submission_date;
+    if (!dateKey) return;
+    subKey.set(`${dateKey}|${s.daily_task_id}|${s.staff_id}`, { is_done: !!s.is_done, remark: s.remark || null });
+  });
 
   // Map employee -> { done, notDone, notSubmitted }
-  const dailyByEmp = new Map<string, { done: number; notDone: number; notSubmitted: number }>();
+  const dailyByEmp = new Map<string, { done: number; notDone: number; notSubmitted: number; remarks: string[] }>();
   const activeEmps = employees; // already active
   days.forEach(d => {
     const dateStr = format(d, 'yyyy-MM-dd');
     const dow = DOW[d.getDay()];
     dailyTasksAll.forEach(task => {
+      const createdDate = task.created_at ? String(task.created_at).slice(0, 10) : null;
+      if (createdDate && dateStr < createdDate) return;
       if (task.frequency === 'daily') { /* ok */ }
       else if (task.frequency === 'specific_date') { if (task.specific_date !== dateStr) return; }
       else if (task.frequency === 'weekdays') { if (!(task.selected_weekdays || []).includes(dow)) return; }
@@ -206,17 +207,18 @@ async function fetchMonthDataForAllEmployees(
         targets = activeEmps.filter(e => e.department_id === task.department_id);
       }
       targets.forEach(emp => {
-        const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+        const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0, remarks: [] };
         const sub = subKey.get(`${dateStr}|${task.id}|${emp.id}`);
         if (!sub) cur.notSubmitted++;
         else if (sub.is_done) cur.done++;
-        else cur.notDone++;
+        else {
+          cur.notDone++;
+          if (sub.remark?.trim()) cur.remarks.push(`${task.title}: ${sub.remark.trim()}`);
+        }
         dailyByEmp.set(emp.id, cur);
       });
     });
   });
-  console.log('[PerfReport] dailyByEmp entries:', Array.from(dailyByEmp.entries()).slice(0, 10));
-  console.log('[PerfReport] days count:', days.length, 'today:', today, 'effectiveTo:', effectiveTo);
 
 
 
@@ -294,11 +296,15 @@ async function fetchMonthDataForAllEmployees(
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
     const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
-    const { rating: taskRating, score: taskScore } = getTaskRating(overdueTasks, totalTasks);
+    const regularDuePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
-    // Daily task breakdown (kept for the separate Daily Task Summary table only — does not affect scores)
-    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+    // Daily task breakdown also affects the Tasks score and 3-month trend.
+    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0, remarks: [] };
     const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
+    const scoredTaskTotal = totalTasks + dailyTotal;
+    const scoredTaskIssues = overdueTasks + daily.notDone + daily.notSubmitted;
+    const scoredTaskDuePercent = scoredTaskTotal > 0 ? (scoredTaskIssues / scoredTaskTotal) * 100 : 0;
+    const { rating: taskRating, score: taskScore } = getTaskRating(scoredTaskIssues, scoredTaskTotal);
 
 
 
@@ -330,8 +336,10 @@ async function fetchMonthDataForAllEmployees(
       totalScore, maxScore, overallRating,
       present, late, absent, leave, workingDays, totalLateMinutes, attendanceRate,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders, conversionRate, totalSales,
-      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
+      totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent: regularDuePercent,
       dailyTotal, dailyDone: daily.done, dailyNotDone: daily.notDone, dailyNotSubmitted: daily.notSubmitted,
+      dailyRemarks: daily.remarks,
+      scoredTaskTotal, scoredTaskIssues, scoredTaskDuePercent,
       promotionSuggestion,
     };
   });
