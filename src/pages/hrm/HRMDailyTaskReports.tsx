@@ -270,140 +270,135 @@ export default function HRMDailyTaskReports() {
             <Button variant={viewMode === 'flat' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setViewMode('flat')}>Flat</Button>
           </div>
         </div>
-        <TabsContent value="submissions">
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="h-9">
-                      <TableHead className="py-1 w-10"></TableHead>
-                      <TableHead className="py-1">Date</TableHead>
-                      <TableHead className="py-1">Staff</TableHead>
-                      <TableHead className="py-1">Department</TableHead>
-                      <TableHead className="py-1">Task</TableHead>
-                      <TableHead className="py-1">Status</TableHead>
-                      <TableHead className="py-1">Remark</TableHead>
-                      <TableHead className="py-1">Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewMode === 'flat' ? (
-                      <>
-                        {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">No submissions found</TableCell></TableRow>}
-                        {filtered.map(s => (
-                          <TableRow key={s.id} className="h-9">
-                            <TableCell className="py-1 w-10"></TableCell>
-                            <TableCell className="py-1 text-xs">{s.task_date || s.submission_date}</TableCell>
-                            <TableCell className="py-1 text-xs">{staffMap[s.staff_id]?.full_name || '-'}</TableCell>
-                            <TableCell className="py-1 text-xs">{deptMap[s.department_id || '']?.name || '-'}</TableCell>
-                            <TableCell className="py-1 text-xs">{taskMap[s.daily_task_id]?.title || '-'}</TableCell>
-                            <TableCell className="py-1"><Badge variant={s.is_done ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">{s.is_done ? 'Done' : 'Not Done'}</Badge></TableCell>
-                            <TableCell className="py-1 text-xs">{s.remark || '-'}</TableCell>
-                            <TableCell className="py-1 text-xs">{s.checkin_time ? format(new Date(s.checkin_time), 'HH:mm') : '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {groupedByStaff.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">No data</TableCell></TableRow>}
-                        {groupedByStaff.map(([staffId, rows]) => {
-                          const expanded = !!expandedStaff[staffId];
-                          const emp = staffMap[staffId];
-                          const doneCount = rows.filter(r => r.submission?.is_done).length;
-                          const notDoneCount = rows.filter(r => r.submission && !r.submission.is_done).length;
-                          const missingCount = rows.filter(r => !r.submission).length;
-                          return (
-                            <Fragment key={staffId}>
-                              <TableRow className="h-9 cursor-pointer hover:bg-muted/40" onClick={() => toggleStaff(staffId)}>
-                                <TableCell className="py-1 w-10">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={e => { e.stopPropagation(); toggleStaff(staffId); }}>
-                                    {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                  </Button>
-                                </TableCell>
-                                <TableCell className="py-1 text-xs" colSpan={3}>
-                                  <div className="flex items-center gap-2">
-                                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                                    <span className="font-medium">{emp?.full_name || 'Unassigned'}</span>
-                                    <span className="text-[10px] text-muted-foreground">({rows.length})</span>
-                                    <span className="text-[10px] text-muted-foreground">· {emp ? (deptMap[emp.department_id]?.name || '') : ''}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-1 text-xs"></TableCell>
-                                <TableCell className="py-1 text-xs">
-                                  <span className="text-green-600">{doneCount}</span>
-                                  <span className="text-muted-foreground mx-1">/</span>
-                                  <span className="text-red-600">{notDoneCount}</span>
-                                  <span className="text-muted-foreground mx-1">/</span>
-                                  <span className="text-amber-600">{missingCount}</span>
-                                </TableCell>
-                                <TableCell className="py-1 text-xs" colSpan={2}></TableCell>
-                              </TableRow>
-                              {expanded && rows.map(i => {
-                                const sub = i.submission;
-                                return (
-                                  <TableRow key={i.key} className="h-9 bg-muted/20">
-                                    <TableCell className="py-1 w-10"></TableCell>
-                                    <TableCell className="py-1 text-xs">{i.date}</TableCell>
-                                    <TableCell className="py-1 text-xs">{staffMap[i.staffId]?.full_name || '-'}</TableCell>
-                                    <TableCell className="py-1 text-xs">{deptMap[staffMap[i.staffId]?.department_id || '']?.name || '-'}</TableCell>
-                                    <TableCell className="py-1 text-xs">{i.task.title}</TableCell>
-                                    <TableCell className="py-1">
-                                      {!sub ? (
-                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">Not Submitted</Badge>
-                                      ) : (
-                                        <Badge variant={sub.is_done ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">{sub.is_done ? 'Done' : 'Not Done'}</Badge>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="py-1 text-xs">{sub?.remark || '-'}</TableCell>
-                                    <TableCell className="py-1 text-xs">{sub?.checkin_time ? format(new Date(sub.checkin_time), 'HH:mm') : '-'}</TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </Fragment>
-                          );
-                        })}
-                      </>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="overrides">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="h-9">
-                    <TableHead className="py-1">Staff</TableHead>
-                    <TableHead className="py-1">Task Date</TableHead>
-                    <TableHead className="py-1">Check-in Date</TableHead>
-                    <TableHead className="py-1">Reason</TableHead>
-                    <TableHead className="py-1">Overdue By</TableHead>
-                    <TableHead className="py-1">Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {overrides.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-6 text-xs text-muted-foreground">No overdue entries</TableCell></TableRow>}
-                  {overrides.map((o: any) => (
-                    <TableRow key={o.id} className="h-9">
-                      <TableCell className="py-1 text-xs">{staffMap[o.staff_id]?.full_name || '-'}</TableCell>
-                      <TableCell className="py-1 text-xs">{o.task_date || o.date}</TableCell>
-                      <TableCell className="py-1 text-xs">{o.checkin_date || '-'}</TableCell>
-                      <TableCell className="py-1 text-xs">{o.override_reason}</TableCell>
-                      <TableCell className="py-1 text-xs">{staffMap[o.override_by]?.full_name || o.override_by}</TableCell>
-                      <TableCell className="py-1 text-xs">{o.override_time ? format(new Date(o.override_time), 'yyyy-MM-dd HH:mm') : '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {(() => {
+          const renderTable = (list: Instance[], grouped: [string, Instance[]][], emptyText: string) => (
+            <Card>
+              <CardContent className="p-0">
+                {loading ? (
+                  <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="h-9">
+                        <TableHead className="py-1 w-10"></TableHead>
+                        <TableHead className="py-1">Date</TableHead>
+                        <TableHead className="py-1">Staff</TableHead>
+                        <TableHead className="py-1">Department</TableHead>
+                        <TableHead className="py-1">Task</TableHead>
+                        <TableHead className="py-1">Status</TableHead>
+                        <TableHead className="py-1">Remark</TableHead>
+                        <TableHead className="py-1">Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {viewMode === 'flat' ? (
+                        <>
+                          {list.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">{emptyText}</TableCell></TableRow>}
+                          {list
+                            .slice()
+                            .sort((a, b) => b.date.localeCompare(a.date))
+                            .map(i => {
+                              const sub = i.submission;
+                              return (
+                                <TableRow key={i.key} className="h-9">
+                                  <TableCell className="py-1 w-10"></TableCell>
+                                  <TableCell className="py-1 text-xs">{i.date}</TableCell>
+                                  <TableCell className="py-1 text-xs">{staffMap[i.staffId]?.full_name || '-'}</TableCell>
+                                  <TableCell className="py-1 text-xs">{deptMap[staffMap[i.staffId]?.department_id || '']?.name || '-'}</TableCell>
+                                  <TableCell className="py-1 text-xs">{i.task.title}</TableCell>
+                                  <TableCell className="py-1">
+                                    {!sub ? (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">Not Submitted</Badge>
+                                    ) : (
+                                      <Badge variant={sub.is_done ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">{sub.is_done ? 'Done' : 'Not Done'}</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-1 text-xs">{sub?.remark || '-'}</TableCell>
+                                  <TableCell className="py-1 text-xs">{sub?.checkin_time ? format(new Date(sub.checkin_time), 'HH:mm') : '-'}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                        </>
+                      ) : (
+                        <>
+                          {grouped.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-xs text-muted-foreground">{emptyText}</TableCell></TableRow>}
+                          {grouped.map(([key, rows]) => {
+                            const [staffId, date] = key.split('|');
+                            const expanded = !!expandedStaff[key];
+                            const emp = staffMap[staffId];
+                            const doneCount = rows.filter(r => r.submission?.is_done).length;
+                            const notDoneCount = rows.filter(r => r.submission && !r.submission.is_done).length;
+                            const missingCount = rows.filter(r => !r.submission).length;
+                            return (
+                              <Fragment key={key}>
+                                <TableRow className="h-9 cursor-pointer hover:bg-muted/40" onClick={() => toggleStaff(key)}>
+                                  <TableCell className="py-1 w-10">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={e => { e.stopPropagation(); toggleStaff(key); }}>
+                                      {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </Button>
+                                  </TableCell>
+                                  <TableCell className="py-1 text-xs font-medium">{date}</TableCell>
+                                  <TableCell className="py-1 text-xs" colSpan={2}>
+                                    <div className="flex items-center gap-2">
+                                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                                      <span className="font-medium">{emp?.full_name || 'Unassigned'}</span>
+                                      <span className="text-[10px] text-muted-foreground">({rows.length})</span>
+                                      <span className="text-[10px] text-muted-foreground">· {emp ? (deptMap[emp.department_id]?.name || '') : ''}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-1 text-xs"></TableCell>
+                                  <TableCell className="py-1 text-xs">
+                                    <span className="text-green-600">{doneCount}</span>
+                                    <span className="text-muted-foreground mx-1">/</span>
+                                    <span className="text-red-600">{notDoneCount}</span>
+                                    <span className="text-muted-foreground mx-1">/</span>
+                                    <span className="text-amber-600">{missingCount}</span>
+                                  </TableCell>
+                                  <TableCell className="py-1 text-xs" colSpan={2}></TableCell>
+                                </TableRow>
+                                {expanded && rows.map(i => {
+                                  const sub = i.submission;
+                                  return (
+                                    <TableRow key={i.key} className="h-9 bg-muted/20">
+                                      <TableCell className="py-1 w-10"></TableCell>
+                                      <TableCell className="py-1 text-xs">{i.date}</TableCell>
+                                      <TableCell className="py-1 text-xs">{staffMap[i.staffId]?.full_name || '-'}</TableCell>
+                                      <TableCell className="py-1 text-xs">{deptMap[staffMap[i.staffId]?.department_id || '']?.name || '-'}</TableCell>
+                                      <TableCell className="py-1 text-xs">{i.task.title}</TableCell>
+                                      <TableCell className="py-1">
+                                        {!sub ? (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">Not Submitted</Badge>
+                                        ) : (
+                                          <Badge variant={sub.is_done ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">{sub.is_done ? 'Done' : 'Not Done'}</Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="py-1 text-xs">{sub?.remark || '-'}</TableCell>
+                                      <TableCell className="py-1 text-xs">{sub?.checkin_time ? format(new Date(sub.checkin_time), 'HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </Fragment>
+                            );
+                          })}
+                        </>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          );
+          return (
+            <>
+              <TabsContent value="submissions">
+                {renderTable(submittedInstances, groupedSubmitted, 'No submissions found')}
+              </TabsContent>
+              <TabsContent value="overrides">
+                {renderTable(missingInstances, groupedMissing, 'No overdue entries')}
+              </TabsContent>
+            </>
+          );
+        })()}
       </Tabs>
     </div>
   );
