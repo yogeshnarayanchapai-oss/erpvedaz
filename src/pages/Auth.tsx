@@ -83,6 +83,7 @@ export default function Auth() {
       HR: '/hr/dashboard',
       ACCOUNTANT: '/admin/accounting/dashboard-new',
       WAREHOUSE: '/admin/inventory/stock-summary',
+      STAFF: '/my-tasks',
     };
     navigate(routes[userRole] || '/');
   };
