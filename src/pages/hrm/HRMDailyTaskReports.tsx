@@ -154,19 +154,36 @@ export default function HRMDailyTaskReports() {
     return true;
   });
 
-  const groupedByStaff = useMemo(() => {
+  // Submissions = only instances with an actual submission
+  const submittedInstances = useMemo(
+    () => filteredInstances.filter(i => !!i.submission),
+    [filteredInstances]
+  );
+  // Overdue (Not Submitted) instances
+  const missingInstances = useMemo(
+    () => filteredInstances.filter(i => !i.submission),
+    [filteredInstances]
+  );
+
+  const groupByStaffDate = (list: Instance[]): [string, Instance[]][] => {
     const map: Record<string, Instance[]> = {};
-    filteredInstances.forEach(i => {
-      const key = i.staffId || '__unassigned';
+    list.forEach(i => {
+      const key = `${i.staffId || '__unassigned'}|${i.date}`;
       if (!map[key]) map[key] = [];
       map[key].push(i);
     });
     return Object.entries(map).sort((a, b) => {
-      const nameA = staffMap[a[0]]?.full_name || '';
-      const nameB = staffMap[b[0]]?.full_name || '';
+      const [sa, da] = a[0].split('|');
+      const [sb, db] = b[0].split('|');
+      if (da !== db) return db.localeCompare(da); // latest date top
+      const nameA = staffMap[sa]?.full_name || '';
+      const nameB = staffMap[sb]?.full_name || '';
       return nameA.localeCompare(nameB);
     });
-  }, [filteredInstances, staffMap]);
+  };
+
+  const groupedSubmitted = useMemo(() => groupByStaffDate(submittedInstances), [submittedInstances, staffMap]);
+  const groupedMissing = useMemo(() => groupByStaffDate(missingInstances), [missingInstances, staffMap]);
 
   const toggleStaff = (staffId: string) => {
     setExpandedStaff(prev => ({ ...prev, [staffId]: !prev[staffId] }));
