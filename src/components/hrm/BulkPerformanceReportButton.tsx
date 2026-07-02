@@ -569,7 +569,7 @@ export function BulkPerformanceReportButton() {
     }
     const empList = employees.map((e: any) => ({
       id: e.id, user_id: e.user_id, full_name: e.full_name, position: e.position,
-      department: e.departments?.name || '-', store_id: e.store_id,
+      department: e.departments?.name || '-', store_id: e.store_id, department_id: e.department_id,
     }));
     const storeId = empList.find(e => e.store_id)?.store_id;
     let companyInfo: any = null;
