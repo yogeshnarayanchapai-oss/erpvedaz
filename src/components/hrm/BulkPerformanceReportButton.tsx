@@ -258,7 +258,7 @@ async function fetchMonthDataForAllEmployees(
     const workingDays = att.filter(r => !['Saturday', 'Holiday'].includes(r.status)).length;
     const hasAttData = workingDays > 0 && att.some(r => ['Present', 'Late', 'Absent'].includes(r.status));
     const attendanceRate = workingDays > 0 ? (present / workingDays) * 100 : 0;
-    const { rating: attendanceRating, score: attendanceScore } = getAttendanceRating(present, workingDays, hasAttData);
+    const { rating: attendanceRating, score: attendanceScore } = getAttendanceRating(present, late, absent, workingDays);
 
     const totalLeads = emp.user_id ? (transfersByUser.get(emp.user_id) || 0) : 0;
     const orders = emp.user_id ? (ordersByUser.get(emp.user_id) || []) : [];
@@ -279,29 +279,27 @@ async function fetchMonthDataForAllEmployees(
     const hasSalesData = totalLeads > 0 && conversionRate > 0;
     const { rating: salesRating, score: salesScore } = getSalesRating(conversionRate, hasSalesData);
 
+    // Regular tasks only — match individual Export Report (daily tasks tracked separately)
     const tasks = emp.user_id ? (tasksByUser.get(emp.user_id) || []) : [];
-    const regTotal = tasks.length;
-    const regCompleted = tasks.filter(t => t.status === 'COMPLETED').length;
-    const regOnTime = tasks.filter(t => {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
+    const onTimeTasks = tasks.filter(t => {
       if (t.status !== 'COMPLETED' || !t.completed_date) return false;
       return new Date(t.completed_date) <= new Date(t.due_date);
     }).length;
-    const regOverdue = tasks.filter(t => {
+    const overdueTasks = tasks.filter(t => {
       if (t.status === 'COMPLETED' && t.completed_date) {
         return new Date(t.completed_date) > new Date(t.due_date);
       }
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
-
-    // Merge daily task instances into task counts
-    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
-    const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
-    const totalTasks = regTotal + dailyTotal;
-    const completedTasks = regCompleted + daily.done;
-    const onTimeTasks = regOnTime + daily.done;
-    const overdueTasks = regOverdue + daily.notDone + daily.notSubmitted;
     const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
     const { rating: taskRating, score: taskScore } = getTaskRating(overdueTasks, totalTasks);
+
+    // Daily task breakdown (kept for the separate Daily Task Summary table only — does not affect scores)
+    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+    const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
+
 
 
     const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
