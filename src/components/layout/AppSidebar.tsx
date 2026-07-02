@@ -73,7 +73,7 @@ import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 import { useBranding } from '@/hooks/useBranding';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE' | 'STAFF';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
