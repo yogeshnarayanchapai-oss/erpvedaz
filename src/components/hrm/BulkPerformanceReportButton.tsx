@@ -90,7 +90,7 @@ function getTaskRating(overdueTasks: number, totalTasks: number): { rating: Rati
 }
 
 async function fetchMonthDataForAllEmployees(
-  employees: { id: string; user_id: string | null; full_name: string; position: string | null; department: string }[],
+  employees: { id: string; user_id: string | null; full_name: string; position: string | null; department: string; department_id?: string | null }[],
   dateFrom: string,
   dateTo: string
 ): Promise<EmployeeMonthData[]> {
