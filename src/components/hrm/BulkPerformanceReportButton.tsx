@@ -464,6 +464,25 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
     margin,
   });
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // Daily Task Summary (separate breakdown)
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
+  doc.text('Daily Task Summary', margin.left, y); y += 2;
+  const dailyCompletionPct = emp.dailyTotal > 0 ? ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1) : '0.0';
+  autoTable(doc, {
+    startY: y, theme: 'grid', headStyles: lightHead, styles: lightBody,
+    head: [['Total', 'Done', 'Not Done', 'Not Submitted', 'Completion %']],
+    body: [[emp.dailyTotal, emp.dailyDone, emp.dailyNotDone, emp.dailyNotSubmitted, `${dailyCompletionPct}%`]],
+    didParseCell: (data: any) => {
+      if (data.section === 'body') {
+        if (data.column.index === 1) data.cell.styles.textColor = [22, 163, 74];
+        if (data.column.index === 2) data.cell.styles.textColor = [234, 88, 12];
+        if (data.column.index === 3) data.cell.styles.textColor = [220, 38, 38];
+      }
+    },
+    margin,
+  });
   y = (doc as any).lastAutoTable.finalY + 7;
 
   // 3-month trend
