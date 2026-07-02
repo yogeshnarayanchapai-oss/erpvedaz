@@ -740,10 +740,10 @@ export default function AdminLeads() {
     if (!reassignStaffId || selectedLeads.length === 0) return;
     
     const selectedLeadObjects = filteredLeads.filter(l => selectedLeads.includes(l.id));
-    const isOwner = profile?.role === 'OWNER';
+    const canBypass = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS'].includes(profile?.role as string);
     
-    // OWNER bypasses ASSIGNED-status and same-day reassignment restrictions
-    if (!isOwner) {
+    // OWNER/ADMIN/MANAGER/SALES_MANAGER/LEADS bypass ASSIGNED-status and same-day reassignment restrictions
+    if (!canBypass) {
       const assignedStatusLeads = selectedLeadObjects.filter(l => l.status === 'ASSIGNED');
       if (assignedStatusLeads.length > 0) {
         toast.error(`Cannot reassign ${assignedStatusLeads.length} lead(s) with ASSIGNED status. Staff must first work on the lead (change status to CONFIRMED, FOLLOW_UP, CNR, or CANCELLED).`);

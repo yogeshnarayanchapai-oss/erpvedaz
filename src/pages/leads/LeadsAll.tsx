@@ -305,19 +305,19 @@ export default function LeadsAll() {
 
     const selectedLeadObjects = filteredLeads.filter(l => selectedLeads.includes(l.id));
 
-    // OWNER bypasses ASSIGNED-status and same-day reassignment restrictions
+    // OWNER, ADMIN, MANAGER, SALES_MANAGER, LEADS bypass ASSIGNED-status and same-day reassignment restrictions
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    let isOwner = false;
+    let canBypass = false;
     if (currentUser) {
       const { data: currentProfile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', currentUser.id)
         .maybeSingle();
-      isOwner = currentProfile?.role === 'OWNER';
+      canBypass = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS'].includes(currentProfile?.role as string);
     }
 
-    if (!isOwner) {
+    if (!canBypass) {
       const assignedStatusLeads = selectedLeadObjects.filter(l => l.status === 'ASSIGNED');
       if (assignedStatusLeads.length > 0) {
         toast.error(`Cannot reassign ${assignedStatusLeads.length} lead(s) with ASSIGNED status. Staff must first work on the lead (change status to CONFIRMED, FOLLOW_UP, CNR, or CANCELLED).`);
