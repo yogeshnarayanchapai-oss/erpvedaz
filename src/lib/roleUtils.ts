@@ -8,7 +8,7 @@ import type { Database } from '@/integrations/supabase/types';
 export type AppRole = Database['public']['Enums']['app_role'];
 
 // All available roles
-export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
+export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE', 'STAFF'];
 
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
@@ -24,6 +24,7 @@ export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
   HR: 'HR',
   ACCOUNTANT: 'Accountant',
   WAREHOUSE: 'Warehouse',
+  STAFF: 'Staff',
 };
 
 // Get display label for a role
@@ -42,6 +43,7 @@ export const ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
+  { value: 'STAFF', label: 'Staff' },
   { value: 'SALES_MANAGER', label: 'Sales Manager' },
   { value: 'MANAGER', label: 'Manager' },
   { value: 'ADMIN', label: 'Admin Manager' },
@@ -58,6 +60,7 @@ export const STAFF_ROLE_OPTIONS: { value: AppRole; label: string }[] = [
   { value: 'HR', label: 'HR' },
   { value: 'ACCOUNTANT', label: 'Accountant' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
+  { value: 'STAFF', label: 'Staff' },
   { value: 'SALES_MANAGER', label: 'Sales Manager' },
   { value: 'MANAGER', label: 'Manager' },
   { value: 'ADMIN', label: 'Admin Manager' },
@@ -92,4 +95,5 @@ export const roleColors: Record<string, string> = {
   HR: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
   ACCOUNTANT: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
   WAREHOUSE: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
+  STAFF: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };

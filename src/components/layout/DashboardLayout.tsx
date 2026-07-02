@@ -68,6 +68,12 @@ const isAllowedForSalesManager = (pathname: string) =>
   SALES_MANAGER_ALLOWED_EXACT_PATHS.includes(pathname) ||
   SALES_MANAGER_ALLOWED_PREFIX_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
+const STAFF_ALLOWED_PREFIX_PATHS = ['/my-hr', '/my-tasks', '/training'];
+const STAFF_ALLOWED_EXACT_PATHS = ['/settings/profile'];
+const isAllowedForStaff = (pathname: string) =>
+  STAFF_ALLOWED_EXACT_PATHS.includes(pathname) ||
+  STAFF_ALLOWED_PREFIX_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
 // Date Format selector with current date display for profile dropdown
 function DateFormatSelector() {
   const { dateMode, setDateMode } = useDateMode();
@@ -232,6 +238,9 @@ function DashboardLayoutInner() {
   useEffect(() => {
     if (!loading && user && profile && (effectiveRole as string) === 'SALES_MANAGER' && !isAllowedForSalesManager(location.pathname)) {
       navigate('/admin/sales/dashboard', { replace: true });
+    }
+    if (!loading && user && profile && (effectiveRole as string) === 'STAFF' && !isAllowedForStaff(location.pathname)) {
+      navigate('/my-tasks', { replace: true });
     }
   }, [effectiveRole, loading, location.pathname, navigate, profile, user]);
 

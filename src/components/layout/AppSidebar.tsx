@@ -73,7 +73,7 @@ import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { SidebarBadge } from './SidebarBadge';
 import { useBranding } from '@/hooks/useBranding';
 
-type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE';
+type AppRole = 'OWNER' | 'ADMIN' | 'LEADS' | 'CALLING' | 'FOLLOWUP' | 'LOGISTICS' | 'MARKETING' | 'MANAGER' | 'SALES_MANAGER' | 'HR' | 'ACCOUNTANT' | 'WAREHOUSE' | 'STAFF';
 
 type MenuItem = { title: string; url: string; icon: any; children?: MenuItem[] };
 
@@ -396,6 +396,22 @@ const menuItems: Record<AppRole, MenuItem[]> = {
       icon: TrendingUp,
       children: salesItems,
     },
+    {
+      title: 'My Training',
+      url: '/training/my-courses',
+      icon: GraduationCap,
+      children: myTrainingItems,
+    },
+    {
+      title: 'My HR',
+      url: '/my-hr',
+      icon: Briefcase,
+      children: myHRItems,
+    },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
+  ],
+  // STAFF: minimal access - only personal HR/Tasks/Training
+  STAFF: [
     {
       title: 'My Training',
       url: '/training/my-courses',
