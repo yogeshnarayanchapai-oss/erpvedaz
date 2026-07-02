@@ -289,7 +289,7 @@ async function fetchMonthDataForAllEmployees(
     const hasSalesData = totalLeads > 0 && conversionRate > 0;
     const { rating: salesRating, score: salesScore } = getSalesRating(conversionRate, hasSalesData);
 
-    // Regular tasks only — match individual Export Report (daily tasks tracked separately)
+    // Regular task counts are shown separately, but the task rating/score includes daily task issues too.
     const tasks = emp.user_id ? (tasksByUser.get(emp.user_id) || []) : [];
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
@@ -305,7 +305,7 @@ async function fetchMonthDataForAllEmployees(
     }).length;
     const regularDuePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
-    // Daily task breakdown also affects the Tasks score and 3-month trend.
+    // Daily task breakdown affects Tasks score, Overall Score, Remarks, and 3-month trend.
     const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0, remarks: [] };
     const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
     const scoredTaskTotal = totalTasks + dailyTotal;
