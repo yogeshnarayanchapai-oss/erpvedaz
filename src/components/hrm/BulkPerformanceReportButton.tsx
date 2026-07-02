@@ -330,6 +330,7 @@ async function fetchMonthDataForAllEmployees(
       present, late, absent, leave, workingDays, totalLateMinutes, attendanceRate,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders, conversionRate, totalSales,
       totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
+      dailyTotal, dailyDone: daily.done, dailyNotDone: daily.notDone, dailyNotSubmitted: daily.notSubmitted,
       promotionSuggestion,
     };
   });
