@@ -197,11 +197,11 @@ async function fetchMonthDataForAllEmployees(
         else if (sub.is_done) cur.done++;
         else cur.notDone++;
         dailyByEmp.set(emp.id, cur);
+      });
+    });
   });
   console.log('[PerfReport] dailyByEmp entries:', Array.from(dailyByEmp.entries()).slice(0, 10));
   console.log('[PerfReport] days count:', days.length, 'today:', today, 'effectiveTo:', effectiveTo);
-    });
-  });
 
 
 
