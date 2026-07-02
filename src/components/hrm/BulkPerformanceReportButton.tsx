@@ -254,20 +254,29 @@ async function fetchMonthDataForAllEmployees(
     const { rating: salesRating, score: salesScore } = getSalesRating(conversionRate, hasSalesData);
 
     const tasks = emp.user_id ? (tasksByUser.get(emp.user_id) || []) : [];
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
-    const onTimeTasks = tasks.filter(t => {
+    const regTotal = tasks.length;
+    const regCompleted = tasks.filter(t => t.status === 'COMPLETED').length;
+    const regOnTime = tasks.filter(t => {
       if (t.status !== 'COMPLETED' || !t.completed_date) return false;
       return new Date(t.completed_date) <= new Date(t.due_date);
     }).length;
-    const overdueTasks = tasks.filter(t => {
+    const regOverdue = tasks.filter(t => {
       if (t.status === 'COMPLETED' && t.completed_date) {
         return new Date(t.completed_date) > new Date(t.due_date);
       }
       return t.status !== 'COMPLETED' && new Date(t.due_date) < new Date();
     }).length;
+
+    // Merge daily task instances into task counts
+    const daily = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
+    const dailyTotal = daily.done + daily.notDone + daily.notSubmitted;
+    const totalTasks = regTotal + dailyTotal;
+    const completedTasks = regCompleted + daily.done;
+    const onTimeTasks = regOnTime + daily.done;
+    const overdueTasks = regOverdue + daily.notDone + daily.notSubmitted;
     const duePercent = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
     const { rating: taskRating, score: taskScore } = getTaskRating(overdueTasks, totalTasks);
+
 
     const maxScore = (attendanceRating !== 'No Rating' ? 30 : 0) + (salesRating !== 'No Rating' ? 40 : 0) + (taskRating !== 'No Rating' ? 30 : 0);
     const totalScore = attendanceScore + salesScore + taskScore;
