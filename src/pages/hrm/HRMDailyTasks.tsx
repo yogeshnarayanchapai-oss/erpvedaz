@@ -14,11 +14,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical, ChevronsUpDown } from 'lucide-react';
+
 
 interface DailyTask {
   id: string;
