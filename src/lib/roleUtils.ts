@@ -8,7 +8,7 @@ import type { Database } from '@/integrations/supabase/types';
 export type AppRole = Database['public']['Enums']['app_role'];
 
 // All available roles
-export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE'];
+export const ALL_ROLES: AppRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'SALES_MANAGER', 'LEADS', 'CALLING', 'FOLLOWUP', 'LOGISTICS', 'MARKETING', 'HR', 'ACCOUNTANT', 'WAREHOUSE', 'STAFF'];
 
 // Map database role values to display labels
 export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
@@ -24,6 +24,7 @@ export const ROLE_DISPLAY_LABELS: Record<AppRole, string> = {
   HR: 'HR',
   ACCOUNTANT: 'Accountant',
   WAREHOUSE: 'Warehouse',
+  STAFF: 'Staff',
 };
 
 // Get display label for a role
