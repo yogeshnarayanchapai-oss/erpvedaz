@@ -45,7 +45,7 @@ const ROLES = [
 
 interface FormState {
   target_role: string | null;
-  assigned_staff_id: string | null;
+  assigned_staff_ids: string[];
   frequency: string;
   specific_date: string | null;
   selected_weekdays: string[];
@@ -54,12 +54,13 @@ interface FormState {
 
 const blankForm = (): FormState => ({
   target_role: null,
-  assigned_staff_id: null,
+  assigned_staff_ids: [],
   frequency: 'daily',
   specific_date: null,
   selected_weekdays: [],
   is_active: true,
 });
+
 
 export default function HRMDailyTasks() {
   const storeId = useCurrentStoreId();
