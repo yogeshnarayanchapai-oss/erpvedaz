@@ -433,7 +433,7 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     body: [
       [emp.attendanceRating === 'No Rating' ? 'Attendance (N/A)' : 'Attendance (30)', emp.attendanceRating, emp.attendanceRating === 'No Rating' ? '-' : `${emp.attendanceScore}/30`, '', ''],
       [emp.salesRating === 'No Rating' ? 'Sales (N/A)' : 'Sales (40)', emp.salesRating, emp.salesRating === 'No Rating' ? '-' : `${emp.salesScore}/40`, '', ''],
-      [emp.taskRating === 'No Rating' ? 'Tasks (N/A)' : 'Tasks (30)', emp.taskRating, emp.taskRating === 'No Rating' ? '-' : `${emp.taskScore}/30`, '', ''],
+      [emp.taskRating === 'No Rating' ? 'Tasks incl. Daily (N/A)' : 'Tasks incl. Daily (30)', emp.taskRating, emp.taskRating === 'No Rating' ? '-' : `${emp.taskScore}/30`, '', ''],
     ],
     didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 1) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; }
@@ -475,9 +475,9 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
   doc.text('Task Summary', margin.left, y); y += 2;
   autoTable(doc, {
     startY: y, theme: 'grid', headStyles: lightHead, styles: lightBody,
-    head: [['Total Tasks', 'Completed', 'On Time', 'Overdue', 'Due %', 'Rating']],
-    body: [[emp.totalTasks, emp.completedTasks, emp.onTimeTasks, emp.overdueTasks, `${emp.duePercent.toFixed(1)}%`, emp.taskRating]],
-    didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
+    head: [['Regular Tasks', 'Completed', 'On Time', 'Overdue', 'Regular Due %', 'Scored Total', 'Scored Issues', 'Rating']],
+    body: [[emp.totalTasks, emp.completedTasks, emp.onTimeTasks, emp.overdueTasks, `${emp.duePercent.toFixed(1)}%`, emp.scoredTaskTotal, emp.scoredTaskIssues, emp.taskRating]],
+    didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 7) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
     margin,
   });
   y = (doc as any).lastAutoTable.finalY + 5;
