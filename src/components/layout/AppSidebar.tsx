@@ -410,6 +410,22 @@ const menuItems: Record<AppRole, MenuItem[]> = {
     },
     { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
   ],
+  // STAFF: minimal access - only personal HR/Tasks/Training
+  STAFF: [
+    {
+      title: 'My Training',
+      url: '/training/my-courses',
+      icon: GraduationCap,
+      children: myTrainingItems,
+    },
+    {
+      title: 'My HR',
+      url: '/my-hr',
+      icon: Briefcase,
+      children: myHRItems,
+    },
+    { title: 'My Tasks', url: '/my-tasks', icon: CheckSquare },
+  ],
   MARKETING: [
     { title: 'Dashboard', url: '/marketing/dashboard', icon: LayoutDashboard },
     { title: 'Ads Spend', url: '/marketing/ads', icon: Megaphone },
