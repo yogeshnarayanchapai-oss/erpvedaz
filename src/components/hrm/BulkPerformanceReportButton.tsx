@@ -142,9 +142,6 @@ async function fetchMonthDataForAllEmployees(
 
   const attData = attResult.data || [];
 
-  const taskData = taskResult.data || [];
-  const transferData = transferResult.data || [];
-  const orderData = orderResult.data || [];
 
   const attByEmp = new Map<string, typeof attData>();
   attData.forEach(r => {
