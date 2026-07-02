@@ -162,7 +162,7 @@ async function fetchMonthDataForAllEmployees(
 
   const attData = attResult.data || [];
   const dailyTasksAll = (dailyTasksRes.data || []) as any[];
-  const dailySubs = (dailySubsRes.data || []) as any[];
+  const dailySubs = (dailySubsRes || []) as any[];
   const profiles = ((profilesRes as any).data || []) as any[];
   const roleByUserId: Record<string, string> = {};
   profiles.forEach(p => { roleByUserId[p.id] = p.role; });
