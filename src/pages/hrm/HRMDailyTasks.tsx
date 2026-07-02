@@ -125,7 +125,7 @@ export default function HRMDailyTasks() {
     setTitleIds(g.tasks.map(t => t.id));
     setForm({
       target_role: g.target_role,
-      assigned_staff_id: g.assigned_staff_id,
+      assigned_staff_ids: g.assigned_staff_id ? [g.assigned_staff_id] : [],
       frequency: sample?.frequency || 'daily',
       specific_date: sample?.specific_date || null,
       selected_weekdays: sample?.selected_weekdays || [],
@@ -138,9 +138,10 @@ export default function HRMDailyTasks() {
     const pairs = titles.map((t, i) => ({ title: t.trim(), id: titleIds[i] ?? null })).filter(p => p.title);
     if (pairs.length === 0) return toast.error('At least one title required');
 
-    const base: any = {
+    const staffBuckets: (string | null)[] = form.assigned_staff_ids.length > 0 ? form.assigned_staff_ids : [null];
+
+    const baseCommon: any = {
       target_role: form.target_role || null,
-      assigned_staff_id: form.assigned_staff_id || null,
       frequency: form.frequency || 'daily',
       specific_date: form.frequency === 'specific_date' ? form.specific_date : null,
       selected_weekdays: form.frequency === 'weekdays' ? form.selected_weekdays : null,
@@ -151,8 +152,12 @@ export default function HRMDailyTasks() {
     const { data: u } = await supabase.auth.getUser();
     let lastError: any = null;
 
-    if (editingGroup) {
-      // Update existing rows, insert new ones, delete removed ones
+    const isMultiStaff = staffBuckets.length > 1;
+
+    if (editingGroup && !isMultiStaff) {
+      // Single staff (or none) — preserve original row ids where possible
+      const staffId = staffBuckets[0];
+      const base = { ...baseCommon, assigned_staff_id: staffId };
       const keptIds = new Set(pairs.filter(p => p.id).map(p => p.id as string));
       const toDelete = editingGroup.originalIds.filter(id => !keptIds.has(id));
       for (let i = 0; i < pairs.length; i++) {
@@ -169,25 +174,58 @@ export default function HRMDailyTasks() {
         const r = await supabase.from('daily_checkout_tasks' as any).delete().in('id', toDelete);
         if (r.error) lastError = r.error;
       }
+    } else if (editingGroup && isMultiStaff) {
+      // Multiple staff → replace entire group with title × staff rows
+      const rows: any[] = [];
+      let idx = 0;
+      for (const staffId of staffBuckets) {
+        for (let i = 0; i < pairs.length; i++) {
+          rows.push({ ...baseCommon, assigned_staff_id: staffId, title: pairs[i].title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
+      const del = await supabase.from('daily_checkout_tasks' as any).delete().in('id', editingGroup.originalIds);
+      if (del.error) lastError = del.error;
+      const ins = await supabase.from('daily_checkout_tasks' as any).insert(rows);
+      if (ins.error) lastError = ins.error;
     } else if (editing) {
+      // Single-task edit
+      const staffId = staffBuckets[0];
+      const base = { ...baseCommon, assigned_staff_id: staffId };
       const first = pairs[0];
       const r1 = await supabase.from('daily_checkout_tasks' as any)
         .update({ ...base, title: first.title, sort_order: 0 })
         .eq('id', editing.id);
       if (r1.error) lastError = r1.error;
-      if (pairs.length > 1) {
-        const extra = pairs.slice(1).map((p, idx) => ({ ...base, title: p.title, sort_order: idx + 1, created_by: u.user?.id }));
-        const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+      // Extra titles × extra staff → replicate
+      const extraTitles = pairs.slice(1);
+      const extraRows: any[] = [];
+      let idx = 1;
+      for (const s of staffBuckets) {
+        const titlesForS = s === staffId ? extraTitles : pairs;
+        for (const p of titlesForS) {
+          extraRows.push({ ...baseCommon, assigned_staff_id: s, title: p.title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
+      if (extraRows.length) {
+        const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extraRows);
         if (r2.error) lastError = r2.error;
       }
     } else {
-      const rows = pairs.map((p, i) => ({ ...base, title: p.title, sort_order: i, created_by: u.user?.id }));
+      // Fresh create — title × staff matrix
+      const rows: any[] = [];
+      let idx = 0;
+      for (const staffId of staffBuckets) {
+        for (const p of pairs) {
+          rows.push({ ...baseCommon, assigned_staff_id: staffId, title: p.title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
       const r = await supabase.from('daily_checkout_tasks' as any).insert(rows);
       if (r.error) lastError = r.error;
     }
     if (lastError) return toast.error(lastError.message);
     toast.success('Saved');
     setOpen(false);
+
     load();
   };
 
