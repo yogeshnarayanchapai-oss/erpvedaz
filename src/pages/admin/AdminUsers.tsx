@@ -875,22 +875,20 @@ const usersWithEmployee = useMemo(() => {
                 onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
               />
             </div>
-            {/* Global role - only show when no store-specific roles assigned */}
-            {(!isOwnerRole || editSelectedStoreIds.length === 0) && (
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={editFormData.role} onValueChange={(v: AppRole) => setEditFormData({ ...editFormData, role: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRoles().map((role) => (
-                      <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Global (main) role - always editable */}
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editFormData.role} onValueChange={(v: AppRole) => setEditFormData({ ...editFormData, role: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableRoles().map((role) => (
+                    <SelectItem key={role} value={role}>{getRoleDisplayLabel(role)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Store Assignment - OWNER can assign to any user including other OWNERs */}
             {isOwnerRole && allStores.length > 0 && (
