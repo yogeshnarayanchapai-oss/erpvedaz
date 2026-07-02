@@ -191,8 +191,16 @@ async function fetchMonthDataForAllEmployees(
       if (task.assigned_staff_id) {
         const emp = activeEmps.find(e => e.id === task.assigned_staff_id);
         if (emp) targets = [emp];
+      } else if (task.target_role && task.department_id) {
+        // Intersect: role AND department
+        targets = activeEmps.filter(e =>
+          e.department_id === task.department_id &&
+          e.user_id && roleByUserId[e.user_id] === task.target_role
+        );
       } else if (task.target_role) {
         targets = activeEmps.filter(e => e.user_id && roleByUserId[e.user_id] === task.target_role);
+      } else if (task.department_id) {
+        targets = activeEmps.filter(e => e.department_id === task.department_id);
       }
       targets.forEach(emp => {
         const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
