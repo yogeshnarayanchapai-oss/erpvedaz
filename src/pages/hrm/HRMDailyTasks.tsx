@@ -14,11 +14,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { getRoleDisplayLabel } from '@/lib/roleUtils';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, Plus, Loader2, X, Search, ChevronRight, ChevronDown, GripVertical, ChevronsUpDown } from 'lucide-react';
+
 
 interface DailyTask {
   id: string;
@@ -43,7 +45,7 @@ const ROLES = [
 
 interface FormState {
   target_role: string | null;
-  assigned_staff_id: string | null;
+  assigned_staff_ids: string[];
   frequency: string;
   specific_date: string | null;
   selected_weekdays: string[];
@@ -52,12 +54,13 @@ interface FormState {
 
 const blankForm = (): FormState => ({
   target_role: null,
-  assigned_staff_id: null,
+  assigned_staff_ids: [],
   frequency: 'daily',
   specific_date: null,
   selected_weekdays: [],
   is_active: true,
 });
+
 
 export default function HRMDailyTasks() {
   const storeId = useCurrentStoreId();
@@ -104,7 +107,7 @@ export default function HRMDailyTasks() {
     setTitleIds([t.id]);
     setForm({
       target_role: t.target_role,
-      assigned_staff_id: t.assigned_staff_id,
+      assigned_staff_ids: t.assigned_staff_id ? [t.assigned_staff_id] : [],
       frequency: t.frequency,
       specific_date: t.specific_date,
       selected_weekdays: t.selected_weekdays || [],
@@ -112,6 +115,7 @@ export default function HRMDailyTasks() {
     });
     setOpen(true);
   };
+
 
   const openEditGroup = (g: { target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] }) => {
     setEditing(null);
@@ -121,7 +125,7 @@ export default function HRMDailyTasks() {
     setTitleIds(g.tasks.map(t => t.id));
     setForm({
       target_role: g.target_role,
-      assigned_staff_id: g.assigned_staff_id,
+      assigned_staff_ids: g.assigned_staff_id ? [g.assigned_staff_id] : [],
       frequency: sample?.frequency || 'daily',
       specific_date: sample?.specific_date || null,
       selected_weekdays: sample?.selected_weekdays || [],
@@ -134,9 +138,10 @@ export default function HRMDailyTasks() {
     const pairs = titles.map((t, i) => ({ title: t.trim(), id: titleIds[i] ?? null })).filter(p => p.title);
     if (pairs.length === 0) return toast.error('At least one title required');
 
-    const base: any = {
+    const staffBuckets: (string | null)[] = form.assigned_staff_ids.length > 0 ? form.assigned_staff_ids : [null];
+
+    const baseCommon: any = {
       target_role: form.target_role || null,
-      assigned_staff_id: form.assigned_staff_id || null,
       frequency: form.frequency || 'daily',
       specific_date: form.frequency === 'specific_date' ? form.specific_date : null,
       selected_weekdays: form.frequency === 'weekdays' ? form.selected_weekdays : null,
@@ -147,8 +152,12 @@ export default function HRMDailyTasks() {
     const { data: u } = await supabase.auth.getUser();
     let lastError: any = null;
 
-    if (editingGroup) {
-      // Update existing rows, insert new ones, delete removed ones
+    const isMultiStaff = staffBuckets.length > 1;
+
+    if (editingGroup && !isMultiStaff) {
+      // Single staff (or none) — preserve original row ids where possible
+      const staffId = staffBuckets[0];
+      const base = { ...baseCommon, assigned_staff_id: staffId };
       const keptIds = new Set(pairs.filter(p => p.id).map(p => p.id as string));
       const toDelete = editingGroup.originalIds.filter(id => !keptIds.has(id));
       for (let i = 0; i < pairs.length; i++) {
@@ -165,25 +174,58 @@ export default function HRMDailyTasks() {
         const r = await supabase.from('daily_checkout_tasks' as any).delete().in('id', toDelete);
         if (r.error) lastError = r.error;
       }
+    } else if (editingGroup && isMultiStaff) {
+      // Multiple staff → replace entire group with title × staff rows
+      const rows: any[] = [];
+      let idx = 0;
+      for (const staffId of staffBuckets) {
+        for (let i = 0; i < pairs.length; i++) {
+          rows.push({ ...baseCommon, assigned_staff_id: staffId, title: pairs[i].title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
+      const del = await supabase.from('daily_checkout_tasks' as any).delete().in('id', editingGroup.originalIds);
+      if (del.error) lastError = del.error;
+      const ins = await supabase.from('daily_checkout_tasks' as any).insert(rows);
+      if (ins.error) lastError = ins.error;
     } else if (editing) {
+      // Single-task edit
+      const staffId = staffBuckets[0];
+      const base = { ...baseCommon, assigned_staff_id: staffId };
       const first = pairs[0];
       const r1 = await supabase.from('daily_checkout_tasks' as any)
         .update({ ...base, title: first.title, sort_order: 0 })
         .eq('id', editing.id);
       if (r1.error) lastError = r1.error;
-      if (pairs.length > 1) {
-        const extra = pairs.slice(1).map((p, idx) => ({ ...base, title: p.title, sort_order: idx + 1, created_by: u.user?.id }));
-        const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extra);
+      // Extra titles × extra staff → replicate
+      const extraTitles = pairs.slice(1);
+      const extraRows: any[] = [];
+      let idx = 1;
+      for (const s of staffBuckets) {
+        const titlesForS = s === staffId ? extraTitles : pairs;
+        for (const p of titlesForS) {
+          extraRows.push({ ...baseCommon, assigned_staff_id: s, title: p.title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
+      if (extraRows.length) {
+        const r2 = await supabase.from('daily_checkout_tasks' as any).insert(extraRows);
         if (r2.error) lastError = r2.error;
       }
     } else {
-      const rows = pairs.map((p, i) => ({ ...base, title: p.title, sort_order: i, created_by: u.user?.id }));
+      // Fresh create — title × staff matrix
+      const rows: any[] = [];
+      let idx = 0;
+      for (const staffId of staffBuckets) {
+        for (const p of pairs) {
+          rows.push({ ...baseCommon, assigned_staff_id: staffId, title: p.title, sort_order: idx++, created_by: u.user?.id });
+        }
+      }
       const r = await supabase.from('daily_checkout_tasks' as any).insert(rows);
       if (r.error) lastError = r.error;
     }
     if (lastError) return toast.error(lastError.message);
     toast.success('Saved');
     setOpen(false);
+
     load();
   };
 
@@ -468,14 +510,57 @@ export default function HRMDailyTasks() {
               </div>
               <div>
                 <Label className="text-xs">Specific Staff</Label>
-                <Select value={form.assigned_staff_id || 'none'} onValueChange={v => setForm({ ...form, assigned_staff_id: v === 'none' ? null : v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">- None -</SelectItem>
-                    {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between font-normal h-10"
+                    >
+                      <span className="truncate text-left">
+                        {form.assigned_staff_ids.length === 0
+                          ? '- None -'
+                          : form.assigned_staff_ids.length === 1
+                            ? (staff.find(s => s.id === form.assigned_staff_ids[0])?.full_name || '1 selected')
+                            : `${form.assigned_staff_ids.length} selected`}
+                      </span>
+                      <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0 ml-1" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[260px] p-0" align="start">
+                    <div className="p-2 border-b flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{form.assigned_staff_ids.length} selected</span>
+                      {form.assigned_staff_ids.length > 0 && (
+                        <Button type="button" size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setForm({ ...form, assigned_staff_ids: [] })}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-auto p-1">
+                      {staff.map(s => {
+                        const checked = form.assigned_staff_ids.includes(s.id);
+                        return (
+                          <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                setForm({
+                                  ...form,
+                                  assigned_staff_ids: c
+                                    ? [...form.assigned_staff_ids, s.id]
+                                    : form.assigned_staff_ids.filter(x => x !== s.id),
+                                });
+                              }}
+                            />
+                            <span className="truncate">{s.full_name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
+
               <div>
                 <Label className="text-xs">Frequency</Label>
                 <Select value={form.frequency} onValueChange={v => setForm({ ...form, frequency: v })}>
