@@ -59,19 +59,22 @@ interface EmployeeMonthData {
 function getOverallRating(totalScore: number, maxScore: number): Rating {
   if (maxScore === 0) return 'No Rating';
   const pct = (totalScore / maxScore) * 100;
-  if (pct >= 90) return 'Excellent';
-  if (pct >= 70) return 'Good';
-  if (pct >= 50) return 'Medium';
+  // Match individual Export Report thresholds
+  if (pct >= 85) return 'Excellent';
+  if (pct >= 65) return 'Good';
+  if (pct >= 45) return 'Medium';
   return 'Low';
 }
 
-function getAttendanceRating(present: number, workingDays: number, hasData: boolean): { rating: Rating; score: number } {
-  if (!hasData || workingDays === 0) return { rating: 'No Rating', score: 0 };
+function getAttendanceRating(present: number, late: number, absent: number, workingDays: number): { rating: Rating; score: number } {
+  // Match individual: No Rating if workingDays=0 OR all of present/late/absent are 0
+  if (workingDays === 0 || (present === 0 && late === 0 && absent === 0)) return { rating: 'No Rating', score: 0 };
   const rate = (present / workingDays) * 100;
   if (rate >= 95) return { rating: 'Excellent', score: 30 };
   if (rate >= 90) return { rating: 'Good', score: 20 };
   return { rating: 'Low', score: 10 };
 }
+
 
 function getSalesRating(conversionRate: number, hasData: boolean): { rating: Rating; score: number } {
   if (!hasData) return { rating: 'No Rating', score: 0 };
