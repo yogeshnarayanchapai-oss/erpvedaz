@@ -239,6 +239,9 @@ function DashboardLayoutInner() {
     if (!loading && user && profile && (effectiveRole as string) === 'SALES_MANAGER' && !isAllowedForSalesManager(location.pathname)) {
       navigate('/admin/sales/dashboard', { replace: true });
     }
+    if (!loading && user && profile && (effectiveRole as string) === 'STAFF' && !isAllowedForStaff(location.pathname)) {
+      navigate('/my-tasks', { replace: true });
+    }
   }, [effectiveRole, loading, location.pathname, navigate, profile, user]);
 
   // Update document title based on portal, page and store
