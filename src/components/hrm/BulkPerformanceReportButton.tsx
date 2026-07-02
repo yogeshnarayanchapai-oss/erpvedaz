@@ -49,6 +49,10 @@ interface EmployeeMonthData {
   onTimeTasks: number;
   overdueTasks: number;
   duePercent: number;
+  dailyTotal: number;
+  dailyDone: number;
+  dailyNotDone: number;
+  dailyNotSubmitted: number;
   promotionSuggestion: string;
 }
 
@@ -86,7 +90,7 @@ function getTaskRating(overdueTasks: number, totalTasks: number): { rating: Rati
 }
 
 async function fetchMonthDataForAllEmployees(
-  employees: { id: string; user_id: string | null; full_name: string; position: string | null; department: string }[],
+  employees: { id: string; user_id: string | null; full_name: string; position: string | null; department: string; department_id?: string | null }[],
   dateFrom: string,
   dateTo: string
 ): Promise<EmployeeMonthData[]> {
@@ -187,8 +191,16 @@ async function fetchMonthDataForAllEmployees(
       if (task.assigned_staff_id) {
         const emp = activeEmps.find(e => e.id === task.assigned_staff_id);
         if (emp) targets = [emp];
+      } else if (task.target_role && task.department_id) {
+        // Intersect: role AND department
+        targets = activeEmps.filter(e =>
+          e.department_id === task.department_id &&
+          e.user_id && roleByUserId[e.user_id] === task.target_role
+        );
       } else if (task.target_role) {
         targets = activeEmps.filter(e => e.user_id && roleByUserId[e.user_id] === task.target_role);
+      } else if (task.department_id) {
+        targets = activeEmps.filter(e => e.department_id === task.department_id);
       }
       targets.forEach(emp => {
         const cur = dailyByEmp.get(emp.id) || { done: 0, notDone: 0, notSubmitted: 0 };
@@ -318,6 +330,7 @@ async function fetchMonthDataForAllEmployees(
       present, late, absent, leave, workingDays, totalLateMinutes, attendanceRate,
       totalLeads, confirmedOrders, vdNotDeliver, effectiveOrders, conversionRate, totalSales,
       totalTasks, completedTasks, onTimeTasks, overdueTasks, duePercent,
+      dailyTotal, dailyDone: daily.done, dailyNotDone: daily.notDone, dailyNotSubmitted: daily.notSubmitted,
       promotionSuggestion,
     };
   });
@@ -451,6 +464,25 @@ function renderEmployeePage(doc: jsPDF, emp: EmployeeMonthData, monthLabel: stri
     didParseCell: (data: any) => { if (data.section === 'body' && data.column.index === 5) { data.cell.styles.textColor = RATING_COLOR(data.cell.raw); data.cell.styles.fontStyle = 'bold'; } },
     margin,
   });
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // Daily Task Summary (separate breakdown)
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 41, 59);
+  doc.text('Daily Task Summary', margin.left, y); y += 2;
+  const dailyCompletionPct = emp.dailyTotal > 0 ? ((emp.dailyDone / emp.dailyTotal) * 100).toFixed(1) : '0.0';
+  autoTable(doc, {
+    startY: y, theme: 'grid', headStyles: lightHead, styles: lightBody,
+    head: [['Total', 'Done', 'Not Done', 'Not Submitted', 'Completion %']],
+    body: [[emp.dailyTotal, emp.dailyDone, emp.dailyNotDone, emp.dailyNotSubmitted, `${dailyCompletionPct}%`]],
+    didParseCell: (data: any) => {
+      if (data.section === 'body') {
+        if (data.column.index === 1) data.cell.styles.textColor = [22, 163, 74];
+        if (data.column.index === 2) data.cell.styles.textColor = [234, 88, 12];
+        if (data.column.index === 3) data.cell.styles.textColor = [220, 38, 38];
+      }
+    },
+    margin,
+  });
   y = (doc as any).lastAutoTable.finalY + 7;
 
   // 3-month trend
@@ -556,7 +588,7 @@ export function BulkPerformanceReportButton() {
     }
     const empList = employees.map((e: any) => ({
       id: e.id, user_id: e.user_id, full_name: e.full_name, position: e.position,
-      department: e.departments?.name || '-', store_id: e.store_id,
+      department: e.departments?.name || '-', store_id: e.store_id, department_id: e.department_id,
     }));
     const storeId = empList.find(e => e.store_id)?.store_id;
     let companyInfo: any = null;
