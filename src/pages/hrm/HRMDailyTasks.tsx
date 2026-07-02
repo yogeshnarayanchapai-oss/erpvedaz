@@ -107,7 +107,7 @@ export default function HRMDailyTasks() {
     setTitleIds([t.id]);
     setForm({
       target_role: t.target_role,
-      assigned_staff_id: t.assigned_staff_id,
+      assigned_staff_ids: t.assigned_staff_id ? [t.assigned_staff_id] : [],
       frequency: t.frequency,
       specific_date: t.specific_date,
       selected_weekdays: t.selected_weekdays || [],
@@ -115,6 +115,7 @@ export default function HRMDailyTasks() {
     });
     setOpen(true);
   };
+
 
   const openEditGroup = (g: { target_role: string | null; assigned_staff_id: string | null; tasks: DailyTask[] }) => {
     setEditing(null);
