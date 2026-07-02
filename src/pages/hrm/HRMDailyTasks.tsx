@@ -76,6 +76,8 @@ export default function HRMDailyTasks() {
   const [viewMode, setViewMode] = useState<'task' | 'user'>('user');
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [staffSearch, setStaffSearch] = useState('');
+
 
 
   const load = async () => {
