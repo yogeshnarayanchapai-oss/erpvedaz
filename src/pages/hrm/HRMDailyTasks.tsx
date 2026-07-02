@@ -510,14 +510,57 @@ export default function HRMDailyTasks() {
               </div>
               <div>
                 <Label className="text-xs">Specific Staff</Label>
-                <Select value={form.assigned_staff_id || 'none'} onValueChange={v => setForm({ ...form, assigned_staff_id: v === 'none' ? null : v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">- None -</SelectItem>
-                    {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between font-normal h-10"
+                    >
+                      <span className="truncate text-left">
+                        {form.assigned_staff_ids.length === 0
+                          ? '- None -'
+                          : form.assigned_staff_ids.length === 1
+                            ? (staff.find(s => s.id === form.assigned_staff_ids[0])?.full_name || '1 selected')
+                            : `${form.assigned_staff_ids.length} selected`}
+                      </span>
+                      <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0 ml-1" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[260px] p-0" align="start">
+                    <div className="p-2 border-b flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{form.assigned_staff_ids.length} selected</span>
+                      {form.assigned_staff_ids.length > 0 && (
+                        <Button type="button" size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setForm({ ...form, assigned_staff_ids: [] })}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-auto p-1">
+                      {staff.map(s => {
+                        const checked = form.assigned_staff_ids.includes(s.id);
+                        return (
+                          <label key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                setForm({
+                                  ...form,
+                                  assigned_staff_ids: c
+                                    ? [...form.assigned_staff_ids, s.id]
+                                    : form.assigned_staff_ids.filter(x => x !== s.id),
+                                });
+                              }}
+                            />
+                            <span className="truncate">{s.full_name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
+
               <div>
                 <Label className="text-xs">Frequency</Label>
                 <Select value={form.frequency} onValueChange={v => setForm({ ...form, frequency: v })}>
