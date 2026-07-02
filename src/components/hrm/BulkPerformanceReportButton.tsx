@@ -152,6 +152,15 @@ async function fetchMonthDataForAllEmployees(
   const profiles = ((profilesRes as any).data || []) as any[];
   const roleByUserId: Record<string, string> = {};
   profiles.forEach(p => { roleByUserId[p.id] = p.role; });
+  console.log('[PerfReport]', dateFrom, '→', dateTo, {
+    dailyTasksAll: dailyTasksAll.length,
+    dailyTasksErr: (dailyTasksRes as any).error,
+    dailySubs: dailySubs.length,
+    dailySubsErr: (dailySubsRes as any).error,
+    profiles: profiles.length,
+    empIds: empIds.length,
+    userIds: userIds.length,
+  });
 
   // Build expected daily-task instances per employee (staff_id)
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -191,6 +200,8 @@ async function fetchMonthDataForAllEmployees(
       });
     });
   });
+  console.log('[PerfReport] dailyByEmp entries:', Array.from(dailyByEmp.entries()).slice(0, 10));
+  console.log('[PerfReport] days count:', days.length, 'today:', today, 'effectiveTo:', effectiveTo);
 
 
 
