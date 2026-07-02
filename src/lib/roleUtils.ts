@@ -95,4 +95,5 @@ export const roleColors: Record<string, string> = {
   HR: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
   ACCOUNTANT: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
   WAREHOUSE: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
+  STAFF: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };
