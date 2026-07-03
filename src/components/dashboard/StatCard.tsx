@@ -36,7 +36,7 @@ const iconStyles = {
   info: 'bg-info/10 text-info',
 };
 
-export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className, valueClassName }: StatCardProps) {
+export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className, valueClassName, compare }: StatCardProps) {
   const Component = onClick ? 'button' : 'div';
   
   return (
