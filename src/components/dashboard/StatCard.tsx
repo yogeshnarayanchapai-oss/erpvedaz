@@ -14,7 +14,9 @@ interface StatCardProps {
   onClick?: () => void;
   className?: string;
   valueClassName?: string;
+  compare?: { pct: number; positive: boolean } | null;
 }
+
 
 const variantStyles = {
   default: 'bg-card border-border',
