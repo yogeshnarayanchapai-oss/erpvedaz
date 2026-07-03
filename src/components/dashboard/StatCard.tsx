@@ -42,10 +42,11 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
   return (
     <Component 
       className={cn(
-        'stat-card border animate-fade-in w-full text-left touch-target',
+        'stat-card border animate-fade-in w-full text-left touch-target relative',
         variantStyles[variant],
         onClick && 'active:scale-[0.98] transition-transform',
         className
+
       )}
       onClick={onClick}
     >
