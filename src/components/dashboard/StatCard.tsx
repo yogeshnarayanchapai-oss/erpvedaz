@@ -77,7 +77,7 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
           'absolute bottom-1 right-2 text-[9px] md:text-[10px] font-medium leading-none',
           compare.positive ? 'text-success' : 'text-destructive'
         )}>
-          {compare.positive ? '+' : '-'}{Math.abs(compare.pct)}% vs yday
+          {compare.positive ? '+' : '-'}{Math.abs(compare.pct)}%
         </div>
       )}
 

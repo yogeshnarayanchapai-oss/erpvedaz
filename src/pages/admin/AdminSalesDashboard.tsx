@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { format, startOfDay, endOfDay } from 'date-fns';
+
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
@@ -61,27 +65,65 @@ export default function AdminDashboard() {
   const { data: leadStats } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats } = useOrderDashboardStats(dateFrom, dateTo);
 
-  // Yesterday comparison (relative to today's Nepal date)
-  const yesterdayStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return format(d, 'yyyy-MM-dd');
-  }, []);
-  const yesterdayRange = useMemo<DateRange>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return { from: startOfDay(d), to: endOfDay(d) };
-  }, []);
-  const { data: yLeadStats } = useLeadDashboardStats(yesterdayStr, yesterdayStr);
-  const { data: yOrderStats } = useOrderDashboardStats(yesterdayStr, yesterdayStr);
-  const { data: ySalesByRange } = useSalesByDateRange(yesterdayRange);
+  // Yesterday same-time-of-day comparison (only when viewing today)
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+  const todayStr = getNepalDate();
+  const isTodayView = dateFrom === todayStr && dateTo === todayStr;
+
+  const { data: ySameTime } = useQuery({
+    queryKey: ['yday-same-time-stats', storeId, todayStr],
+    queryFn: async () => {
+      const now = new Date();
+      const yEnd = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yStart = new Date(yEnd);
+      // Nepal day start for yesterday
+      const yDateStr = yEnd.toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
+      const yStartISO = `${yDateStr}T00:00:00+05:45`;
+      const yEndISO = yEnd.toISOString();
+
+      let leadsQ = supabase
+        .from('leads')
+        .select('id, status, order_id, assigned_to_user_id, created_at, store_id')
+        .gte('created_at', yStartISO)
+        .lte('created_at', yEndISO);
+      if (storeId) leadsQ = leadsQ.eq('store_id', storeId);
+
+      let ordersQ = supabase
+        .from('orders')
+        .select('id, order_status, delivery_location, amount, is_deleted, order_date, store_id')
+        .eq('is_deleted', false)
+        .gte('order_date', yStartISO)
+        .lte('order_date', yEndISO);
+      if (storeId) ordersQ = ordersQ.eq('store_id', storeId);
+
+      const [{ data: leads = [] }, { data: orders = [] }] = await Promise.all([leadsQ, ordersQ]);
+      const validStatuses = ['CONFIRMED', 'DISPATCHED', 'DELIVERED', 'PACKED'];
+      const salesOrders = (orders || []).filter((o: any) => validStatuses.includes(o.order_status || ''));
+      return {
+        totalLeads: leads?.length || 0,
+        confirmed: (orders || []).filter((o: any) => o.order_status === 'CONFIRMED').length,
+        cnr: (leads || []).filter((l: any) => l.status === 'CALL_NOT_RECEIVED').length,
+        followUp: (leads || []).filter((l: any) => l.status === 'FOLLOW_UP').length,
+        cancelled: (leads || []).filter((l: any) => l.status === 'CANCELLED').length,
+        redirect: (orders || []).filter((o: any) => o.order_status === 'REDIRECT').length,
+        insideValley: salesOrders.filter((o: any) => o.delivery_location === 'INSIDE_VALLEY').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+        outsideValley: salesOrders.filter((o: any) => o.delivery_location === 'OUTSIDE_VALLEY').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+        totalSales: salesOrders.reduce((s: number, o: any) => s + (o.amount || 0), 0),
+      };
+    },
+    enabled: !!storeId && isTodayView,
+    staleTime: 60_000,
+  });
 
   const cmp = (today: number, yday: number) => {
+    if (!isTodayView) return null;
     if (!yday && !today) return null;
     if (!yday) return { pct: 100, positive: today > 0 };
     const pct = Math.round(((today - yday) / yday) * 100);
     return { pct, positive: pct >= 0 };
   };
+
   
   // Other data fetching
   const { data: products = [] } = useProducts();
@@ -497,7 +539,7 @@ export default function AdminDashboard() {
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
           className="cursor-pointer hover:scale-[1.02] transition-transform [&_p.text-\\[10px\\]]:text-right [&_p.text-\\[10px\\]]:mt-2"
-          compare={cmp(stats.total, yLeadStats?.total || 0)}
+          compare={cmp(stats.total, ySameTime?.totalLeads || 0)}
         />
         <StatCard 
           title="Pending Transfer" 
@@ -515,7 +557,7 @@ export default function AdminDashboard() {
           variant="success" 
           onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
-          compare={cmp(orders.confirmed, yOrderStats?.confirmed || 0)}
+          compare={cmp(orders.confirmed, ySameTime?.confirmed || 0)}
         />
         <StatCard 
           title="CNR" 
@@ -524,7 +566,7 @@ export default function AdminDashboard() {
           variant="warning" 
           onClick={() => handleStatCardClick('cnr')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
-          compare={cmp(stats.callNotReceived, yLeadStats?.callNotReceived || 0)}
+          compare={cmp(stats.callNotReceived, ySameTime?.cnr || 0)}
         />
         <StatCard 
           title="Follow Up" 
@@ -533,7 +575,7 @@ export default function AdminDashboard() {
           variant="info" 
           onClick={() => handleStatCardClick('followup')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
-          compare={cmp(stats.followUp, yLeadStats?.followUp || 0)}
+          compare={cmp(stats.followUp, ySameTime?.followUp || 0)}
         />
         <StatCard 
           title="Cancelled" 
@@ -542,7 +584,7 @@ export default function AdminDashboard() {
           variant="destructive" 
           onClick={() => handleStatCardClick('cancelled')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
-          compare={cmp(stats.cancelled, yLeadStats?.cancelled || 0)}
+          compare={cmp(stats.cancelled, ySameTime?.cancelled || 0)}
         />
         <StatCard 
           title="Redirect" 
@@ -551,7 +593,7 @@ export default function AdminDashboard() {
           variant="default" 
           onClick={() => navigate(`/admin/orders?status=REDIRECT&from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
-          compare={cmp(orders.redirect, yOrderStats?.redirect || 0)}
+          compare={cmp(orders.redirect, ySameTime?.redirect || 0)}
         />
         <StatCard 
           title="Cancelled Orders" 
@@ -575,7 +617,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<MapPin className="w-4 h-4 md:w-5 md:h-5" />}
           variant="success"
-          compare={cmp(salesByRange?.insideValley || 0, ySalesByRange?.insideValley || 0)}
+          compare={cmp(salesByRange?.insideValley || 0, ySameTime?.insideValley || 0)}
         />
         <StatCard
           title="Outside Valley"
@@ -583,7 +625,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<Truck className="w-4 h-4 md:w-5 md:h-5" />}
           variant="info"
-          compare={cmp(salesByRange?.outsideValley || 0, ySalesByRange?.outsideValley || 0)}
+          compare={cmp(salesByRange?.outsideValley || 0, ySameTime?.outsideValley || 0)}
         />
         <StatCard
           title="Total Sales"
@@ -591,7 +633,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<DollarSign className="w-4 h-4 md:w-5 md:h-5" />}
           variant="primary"
-          compare={cmp(salesByRange?.total || 0, ySalesByRange?.total || 0)}
+          compare={cmp(salesByRange?.total || 0, ySameTime?.totalSales || 0)}
 
         />
       </div>
