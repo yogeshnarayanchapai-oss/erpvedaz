@@ -65,27 +65,65 @@ export default function AdminDashboard() {
   const { data: leadStats } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats } = useOrderDashboardStats(dateFrom, dateTo);
 
-  // Yesterday comparison (relative to today's Nepal date)
-  const yesterdayStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return format(d, 'yyyy-MM-dd');
-  }, []);
-  const yesterdayRange = useMemo<DateRange>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return { from: startOfDay(d), to: endOfDay(d) };
-  }, []);
-  const { data: yLeadStats } = useLeadDashboardStats(yesterdayStr, yesterdayStr);
-  const { data: yOrderStats } = useOrderDashboardStats(yesterdayStr, yesterdayStr);
-  const { data: ySalesByRange } = useSalesByDateRange(yesterdayRange);
+  // Yesterday same-time-of-day comparison (only when viewing today)
+  const { currentStore } = useCurrentStore();
+  const storeId = currentStore?.id;
+  const todayStr = getNepalDate();
+  const isTodayView = dateFrom === todayStr && dateTo === todayStr;
+
+  const { data: ySameTime } = useQuery({
+    queryKey: ['yday-same-time-stats', storeId, todayStr],
+    queryFn: async () => {
+      const now = new Date();
+      const yEnd = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yStart = new Date(yEnd);
+      // Nepal day start for yesterday
+      const yDateStr = yEnd.toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
+      const yStartISO = `${yDateStr}T00:00:00+05:45`;
+      const yEndISO = yEnd.toISOString();
+
+      let leadsQ = supabase
+        .from('leads')
+        .select('id, status, order_id, assigned_to_user_id, created_at, store_id')
+        .gte('created_at', yStartISO)
+        .lte('created_at', yEndISO);
+      if (storeId) leadsQ = leadsQ.eq('store_id', storeId);
+
+      let ordersQ = supabase
+        .from('orders')
+        .select('id, order_status, delivery_location, amount, is_deleted, order_date, store_id')
+        .eq('is_deleted', false)
+        .gte('order_date', yStartISO)
+        .lte('order_date', yEndISO);
+      if (storeId) ordersQ = ordersQ.eq('store_id', storeId);
+
+      const [{ data: leads = [] }, { data: orders = [] }] = await Promise.all([leadsQ, ordersQ]);
+      const validStatuses = ['CONFIRMED', 'DISPATCHED', 'DELIVERED', 'PACKED'];
+      const salesOrders = (orders || []).filter((o: any) => validStatuses.includes(o.order_status || ''));
+      return {
+        totalLeads: leads?.length || 0,
+        confirmed: (orders || []).filter((o: any) => o.order_status === 'CONFIRMED').length,
+        cnr: (leads || []).filter((l: any) => l.status === 'CALL_NOT_RECEIVED').length,
+        followUp: (leads || []).filter((l: any) => l.status === 'FOLLOW_UP').length,
+        cancelled: (leads || []).filter((l: any) => l.status === 'CANCELLED').length,
+        redirect: (orders || []).filter((o: any) => o.order_status === 'REDIRECT').length,
+        insideValley: salesOrders.filter((o: any) => o.delivery_location === 'INSIDE_VALLEY').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+        outsideValley: salesOrders.filter((o: any) => o.delivery_location === 'OUTSIDE_VALLEY').reduce((s: number, o: any) => s + (o.amount || 0), 0),
+        totalSales: salesOrders.reduce((s: number, o: any) => s + (o.amount || 0), 0),
+      };
+    },
+    enabled: !!storeId && isTodayView,
+    staleTime: 60_000,
+  });
 
   const cmp = (today: number, yday: number) => {
+    if (!isTodayView) return null;
     if (!yday && !today) return null;
     if (!yday) return { pct: 100, positive: today > 0 };
     const pct = Math.round(((today - yday) / yday) * 100);
     return { pct, positive: pct >= 0 };
   };
+
   
   // Other data fetching
   const { data: products = [] } = useProducts();
