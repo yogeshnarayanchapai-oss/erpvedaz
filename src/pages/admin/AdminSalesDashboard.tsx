@@ -60,10 +60,33 @@ export default function AdminDashboard() {
   // Use dashboard-specific hooks that include ALL leads (including confirmed)
   const { data: leadStats } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats } = useOrderDashboardStats(dateFrom, dateTo);
+
+  // Yesterday comparison (relative to today's Nepal date)
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return format(d, 'yyyy-MM-dd');
+  }, []);
+  const yesterdayRange = useMemo<DateRange>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return { from: startOfDay(d), to: endOfDay(d) };
+  }, []);
+  const { data: yLeadStats } = useLeadDashboardStats(yesterdayStr, yesterdayStr);
+  const { data: yOrderStats } = useOrderDashboardStats(yesterdayStr, yesterdayStr);
+  const { data: ySalesByRange } = useSalesByDateRange(yesterdayRange);
+
+  const cmp = (today: number, yday: number) => {
+    if (!yday && !today) return null;
+    if (!yday) return { pct: 100, positive: today > 0 };
+    const pct = Math.round(((today - yday) / yday) * 100);
+    return { pct, positive: pct >= 0 };
+  };
   
   // Other data fetching
   const { data: products = [] } = useProducts();
   const { data: staff = [] } = useStaff();
+
 
   // Sales analytics with date range
   const { data: salesByRange } = useSalesByDateRange(dateRange);
