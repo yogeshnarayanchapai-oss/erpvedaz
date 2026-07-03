@@ -14,7 +14,9 @@ interface StatCardProps {
   onClick?: () => void;
   className?: string;
   valueClassName?: string;
+  compare?: { pct: number; positive: boolean } | null;
 }
+
 
 const variantStyles = {
   default: 'bg-card border-border',
@@ -34,16 +36,17 @@ const iconStyles = {
   info: 'bg-info/10 text-info',
 };
 
-export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className, valueClassName }: StatCardProps) {
+export function StatCard({ title, value, icon, description, trend, variant = 'default', onClick, className, valueClassName, compare }: StatCardProps) {
   const Component = onClick ? 'button' : 'div';
   
   return (
     <Component 
       className={cn(
-        'stat-card border animate-fade-in w-full text-left touch-target',
+        'stat-card border animate-fade-in w-full text-left touch-target relative',
         variantStyles[variant],
         onClick && 'active:scale-[0.98] transition-transform',
         className
+
       )}
       onClick={onClick}
     >
@@ -69,6 +72,15 @@ export function StatCard({ title, value, icon, description, trend, variant = 'de
           </div>
         )}
       </div>
+      {compare && (
+        <div className={cn(
+          'absolute bottom-1 right-2 text-[9px] md:text-[10px] font-medium leading-none',
+          compare.positive ? 'text-success' : 'text-destructive'
+        )}>
+          {compare.positive ? '+' : '-'}{Math.abs(compare.pct)}% vs yday
+        </div>
+      )}
+
     </Component>
   );
 }

@@ -60,10 +60,33 @@ export default function AdminDashboard() {
   // Use dashboard-specific hooks that include ALL leads (including confirmed)
   const { data: leadStats } = useLeadDashboardStats(dateFrom, dateTo);
   const { data: orderStats } = useOrderDashboardStats(dateFrom, dateTo);
+
+  // Yesterday comparison (relative to today's Nepal date)
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return format(d, 'yyyy-MM-dd');
+  }, []);
+  const yesterdayRange = useMemo<DateRange>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return { from: startOfDay(d), to: endOfDay(d) };
+  }, []);
+  const { data: yLeadStats } = useLeadDashboardStats(yesterdayStr, yesterdayStr);
+  const { data: yOrderStats } = useOrderDashboardStats(yesterdayStr, yesterdayStr);
+  const { data: ySalesByRange } = useSalesByDateRange(yesterdayRange);
+
+  const cmp = (today: number, yday: number) => {
+    if (!yday && !today) return null;
+    if (!yday) return { pct: 100, positive: today > 0 };
+    const pct = Math.round(((today - yday) / yday) * 100);
+    return { pct, positive: pct >= 0 };
+  };
   
   // Other data fetching
   const { data: products = [] } = useProducts();
   const { data: staff = [] } = useStaff();
+
 
   // Sales analytics with date range
   const { data: salesByRange } = useSalesByDateRange(dateRange);
@@ -474,6 +497,7 @@ export default function AdminDashboard() {
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
           className="cursor-pointer hover:scale-[1.02] transition-transform [&_p.text-\\[10px\\]]:text-right [&_p.text-\\[10px\\]]:mt-2"
+          compare={cmp(stats.total, yLeadStats?.total || 0)}
         />
         <StatCard 
           title="Pending Transfer" 
@@ -491,6 +515,7 @@ export default function AdminDashboard() {
           variant="success" 
           onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(orders.confirmed, yOrderStats?.confirmed || 0)}
         />
         <StatCard 
           title="CNR" 
@@ -499,6 +524,7 @@ export default function AdminDashboard() {
           variant="warning" 
           onClick={() => handleStatCardClick('cnr')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.callNotReceived, yLeadStats?.callNotReceived || 0)}
         />
         <StatCard 
           title="Follow Up" 
@@ -507,6 +533,7 @@ export default function AdminDashboard() {
           variant="info" 
           onClick={() => handleStatCardClick('followup')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.followUp, yLeadStats?.followUp || 0)}
         />
         <StatCard 
           title="Cancelled" 
@@ -515,6 +542,7 @@ export default function AdminDashboard() {
           variant="destructive" 
           onClick={() => handleStatCardClick('cancelled')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.cancelled, yLeadStats?.cancelled || 0)}
         />
         <StatCard 
           title="Redirect" 
@@ -523,6 +551,7 @@ export default function AdminDashboard() {
           variant="default" 
           onClick={() => navigate(`/admin/orders?status=REDIRECT&from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(orders.redirect, yOrderStats?.redirect || 0)}
         />
         <StatCard 
           title="Cancelled Orders" 
@@ -546,6 +575,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<MapPin className="w-4 h-4 md:w-5 md:h-5" />}
           variant="success"
+          compare={cmp(salesByRange?.insideValley || 0, ySalesByRange?.insideValley || 0)}
         />
         <StatCard
           title="Outside Valley"
@@ -553,6 +583,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<Truck className="w-4 h-4 md:w-5 md:h-5" />}
           variant="info"
+          compare={cmp(salesByRange?.outsideValley || 0, ySalesByRange?.outsideValley || 0)}
         />
         <StatCard
           title="Total Sales"
@@ -560,6 +591,8 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<DollarSign className="w-4 h-4 md:w-5 md:h-5" />}
           variant="primary"
+          compare={cmp(salesByRange?.total || 0, ySalesByRange?.total || 0)}
+
         />
       </div>
 
