@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentStore } from '@/contexts/CurrentStoreContext';
 import { format, startOfDay, endOfDay } from 'date-fns';
+
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
