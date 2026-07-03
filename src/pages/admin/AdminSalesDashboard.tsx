@@ -497,6 +497,7 @@ export default function AdminDashboard() {
           variant="primary" 
           onClick={() => handleStatCardClick('total')}
           className="cursor-pointer hover:scale-[1.02] transition-transform [&_p.text-\\[10px\\]]:text-right [&_p.text-\\[10px\\]]:mt-2"
+          compare={cmp(stats.total, yLeadStats?.total || 0)}
         />
         <StatCard 
           title="Pending Transfer" 
@@ -514,6 +515,7 @@ export default function AdminDashboard() {
           variant="success" 
           onClick={() => navigate(`/admin/orders?from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(orders.confirmed, yOrderStats?.confirmed || 0)}
         />
         <StatCard 
           title="CNR" 
@@ -522,6 +524,7 @@ export default function AdminDashboard() {
           variant="warning" 
           onClick={() => handleStatCardClick('cnr')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.callNotReceived, yLeadStats?.callNotReceived || 0)}
         />
         <StatCard 
           title="Follow Up" 
@@ -530,6 +533,7 @@ export default function AdminDashboard() {
           variant="info" 
           onClick={() => handleStatCardClick('followup')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.followUp, yLeadStats?.followUp || 0)}
         />
         <StatCard 
           title="Cancelled" 
@@ -538,6 +542,7 @@ export default function AdminDashboard() {
           variant="destructive" 
           onClick={() => handleStatCardClick('cancelled')}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(stats.cancelled, yLeadStats?.cancelled || 0)}
         />
         <StatCard 
           title="Redirect" 
@@ -546,6 +551,7 @@ export default function AdminDashboard() {
           variant="default" 
           onClick={() => navigate(`/admin/orders?status=REDIRECT&from=${dateFrom}&to=${dateTo}`)}
           className="cursor-pointer hover:scale-[1.02] transition-transform"
+          compare={cmp(orders.redirect, yOrderStats?.redirect || 0)}
         />
         <StatCard 
           title="Cancelled Orders" 
@@ -569,6 +575,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<MapPin className="w-4 h-4 md:w-5 md:h-5" />}
           variant="success"
+          compare={cmp(salesByRange?.insideValley || 0, ySalesByRange?.insideValley || 0)}
         />
         <StatCard
           title="Outside Valley"
@@ -576,6 +583,7 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<Truck className="w-4 h-4 md:w-5 md:h-5" />}
           variant="info"
+          compare={cmp(salesByRange?.outsideValley || 0, ySalesByRange?.outsideValley || 0)}
         />
         <StatCard
           title="Total Sales"
@@ -583,6 +591,8 @@ export default function AdminDashboard() {
           description={getPeriodLabel()}
           icon={<DollarSign className="w-4 h-4 md:w-5 md:h-5" />}
           variant="primary"
+          compare={cmp(salesByRange?.total || 0, ySalesByRange?.total || 0)}
+
         />
       </div>
 
