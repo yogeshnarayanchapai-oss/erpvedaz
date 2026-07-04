@@ -386,26 +386,41 @@ export default function AdminLeads() {
       .sort((a, b) => b.transferCount - a.transferCount);
   }, [callingStaff, allStoreLeads, products, leadAssignmentCounts]);
 
-  // Product Leads Summary calculation - filtered by selected date range using lead.date field
+  // Product Leads Summary calculation - filtered by selected date range
+  // Transferred uses lead_transfers (via useLeadAssignmentCounts) as source of truth,
+  // matching Today's Transfer Progress card exactly.
   const productSummary = useMemo(() => {
+    // Build set of unique transferred lead IDs in range from lead_transfers
+    const transferredLeadIds = new Set<string>();
+    Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
+      transfers.forEach(t => transferredLeadIds.add(t.leadId));
+    });
+
+    // Map lead id -> product_id for quick lookup (across all loaded leads)
+    const leadProductMap = new Map<string, string | null>();
+    allStoreLeads.forEach(l => leadProductMap.set(l.id, l.product_id ?? null));
+
+    // Count transferred per product using lead_transfers truth
+    const transferredByProduct = new Map<string, number>();
+    transferredLeadIds.forEach(id => {
+      const pid = leadProductMap.get(id);
+      if (!pid) return;
+      transferredByProduct.set(pid, (transferredByProduct.get(pid) || 0) + 1);
+    });
+
     return products.map(product => {
       const productLeads = allStoreLeads.filter(l => l.product_id === product.id);
-      
+
       // Leads = total leads where lead.date is within date range
       const leadsInRange = productLeads.filter(l => {
         if (!l.date) return false;
-        const leadDate = l.date.split('T')[0]; // Extract date part if timestamp
+        const leadDate = l.date.split('T')[0];
         return leadDate >= dateFrom && leadDate <= dateTo;
       }).length;
-      
-      // Transferred = total leads assigned in date range (by assigned_at)
-      const transferredInRange = productLeads.filter(l => {
-        if (!l.assigned_at) return false;
-        const assignedDate = l.assigned_at.split('T')[0];
-        return assignedDate >= dateFrom && assignedDate <= dateTo;
-      }).length;
-      
-      // Remaining = Leads - Transferred
+
+      const transferredInRange = transferredByProduct.get(product.id) || 0;
+
+      // Remaining = Leads - Transferred (clamped)
       const remaining = leadsInRange - transferredInRange;
 
       return {
@@ -416,7 +431,8 @@ export default function AdminLeads() {
         remaining: Math.max(0, remaining),
       };
     }).filter(p => p.leadsInRange > 0 || p.transferredInRange > 0);
-  }, [products, allStoreLeads, dateFrom, dateTo]);
+  }, [products, allStoreLeads, dateFrom, dateTo, leadAssignmentCounts]);
+
 
   // Transfer Progress calculation - uses lead_transfers (via useLeadAssignmentCounts) as source of truth
   // This ensures Today's Transfer Progress matches Staff Transfer Summary
