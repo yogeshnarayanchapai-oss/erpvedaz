@@ -185,22 +185,76 @@ export default function AdminLeads() {
   const [dateRangeAssignedLeads, setDateRangeAssignedLeads] = useState<{ id: string; assigned_to_user_id: string; first_assigned_to_user_id: string | null; created_by_user_id: string | null; product_id: string | null }[]>([]);
   const [allStoreLeads, setAllStoreLeads] = useState<{ id: string; date: string | null; product_id: string | null; assigned_to_user_id: string | null; first_assigned_to_user_id: string | null; created_by_user_id: string | null; pool_status: string | null; assigned_at: string | null; status: string | null; lead_bucket: string | null; entry_type: string | null }[]>([]);
   
-  // Fetch all store leads for product summary (not filtered by date range)
+  // Fetch only leads needed for summaries: selected date range + transferred leads.
+  // Also count pool leads separately so large stores don't hit the default 1000-row API cap.
   useEffect(() => {
     const fetchAllStoreLeads = async () => {
-      if (!storeId) return;
-      const { data } = await supabase
+      if (!storeId) {
+        setAllStoreLeads([]);
+        setTotalPoolCount(0);
+        return;
+      }
+
+      const selectFields = 'id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status, lead_bucket, entry_type';
+      const PAGE_SIZE = 1000;
+      const mergedLeads = new Map<string, typeof allStoreLeads[number]>();
+
+      const { count: poolCount } = await supabase
         .from('leads')
-        .select('id, date, product_id, assigned_to_user_id, first_assigned_to_user_id, created_by_user_id, pool_status, assigned_at, status, lead_bucket, entry_type')
-        .eq('store_id', storeId);
-      
-      setAllStoreLeads(data || []);
-      // Count pool leads
-      const poolLeads = (data || []).filter(l => l.pool_status === 'IN_POOL' && !l.assigned_to_user_id);
-      setTotalPoolCount(poolLeads.length);
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .eq('pool_status', 'IN_POOL')
+        .is('assigned_to_user_id', null);
+      setTotalPoolCount(poolCount || 0);
+
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('leads')
+          .select(selectFields)
+          .eq('store_id', storeId)
+          .gte('date', dateFrom)
+          .lte('date', dateTo)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('Failed to fetch date-range leads for summary:', error);
+          break;
+        }
+
+        (data || []).forEach(lead => mergedLeads.set(lead.id, lead));
+        hasMore = (data || []).length === PAGE_SIZE;
+        page += 1;
+      }
+
+      const transferredLeadIds = Array.from(new Set(
+        Object.values(leadAssignmentCounts?.transfersByStaff || {})
+          .flatMap(transfers => transfers.map(t => t.leadId))
+      ));
+
+      for (let i = 0; i < transferredLeadIds.length; i += 500) {
+        const batchIds = transferredLeadIds.slice(i, i + 500);
+        if (batchIds.length === 0) continue;
+
+        const { data, error } = await supabase
+          .from('leads')
+          .select(selectFields)
+          .eq('store_id', storeId)
+          .in('id', batchIds);
+
+        if (error) {
+          console.error('Failed to fetch transferred leads for summary:', error);
+          continue;
+        }
+
+        (data || []).forEach(lead => mergedLeads.set(lead.id, lead));
+      }
+
+      setAllStoreLeads(Array.from(mergedLeads.values()));
     };
     fetchAllStoreLeads();
-  }, [storeId, leads]); // Refresh when leads change
+  }, [storeId, dateFrom, dateTo, leadAssignmentCounts]);
 
   // Fetch leads assigned in selected date range from leads table (aggregates ALL assignments regardless of creator)
   useEffect(() => {
@@ -390,22 +444,26 @@ export default function AdminLeads() {
   // Transferred uses lead_transfers (via useLeadAssignmentCounts) as source of truth,
   // matching Today's Transfer Progress card exactly.
   const productSummary = useMemo(() => {
-    // Build set of unique transferred lead IDs in range from lead_transfers
-    const transferredLeadIds = new Set<string>();
-    Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
-      transfers.forEach(t => transferredLeadIds.add(t.leadId));
-    });
-
     // Map lead id -> product_id for quick lookup (across all loaded leads)
     const leadProductMap = new Map<string, string | null>();
     allStoreLeads.forEach(l => leadProductMap.set(l.id, l.product_id ?? null));
 
-    // Count transferred per product using lead_transfers truth
+    // Count transfer events per product using the exact same truth as the top transfer cards.
     const transferredByProduct = new Map<string, number>();
-    transferredLeadIds.forEach(id => {
-      const pid = leadProductMap.get(id);
-      if (!pid) return;
-      transferredByProduct.set(pid, (transferredByProduct.get(pid) || 0) + 1);
+    Object.values(leadAssignmentCounts?.transfersByStaff || {}).forEach(transfers => {
+      transfers.forEach(t => {
+        const isCountedTransfer =
+          t.leadType === 'NEW' ||
+          t.leadType === 'CNR_POOL' ||
+          t.leadType === 'FOLLOW_UP_POOL' ||
+          t.leadType === 'REASSIGN' ||
+          (t.leadType === null && t.fromTeam !== null && t.fromTeam !== 'LEADS');
+
+        if (!isCountedTransfer) return;
+        const pid = leadProductMap.get(t.leadId);
+        if (!pid) return;
+        transferredByProduct.set(pid, (transferredByProduct.get(pid) || 0) + 1);
+      });
     });
 
     return products.map(product => {
