@@ -948,8 +948,29 @@ export default function AdminLeads() {
                         </TableCell>
                       </TableRow>
                     )}
+                    {productSummary.length > 0 && (
+                      <TableRow className="bg-muted/40 font-semibold border-t-2">
+                        <TableCell className="text-xs md:text-sm">Total</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="bg-info/10 text-xs font-semibold">
+                            {productSummary.reduce((s, p) => s + (p.leadsInRange || 0), 0).toLocaleString()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="bg-success/10 text-xs font-semibold">
+                            {productSummary.reduce((s, p) => s + (p.transferredInRange || 0), 0).toLocaleString()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="bg-warning/10 text-xs font-semibold">
+                            {productSummary.reduce((s, p) => s + (p.remaining || 0), 0).toLocaleString()}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
+
               </div>
             </CardContent>
           </Card>
