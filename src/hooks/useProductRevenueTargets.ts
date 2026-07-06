@@ -126,27 +126,23 @@ export function useProductRevenueTargets(dateRange: DateRange) {
 
       if (ordersError) throw ordersError;
 
-      // Get valid order IDs based on OVD/VD logic
+      // Get valid order IDs based on OVD/VD logic (aligned with Total Sales card)
       const validOrderIds = (ordersData || [])
         .filter(o => {
-          // Outside Valley: CONFIRMED or DISPATCHED
+          // Outside Valley: CONFIRMED, DISPATCHED, or DELIVERED
           if (o.delivery_location === 'OUTSIDE_VALLEY' && 
-              ['CONFIRMED', 'DISPATCHED'].includes(o.order_status || '')) {
+              ['CONFIRMED', 'DISPATCHED', 'DELIVERED'].includes(o.order_status || '')) {
             return true;
           }
-          // Inside Valley: CONFIRMED with inside_delivery_status = DELIVERED
+          // Inside Valley: CONFIRMED or DELIVERED
           if (o.delivery_location === 'INSIDE_VALLEY' && 
-              o.order_status === 'CONFIRMED' && 
-              o.inside_delivery_status === 'DELIVERED') {
-            return true;
-          }
-          // Also include DELIVERED status regardless of location
-          if (o.order_status === 'DELIVERED') {
+              ['CONFIRMED', 'DELIVERED'].includes(o.order_status || '')) {
             return true;
           }
           return false;
         })
         .map(o => o.id);
+
 
       // Fetch order items for valid orders
       let revenueByProduct: Record<string, number> = {};
