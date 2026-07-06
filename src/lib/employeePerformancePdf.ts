@@ -252,6 +252,12 @@ export async function fetchMonthDataForAllEmployees(
     ordersByUser.set(o.sales_person_id, arr);
   });
 
+  // Working days = all days in the report period EXCLUDING Saturdays (weekly off).
+  // Holidays are still counted as working days per policy request.
+  let periodDays: Date[] = [];
+  try { periodDays = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(dateTo) }); } catch { periodDays = []; }
+  const workingDaysInPeriod = periodDays.filter(d => d.getDay() !== 6).length;
+
   return employees.map(emp => {
     const att = attByEmp.get(emp.id) || [];
     const present = att.filter(r => ['Present', 'Work From Home', 'Late'].includes(r.status)).length;
@@ -259,7 +265,7 @@ export async function fetchMonthDataForAllEmployees(
     const absent = att.filter(r => r.status === 'Absent').length;
     const leave = att.filter(r => r.status === 'Leave').length;
     const totalLateMinutes = att.reduce((s, r) => s + ((r as any).late_minutes || 0), 0);
-    const workingDays = att.filter(r => !['Saturday', 'Holiday'].includes(r.status)).length;
+    const workingDays = workingDaysInPeriod;
     const attendanceRate = workingDays > 0 ? (present / workingDays) * 100 : 0;
     const { rating: attendanceRating, score: attendanceScore } = getAttendanceRating(present, late, absent, workingDays);
 
