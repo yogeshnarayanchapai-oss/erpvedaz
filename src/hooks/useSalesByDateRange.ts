@@ -193,14 +193,14 @@ export function useProductDaybookByDateRange(dateRange: DateRange, products: { i
         )
         .map(o => o.id);
 
-      // VD orders: INSIDE_VALLEY with CONFIRMED and inside_delivery_status = DELIVERED
+      // VD orders: INSIDE_VALLEY CONFIRMED or DELIVERED (aligned with Total Sales card)
       const vdOrderIds = (orders || [])
         .filter(o => 
           o.delivery_location === 'INSIDE_VALLEY' && 
-          o.order_status === 'CONFIRMED' && 
-          o.inside_delivery_status === 'DELIVERED'
+          ['CONFIRMED', 'DELIVERED'].includes(o.order_status || '')
         )
         .map(o => o.id);
+
 
       // Combined order IDs for fetching items
       const allValidOrderIds = [...new Set([...ovdOrderIds, ...vdOrderIds])];
