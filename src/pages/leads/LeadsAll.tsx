@@ -92,10 +92,23 @@ export default function LeadsAll() {
     };
   }, [dateRange, productFilter, statusFilter, assignedToFilter]);
 
-  const { data: allLeads = [], isLoading, refetch } = useLeads(serverFilters);
+  const { data: dateFilteredLeads = [], isLoading, refetch } = useLeads(serverFilters);
+  const { data: pendingTransferLeads = [] } = usePendingTransferLeads();
+
+  // When PENDING_TRANSFER bucket is active, use pending-transfer dataset (ignores date filter)
+  // so mistakenly-created leads from other dates still appear.
+  const allLeads = useMemo(() => {
+    if (bucketFilter !== 'PENDING_TRANSFER') return dateFilteredLeads;
+    // Merge: use pending set as source of truth, dedupe against date-filtered
+    const map = new Map<string, typeof dateFilteredLeads[number]>();
+    pendingTransferLeads.forEach(l => map.set(l.id, l));
+    return Array.from(map.values());
+  }, [dateFilteredLeads, pendingTransferLeads, bucketFilter]);
+
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const transferLeads = useTransferLeads();
+
   
   // Get transfer counts for the selected date range
   const { data: transferCounts } = useLeadAssignmentCounts({
