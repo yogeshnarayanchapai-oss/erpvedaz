@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, useUpdateLead, useUpdateLeadStatus, Lead } from '@/hooks/useLeads';
+import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, useUpdateLead, useUpdateLeadStatus, usePendingTransferLeads, Lead } from '@/hooks/useLeads';
 import { useOrders, useCreateOrder } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
