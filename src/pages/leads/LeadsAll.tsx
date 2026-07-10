@@ -574,10 +574,14 @@ export default function LeadsAll() {
           <div className="text-xs text-muted-foreground">In My Orders</div>
           <div className="text-lg font-bold text-blue-600">{bucketCounts.CONFIRMED}</div>
         </Card>
-        <Card className="p-3">
+        <Card
+          className="p-3 cursor-pointer hover:bg-accent transition-colors"
+          onClick={() => setBucketFilter('PENDING_TRANSFER')}
+        >
           <div className="text-xs text-muted-foreground">Pending Transfer</div>
-          <div className="text-lg font-bold text-orange-600">{bucketCounts.NEW}</div>
+          <div className="text-lg font-bold text-orange-600">{bucketCounts.PENDING_TRANSFER}</div>
         </Card>
+
       </div>
 
       {/* Filters */}
