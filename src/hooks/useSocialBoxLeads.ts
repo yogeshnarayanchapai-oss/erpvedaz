@@ -206,6 +206,7 @@ export function useStoredSocialBoxLeads() {
           source: ld.source || 'SocialBox',
           status: ld.status || 'new',
           notes: ld.notes || '',
+          remark: ld.remark || ld.remarks || ld.comment || ld.comments || '',
           created_at: row.pulled_at,
           page_id: ld.page_id,
           page_name: ld.page_name,
