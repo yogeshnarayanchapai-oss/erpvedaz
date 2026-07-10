@@ -229,9 +229,11 @@ export default function LeadsAll() {
   } = useClientPagination(filteredLeads, 100, leadsPaginationKey);
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
+  // Use date-filtered dataset for date-scoped tabs; PENDING_TRANSFER uses the
+  // global pool dataset so it reflects all stale unassigned leads.
   const bucketCounts = useMemo(() => {
-    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0 };
-    allLeads.forEach(lead => {
+    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0, PENDING_TRANSFER: 0 };
+    dateFilteredLeads.forEach(lead => {
       counts.ALL++;
       // Check CONFIRMED first
       if (lead.status === 'CONFIRMED') {
@@ -246,8 +248,10 @@ export default function LeadsAll() {
         counts.CANCELLED++;
       }
     });
+    counts.PENDING_TRANSFER = pendingTransferLeads.length;
     return counts;
-  }, [allLeads]);
+  }, [dateFilteredLeads, pendingTransferLeads]);
+
 
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
