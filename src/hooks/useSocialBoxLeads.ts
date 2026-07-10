@@ -11,6 +11,7 @@ interface SocialBoxLead {
   source: string;
   status: string;
   notes: string;
+  remark: string;
   created_at: string;
   page_id?: string;
   page_name?: string;
