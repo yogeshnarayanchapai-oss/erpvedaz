@@ -148,7 +148,7 @@ export default function AILeads() {
         alt_phone: '',
         product_id: matchedProduct?.id || '',
         source: lead.source || 'SocialBox',
-        remark: lead.notes || '',
+        remark: lead.remark || lead.notes || '',
         _socialbox_id: lead.id,
       };
     });
