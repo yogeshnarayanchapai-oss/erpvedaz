@@ -547,14 +547,16 @@ export default function LeadsAll() {
       {/* Lead Bucket Tabs - scrollable on mobile */}
       <Tabs value={bucketFilter} onValueChange={(v) => setBucketFilter(v as LeadBucketFilter)} className="w-full">
         <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-          <TabsList className="grid w-max md:w-full grid-cols-6 min-w-[600px] md:min-w-0 md:max-w-2xl">
+          <TabsList className="grid w-max md:w-full grid-cols-7 min-w-[720px] md:min-w-0 md:max-w-3xl">
             <TabsTrigger value="ALL" className="text-xs md:text-sm">All ({bucketCounts.ALL})</TabsTrigger>
             <TabsTrigger value="NEW" className="text-xs md:text-sm">New ({bucketCounts.NEW})</TabsTrigger>
+            <TabsTrigger value="PENDING_TRANSFER" className="text-xs md:text-sm">Pending Transfer ({bucketCounts.PENDING_TRANSFER})</TabsTrigger>
             <TabsTrigger value="FOLLOWUP" className="text-xs md:text-sm">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
             <TabsTrigger value="CNR" className="text-xs md:text-sm">CNR ({bucketCounts.CNR})</TabsTrigger>
             <TabsTrigger value="CONFIRMED" className="text-xs md:text-sm">Confirmed ({bucketCounts.CONFIRMED})</TabsTrigger>
             <TabsTrigger value="CANCELLED" className="text-xs md:text-sm">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
           </TabsList>
+
         </div>
       </Tabs>
 
