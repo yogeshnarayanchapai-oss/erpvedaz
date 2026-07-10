@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, useUpdateLead, useUpdateLeadStatus, Lead } from '@/hooks/useLeads';
+import { useLeads, useReturnLeadsToQueue, useAdminResendCNRToPool, useUpdateLead, useUpdateLeadStatus, usePendingTransferLeads, Lead } from '@/hooks/useLeads';
 import { useOrders, useCreateOrder } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
@@ -168,7 +168,11 @@ export default function AdminLeads() {
   const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
   const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
 
-  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
+  const { data: dateScopedLeads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
+  const { data: pendingTransferAll = [] } = usePendingTransferLeads();
+  // When Pending Transfer filter is active, show ALL pending pool leads regardless of date range
+  const leads = selectedStatus === 'pending_transfer' ? (pendingTransferAll as Lead[]) : dateScopedLeads;
+
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
@@ -312,7 +316,7 @@ export default function AdminLeads() {
     // Handle special filters: "pending_transfer" and "duplicate"
     const matchesStatus = 
       selectedStatus === 'all' ? true :
-      selectedStatus === 'pending_transfer' ? lead.is_transferred === false :
+      selectedStatus === 'pending_transfer' ? (lead.pool_status === 'IN_POOL' && !lead.assigned_to_user_id) :
       selectedStatus === 'duplicate' ? lead.is_duplicate === true :
       lead.status === selectedStatus;
     // Handle assigned to filter
