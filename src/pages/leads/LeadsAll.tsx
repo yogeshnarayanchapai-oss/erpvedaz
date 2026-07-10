@@ -36,7 +36,7 @@ import { exportLeadsToExcel } from '@/lib/exportLeadsExcel';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
-type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED' | 'CONFIRMED';
+type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED' | 'CONFIRMED' | 'PENDING_TRANSFER';
 
 export default function LeadsAll() {
   const today = new Date();
