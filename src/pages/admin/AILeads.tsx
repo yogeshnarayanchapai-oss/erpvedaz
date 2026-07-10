@@ -340,6 +340,7 @@ export default function AILeads() {
                         </Badge>
                       </td>
                       <td className="p-2 max-w-[200px] truncate text-muted-foreground">{lead.notes || '-'}</td>
+                      <td className="p-2 max-w-[200px] truncate text-muted-foreground">{lead.remark || '-'}</td>
                       <td className="p-2 text-muted-foreground">
                         {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}
                       </td>
