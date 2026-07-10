@@ -148,7 +148,7 @@ export default function AILeads() {
         alt_phone: '',
         product_id: matchedProduct?.id || '',
         source: lead.source || 'SocialBox',
-        remark: lead.notes || '',
+        remark: lead.remark || lead.notes || '',
         _socialbox_id: lead.id,
       };
     });
@@ -304,6 +304,7 @@ export default function AILeads() {
                     <th className="p-2">Source</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Notes</th>
+                    <th className="p-2">Remark</th>
                     <th className="p-2">Date</th>
                   </tr>
                 </thead>
@@ -339,6 +340,7 @@ export default function AILeads() {
                         </Badge>
                       </td>
                       <td className="p-2 max-w-[200px] truncate text-muted-foreground">{lead.notes || '-'}</td>
+                      <td className="p-2 max-w-[200px] truncate text-muted-foreground">{lead.remark || '-'}</td>
                       <td className="p-2 text-muted-foreground">
                         {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}
                       </td>
