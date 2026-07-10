@@ -316,7 +316,7 @@ export default function AdminLeads() {
     // Handle special filters: "pending_transfer" and "duplicate"
     const matchesStatus = 
       selectedStatus === 'all' ? true :
-      selectedStatus === 'pending_transfer' ? lead.is_transferred === false :
+      selectedStatus === 'pending_transfer' ? (lead.pool_status === 'IN_POOL' && !lead.assigned_to_user_id) :
       selectedStatus === 'duplicate' ? lead.is_duplicate === true :
       lead.status === selectedStatus;
     // Handle assigned to filter
