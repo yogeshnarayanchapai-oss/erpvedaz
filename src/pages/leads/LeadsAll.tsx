@@ -139,7 +139,7 @@ export default function LeadsAll() {
   // Sync bucket filter with URL params
   useEffect(() => {
     const urlBucket = searchParams.get('bucket') as LeadBucketFilter;
-    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED', 'CONFIRMED'].includes(urlBucket)) {
+    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED', 'CONFIRMED', 'PENDING_TRANSFER'].includes(urlBucket)) {
       setBucketFilter(urlBucket);
     }
   }, [searchParams]);
