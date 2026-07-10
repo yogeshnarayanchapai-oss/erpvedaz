@@ -168,7 +168,11 @@ export default function AdminLeads() {
   const queryDateFrom = isSearching ? '2020-01-01' : dateFrom;
   const queryDateTo = isSearching ? format(new Date(), 'yyyy-MM-dd') : dateTo;
 
-  const { data: leads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
+  const { data: dateScopedLeads = [], isLoading, isFetched } = useLeads({ dateFrom: queryDateFrom, dateTo: queryDateTo, search: isSearching ? search : undefined });
+  const { data: pendingTransferAll = [] } = usePendingTransferLeads();
+  // When Pending Transfer filter is active, show ALL pending pool leads regardless of date range
+  const leads = selectedStatus === 'pending_transfer' ? (pendingTransferAll as Lead[]) : dateScopedLeads;
+
   const { data: orders = [] } = useOrders({ dateFrom, dateTo });
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
