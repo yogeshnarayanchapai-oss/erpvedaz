@@ -148,9 +148,13 @@ export default function LeadsAll() {
   const isTodayFilter = isToday(dateRange.from) && isToday(dateRange.to);
 
   const filteredLeads = useMemo(() => {
+    const isPendingBucket = bucketFilter === 'PENDING_TRANSFER';
     let leads = allLeads.filter(lead => {
       const leadDate = new Date(lead.date);
-      const inDateRange = leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to);
+      // Bypass date filter for PENDING_TRANSFER so stale unassigned leads are visible
+      const inDateRange = isPendingBucket
+        ? true
+        : (leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to));
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       const matchesStatus = statusFilter === 'ALL' ? true :
         statusFilter === 'DUPLICATE' ? lead.is_duplicate === true :
@@ -176,6 +180,8 @@ export default function LeadsAll() {
         matchesBucket = lead.lead_bucket === 'CANCELLED';
       } else if (bucketFilter === 'CONFIRMED') {
         matchesBucket = lead.status === 'CONFIRMED';
+      } else if (bucketFilter === 'PENDING_TRANSFER') {
+        matchesBucket = lead.pool_status === 'IN_POOL' && !lead.assigned_to_user_id && lead.current_team === 'LEADS';
       }
       
       // Check for reference ID search
@@ -190,6 +196,7 @@ export default function LeadsAll() {
 
       return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch && matchesCancelReason;
     });
+
 
     // Sort: newest first, then unassigned leads first when viewing today's leads
     if (isTodayFilter) {
