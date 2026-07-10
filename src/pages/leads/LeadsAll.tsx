@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useLeads, useTransferLeads } from '@/hooks/useLeads';
+import { useLeads, useTransferLeads, usePendingTransferLeads } from '@/hooks/useLeads';
 import { useLeadAssignmentCounts } from '@/hooks/useLeadAssignmentCounts';
 import { useProducts } from '@/hooks/useProducts';
 import { useCallingStaff } from '@/hooks/useStaff';
@@ -36,7 +36,7 @@ import { exportLeadsToExcel } from '@/lib/exportLeadsExcel';
 
 const STATUS_OPTIONS = ['ALL', 'DUPLICATE', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'CONFIRMED', 'FOLLOW_UP', 'CALL_NOT_RECEIVED', 'CANCELLED', 'REDIRECT'];
 
-type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED' | 'CONFIRMED';
+type LeadBucketFilter = 'ALL' | 'NEW' | 'FOLLOWUP' | 'CNR' | 'CANCELLED' | 'CONFIRMED' | 'PENDING_TRANSFER';
 
 export default function LeadsAll() {
   const today = new Date();
@@ -92,10 +92,23 @@ export default function LeadsAll() {
     };
   }, [dateRange, productFilter, statusFilter, assignedToFilter]);
 
-  const { data: allLeads = [], isLoading, refetch } = useLeads(serverFilters);
+  const { data: dateFilteredLeads = [], isLoading, refetch } = useLeads(serverFilters);
+  const { data: pendingTransferLeads = [] } = usePendingTransferLeads();
+
+  // When PENDING_TRANSFER bucket is active, use pending-transfer dataset (ignores date filter)
+  // so mistakenly-created leads from other dates still appear.
+  const allLeads = useMemo(() => {
+    if (bucketFilter !== 'PENDING_TRANSFER') return dateFilteredLeads;
+    // Merge: use pending set as source of truth, dedupe against date-filtered
+    const map = new Map<string, typeof dateFilteredLeads[number]>();
+    pendingTransferLeads.forEach(l => map.set(l.id, l));
+    return Array.from(map.values());
+  }, [dateFilteredLeads, pendingTransferLeads, bucketFilter]);
+
   const { data: products = [] } = useProducts();
   const { data: callingStaff = [] } = useCallingStaff();
   const transferLeads = useTransferLeads();
+
   
   // Get transfer counts for the selected date range
   const { data: transferCounts } = useLeadAssignmentCounts({
@@ -126,7 +139,7 @@ export default function LeadsAll() {
   // Sync bucket filter with URL params
   useEffect(() => {
     const urlBucket = searchParams.get('bucket') as LeadBucketFilter;
-    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED', 'CONFIRMED'].includes(urlBucket)) {
+    if (urlBucket && ['ALL', 'NEW', 'FOLLOWUP', 'CNR', 'CANCELLED', 'CONFIRMED', 'PENDING_TRANSFER'].includes(urlBucket)) {
       setBucketFilter(urlBucket);
     }
   }, [searchParams]);
@@ -135,9 +148,13 @@ export default function LeadsAll() {
   const isTodayFilter = isToday(dateRange.from) && isToday(dateRange.to);
 
   const filteredLeads = useMemo(() => {
+    const isPendingBucket = bucketFilter === 'PENDING_TRANSFER';
     let leads = allLeads.filter(lead => {
       const leadDate = new Date(lead.date);
-      const inDateRange = leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to);
+      // Bypass date filter for PENDING_TRANSFER so stale unassigned leads are visible
+      const inDateRange = isPendingBucket
+        ? true
+        : (leadDate >= startOfDay(dateRange.from) && leadDate <= endOfDay(dateRange.to));
       const matchesProduct = productFilter === 'ALL' || lead.product_id === productFilter;
       const matchesStatus = statusFilter === 'ALL' ? true :
         statusFilter === 'DUPLICATE' ? lead.is_duplicate === true :
@@ -163,6 +180,8 @@ export default function LeadsAll() {
         matchesBucket = lead.lead_bucket === 'CANCELLED';
       } else if (bucketFilter === 'CONFIRMED') {
         matchesBucket = lead.status === 'CONFIRMED';
+      } else if (bucketFilter === 'PENDING_TRANSFER') {
+        matchesBucket = lead.pool_status === 'IN_POOL' && !lead.assigned_to_user_id && lead.current_team === 'LEADS';
       }
       
       // Check for reference ID search
@@ -177,6 +196,7 @@ export default function LeadsAll() {
 
       return inDateRange && matchesProduct && matchesStatus && matchesBucket && matchesAssignedTo && matchesSearch && matchesCancelReason;
     });
+
 
     // Sort: newest first, then unassigned leads first when viewing today's leads
     if (isTodayFilter) {
@@ -209,9 +229,11 @@ export default function LeadsAll() {
   } = useClientPagination(filteredLeads, 100, leadsPaginationKey);
 
   // Count leads by bucket - CNR includes both teams (LEADS and CALLING)
+  // Use date-filtered dataset for date-scoped tabs; PENDING_TRANSFER uses the
+  // global pool dataset so it reflects all stale unassigned leads.
   const bucketCounts = useMemo(() => {
-    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0 };
-    allLeads.forEach(lead => {
+    const counts = { ALL: 0, NEW: 0, FOLLOWUP: 0, CNR: 0, CANCELLED: 0, CONFIRMED: 0, PENDING_TRANSFER: 0 };
+    dateFilteredLeads.forEach(lead => {
       counts.ALL++;
       // Check CONFIRMED first
       if (lead.status === 'CONFIRMED') {
@@ -226,8 +248,10 @@ export default function LeadsAll() {
         counts.CANCELLED++;
       }
     });
+    counts.PENDING_TRANSFER = pendingTransferLeads.length;
     return counts;
-  }, [allLeads]);
+  }, [dateFilteredLeads, pendingTransferLeads]);
+
 
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
@@ -523,14 +547,16 @@ export default function LeadsAll() {
       {/* Lead Bucket Tabs - scrollable on mobile */}
       <Tabs value={bucketFilter} onValueChange={(v) => setBucketFilter(v as LeadBucketFilter)} className="w-full">
         <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-          <TabsList className="grid w-max md:w-full grid-cols-6 min-w-[600px] md:min-w-0 md:max-w-2xl">
+          <TabsList className="grid w-max md:w-full grid-cols-7 min-w-[720px] md:min-w-0 md:max-w-3xl">
             <TabsTrigger value="ALL" className="text-xs md:text-sm">All ({bucketCounts.ALL})</TabsTrigger>
             <TabsTrigger value="NEW" className="text-xs md:text-sm">New ({bucketCounts.NEW})</TabsTrigger>
+            <TabsTrigger value="PENDING_TRANSFER" className="text-xs md:text-sm">Pending Transfer ({bucketCounts.PENDING_TRANSFER})</TabsTrigger>
             <TabsTrigger value="FOLLOWUP" className="text-xs md:text-sm">Follow-up ({bucketCounts.FOLLOWUP})</TabsTrigger>
             <TabsTrigger value="CNR" className="text-xs md:text-sm">CNR ({bucketCounts.CNR})</TabsTrigger>
             <TabsTrigger value="CONFIRMED" className="text-xs md:text-sm">Confirmed ({bucketCounts.CONFIRMED})</TabsTrigger>
             <TabsTrigger value="CANCELLED" className="text-xs md:text-sm">Cancelled ({bucketCounts.CANCELLED})</TabsTrigger>
           </TabsList>
+
         </div>
       </Tabs>
 
@@ -548,10 +574,14 @@ export default function LeadsAll() {
           <div className="text-xs text-muted-foreground">In My Orders</div>
           <div className="text-lg font-bold text-blue-600">{bucketCounts.CONFIRMED}</div>
         </Card>
-        <Card className="p-3">
+        <Card
+          className="p-3 cursor-pointer hover:bg-accent transition-colors"
+          onClick={() => setBucketFilter('PENDING_TRANSFER')}
+        >
           <div className="text-xs text-muted-foreground">Pending Transfer</div>
-          <div className="text-lg font-bold text-orange-600">{bucketCounts.NEW}</div>
+          <div className="text-lg font-bold text-orange-600">{bucketCounts.PENDING_TRANSFER}</div>
         </Card>
+
       </div>
 
       {/* Filters */}

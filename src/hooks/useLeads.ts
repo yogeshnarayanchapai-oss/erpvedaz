@@ -218,6 +218,39 @@ export function useLeadsForTransferSummary() {
   });
 }
 
+// Hook for fetching ALL leads pending transfer (pool_status = IN_POOL, unassigned)
+// across ALL dates - used by "Pending Transfer" filter to catch stale leads
+// that were created earlier but never transferred.
+export function usePendingTransferLeads() {
+  const storeId = useCurrentStoreId();
+
+  return useQuery({
+    queryKey: ['leads-pending-transfer', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          *,
+          products:product_id(name),
+          assigned_to:profiles!leads_assigned_to_user_id_fkey(name),
+          created_by_staff:profiles!leads_created_by_staff_id_fkey(name),
+          branches:branch_id(branch_name, district, arrival_time, contact_phone, base_charge, area_covered)
+        `)
+        .eq('store_id', storeId)
+        .eq('pool_status', 'IN_POOL')
+        .is('assigned_to_user_id', null)
+        .eq('current_team', 'LEADS')
+        .order('created_at', { ascending: false })
+        .range(0, 9999);
+      if (error) throw error;
+      return (data || []) as Lead[];
+    },
+    enabled: !!storeId,
+    staleTime: 30 * 1000,
+  });
+}
+
+
 export function useCreateLead() {
   const queryClient = useQueryClient();
   const storeId = useCurrentStoreId();
