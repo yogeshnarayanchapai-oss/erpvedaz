@@ -304,6 +304,7 @@ export default function AILeads() {
                     <th className="p-2">Source</th>
                     <th className="p-2">Status</th>
                     <th className="p-2">Notes</th>
+                    <th className="p-2">Remark</th>
                     <th className="p-2">Date</th>
                   </tr>
                 </thead>
