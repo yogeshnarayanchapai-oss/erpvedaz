@@ -119,8 +119,10 @@ export default function CallingOrders() {
   const { data: allOrders = [], isLoading } = useOrders({
     dateFrom: dateRange.from,
     dateTo: dateRange.to,
-    salesPersonId: profile?.id,
+    // When searching globally, don't restrict by sales person so any order can be found
+    salesPersonId: isSearchActive ? undefined : profile?.id,
     deliveryLocation: deliveryFilter === 'ALL' ? undefined : deliveryFilter,
+    search: isSearchActive ? searchQuery.trim() : undefined,
   });
   
   // Filter orders by status, inside delivery status, product, and search
