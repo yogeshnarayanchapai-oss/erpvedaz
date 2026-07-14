@@ -222,7 +222,8 @@ export function useOrders(filters?: {
         ];
 
         const orderNumber = Number(searchTerm);
-        if (Number.isInteger(orderNumber)) {
+        // order_number is INT4 in Postgres — guard against overflow (e.g. phone numbers like 98xxxxxxxx)
+        if (Number.isInteger(orderNumber) && orderNumber >= 0 && orderNumber <= 2147483647) {
           searchFilters.push(`order_number.eq.${orderNumber}`);
         }
 
