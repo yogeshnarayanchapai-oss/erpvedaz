@@ -58,15 +58,16 @@ serve(async (req: Request) => {
       .eq("user_id", callingUser.id)
       .single();
 
-    const allowedRoles = ["ADMIN", "OWNER"];
+    const allowedRoles = ["ADMIN", "OWNER", "MANAGER"];
     if (roleError || !roleData || !allowedRoles.includes(roleData.role)) {
       return new Response(
-        JSON.stringify({ error: "Only administrators and owners can create users" }),
+        JSON.stringify({ error: "You are not allowed to create users" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const isOwner = roleData.role === "OWNER";
+    const isManager = roleData.role === "MANAGER";
 
     // Parse request body
     const requestData: CreateUserRequest = await req.json();
@@ -123,6 +124,14 @@ serve(async (req: Request) => {
     if (!isOwner && role === "OWNER") {
       return new Response(
         JSON.stringify({ error: "Only owners can create other owner accounts" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // MANAGER role cannot create ADMIN or OWNER users
+    if (isManager && (role === "OWNER" || role === "ADMIN")) {
+      return new Response(
+        JSON.stringify({ error: "Managers cannot create admin or owner accounts" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
