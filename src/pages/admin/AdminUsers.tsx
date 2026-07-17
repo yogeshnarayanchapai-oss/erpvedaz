@@ -663,6 +663,10 @@ const usersWithEmployee = useMemo(() => {
     if (profile?.role === 'OWNER') {
       return ALL_ROLES; // OWNER can assign any role including OWNER and ADMIN
     }
+    // MANAGER cannot assign OWNER or ADMIN
+    if (profile?.role === 'MANAGER') {
+      return ALL_ROLES.filter(r => r !== 'OWNER' && r !== 'ADMIN');
+    }
     // ADMIN cannot assign OWNER role
     return ALL_ROLES.filter(r => r !== 'OWNER');
   };
