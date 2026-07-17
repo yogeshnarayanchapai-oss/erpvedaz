@@ -128,6 +128,14 @@ serve(async (req: Request) => {
       );
     }
 
+    // MANAGER role cannot create ADMIN or OWNER users
+    if (isManager && (role === "OWNER" || role === "ADMIN")) {
+      return new Response(
+        JSON.stringify({ error: "Managers cannot create admin or owner accounts" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create the user in Supabase Auth with auto-confirmed email
     const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
       email,
