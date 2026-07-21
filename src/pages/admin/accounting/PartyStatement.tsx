@@ -274,16 +274,16 @@ export default function PartyStatement() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Debit</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold text-red-600">₹{statementSummary.totalDebit.toLocaleString()}</span></CardContent></Card>
+            <CardContent><span className="text-2xl font-bold text-red-600">₹{Math.round(statementSummary.totalDebit).toLocaleString()}</span></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Credit</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold text-green-600">₹{statementSummary.totalCredit.toLocaleString()}</span></CardContent></Card>
+            <CardContent><span className="text-2xl font-bold text-green-600">₹{Math.round(statementSummary.totalCredit).toLocaleString()}</span></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Balance</CardTitle></CardHeader>
             <CardContent>
               {(() => {
                 const totalBalance = statementSummary.balance;
                 return (
                   <>
-                    <span className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(totalBalance).toLocaleString()}</span>
+                    <span className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.round(Math.abs(totalBalance)).toLocaleString()}</span>
                     <Badge variant="outline" className="ml-2">{totalBalance >= 0 ? 'Receivable' : 'Payable'}</Badge>
                   </>
                 );
