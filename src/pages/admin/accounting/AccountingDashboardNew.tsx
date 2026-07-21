@@ -158,7 +158,7 @@ export default function AccountingDashboardNew() {
                     <p className="text-xs text-muted-foreground">From transactions with Asset category</p>
                   </div>
                   <p className="font-semibold text-emerald-600">
-                    NPR {(metrics?.totalAssetItems || 0).toLocaleString()}
+                    NPR {fmt(metrics?.totalAssetItems)}
                   </p>
                 </div>
               </div>
