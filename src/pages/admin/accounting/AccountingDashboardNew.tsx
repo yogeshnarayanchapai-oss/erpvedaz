@@ -112,7 +112,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Account Balances</p>
                   <p className="text-xl font-bold text-blue-600">
-                    NPR {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0}
+                    NPR {fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))}
                   </p>
                 </CardContent>
               </Card>
