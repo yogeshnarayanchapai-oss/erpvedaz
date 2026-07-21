@@ -108,6 +108,18 @@ export default function AdminLeads() {
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
   const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
+  const canUnlock = ['OWNER', 'ADMIN', 'MANAGER'].includes(profile?.role as string);
+  const handleUnlockToggle = (leadId: string) => {
+    if (!canUnlock) return;
+    setUnlockedLeadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+    toast.success(unlockedLeadIds.has(leadId) ? 'Lead locked' : 'Lead unlocked');
+  };
   const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [reassignStaffId, setReassignStaffId] = useState('');
