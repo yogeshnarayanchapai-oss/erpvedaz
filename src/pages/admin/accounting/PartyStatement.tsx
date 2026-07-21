@@ -98,7 +98,7 @@ export default function PartyStatement() {
         (balanceFilter === 'receivable' && party.net_receivable > 0) ||
         (balanceFilter === 'payable' && party.net_payable > 0);
       const hasBalance = party.net_receivable > 0 || party.net_payable > 0;
-      const matchesZeroBalance = !hideZeroBalance || hasBalance;
+      const matchesZeroBalance = !!searchTerm || !hideZeroBalance || hasBalance;
       return matchesType && matchesSearch && matchesBalance && matchesZeroBalance;
     });
   }, [parties, partyTypeFilter, searchTerm, balanceFilter, hideZeroBalance]);
