@@ -339,7 +339,7 @@ export default function AccountingDashboardNew() {
                 </div>
                 <div className="text-right">
                   <p className={`font-bold text-lg ${account.current_balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {account.currency} {account.current_balance.toLocaleString()}
+                    {account.currency} {fmt(account.current_balance)}
                   </p>
                   {account.account_number && (
                     <p className="text-xs text-muted-foreground">{account.account_number}</p>
