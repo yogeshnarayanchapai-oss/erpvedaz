@@ -1224,6 +1224,7 @@ export default function AdminLeads() {
             )}
             <DeleteLeadsButton 
               selectedIds={selectedLeads} 
+              unlockedIds={unlockedLeadIds}
               onDeleteComplete={() => setSelectedLeads([])} 
             />
           </div>
