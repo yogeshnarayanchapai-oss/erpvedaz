@@ -35,6 +35,15 @@ export default function AccountingDashboardNew() {
   }
 
   const fmt = (n: number | undefined | null) => Math.round(Number(n) || 0).toLocaleString();
+  const fmtCompact = (n: number | undefined | null) => {
+    const v = Math.round(Number(n) || 0);
+    const abs = Math.abs(v);
+    const sign = v < 0 ? '-' : '';
+    if (abs >= 10000000) return `${sign}${(abs / 10000000).toFixed(2).replace(/\.?0+$/, '')} Cr`;
+    if (abs >= 100000) return `${sign}${(abs / 100000).toFixed(2).replace(/\.?0+$/, '')} L`;
+    if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(1).replace(/\.?0+$/, '')} K`;
+    return `${sign}${abs}`;
+  };
   const stats = [
     {
       title: 'Net Worth',
@@ -292,8 +301,8 @@ export default function AccountingDashboardNew() {
               <AreaChart data={netWorthData || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={fmtCompact} width={70} />
+                <Tooltip formatter={(v: any) => fmtCompact(v)} />
                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -309,9 +318,9 @@ export default function AccountingDashboardNew() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={expenseByCategory || []} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
+                <XAxis type="number" tickFormatter={fmtCompact} />
                 <YAxis dataKey="name" type="category" width={120} />
-                <Tooltip />
+                <Tooltip formatter={(v: any) => fmtCompact(v)} />
                 <Bar dataKey="amount" fill="hsl(var(--destructive))" />
               </BarChart>
             </ResponsiveContainer>
