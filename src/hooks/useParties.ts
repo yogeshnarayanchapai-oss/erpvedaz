@@ -101,9 +101,9 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
       // Fetch all transactions linked to these parties (new 7-type model)
       const { data: transactions, error: txError } = await supabase
         .from('transactions')
-        .select('party_id, transaction_type, amount')
+        .select('party_id, transaction_type, type, amount')
         .in('party_id', partyIds)
-        .limit(5000);
+        .range(0, 49999);
       
       if (txError) console.error('Failed to fetch party transactions:', txError);
 
@@ -112,13 +112,11 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
         const partyTxns = transactions?.filter(t => t.party_id === party.id) || [];
         const transaction_count = partyTxns.length;
 
-        // DR/CR logic:
-        // DR (we gave/spent) = EXPENSE, PAYMENT_OUT, SALES_OUT → Receivable (they owe us)
-        // CR (we received) = INCOME, PAYMENT_IN, SALES_IN → Payable (we owe them)
+        // Mirror usePartyStatement DR/CR logic so outer table matches inner card
         let totalDebit = 0;
         let totalCredit = 0;
 
-        partyTxns.forEach(t => {
+        partyTxns.forEach((t: any) => {
           const txType = t.transaction_type || '';
           const amt = Number(t.amount) || 0;
           switch (txType) {
@@ -132,6 +130,9 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
             case 'SALES_IN':
               totalCredit += amt;
               break;
+            default:
+              if (t.type === 'expense') totalDebit += amt;
+              else totalCredit += amt;
           }
         });
 
