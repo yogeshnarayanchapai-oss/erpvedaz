@@ -478,7 +478,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Total Balance</p>
                 <p className="text-sm md:text-base font-bold text-green-600 truncate">
-                  ₹{Math.round(accountingMetricsComputed.totalAvailableBalance).toLocaleString()}
+                  ₹{fmt(accountingMetricsComputed.totalAvailableBalance)}
                 </p>
               </div>
             </div>
@@ -495,7 +495,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Ref. P/L</p>
                 <p className={`text-sm md:text-base font-bold truncate ${refPLData >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {refPLLoading ? '...' : `₹${Math.round(refPLData).toLocaleString()}`}
+                  {refPLLoading ? '...' : `₹${fmt(refPLData)}`}
                 </p>
               </div>
             </div>
@@ -546,7 +546,7 @@ const hrmMetrics = useMemo(() => {
               <div className="min-w-0">
                 <p className="text-[9px] md:text-[10px] text-muted-foreground font-medium truncate">Yesterday P/L</p>
                 <p className={`text-sm md:text-base font-bold truncate ${inventoryMetrics.yesterdayProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ₹{Math.round(inventoryMetrics.yesterdayProfit).toLocaleString()}
+                  ₹{fmt(inventoryMetrics.yesterdayProfit)}
                 </p>
               </div>
             </div>
