@@ -263,33 +263,6 @@ export default function PartyStatement() {
           <h1 className="text-2xl font-bold">{selectedParty.name}</h1>
           <p className="text-muted-foreground">{selectedParty.party_type} • {selectedParty.phone || 'No phone'}</p>
         </div>
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2"><Label>Search</Label><Input placeholder="Search particulars/remarks..." value={statementSearch} onChange={e => setStatementSearch(e.target.value)} /></div>
-              <div className="space-y-2">
-                <Label>Date Range</Label>
-                <Select value={datePreset} onValueChange={handleDatePreset}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="7days">Last 7 Days</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {datePreset === 'custom' && (
-                <>
-                  <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-                </>
-              )}
-              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('7days'); handleDatePreset('7days'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
-            </div>
-          </CardContent>
-        </Card>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Debit</CardTitle></CardHeader>
             <CardContent><span className="text-2xl font-bold text-red-600">₹{statementSummary.totalDebit.toLocaleString()}</span></CardContent></Card>
@@ -319,6 +292,33 @@ export default function PartyStatement() {
               </div>
             </CardContent></Card>
         </div>
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Filters</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2"><Label>Search</Label><Input placeholder="Search particulars/remarks..." value={statementSearch} onChange={e => setStatementSearch(e.target.value)} /></div>
+              <div className="space-y-2">
+                <Label>Date Range</Label>
+                <Select value={datePreset} onValueChange={handleDatePreset}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {datePreset === 'custom' && (
+                <>
+                  <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+                </>
+              )}
+              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('7days'); handleDatePreset('7days'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader><CardTitle>Transaction Ledger</CardTitle></CardHeader>
           <CardContent>
