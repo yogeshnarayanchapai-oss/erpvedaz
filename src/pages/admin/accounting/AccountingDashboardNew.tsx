@@ -34,9 +34,13 @@ export default function AccountingDashboardNew() {
     return <div className="p-6">Loading...</div>;
   }
 
-  const fmt = (n: number | undefined | null) => Math.round(Number(n) || 0).toLocaleString();
-  const fmtCompact = (n: number | undefined | null) => {
-    const v = Math.round(Number(n) || 0);
+  const fmt = (n: number | string | undefined | null) => {
+    const raw = typeof n === 'string' ? n.replace(/,/g, '') : n;
+    return Math.round(Number(raw) || 0).toLocaleString();
+  };
+  const fmtCompact = (n: number | string | undefined | null) => {
+    const raw = typeof n === 'string' ? n.replace(/,/g, '') : n;
+    const v = Math.round(Number(raw) || 0);
     const abs = Math.abs(v);
     const sign = v < 0 ? '-' : '';
     if (abs >= 10000000) return `${sign}${(abs / 10000000).toFixed(2).replace(/\.?0+$/, '')} Cr`;
