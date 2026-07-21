@@ -116,13 +116,13 @@ export default function PartyStatement() {
   }, [statement, statementSearch]);
 
   const statementSummary = useMemo(() => {
-    const allEntries = filteredStatement.filter(e => e.id !== 'opening-balance');
+    const allEntries = statementAll.filter(e => e.id !== 'opening-balance');
     const totalDebit = allEntries.reduce((sum, e) => sum + e.debit, 0);
     const totalCredit = allEntries.reduce((sum, e) => sum + e.credit, 0);
-    // Use the running balance of the newest visible entry (list is sorted newest first)
-    const balance = filteredStatement.length > 0 ? filteredStatement[0].balance : 0;
+    // All-time running balance (list sorted newest first)
+    const balance = statementAll.length > 0 ? statementAll[0].balance : 0;
     return { totalDebit, totalCredit, balance };
-  }, [filteredStatement]);
+  }, [statementAll]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredStatement.filter(e => e.id !== 'opening-balance').length) {
