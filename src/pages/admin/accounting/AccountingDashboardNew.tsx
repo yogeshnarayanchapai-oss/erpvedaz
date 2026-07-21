@@ -120,7 +120,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Liabilities</p>
                   <p className="text-xl font-bold text-destructive">
-                    NPR {metrics?.totalLiabilities.toLocaleString() || 0}
+                    NPR {fmt(metrics?.totalLiabilities)}
                   </p>
                 </CardContent>
               </Card>
