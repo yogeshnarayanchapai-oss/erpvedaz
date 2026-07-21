@@ -178,7 +178,7 @@ export default function AccountingDashboardNew() {
                       <p className="text-xs text-muted-foreground capitalize">{acc.type}</p>
                     </div>
                     <p className="font-semibold text-blue-600">
-                      {acc.currency} {acc.current_balance?.toLocaleString() || 0}
+                      {acc.currency} {fmt(acc.current_balance)}
                     </p>
                   </div>
                 )) : (
