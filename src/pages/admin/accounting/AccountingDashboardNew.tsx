@@ -301,8 +301,8 @@ export default function AccountingDashboardNew() {
               <AreaChart data={netWorthData || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={fmtCompact} width={70} />
+                <Tooltip formatter={(v: any) => fmtCompact(v)} />
                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
               </AreaChart>
             </ResponsiveContainer>
