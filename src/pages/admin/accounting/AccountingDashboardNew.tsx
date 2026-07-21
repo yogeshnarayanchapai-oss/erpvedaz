@@ -128,7 +128,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Net Worth</p>
                   <p className={`text-xl font-bold ${(metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                    NPR {metrics?.netWorth.toLocaleString() || 0}
+                    NPR {fmt(metrics?.netWorth)}
                   </p>
                 </CardContent>
               </Card>
