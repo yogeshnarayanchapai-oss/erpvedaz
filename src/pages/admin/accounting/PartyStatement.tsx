@@ -61,6 +61,11 @@ export default function PartyStatement() {
     selectedPartyId,
     { startDate: effectiveStartDate, endDate: effectiveEndDate }
   );
+  // Cards always reflect all-time totals regardless of date filter
+  const { data: statementAll = [] } = usePartyStatement(
+    selectedPartyId,
+    { startDate: undefined, endDate: undefined }
+  );
 
   const handleDatePreset = (preset: string) => {
     setDatePreset(preset);
