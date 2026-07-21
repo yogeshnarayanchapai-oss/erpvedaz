@@ -108,6 +108,18 @@ export default function AdminLeads() {
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
   const [cancelReasonFilter, setCancelReasonFilter] = useState<string>('ALL');
+  const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
+  const canUnlock = ['OWNER', 'ADMIN', 'MANAGER'].includes(profile?.role as string);
+  const handleUnlockToggle = (leadId: string) => {
+    if (!canUnlock) return;
+    setUnlockedLeadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+    toast.success(unlockedLeadIds.has(leadId) ? 'Lead locked' : 'Lead unlocked');
+  };
   const { data: cancelReasonsList = [] } = useLeadCancelReasons();
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [reassignStaffId, setReassignStaffId] = useState('');
@@ -1256,8 +1268,20 @@ export default function AdminLeads() {
                       <Badge variant="outline" className={cn("text-xs", getLeadStatusBadgeClass(lead.status || 'NEW'))}>
                         {formatStatusLabel(lead.status || 'NEW')}
                       </Badge>
-                      {(lead.status === 'CONFIRMED' || lead.order_id) && (
-                        <Lock className="w-3 h-3 text-muted-foreground" />
+                      {(lead.status === 'CONFIRMED' || lead.order_id) && !unlockedLeadIds.has(lead.id) && (
+                        <Lock
+                          className={cn("w-3 h-3 text-muted-foreground", canUnlock && "cursor-pointer hover:text-foreground")}
+                          onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                        />
+                      )}
+                      {(lead.status === 'CONFIRMED' || lead.order_id) && unlockedLeadIds.has(lead.id) && canUnlock && (
+                        <span
+                          className="text-[10px] text-green-600 cursor-pointer font-medium"
+                          onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                          title="Double-click to lock again"
+                        >
+                          🔓
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1354,17 +1378,29 @@ export default function AdminLeads() {
                         <Badge variant="outline" className={getLeadStatusBadgeClass(lead.status || 'NEW')}>
                           {formatStatusLabel(lead.status || 'NEW')}
                         </Badge>
-                        {(lead.status === 'CONFIRMED' || lead.order_id) && (
+                        {(lead.status === 'CONFIRMED' || lead.order_id) && !unlockedLeadIds.has(lead.id) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Lock className="w-3 h-3 text-muted-foreground" />
+                                <Lock
+                                  className={cn("w-3 h-3 text-muted-foreground", canUnlock && "cursor-pointer hover:text-foreground")}
+                                  onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                                />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>This lead is confirmed and cannot be transferred</p>
+                                <p>{canUnlock ? 'Double-click to unlock' : 'This lead is confirmed and cannot be transferred'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                        )}
+                        {(lead.status === 'CONFIRMED' || lead.order_id) && unlockedLeadIds.has(lead.id) && canUnlock && (
+                          <span
+                            className="text-[11px] text-green-600 cursor-pointer font-medium"
+                            onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                            title="Double-click to lock again"
+                          >
+                            🔓
+                          </span>
                         )}
                       </div>
                     </TableCell>
