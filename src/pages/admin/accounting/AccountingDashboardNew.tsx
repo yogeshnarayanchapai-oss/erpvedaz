@@ -34,18 +34,19 @@ export default function AccountingDashboardNew() {
     return <div className="p-6">Loading...</div>;
   }
 
+  const fmt = (n: number | undefined | null) => Math.round(Number(n) || 0).toLocaleString();
   const stats = [
     {
       title: 'Net Worth',
-      value: `NPR ${metrics?.netWorth.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.netWorth)}`,
       icon: Scale,
       color: (metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive',
-      description: `Assets: ${(metrics?.totalAssetItems || 0).toLocaleString()} + Accounts: ${metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - Liabilities: ${metrics?.totalLiabilities.toLocaleString() || 0}`,
+      description: `Assets: ${fmt(metrics?.totalAssetItems)} + Accounts: ${fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))} - Liabilities: ${fmt(metrics?.totalLiabilities)}`,
       onClick: () => setShowNetWorthDetail(true),
     },
     {
       title: 'Total Income',
-      value: `NPR ${metrics?.totalIncome.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.totalIncome)}`,
       icon: TrendingUp,
       color: 'text-success',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
@@ -53,7 +54,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Total Expense',
-      value: `NPR ${metrics?.totalExpense.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.totalExpense)}`,
       icon: TrendingDown,
       color: 'text-destructive',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
@@ -61,7 +62,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Profit / Loss',
-      value: `NPR ${metrics?.profitLoss.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.profitLoss)}`,
       icon: DollarSign,
       color: (metrics?.profitLoss || 0) >= 0 ? 'text-success' : 'text-destructive',
       description: 'Income - Expense',
@@ -69,7 +70,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Receivable Outstanding',
-      value: `NPR ${metrics?.receivableOutstanding.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.receivableOutstanding)}`,
       icon: CreditCard,
       color: 'text-warning',
       description: 'Amount to collect from parties',
@@ -77,7 +78,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Payable Outstanding',
-      value: `NPR ${metrics?.payableOutstanding.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.payableOutstanding)}`,
       icon: AlertCircle,
       color: 'text-primary',
       description: 'Amount to pay to parties',
