@@ -76,7 +76,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
   const storeId = useCurrentStoreId();
   
   return useQuery({
-    queryKey: ['parties-balances', storeId, partyType],
+    queryKey: ['parties-balances', storeId, partyType, 'ledger-v2'],
     queryFn: async () => {
       let query = supabase
         .from('parties')
@@ -96,20 +96,42 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
 
       if (!parties || parties.length === 0) return [];
 
-      const partyIds = parties.map(p => p.id);
+      type PartyTransaction = { party_id: string | null; transaction_type: string | null; type: string | null; amount: number | string | null };
+      const transactionsByParty = new Map<string, PartyTransaction[]>();
+      const pageSize = 1000;
 
-      // Fetch all transactions linked to these parties (new 7-type model)
-      const { data: transactions, error: txError } = await supabase
-        .from('transactions')
-        .select('party_id, transaction_type, type, amount')
-        .in('party_id', partyIds)
-        .range(0, 49999);
-      
-      if (txError) console.error('Failed to fetch party transactions:', txError);
+      // Fetch party-wise exactly like the inside Party Statement ledger. The
+      // previous bulk `.in(...)` balance request could return no rows for an
+      // individual party even though opening that party showed correct ledger
+      // totals, so the outside table did not match the inside cards.
+      await Promise.all(parties.map(async (party) => {
+        const partyTransactions: PartyTransaction[] = [];
+        let from = 0;
+
+        while (true) {
+          const { data, error: txError } = await supabase
+            .from('transactions')
+            .select('party_id, transaction_type, type, amount')
+            .eq('party_id', party.id)
+            .range(from, from + pageSize - 1);
+
+          if (txError) {
+            console.error('Failed to fetch party transactions:', txError);
+            break;
+          }
+
+          if (!data || data.length === 0) break;
+          partyTransactions.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+
+        transactionsByParty.set(party.id, partyTransactions);
+      }));
 
       const partiesWithBalances: PartyWithBalances[] = parties.map(party => {
         const typedParty = party as Party;
-        const partyTxns = transactions?.filter(t => t.party_id === party.id) || [];
+        const partyTxns = transactionsByParty.get(party.id) || [];
         const transaction_count = partyTxns.length;
 
         // Mirror usePartyStatement DR/CR logic so outer table matches inner card
