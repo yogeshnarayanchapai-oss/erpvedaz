@@ -427,23 +427,19 @@ export default function PartyStatement() {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHeader><TableRow><TableHead>Party Name</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Receivable</TableHead><TableHead className="text-right">Payable</TableHead><TableHead className="text-right">Balance</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Party Name</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Receivable</TableHead><TableHead className="text-right">Payable</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
             <TableBody>
-              {partiesLoading && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
-              {!partiesLoading && filteredParties.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No parties found</TableCell></TableRow>}
-              {filteredParties.map(party => {
-                const partyBalance = party.net_receivable - party.net_payable;
-                return (
-                  <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
-                    <TableCell className="font-medium">{party.name}</TableCell>
-                    <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
-                    <TableCell className="text-right text-green-600">{party.net_receivable > 0 ? `₹${Math.round(party.net_receivable).toLocaleString()}` : '-'}</TableCell>
-                    <TableCell className="text-right text-red-600">{party.net_payable > 0 ? `₹${Math.round(party.net_payable).toLocaleString()}` : '-'}</TableCell>
-                    <TableCell className={`text-right font-medium ${partyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.round(Math.abs(partyBalance)).toLocaleString()}</TableCell>
-                    <TableCell><Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
-                  </TableRow>
-                );
-              })}
+              {partiesLoading && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>}
+              {!partiesLoading && filteredParties.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No parties found</TableCell></TableRow>}
+              {filteredParties.map(party => (
+                <TableRow key={party.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedPartyId(party.id)}>
+                  <TableCell className="font-medium">{party.name}</TableCell>
+                  <TableCell><Badge variant="outline">{party.party_type}</Badge></TableCell>
+                  <TableCell className="text-right text-green-600">{party.net_receivable > 0 ? `₹${party.net_receivable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</TableCell>
+                  <TableCell className="text-right text-red-600">{party.net_payable > 0 ? `₹${party.net_payable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</TableCell>
+                  <TableCell><Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setSelectedPartyId(party.id); }}><Eye className="w-4 h-4 mr-1" />View</Button></TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>
