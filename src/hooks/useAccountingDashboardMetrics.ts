@@ -102,12 +102,12 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
       }
       const totalAssets = totalAssetItems + totalAccountBalance;
 
-      // Income for period — mirror ViewTransactions logic (transaction_type=INCOME)
+      // Income for period — INCOME + SALES_IN + PAYMENT_IN
       const incomeData = await fetchAllPaged<{ amount: number }>((from, to) => {
         let q = supabase
           .from('transactions')
           .select('amount')
-          .eq('transaction_type', 'INCOME')
+          .in('transaction_type', ['INCOME', 'SALES_IN', 'PAYMENT_IN'])
           .gte('date', startDate)
           .lte('date', endDate)
           .range(from, to);
@@ -116,11 +116,12 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
       });
       const totalIncome = incomeData.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+      // Expense for period — EXPENSE + SALES_OUT + PAYMENT_OUT
       const expenseData = await fetchAllPaged<{ amount: number }>((from, to) => {
         let q = supabase
           .from('transactions')
           .select('amount')
-          .eq('transaction_type', 'EXPENSE')
+          .in('transaction_type', ['EXPENSE', 'SALES_OUT', 'PAYMENT_OUT'])
           .gte('date', startDate)
           .lte('date', endDate)
           .range(from, to);
