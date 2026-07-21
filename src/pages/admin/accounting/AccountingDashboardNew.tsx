@@ -201,7 +201,7 @@ export default function AccountingDashboardNew() {
                       <p className="text-xs text-muted-foreground capitalize">{acc.type}</p>
                     </div>
                     <p className="font-semibold text-destructive">
-                      {acc.currency} {Math.abs(acc.current_balance || 0).toLocaleString()}
+                      {acc.currency} {fmt(Math.abs(acc.current_balance || 0))}
                     </p>
                   </div>
                 )) : (
