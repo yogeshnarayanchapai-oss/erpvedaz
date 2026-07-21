@@ -356,7 +356,7 @@ export default function AccountingDashboardNew() {
               </div>
               <div className="text-right">
                 <p className={`font-bold text-xl ${totalAccountBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  NPR {totalAccountBalance.toLocaleString()}
+                  NPR {fmt(totalAccountBalance)}
                 </p>
               </div>
             </div>
