@@ -48,7 +48,7 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
   const storeId = useCurrentStoreId();
   
   return useQuery({
-    queryKey: ['dashboard-metrics', storeId, startDate, endDate, 'v3'],
+    queryKey: ['dashboard-metrics', storeId, startDate, endDate, 'v4'],
     queryFn: async () => {
       // Get all active accounts
       let accountsQuery = supabase
