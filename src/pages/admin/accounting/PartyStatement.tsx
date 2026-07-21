@@ -37,10 +37,14 @@ export default function PartyStatement() {
   const { effectiveRole } = useEffectiveRole();
   const isOwner = effectiveRole === 'OWNER';
 
+  const today = new Date();
+  const defaultStartDate = format(subDays(today, 6), 'yyyy-MM-dd');
+  const defaultEndDate = format(today, 'yyyy-MM-dd');
+
   const [selectedPartyId, setSelectedPartyId] = useState(partyIdFromUrl || '');
-  const [datePreset, setDatePreset] = useState('all');
-  const [startDate, setStartDate] = useState('2020-01-01');
-  const [endDate, setEndDate] = useState('2099-12-31');
+  const [datePreset, setDatePreset] = useState('7days');
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
   const [statementSearch, setStatementSearch] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [balanceFilter, setBalanceFilter] = useState<string>('');
