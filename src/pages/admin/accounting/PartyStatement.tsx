@@ -38,9 +38,9 @@ export default function PartyStatement() {
   const isOwner = effectiveRole === 'OWNER';
 
   const [selectedPartyId, setSelectedPartyId] = useState(partyIdFromUrl || '');
-  const [datePreset, setDatePreset] = useState('7days');
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 6), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [datePreset, setDatePreset] = useState('all');
+  const [startDate, setStartDate] = useState('2020-01-01');
+  const [endDate, setEndDate] = useState('2099-12-31');
   const [statementSearch, setStatementSearch] = useState('');
   const [partyTypeFilter, setPartyTypeFilter] = useState<string>('');
   const [balanceFilter, setBalanceFilter] = useState<string>('');
@@ -315,7 +315,7 @@ export default function PartyStatement() {
                   <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
                 </>
               )}
-              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('7days'); handleDatePreset('7days'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
+              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('all'); handleDatePreset('all'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
             </div>
           </CardContent>
         </Card>
