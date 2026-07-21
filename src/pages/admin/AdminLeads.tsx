@@ -1268,8 +1268,20 @@ export default function AdminLeads() {
                       <Badge variant="outline" className={cn("text-xs", getLeadStatusBadgeClass(lead.status || 'NEW'))}>
                         {formatStatusLabel(lead.status || 'NEW')}
                       </Badge>
-                      {(lead.status === 'CONFIRMED' || lead.order_id) && (
-                        <Lock className="w-3 h-3 text-muted-foreground" />
+                      {(lead.status === 'CONFIRMED' || lead.order_id) && !unlockedLeadIds.has(lead.id) && (
+                        <Lock
+                          className={cn("w-3 h-3 text-muted-foreground", canUnlock && "cursor-pointer hover:text-foreground")}
+                          onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                        />
+                      )}
+                      {(lead.status === 'CONFIRMED' || lead.order_id) && unlockedLeadIds.has(lead.id) && canUnlock && (
+                        <span
+                          className="text-[10px] text-green-600 cursor-pointer font-medium"
+                          onDoubleClick={(e) => { e.stopPropagation(); handleUnlockToggle(lead.id); }}
+                          title="Double-click to lock again"
+                        >
+                          🔓
+                        </span>
                       )}
                     </div>
                   </div>
