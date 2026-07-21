@@ -298,7 +298,7 @@ export default function PartyStatement() {
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Balance</CardTitle></CardHeader>
             <CardContent>
               {(() => {
-                const totalBalance = (selectedParty?.net_receivable || 0) - (selectedParty?.net_payable || 0);
+                const totalBalance = statementSummary.balance;
                 return (
                   <>
                     <span className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(totalBalance).toLocaleString()}</span>
