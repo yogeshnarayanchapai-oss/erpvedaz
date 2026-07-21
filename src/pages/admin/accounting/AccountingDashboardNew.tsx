@@ -141,7 +141,7 @@ export default function AccountingDashboardNew() {
                 Net Worth = Asset Items (Saman) + Account Balances - Liabilities
               </p>
               <p className="text-sm text-primary mt-2">
-                = {(metrics?.totalAssetItems || 0).toLocaleString()} + {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - {metrics?.totalLiabilities.toLocaleString() || 0} = {metrics?.netWorth.toLocaleString() || 0}
+                = {fmt(metrics?.totalAssetItems)} + {fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))} - {fmt(metrics?.totalLiabilities)} = {fmt(metrics?.netWorth)}
               </p>
             </div>
 
