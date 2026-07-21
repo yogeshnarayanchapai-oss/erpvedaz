@@ -318,9 +318,9 @@ export default function AccountingDashboardNew() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={expenseByCategory || []} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
+                <XAxis type="number" tickFormatter={fmtCompact} />
                 <YAxis dataKey="name" type="category" width={120} />
-                <Tooltip />
+                <Tooltip formatter={(v: any) => fmtCompact(v)} />
                 <Bar dataKey="amount" fill="hsl(var(--destructive))" />
               </BarChart>
             </ResponsiveContainer>
