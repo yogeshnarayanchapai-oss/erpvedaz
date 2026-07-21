@@ -399,10 +399,10 @@ export default function PartyStatement() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Parties</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold">{summaryStats.partyCount}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Receivable</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-green-600">₹{Math.round(summaryStats.totalReceivable).toLocaleString()}</span></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Payable</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-red-600">₹{Math.round(summaryStats.totalPayable).toLocaleString()}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Receivable</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-green-600">₹{summaryStats.totalReceivable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Payable</CardTitle></CardHeader><CardContent><span className="text-2xl font-bold text-red-600">₹{summaryStats.totalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Balance</CardTitle></CardHeader><CardContent>
-          <span className={`text-2xl font-bold ${summaryStats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.round(Math.abs(summaryStats.totalBalance)).toLocaleString()}</span>
+          <span className={`text-2xl font-bold ${summaryStats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>₹{Math.abs(summaryStats.totalBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           <Badge variant="outline" className="ml-2">{summaryStats.totalBalance >= 0 ? 'Net Receivable' : 'Net Payable'}</Badge>
         </CardContent></Card>
       </div>
