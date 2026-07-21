@@ -49,7 +49,7 @@ export default function AccountingDashboardNew() {
       icon: TrendingUp,
       color: 'text-success',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
-      onClick: () => navigate('/inventory/daily-pl'),
+      onClick: () => navigate(`/admin/accounting/transactions?type=INCOME&start=${dateRange.startDate}&end=${dateRange.endDate}`),
     },
     {
       title: 'Total Expense',
@@ -57,7 +57,7 @@ export default function AccountingDashboardNew() {
       icon: TrendingDown,
       color: 'text-destructive',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
-      onClick: () => navigate('/inventory/daily-pl'),
+      onClick: () => navigate(`/admin/accounting/transactions?type=EXPENSE&start=${dateRange.startDate}&end=${dateRange.endDate}`),
     },
     {
       title: 'Profit / Loss',
@@ -65,7 +65,7 @@ export default function AccountingDashboardNew() {
       icon: DollarSign,
       color: (metrics?.profitLoss || 0) >= 0 ? 'text-success' : 'text-destructive',
       description: 'Income - Expense',
-      onClick: () => navigate('/inventory/daily-pl'),
+      onClick: () => navigate(`/admin/accounting/transactions?start=${dateRange.startDate}&end=${dateRange.endDate}`),
     },
     {
       title: 'Receivable Outstanding',
@@ -73,6 +73,7 @@ export default function AccountingDashboardNew() {
       icon: CreditCard,
       color: 'text-warning',
       description: 'Amount to collect from parties',
+      onClick: () => navigate('/admin/accounting/party-statement'),
     },
     {
       title: 'Payable Outstanding',
@@ -80,6 +81,7 @@ export default function AccountingDashboardNew() {
       icon: AlertCircle,
       color: 'text-primary',
       description: 'Amount to pay to parties',
+      onClick: () => navigate('/admin/accounting/party-statement'),
     },
   ];
 
