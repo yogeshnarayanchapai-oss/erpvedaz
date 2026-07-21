@@ -29,11 +29,26 @@ const ASSET_TYPES = ['cash', 'bank', 'savings', 'investment', 'receivable', 'ass
 const LIABILITY_TYPES = ['credit_card', 'loan', 'payable', 'liability'];
 const ASSET_CATEGORY_NAMES = ['asset', 'assets', 'assests'];
 
+async function fetchAllPaged<T>(build: (from: number, to: number) => any): Promise<T[]> {
+  const pageSize = 1000;
+  const out: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await build(from, from + pageSize - 1);
+    if (error) { console.error('paged fetch failed', error); break; }
+    if (!data || data.length === 0) break;
+    out.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
+
 export function useAccountingDashboardMetrics(startDate: string, endDate: string) {
   const storeId = useCurrentStoreId();
   
   return useQuery({
-    queryKey: ['dashboard-metrics', storeId, startDate, endDate],
+    queryKey: ['dashboard-metrics', storeId, startDate, endDate, 'v3'],
     queryFn: async () => {
       // Get all active accounts
       let accountsQuery = supabase
@@ -74,72 +89,102 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
 
       let totalAssetItems = 0;
       if (assetCategoryIds.length > 0) {
-        let assetTxQuery = supabase
-          .from('transactions')
-          .select('amount')
-          .in('category_id', assetCategoryIds);
-        if (storeId) assetTxQuery = assetTxQuery.eq('store_id', storeId);
-        const { data: assetTransactions } = await assetTxQuery;
-        totalAssetItems = assetTransactions?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
+        const assetTransactions = await fetchAllPaged<{ amount: number }>((from, to) => {
+          let q = supabase
+            .from('transactions')
+            .select('amount')
+            .in('category_id', assetCategoryIds)
+            .range(from, to);
+          if (storeId) q = q.eq('store_id', storeId);
+          return q;
+        });
+        totalAssetItems = assetTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
       }
       const totalAssets = totalAssetItems + totalAccountBalance;
 
-      // Income for period using transaction_type
-      let incomeQuery = supabase
-        .from('transactions')
-        .select('amount, transaction_type')
-        .eq('transaction_type', 'INCOME')
-        .gte('date', startDate)
-        .lte('date', endDate);
-      if (storeId) incomeQuery = incomeQuery.eq('store_id', storeId);
-      const { data: incomeData } = await incomeQuery;
-      const totalIncome = incomeData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-
-      // Expense for period using transaction_type
-      let expenseQuery = supabase
-        .from('transactions')
-        .select('amount, transaction_type')
-        .eq('transaction_type', 'EXPENSE')
-        .gte('date', startDate)
-        .lte('date', endDate);
-      if (storeId) expenseQuery = expenseQuery.eq('store_id', storeId);
-      const { data: expenseData } = await expenseQuery;
-      const totalExpense = expenseData?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-
-      // Receivable/Payable: compute per-party balance from transactions where party_id IS NOT NULL
-      let partyTxQuery = supabase
-        .from('transactions')
-        .select('party_id, transaction_type, amount');
-      if (storeId) partyTxQuery = partyTxQuery.eq('store_id', storeId);
-      partyTxQuery = partyTxQuery.not('party_id', 'is', null);
-      const { data: partyTxns } = await partyTxQuery;
-
-      // Calculate per-party balance
-      const partyBalances = new Map<string, number>();
-      partyTxns?.forEach(tx => {
-        const pid = tx.party_id as string;
-        const current = partyBalances.get(pid) || 0;
-        const txType = (tx as any).transaction_type || '';
-        let creditAmount = 0;
-        let debitAmount = 0;
-
-        switch (txType) {
-          case 'SALES_OUT': creditAmount = tx.amount; break;
-          case 'PAYMENT_IN': debitAmount = tx.amount; break;
-          case 'SALES_IN': debitAmount = tx.amount; break;
-          case 'PAYMENT_OUT': creditAmount = tx.amount; break;
-          case 'INCOME': creditAmount = tx.amount; break;
-          case 'EXPENSE': debitAmount = tx.amount; break;
-        }
-        partyBalances.set(pid, current + creditAmount - debitAmount);
+      // Income for period — mirror ViewTransactions logic (transaction_type=INCOME)
+      const incomeData = await fetchAllPaged<{ amount: number }>((from, to) => {
+        let q = supabase
+          .from('transactions')
+          .select('amount')
+          .eq('transaction_type', 'INCOME')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .range(from, to);
+        if (storeId) q = q.eq('store_id', storeId);
+        return q;
       });
+      const totalIncome = incomeData.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+      const expenseData = await fetchAllPaged<{ amount: number }>((from, to) => {
+        let q = supabase
+          .from('transactions')
+          .select('amount')
+          .eq('transaction_type', 'EXPENSE')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .range(from, to);
+        if (storeId) q = q.eq('store_id', storeId);
+        return q;
+      });
+      const totalExpense = expenseData.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+      // Receivable / Payable — mirror usePartiesWithBalances exactly so the
+      // dashboard cards match the Party Statement "All Parties" table.
+      let partiesQuery = supabase
+        .from('parties')
+        .select('id, opening_balance, opening_balance_type');
+      if (storeId) partiesQuery = partiesQuery.eq('store_id', storeId);
+      const { data: parties } = await partiesQuery;
 
       let receivableOutstanding = 0;
       let payableOutstanding = 0;
-      partyBalances.forEach(balance => {
-        if (balance > 0) receivableOutstanding += balance;
-        else payableOutstanding += Math.abs(balance);
-      });
+
+      if (parties && parties.length > 0) {
+        await Promise.all(parties.map(async (party: any) => {
+          const partyTxns = await fetchAllPaged<{ transaction_type: string | null; type: string | null; amount: number | string | null }>((from, to) =>
+            supabase
+              .from('transactions')
+              .select('transaction_type, type, amount')
+              .eq('party_id', party.id)
+              .range(from, to)
+          );
+
+          let totalDebit = 0;
+          let totalCredit = 0;
+          partyTxns.forEach((t: any) => {
+            const txType = t.transaction_type || '';
+            const amt = Number(t.amount) || 0;
+            switch (txType) {
+              case 'EXPENSE':
+              case 'PAYMENT_OUT':
+              case 'SALES_OUT':
+                totalDebit += amt;
+                break;
+              case 'INCOME':
+              case 'PAYMENT_IN':
+              case 'SALES_IN':
+                totalCredit += amt;
+                break;
+              default:
+                if (t.type === 'expense') totalDebit += amt;
+                else if (t.type === 'income') totalCredit += amt;
+            }
+          });
+
+          let openingDebit = 0;
+          let openingCredit = 0;
+          const ob = Number(party.opening_balance) || 0;
+          if (ob > 0) {
+            if (party.opening_balance_type === 'RECEIVABLE') openingDebit = ob;
+            else if (party.opening_balance_type === 'PAYABLE') openingCredit = ob;
+          }
+
+          const netBalance = (openingDebit + totalDebit) - (openingCredit + totalCredit);
+          if (netBalance > 0) receivableOutstanding += netBalance;
+          else if (netBalance < 0) payableOutstanding += -netBalance;
+        }));
+      }
 
       const totalLiabilitiesCalc = (payableOutstanding - receivableOutstanding) + liabilityAccountTotal;
       const netWorth = totalAssets - liabilityAccountTotal + (receivableOutstanding - payableOutstanding);
@@ -161,6 +206,7 @@ export function useAccountingDashboardMetrics(startDate: string, endDate: string
     enabled: !!storeId,
   });
 }
+
 
 export function useNetWorthOverTime() {
   const storeId = useCurrentStoreId();
