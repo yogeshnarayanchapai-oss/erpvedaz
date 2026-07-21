@@ -35,6 +35,15 @@ export default function AccountingDashboardNew() {
   }
 
   const fmt = (n: number | undefined | null) => Math.round(Number(n) || 0).toLocaleString();
+  const fmtCompact = (n: number | undefined | null) => {
+    const v = Math.round(Number(n) || 0);
+    const abs = Math.abs(v);
+    const sign = v < 0 ? '-' : '';
+    if (abs >= 10000000) return `${sign}${(abs / 10000000).toFixed(2).replace(/\.?0+$/, '')} Cr`;
+    if (abs >= 100000) return `${sign}${(abs / 100000).toFixed(2).replace(/\.?0+$/, '')} L`;
+    if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(1).replace(/\.?0+$/, '')} K`;
+    return `${sign}${abs}`;
+  };
   const stats = [
     {
       title: 'Net Worth',
