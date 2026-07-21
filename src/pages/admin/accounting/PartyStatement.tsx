@@ -324,7 +324,7 @@ export default function PartyStatement() {
                   <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
                 </>
               )}
-              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('all'); handleDatePreset('all'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
+              <div className="flex items-end"><Button variant="outline" onClick={() => { setDatePreset('7days'); handleDatePreset('7days'); setStatementSearch(''); }} className="w-full">Clear</Button></div>
             </div>
           </CardContent>
         </Card>
