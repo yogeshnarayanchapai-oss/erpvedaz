@@ -104,19 +104,20 @@ export default function PartyStatement() {
     return { totalReceivable, totalPayable, totalBalance: totalReceivable - totalPayable, partyCount: parties.length };
   }, [parties]);
 
-  const statementSummary = useMemo(() => {
-    const allEntries = statement.filter(e => e.id !== 'opening-balance');
-    const totalDebit = allEntries.reduce((sum, e) => sum + e.debit, 0);
-    const totalCredit = allEntries.reduce((sum, e) => sum + e.credit, 0);
-    const balance = statement.length > 0 ? statement[0].balance : 0; // newest first, so first = final balance
-    return { totalDebit, totalCredit, balance };
-  }, [statement]);
-
   const filteredStatement = useMemo(() => {
     if (!statementSearch.trim()) return statement;
     const search = statementSearch.toLowerCase();
     return statement.filter(e => e.particulars?.toLowerCase().includes(search) || e.remarks?.toLowerCase().includes(search));
   }, [statement, statementSearch]);
+
+  const statementSummary = useMemo(() => {
+    const allEntries = filteredStatement.filter(e => e.id !== 'opening-balance');
+    const totalDebit = allEntries.reduce((sum, e) => sum + e.debit, 0);
+    const totalCredit = allEntries.reduce((sum, e) => sum + e.credit, 0);
+    // Use the running balance of the newest visible entry (list is sorted newest first)
+    const balance = filteredStatement.length > 0 ? filteredStatement[0].balance : 0;
+    return { totalDebit, totalCredit, balance };
+  }, [filteredStatement]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredStatement.filter(e => e.id !== 'opening-balance').length) {
