@@ -9,9 +9,10 @@ import { useQueryClient } from '@tanstack/react-query';
 interface DeleteLeadsButtonProps {
   selectedIds: string[];
   onDeleteComplete: () => void;
+  unlockedIds?: Set<string>;
 }
 
-export function DeleteLeadsButton({ selectedIds, onDeleteComplete }: DeleteLeadsButtonProps) {
+export function DeleteLeadsButton({ selectedIds, onDeleteComplete, unlockedIds }: DeleteLeadsButtonProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
@@ -28,11 +29,18 @@ export function DeleteLeadsButton({ selectedIds, onDeleteComplete }: DeleteLeads
         .in('lead_id', selectedIds);
 
       const linkedLeadIds = new Set(leadsWithOrders?.map(o => o.lead_id) || []);
+      // Unlocked leads with linked orders → detach orders so lead can be deleted
+      const forceUnlinkIds = selectedIds.filter(id => linkedLeadIds.has(id) && unlockedIds?.has(id));
+      if (forceUnlinkIds.length > 0) {
+        await supabase.from('orders').update({ lead_id: null }).in('lead_id', forceUnlinkIds);
+        forceUnlinkIds.forEach(id => linkedLeadIds.delete(id));
+      }
+
       const deletableIds = selectedIds.filter(id => !linkedLeadIds.has(id));
       const blockedCount = selectedIds.length - deletableIds.length;
 
       if (deletableIds.length === 0) {
-        toast.error(`Cannot delete: All ${blockedCount} selected lead(s) have linked orders`);
+        toast.error(`Cannot delete: All ${blockedCount} selected lead(s) have linked orders. Unlock (🔓) them first.`);
         setIsDeleting(false);
         setShowConfirm(false);
         return;
