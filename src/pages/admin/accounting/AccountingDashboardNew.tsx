@@ -34,18 +34,19 @@ export default function AccountingDashboardNew() {
     return <div className="p-6">Loading...</div>;
   }
 
+  const fmt = (n: number | undefined | null) => Math.round(Number(n) || 0).toLocaleString();
   const stats = [
     {
       title: 'Net Worth',
-      value: `NPR ${metrics?.netWorth.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.netWorth)}`,
       icon: Scale,
       color: (metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive',
-      description: `Assets: ${(metrics?.totalAssetItems || 0).toLocaleString()} + Accounts: ${metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - Liabilities: ${metrics?.totalLiabilities.toLocaleString() || 0}`,
+      description: `Assets: ${fmt(metrics?.totalAssetItems)} + Accounts: ${fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))} - Liabilities: ${fmt(metrics?.totalLiabilities)}`,
       onClick: () => setShowNetWorthDetail(true),
     },
     {
       title: 'Total Income',
-      value: `NPR ${metrics?.totalIncome.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.totalIncome)}`,
       icon: TrendingUp,
       color: 'text-success',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
@@ -53,7 +54,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Total Expense',
-      value: `NPR ${metrics?.totalExpense.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.totalExpense)}`,
       icon: TrendingDown,
       color: 'text-destructive',
       description: `For ${dateRange.startDate} to ${dateRange.endDate}`,
@@ -61,7 +62,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Profit / Loss',
-      value: `NPR ${metrics?.profitLoss.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.profitLoss)}`,
       icon: DollarSign,
       color: (metrics?.profitLoss || 0) >= 0 ? 'text-success' : 'text-destructive',
       description: 'Income - Expense',
@@ -69,7 +70,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Receivable Outstanding',
-      value: `NPR ${metrics?.receivableOutstanding.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.receivableOutstanding)}`,
       icon: CreditCard,
       color: 'text-warning',
       description: 'Amount to collect from parties',
@@ -77,7 +78,7 @@ export default function AccountingDashboardNew() {
     },
     {
       title: 'Payable Outstanding',
-      value: `NPR ${metrics?.payableOutstanding.toLocaleString() || 0}`,
+      value: `NPR ${fmt(metrics?.payableOutstanding)}`,
       icon: AlertCircle,
       color: 'text-primary',
       description: 'Amount to pay to parties',
@@ -103,7 +104,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Asset Items (Saman)</p>
                   <p className="text-xl font-bold text-emerald-600">
-                    NPR {(metrics?.totalAssetItems || 0).toLocaleString()}
+                    NPR {fmt(metrics?.totalAssetItems)}
                   </p>
                 </CardContent>
               </Card>
@@ -111,7 +112,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Account Balances</p>
                   <p className="text-xl font-bold text-blue-600">
-                    NPR {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0}
+                    NPR {fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))}
                   </p>
                 </CardContent>
               </Card>
@@ -119,7 +120,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Liabilities</p>
                   <p className="text-xl font-bold text-destructive">
-                    NPR {metrics?.totalLiabilities.toLocaleString() || 0}
+                    NPR {fmt(metrics?.totalLiabilities)}
                   </p>
                 </CardContent>
               </Card>
@@ -127,7 +128,7 @@ export default function AccountingDashboardNew() {
                 <CardContent className="pt-4">
                   <p className="text-sm text-muted-foreground">Net Worth</p>
                   <p className={`text-xl font-bold ${(metrics?.netWorth || 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                    NPR {metrics?.netWorth.toLocaleString() || 0}
+                    NPR {fmt(metrics?.netWorth)}
                   </p>
                 </CardContent>
               </Card>
@@ -140,7 +141,7 @@ export default function AccountingDashboardNew() {
                 Net Worth = Asset Items (Saman) + Account Balances - Liabilities
               </p>
               <p className="text-sm text-primary mt-2">
-                = {(metrics?.totalAssetItems || 0).toLocaleString()} + {metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0).toLocaleString() || 0} - {metrics?.totalLiabilities.toLocaleString() || 0} = {metrics?.netWorth.toLocaleString() || 0}
+                = {fmt(metrics?.totalAssetItems)} + {fmt(metrics?.assetAccounts?.reduce((s, a) => s + (a.current_balance || 0), 0))} - {fmt(metrics?.totalLiabilities)} = {fmt(metrics?.netWorth)}
               </p>
             </div>
 
@@ -157,7 +158,7 @@ export default function AccountingDashboardNew() {
                     <p className="text-xs text-muted-foreground">From transactions with Asset category</p>
                   </div>
                   <p className="font-semibold text-emerald-600">
-                    NPR {(metrics?.totalAssetItems || 0).toLocaleString()}
+                    NPR {fmt(metrics?.totalAssetItems)}
                   </p>
                 </div>
               </div>
@@ -177,7 +178,7 @@ export default function AccountingDashboardNew() {
                       <p className="text-xs text-muted-foreground capitalize">{acc.type}</p>
                     </div>
                     <p className="font-semibold text-blue-600">
-                      {acc.currency} {acc.current_balance?.toLocaleString() || 0}
+                      {acc.currency} {fmt(acc.current_balance)}
                     </p>
                   </div>
                 )) : (
@@ -200,7 +201,7 @@ export default function AccountingDashboardNew() {
                       <p className="text-xs text-muted-foreground capitalize">{acc.type}</p>
                     </div>
                     <p className="font-semibold text-destructive">
-                      {acc.currency} {Math.abs(acc.current_balance || 0).toLocaleString()}
+                      {acc.currency} {fmt(Math.abs(acc.current_balance || 0))}
                     </p>
                   </div>
                 )) : (
@@ -338,7 +339,7 @@ export default function AccountingDashboardNew() {
                 </div>
                 <div className="text-right">
                   <p className={`font-bold text-lg ${account.current_balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {account.currency} {account.current_balance.toLocaleString()}
+                    {account.currency} {fmt(account.current_balance)}
                   </p>
                   {account.account_number && (
                     <p className="text-xs text-muted-foreground">{account.account_number}</p>
@@ -355,7 +356,7 @@ export default function AccountingDashboardNew() {
               </div>
               <div className="text-right">
                 <p className={`font-bold text-xl ${totalAccountBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  NPR {totalAccountBalance.toLocaleString()}
+                  NPR {fmt(totalAccountBalance)}
                 </p>
               </div>
             </div>
