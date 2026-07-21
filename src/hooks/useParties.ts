@@ -76,7 +76,7 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
   const storeId = useCurrentStoreId();
   
   return useQuery({
-    queryKey: ['parties-balances', storeId, partyType],
+    queryKey: ['parties-balances', storeId, partyType, 'ledger-v2'],
     queryFn: async () => {
       let query = supabase
         .from('parties')
@@ -98,18 +98,39 @@ export function usePartiesWithBalances(partyType?: 'SUPPLIER' | 'CUSTOMER' | 'BO
 
       const partyIds = parties.map(p => p.id);
 
-      // Fetch all transactions linked to these parties (new 7-type model)
-      const { data: transactions, error: txError } = await supabase
-        .from('transactions')
-        .select('party_id, transaction_type, type, amount')
-        .in('party_id', partyIds)
-        .range(0, 49999);
-      
-      if (txError) console.error('Failed to fetch party transactions:', txError);
+      // Fetch all transactions linked to these parties in chunks. A single huge
+      // `.in(...)` request can silently miss rows/timeout on large ERP datasets,
+      // which made the outer table show zero while the inner ledger was correct.
+      const transactions: Array<{ party_id: string | null; transaction_type: string | null; type: string | null; amount: number | string | null }> = [];
+      const chunkSize = 50;
+      const pageSize = 1000;
+
+      for (let i = 0; i < partyIds.length; i += chunkSize) {
+        const chunk = partyIds.slice(i, i + chunkSize);
+        let from = 0;
+
+        while (true) {
+          const { data, error: txError } = await supabase
+            .from('transactions')
+            .select('party_id, transaction_type, type, amount')
+            .in('party_id', chunk)
+            .range(from, from + pageSize - 1);
+
+          if (txError) {
+            console.error('Failed to fetch party transactions:', txError);
+            break;
+          }
+
+          if (!data || data.length === 0) break;
+          transactions.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+      }
 
       const partiesWithBalances: PartyWithBalances[] = parties.map(party => {
         const typedParty = party as Party;
-        const partyTxns = transactions?.filter(t => t.party_id === party.id) || [];
+        const partyTxns = transactions.filter(t => t.party_id === party.id);
         const transaction_count = partyTxns.length;
 
         // Mirror usePartyStatement DR/CR logic so outer table matches inner card
