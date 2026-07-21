@@ -333,6 +333,9 @@ const hrmMetrics = useMemo(() => {
     return { pendingWork, totalWork };
   }, [logisticsStats]);
 
+  // Format whole numbers without decimals for dashboard cards
+  const fmt = (n: number) => Math.round(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
   const ModuleCard = ({ 
     title, 
     icon: Icon, 
