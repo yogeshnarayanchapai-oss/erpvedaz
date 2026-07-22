@@ -25,6 +25,8 @@ import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, Inside
 import { Order } from '@/hooks/useOrders';
 import { toast } from 'sonner';
 import { matchesReferenceId, isReferenceIdSearch } from '@/lib/referenceIdSearch';
+import { PushToCourierButton } from '@/components/orders/PushToCourierButton';
+import { RefreshCourierStatusButton } from '@/components/orders/RefreshCourierStatusButton';
 
 const INSIDE_DELIVERY_STATUS_OPTIONS: { value: InsideDeliveryStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pending' },
@@ -552,6 +554,15 @@ export default function CallingOrders() {
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
+                        {order.order_status === 'CONFIRMED' && (
+                          <PushToCourierButton
+                            orderId={order.id}
+                            alreadyPushed={!!(order as any).logistics_courier || !!(order as any).sent_to_logistics}
+                          />
+                        )}
+                        {((order as any).logistics_courier || (order as any).sent_to_logistics) && (
+                          <RefreshCourierStatusButton orderId={order.id} />
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
