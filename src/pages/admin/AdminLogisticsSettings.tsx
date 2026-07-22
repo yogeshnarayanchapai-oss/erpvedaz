@@ -247,54 +247,43 @@ export default function AdminLogisticsSettings() {
                 </div>
               </div>
 
-              {editing.courier === 'NCM' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Partner ID</Label>
-                    <Input value={editing.partner_id || ''} onChange={(e) => setField('partner_id', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account Type</Label>
-                    <Input value={editing.account_type || ''} onChange={(e) => setField('account_type', e.target.value)} placeholder="COD / Non-COD" />
-                  </div>
+              <Separator />
+              <h4 className="font-medium">Additional Credentials <span className="text-xs text-muted-foreground font-normal">(fill only what your courier needs)</span></h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Partner ID</Label>
+                  <Input value={editing.partner_id || ''} onChange={(e) => setField('partner_id', e.target.value)} placeholder="Optional" />
                 </div>
-              )}
-              {editing.courier === 'GBL' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Client ID</Label>
-                    <Input value={editing.client_id || ''} onChange={(e) => setField('client_id', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input type="password" value={editing.client_password || ''} onChange={(e) => setField('client_password', e.target.value)} />
-                  </div>
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <Input value={editing.account_type || ''} onChange={(e) => setField('account_type', e.target.value)} placeholder="COD / Non-COD (optional)" />
                 </div>
-              )}
-              {editing.courier === 'PATHAO' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Store ID</Label>
-                    <Input value={editing.store_id || ''} onChange={(e) => setField('store_id', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Secret Key</Label>
-                    <Input type="password" value={editing.secret_key || ''} onChange={(e) => setField('secret_key', e.target.value)} />
-                  </div>
+                <div className="space-y-2">
+                  <Label>Client ID</Label>
+                  <Input value={editing.client_id || ''} onChange={(e) => setField('client_id', e.target.value)} placeholder="Optional" />
                 </div>
-              )}
-              {editing.courier === 'GAAUBESI' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Pickup City</Label>
-                    <Input value={editing.pickup_city || ''} onChange={(e) => setField('pickup_city', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Pickup Branch</Label>
-                    <Input value={editing.pickup_branch || ''} onChange={(e) => setField('pickup_branch', e.target.value)} />
-                  </div>
+                <div className="space-y-2">
+                  <Label>Client Password</Label>
+                  <Input type="password" value={editing.client_password || ''} onChange={(e) => setField('client_password', e.target.value)} placeholder="Optional" />
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label>Store ID</Label>
+                  <Input value={editing.store_id || ''} onChange={(e) => setField('store_id', e.target.value)} placeholder="Optional" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret Key</Label>
+                  <Input type="password" value={editing.secret_key || ''} onChange={(e) => setField('secret_key', e.target.value)} placeholder="Optional" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Pickup City</Label>
+                  <Input value={editing.pickup_city || ''} onChange={(e) => setField('pickup_city', e.target.value)} placeholder="Optional" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Pickup Branch</Label>
+                  <Input value={editing.pickup_branch || ''} onChange={(e) => setField('pickup_branch', e.target.value)} placeholder="Optional" />
+                </div>
+              </div>
+
 
               <Separator />
               <h4 className="font-medium">Default Pickup Information</h4>
