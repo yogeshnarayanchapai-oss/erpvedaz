@@ -24,6 +24,9 @@ import { SendToCourierModal } from '@/components/orders/SendToCourierModal';
 import { BulkPrintView } from '@/components/orders/BulkPrintView';
 import { BulkStatusUpdateModal } from '@/components/orders/BulkStatusUpdateModal';
 import { AdminEditOrderSheet } from '@/components/orders/AdminEditOrderSheet';
+import { PushToCourierDialog } from '@/components/orders/PushToCourierDialog';
+import { useRefreshCourierStatus } from '@/hooks/useRefreshCourierStatus';
+import { Truck, RefreshCw } from 'lucide-react';
 import { OrderFiltersCard, DatePreset, DeliveryFilter, OrderStatusFilter, InsideDeliveryStatusFilter } from '@/components/filters/OrderFiltersCard';
 import { ShoppingCart, Download, FileSpreadsheet, FileText, ClipboardList, CheckCircle, Pencil, Trash2, MoreHorizontal, Eye, ChevronDown, Printer } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -95,6 +98,8 @@ export default function AdminOrders() {
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [pushOrderId, setPushOrderId] = useState<string | null>(null);
+  const refreshStatus = useRefreshCourierStatus();
 
   const bulkDeleteOrders = useBulkDeleteOrders();
   
@@ -1039,6 +1044,18 @@ export default function AdminOrders() {
                             <Pencil className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {order.order_status === 'CONFIRMED' && !(order as any).logistics_courier && !(order as any).sent_to_logistics && (
+                            <DropdownMenuItem onClick={() => setPushOrderId(order.id)}>
+                              <Truck className="w-4 h-4 mr-2" />
+                              Push to Courier
+                            </DropdownMenuItem>
+                          )}
+                          {((order as any).logistics_courier || (order as any).sent_to_logistics) && (
+                            <DropdownMenuItem onClick={() => refreshStatus.mutate(order.id)}>
+                              <RefreshCw className={`w-4 h-4 mr-2 ${refreshStatus.isPending ? 'animate-spin' : ''}`} />
+                              Refresh Status
+                            </DropdownMenuItem>
+                          )}
                           {isAdmin && (
                             <DropdownMenuItem 
                               onClick={() => {
@@ -1141,6 +1158,11 @@ export default function AdminOrders() {
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
         onSuccess={() => setEditingOrder(null)}
+      />
+      <PushToCourierDialog
+        open={!!pushOrderId}
+        onOpenChange={(o) => !o && setPushOrderId(null)}
+        orderId={pushOrderId}
       />
     </div>
   );
