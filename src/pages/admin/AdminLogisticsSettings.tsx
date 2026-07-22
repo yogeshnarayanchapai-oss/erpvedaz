@@ -214,7 +214,7 @@ export default function AdminLogisticsSettings() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {PROVIDER_TYPES.find((p) => p.value === editing.courier)?.help}
+                    Fill only the fields your courier's API requires.
                   </p>
                 </div>
               </div>
