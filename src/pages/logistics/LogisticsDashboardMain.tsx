@@ -38,19 +38,15 @@ export default function LogisticsDashboardMain() {
           <p className="text-muted-foreground">Multi-courier performance overview</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Staff" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Staff</SelectItem>
-              {staff.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Link to="/admin/logistics-settings">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Logistics Settings
+            </Button>
+          </Link>
           <DateRangeFilter value={dateRange} onChange={setDateRange} />
         </div>
+
       </div>
 
       {/* KPI Cards */}
