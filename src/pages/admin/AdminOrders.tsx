@@ -1159,6 +1159,11 @@ export default function AdminOrders() {
         onOpenChange={setEditSheetOpen}
         onSuccess={() => setEditingOrder(null)}
       />
+      <PushToCourierDialog
+        open={!!pushOrderId}
+        onOpenChange={(o) => !o && setPushOrderId(null)}
+        orderId={pushOrderId}
+      />
     </div>
   );
 }
