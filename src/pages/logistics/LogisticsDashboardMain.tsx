@@ -20,11 +20,10 @@ export default function LogisticsDashboardMain() {
     from: subDays(new Date(), 30),
     to: new Date(),
   });
-  const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
 
-  const { data: staff = [] } = useStaff('CALLING');
-  const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
-  const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to, selectedStaffId !== 'all' ? selectedStaffId : undefined);
+  const { data: stats, isLoading: statsLoading } = useLogisticsStats(dateRange.from, dateRange.to);
+  const { data: courierData, isLoading: courierLoading } = useCourierComparison(dateRange.from, dateRange.to);
+
 
   const { isSelfBirthday, selfName, otherBirthdayNames } = useBirthdayCheck();
 
