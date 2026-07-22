@@ -4440,6 +4440,7 @@ export type Database = {
           default_pickup_address: string | null
           default_sender_name: string | null
           default_sender_phone: string | null
+          display_name: string | null
           id: string
           is_active: boolean
           partner_id: string | null
@@ -4460,6 +4461,7 @@ export type Database = {
           default_pickup_address?: string | null
           default_sender_name?: string | null
           default_sender_phone?: string | null
+          display_name?: string | null
           id?: string
           is_active?: boolean
           partner_id?: string | null
@@ -4480,6 +4482,7 @@ export type Database = {
           default_pickup_address?: string | null
           default_sender_name?: string | null
           default_sender_phone?: string | null
+          display_name?: string | null
           id?: string
           is_active?: boolean
           partner_id?: string | null
