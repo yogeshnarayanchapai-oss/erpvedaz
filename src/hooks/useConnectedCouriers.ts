@@ -27,11 +27,8 @@ export function useConnectedCouriers() {
       const out: ConnectedCourier[] = [];
       for (const s of (data as any[]) || []) {
         const c = s.courier as CourierProviderType;
-        let connected = false;
-        if (c === 'NCM') connected = !!s.api_base_url && !!s.api_token && !!s.partner_id;
-        else if (c === 'GBL') connected = !!s.api_base_url && !!s.client_id;
-        else if (c === 'PATHAO') connected = !!s.api_base_url && !!s.api_token && !!s.store_id;
-        else if (c === 'GAAUBESI') connected = !!s.api_base_url && !!s.api_token;
+        // Minimum viable connection: base URL + token (any provider type)
+        const connected = !!s.api_base_url && !!s.api_token;
         if (connected) {
           out.push({
             id: s.id,
