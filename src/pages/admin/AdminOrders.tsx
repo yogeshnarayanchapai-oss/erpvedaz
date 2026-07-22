@@ -98,6 +98,8 @@ export default function AdminOrders() {
   // Edit order state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [pushOrderId, setPushOrderId] = useState<string | null>(null);
+  const refreshStatus = useRefreshCourierStatus();
 
   const bulkDeleteOrders = useBulkDeleteOrders();
   
@@ -1042,6 +1044,18 @@ export default function AdminOrders() {
                             <Pencil className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {order.order_status === 'CONFIRMED' && !(order as any).logistics_courier && !(order as any).sent_to_logistics && (
+                            <DropdownMenuItem onClick={() => setPushOrderId(order.id)}>
+                              <Truck className="w-4 h-4 mr-2" />
+                              Push to Courier
+                            </DropdownMenuItem>
+                          )}
+                          {((order as any).logistics_courier || (order as any).sent_to_logistics) && (
+                            <DropdownMenuItem onClick={() => refreshStatus.mutate(order.id)}>
+                              <RefreshCw className={`w-4 h-4 mr-2 ${refreshStatus.isPending ? 'animate-spin' : ''}`} />
+                              Refresh Status
+                            </DropdownMenuItem>
+                          )}
                           {isAdmin && (
                             <DropdownMenuItem 
                               onClick={() => {
