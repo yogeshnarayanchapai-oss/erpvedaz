@@ -15,7 +15,11 @@ export function useRefreshCourierStatus() {
     },
     onSuccess: (data: any) => {
       const status = data?.status || 'unchanged';
-      toast.success(`Status refreshed: ${status}`);
+      if (data?.unchanged) {
+        toast.info(`Status unchanged: ${status}`);
+      } else {
+        toast.success(`Status refreshed: ${status}`);
+      }
       qc.invalidateQueries({ queryKey: ['orders'] });
       qc.invalidateQueries({ queryKey: ['logistics-orders'] });
     },

@@ -99,6 +99,21 @@ Deno.serve(async (req) => {
 
     console.log(`User ${user.email} (${roleList.join(',')}) authorized for logistics action`);
 
+    // Server-side idempotency: block duplicate pushes
+    if (peekOrderId) {
+      const { data: existingPush } = await supabase
+        .from('logistics_orders')
+        .select('id, courier, tracking_id')
+        .eq('order_id', peekOrderId)
+        .maybeSingle();
+      if (existingPush) {
+        return new Response(
+          JSON.stringify({ error: `Order already pushed to ${(existingPush as any).courier}${(existingPush as any).tracking_id ? ` (Tracking: ${(existingPush as any).tracking_id})` : ''}` }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const body: SendToCourierRequest = await req.json();
     const { orderId, courier, customerName, customerPhone, fullAddress, codAmount, productName, quantity, weightGrams = 500 } = body;
 

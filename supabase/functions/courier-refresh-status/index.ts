@@ -67,7 +67,10 @@ Deno.serve(async (req) => {
       raw = { error: e.message };
     }
 
-    if (newStatus) {
+    const currentStatus = (logi as any).delivery_status;
+    const unchanged = !newStatus || newStatus === currentStatus;
+
+    if (newStatus && !unchanged) {
       await supabase
         .from('logistics_orders')
         .update({ delivery_status: newStatus, api_response: raw })
@@ -78,7 +81,7 @@ Deno.serve(async (req) => {
         .eq('id', orderId);
     }
 
-    return json({ success: true, status: newStatus || (logi as any).delivery_status, raw });
+    return json({ success: true, status: newStatus || currentStatus, unchanged, raw });
   } catch (e: any) {
     return json({ error: e.message }, 500);
   }
