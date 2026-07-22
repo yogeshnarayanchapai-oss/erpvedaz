@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     // Create service role client for privileged operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user has required role (ADMIN, MANAGER, or LOGISTICS)
+    // Permission: privileged roles OR the staff who owns/assigned the order
     const { data: userRoles, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -71,18 +71,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    const allowedRoles = ['ADMIN', 'MANAGER', 'LOGISTICS'];
-    const hasRequiredRole = userRoles?.some(ur => allowedRoles.includes(ur.role));
+    const bodyPeek = await req.clone().json().catch(() => ({}));
+    const peekOrderId = (bodyPeek as any)?.orderId;
+    const privilegedRoles = ['OWNER', 'ADMIN', 'MANAGER', 'LOGISTICS', 'SALES_MANAGER'];
+    const staffRoles = ['CALLING', 'FOLLOWUP', 'LEADS'];
+    const roleList = (userRoles || []).map((ur: any) => ur.role);
+    const isPrivileged = roleList.some((r: string) => privilegedRoles.includes(r));
+    const isStaff = roleList.some((r: string) => staffRoles.includes(r));
 
-    if (!hasRequiredRole) {
-      console.error(`User ${user.email} attempted logistics action with insufficient permissions`);
+    let owns = false;
+    if (!isPrivileged && isStaff && peekOrderId) {
+      const { data: ord } = await supabase
+        .from('orders')
+        .select('assigned_to_user_id, created_by_staff_id')
+        .eq('id', peekOrderId)
+        .single();
+      owns = !!ord && (ord.assigned_to_user_id === user.id || ord.created_by_staff_id === user.id);
+    }
+
+    if (!isPrivileged && !owns) {
+      console.error(`User ${user.email} lacks permission to push order ${peekOrderId}`);
       return new Response(
-        JSON.stringify({ error: 'Forbidden: You do not have permission to send orders to logistics' }),
+        JSON.stringify({ error: 'Forbidden: You can only push your own assigned orders to courier' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`User ${user.email} (${userRoles[0]?.role}) authorized for logistics action`);
+    console.log(`User ${user.email} (${roleList.join(',')}) authorized for logistics action`);
 
     const body: SendToCourierRequest = await req.json();
     const { orderId, courier, customerName, customerPhone, fullAddress, codAmount, productName, quantity, weightGrams = 500 } = body;
