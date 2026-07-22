@@ -75,7 +75,7 @@ export default function AdminLogisticsSettings() {
         <TabsList>
           <TabsTrigger value="couriers" className="flex items-center gap-2">
             <Truck className="w-4 h-4" />
-            Couriers
+            Courier Integration
           </TabsTrigger>
           <TabsTrigger value="routing" className="flex items-center gap-2">
             <Route className="w-4 h-4" />
