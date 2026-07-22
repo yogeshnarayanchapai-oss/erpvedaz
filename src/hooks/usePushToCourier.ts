@@ -11,6 +11,16 @@ export function usePushToCourier() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ orderId, courier }: PushInput) => {
+      // Idempotency: block if already pushed to any courier
+      const { data: existing } = await supabase
+        .from('logistics_orders')
+        .select('id, courier, tracking_id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+      if (existing) {
+        throw new Error(`Already pushed to ${(existing as any).courier}${(existing as any).tracking_id ? ` (Tracking: ${(existing as any).tracking_id})` : ''}`);
+      }
+
       // Fetch order with lead details for payload
       const { data: order, error } = await supabase
         .from('orders')
