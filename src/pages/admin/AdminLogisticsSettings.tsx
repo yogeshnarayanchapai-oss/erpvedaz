@@ -213,9 +213,6 @@ export default function AdminLogisticsSettings() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Fill only the fields your courier's API requires.
-                  </p>
                 </div>
               </div>
 
