@@ -18,6 +18,7 @@ export type CODSettlementStatus = 'PENDING' | 'SETTLED' | 'PARTIAL';
 export interface LogisticsSettings {
   id: string;
   courier: CourierProvider;
+  display_name: string | null;
   is_active: boolean;
   api_base_url: string | null;
   api_token: string | null;
@@ -121,27 +122,60 @@ export function useLogisticsSettings() {
   });
 }
 
-// Hook to save logistics settings
+// Hook to save logistics settings (insert if no id, update if id present)
 export function useSaveLogisticsSettings() {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (settings: Partial<LogisticsSettings> & { courier: CourierProvider }) => {
-      const { data, error } = await supabase
-        .from('logistics_settings')
-        .upsert(settings, { onConflict: 'courier' })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const payload: any = { ...settings };
+      let result;
+      if (settings.id) {
+        const { data, error } = await supabase
+          .from('logistics_settings')
+          .update(payload)
+          .eq('id', settings.id)
+          .select()
+          .single();
+        if (error) throw error;
+        result = data;
+      } else {
+        delete payload.id;
+        const { data, error } = await supabase
+          .from('logistics_settings')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        result = data;
+      }
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logistics-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['connected-couriers'] });
       toast.success('Settings saved successfully');
     },
     onError: (error: Error) => {
       toast.error(`Failed to save settings: ${error.message}`);
     },
+  });
+}
+
+// Hook to delete a logistics settings row
+export function useDeleteLogisticsSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('logistics_settings').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['logistics-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['connected-couriers'] });
+      toast.success('Courier removed');
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 }
 

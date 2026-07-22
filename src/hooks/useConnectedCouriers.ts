@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export type CourierProviderType = 'NCM' | 'GBL' | 'PATHAO' | 'GAAUBESI';
+
 export type ConnectedCourier = {
-  courier: 'NCM' | 'GBL' | 'PATHAO' | 'GAAUBESI';
+  id: string;
+  courier: CourierProviderType;
   label: string;
   is_active: boolean;
 };
 
 /**
- * Returns list of couriers that are marked active AND have their required
- * API credentials filled in logistics_settings.
+ * Returns couriers that are active AND have their required credentials filled.
+ * Each row is one user-configured courier (multiple per provider type allowed).
  */
 export function useConnectedCouriers() {
   return useQuery({
@@ -22,14 +25,21 @@ export function useConnectedCouriers() {
       if (error) throw error;
 
       const out: ConnectedCourier[] = [];
-      for (const s of data || []) {
-        const c = (s as any).courier as ConnectedCourier['courier'];
+      for (const s of (data as any[]) || []) {
+        const c = s.courier as CourierProviderType;
         let connected = false;
-        if (c === 'NCM') connected = !!(s as any).api_base_url && !!(s as any).api_token && !!(s as any).partner_id;
-        else if (c === 'GBL') connected = !!(s as any).api_base_url && !!(s as any).client_id;
-        else if (c === 'PATHAO') connected = !!(s as any).api_base_url && !!(s as any).api_token && !!(s as any).store_id;
-        else if (c === 'GAAUBESI') connected = !!(s as any).api_base_url && !!(s as any).api_token;
-        if (connected) out.push({ courier: c, label: c, is_active: true });
+        if (c === 'NCM') connected = !!s.api_base_url && !!s.api_token && !!s.partner_id;
+        else if (c === 'GBL') connected = !!s.api_base_url && !!s.client_id;
+        else if (c === 'PATHAO') connected = !!s.api_base_url && !!s.api_token && !!s.store_id;
+        else if (c === 'GAAUBESI') connected = !!s.api_base_url && !!s.api_token;
+        if (connected) {
+          out.push({
+            id: s.id,
+            courier: c,
+            label: s.display_name || c,
+            is_active: true,
+          });
+        }
       }
       return out;
     },

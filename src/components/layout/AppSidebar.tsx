@@ -99,11 +99,11 @@ const messagingItems: MenuItem[] = [
 // Logistics submenu for Admin
 const logisticsItems: MenuItem[] = [
   { title: 'Control Center', url: '/admin/logistics/control-center', icon: Truck },
+  { title: 'Logistics Settings', url: '/admin/logistics-settings', icon: Settings2 },
   { title: 'Logistics Dashboard', url: '/admin/logistics-dashboard', icon: BarChart3 },
   { title: 'NCM Analytics', url: '/admin/logistics/ncm', icon: Package },
   { title: 'GBL Analytics', url: '/admin/logistics/gbl', icon: Package },
   { title: 'Pathao Analytics', url: '/admin/logistics/pathao', icon: Package },
-  { title: 'Logistics Settings', url: '/admin/logistics-settings', icon: Settings2 },
 ];
 
 // Marketing submenu for Admin
