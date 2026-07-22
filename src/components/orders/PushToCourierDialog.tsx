@@ -51,7 +51,7 @@ export function PushToCourierDialog({ open, onOpenChange, orderId, onSuccess }: 
             <AlertCircle className="w-4 h-4" />
             <AlertDescription className="flex items-center justify-between gap-2">
               <span>No courier API is connected.</span>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/logistics/settings')}>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/logistics-settings')}>
                 <ExternalLink className="w-3 h-3 mr-1" /> Connect
               </Button>
             </AlertDescription>
@@ -59,9 +59,9 @@ export function PushToCourierDialog({ open, onOpenChange, orderId, onSuccess }: 
         ) : (
           <RadioGroup value={selected} onValueChange={setSelected} className="py-2">
             {couriers.map((c) => (
-              <div key={c.courier} className="flex items-center space-x-2 border rounded p-3">
-                <RadioGroupItem value={c.courier} id={c.courier} />
-                <Label htmlFor={c.courier} className="cursor-pointer flex-1">{c.label}</Label>
+              <div key={c.id} className="flex items-center space-x-2 border rounded p-3">
+                <RadioGroupItem value={c.courier} id={c.id} />
+                <Label htmlFor={c.id} className="cursor-pointer flex-1">{c.label}</Label>
               </div>
             ))}
           </RadioGroup>
