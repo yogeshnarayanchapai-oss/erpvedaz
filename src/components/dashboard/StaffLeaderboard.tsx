@@ -57,8 +57,9 @@ export function StaffLeaderboard({ data, periodLabel, isLoading }: StaffLeaderbo
     );
   }
 
-  const topPerformers = data.slice(0, 10);
+  const topPerformers = data;
   const maxOrders = Math.max(...topPerformers.map(s => s.confirmedOrders), 1);
+
 
   return (
     <Card>
