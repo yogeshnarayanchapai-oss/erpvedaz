@@ -68,17 +68,9 @@ export function useMyAttendance() {
   return useQuery({
     queryKey: ['my-attendance'],
     queryFn: async () => {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) return [];
-
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('status', 'Active')
-        .maybeSingle();
-
+      const employee = await resolveActiveEmployee();
       if (!employee) return [];
+
 
       const { data, error } = await supabase
         .from('attendance_records' as any)
