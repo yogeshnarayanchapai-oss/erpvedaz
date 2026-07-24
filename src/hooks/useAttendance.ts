@@ -154,25 +154,20 @@ export function useCheckIn() {
         throw new Error('You must be logged in to check in');
       }
       
-      // Get employee with their assigned store and office time settings
-      // Use maybeSingle() to handle cases where employee might not exist or multiple exist
-      const { data: employees, error: empError } = await supabase
+      // Resolve employee via shared resolver (heals mismatched user_id / inactive dupes)
+      const resolved = await resolveActiveEmployee();
+      if (!resolved) {
+        throw new Error('No active employee profile found for your account. Please contact your administrator.');
+      }
+      const { data: employee, error: empError } = await supabase
         .from('employees')
         .select('id, full_name, store_id, office_start_time, office_end_time, grace_minutes, status')
-        .eq('user_id', userId)
-        .eq('status', 'Active');
-
-      if (empError) {
-        console.error('Error fetching employee:', empError);
+        .eq('id', resolved.id)
+        .maybeSingle();
+      if (empError || !employee) {
         throw new Error('Failed to fetch employee data. Please try again.');
       }
 
-      if (!employees || employees.length === 0) {
-        throw new Error('No active employee profile found for your account. Please contact your administrator.');
-      }
-
-      // Use the first active employee if multiple exist (shouldn't happen normally)
-      const employee = employees[0];
 
       // Use employee's assigned store_id as the source of truth
       const employeeStoreId = employee.store_id;
