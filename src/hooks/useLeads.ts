@@ -225,7 +225,7 @@ export function usePendingTransferLeads() {
   const storeId = useCurrentStoreId();
 
   return useQuery({
-    queryKey: ['leads-pending-transfer', storeId],
+    queryKey: ['leads', 'pending-transfer', storeId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
