@@ -37,11 +37,10 @@ export function DailyTaskReviewButton() {
     refetchOnMount: false,
     refetchOnReconnect: false,
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return { total: 0, done: 0 };
-      const { data: emp } = await supabase
-        .from('employees').select('id').eq('user_id', u.user.id).eq('status', 'Active').maybeSingle();
+      const { resolveActiveEmployee } = await import('@/lib/resolveEmployee');
+      const emp = await resolveActiveEmployee();
       if (!emp) return { total: 0, done: 0 };
+
       const [{ data: tasks }, { data: subs }] = await Promise.all([
         supabase.from('daily_checkout_tasks' as any).select('id,target_role,assigned_staff_id,frequency,specific_date,selected_weekdays').eq('is_active', true),
         supabase.from('daily_task_submissions' as any).select('daily_task_id').eq('staff_id', emp.id).eq('task_date', today),
