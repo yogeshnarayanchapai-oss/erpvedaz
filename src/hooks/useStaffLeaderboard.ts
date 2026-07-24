@@ -167,8 +167,9 @@ export function useStaffLeaderboard(dateRange: DateRange) {
       // Sort by conversion rate descending (top performers first)
       leaderboard.sort((a, b) => b.conversionRate - a.conversionRate);
 
-      // Hard cap: show only top 10 staff on leaderboard
-      return leaderboard.slice(0, 10);
+      // Show all staff with leads > 0 (no top-N cap)
+      return leaderboard.filter(s => s.totalLeads > 0);
+
 
     },
     enabled: !!storeId && !leadCountsLoading && !!leadCounts,
