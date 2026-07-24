@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useCurrentStoreId } from '@/hooks/useCurrentStoreId';
 import { useIsModuleStoreWise } from '@/hooks/useModuleStoreSettings';
 import { sendHRMEmail, getAdminTeamEmails } from '@/lib/hrmEmailService';
+import { resolveActiveEmployee } from '@/lib/resolveEmployee';
 
 export interface AttendanceRecord {
   id: string;
