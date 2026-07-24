@@ -69,14 +69,8 @@ export function DailyTaskReviewButton() {
   const hasPending = total > 0 && done < total;
 
   const handleClick = async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const { data: emp } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('user_id', u.user.id)
-      .eq('status', 'Active')
-      .maybeSingle();
+    const { resolveActiveEmployee } = await import('@/lib/resolveEmployee');
+    const emp = await resolveActiveEmployee();
     if (!emp) {
       toast.error('Employee record not found');
       return;
